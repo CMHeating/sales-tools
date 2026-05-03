@@ -29,7 +29,7 @@ Generated fresh each week from a ServiceTitan Excel export. Each HCA gets their 
 ---
 
 ### 2. Follow-Up Leaderboard
-**URL:** https://spursfaninwa.github.io/cm-heating-sales-tools/leaderboard.html
+**URL:** (https://cmheating.github.io/sales-tools/leaderboard.html)
 
 Live office screen display. Auto-cycles every 15 seconds between Rankings and Detail view.
 
@@ -58,7 +58,7 @@ Takes 20 seconds. Feeds directly into daily reports.
 ---
 
 ### 4. Daily 1-on-1 Brief
-**URL:** https://spursfaninwa.github.io/cm-heating-sales-tools/daily-brief.html
+**URL:** (https://cmheating.github.io/sales-tools/daily-brief.html)
 
 Geoff's daily prep tool. One card per HCA showing:
 - Conversion rate, documentation rate, follow-up attempts (color coded)
@@ -70,7 +70,7 @@ Print to PDF for in-person 1-on-1s.
 ---
 
 ### 5. Executive Summary
-**URL:** https://spursfaninwa.github.io/cm-heating-sales-tools/exec-summary.html
+**URL:** https://cmheating.github.io/sales-tools/exec-summary.html
 
 Weekly report for Paul (Sr VP) and Kailana (GM). One clean page with:
 - 5 KPI tiles — pipeline value, conversion rate, attempts, doc compliance, critical leads
