@@ -205,7 +205,57 @@ body {
 @media print {
   body { padding: 16px; background: white; }
   .print-btn { display: none; }
-  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .selector-wrap { display: none; }
+  .card-view { display: block !important; }
+  .back-btn { display: none; }
+}
+
+/* SELECTOR */
+.selector-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  gap: 16px;
+  text-align: center;
+}
+.selector-logo img { height: 80px; }
+.selector-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--dark);
+}
+.selector-date { font-size: 13px; color: var(--muted); font-weight: 500; }
+.selector-prompt { font-size: 15px; color: var(--muted); margin-top: 8px; }
+.hca-select {
+  font-family: 'Barlow', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dark);
+  background: white;
+  border: 2px solid var(--orange);
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  min-width: 260px;
+  outline: none;
+}
+.back-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--surface);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -217,12 +267,38 @@ body {
   </div>
   <div>
     <div class="page-header-title">Daily 1-on-1 Brief</div>
-    <div class="page-header-date" id="dateLabel"></div>
   </div>
   <button class="print-btn" onclick="window.print()">⎙ Print / Save PDF</button>
 </div>
 
-<div class="cards-grid" id="cards"></div>
+<div class="selector-wrap" id="selectorWrap">
+  <div class="selector-logo">
+    <img src="data:image/webp;base64,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" alt="CM Heating">
+  </div>
+  <div class="selector-title">Daily 1-on-1 Brief</div>
+  <div class="selector-date" id="selectorDate"></div>
+  <div class="selector-prompt">Select a team member to begin</div>
+  <select class="hca-select" id="hcaSelect" onchange="handleSelect(this.value)">
+    <option value="">— Choose an HCA —</option>
+    <option value="Amber">Amber Maddalena</option>
+    <option value="Chester">Chester Granard</option>
+    <option value="Davis">Davis Diosdado</option>
+    <option value="Jay">Javierre Milo (Jay)</option>
+    <option value="Joe">Joe Chounramany</option>
+    <option value="Joseph">Joseph Ruble</option>
+    <option value="Kyle">Kyle McAlister</option>
+    <option value="Samir">Samir Khoury</option>
+    <option value="Trevor">Trevor Bohm</option>
+  </select>
+</div>
+
+<div class="card-view" id="cardView" style="display:none">
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <span style="font-size:13px; color:var(--muted);" id="cardDate"></span>
+  </div>
+  <div style="max-width:420px; margin:0 auto;" id="singleCard"></div>
+</div>
 
 <script>
 // ─── LIVE DATA SOURCE ───
@@ -444,55 +520,69 @@ function getStatColor(val, type) {
   return 'blue';
 }
 
-document.getElementById('dateLabel').textContent =
-  new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('selectorDate').textContent = dateStr;
+document.getElementById('cardDate').textContent = dateStr;
 
-function renderCards() {
-  const cards = document.getElementById('cards');
-  Object.entries(briefData).forEach(([name, d]) => {
-    const conv = d.totalLeads>0 ? Math.round((d.conversions/d.totalLeads)*100) : 0;
-    const doc  = d.attempts>0   ? Math.round((d.documented/d.attempts)*100)   : 0;
-    cards.innerHTML += `
-      <div class="hca-brief">
-        <div class="brief-header">
-          <div class="brief-name">${name}</div>
-          <div class="brief-pts">${d.pts} pts</div>
-        </div>
-        <div class="brief-stats">
-          <div class="brief-stat">
-            <div class="stat-val ${getStatColor(conv,'conv')}">${conv}%</div>
-            <div class="stat-lbl">Conv Rate</div>
-          </div>
-          <div class="brief-stat">
-            <div class="stat-val ${getStatColor(doc,'doc')}">${doc}%</div>
-            <div class="stat-lbl">Doc Rate</div>
-          </div>
-          <div class="brief-stat">
-            <div class="stat-val ${getStatColor(d.attempts,'att')}">${d.attempts}</div>
-            <div class="stat-lbl">Attempts</div>
-          </div>
-        </div>
-        ${d.leads.length > 0 ? `
-        <div class="brief-leads">
-          <div class="leads-title">Oldest Open Leads</div>
-          ${d.leads.map(l=>`
-            <div class="lead-row">
-              <div class="urgency-dot ${getDotClass(l.urgency)}"></div>
-              <div class="lead-name">${l.name}</div>
-              <div class="lead-days">${l.days}d</div>
-              <div class="lead-amount">${l.amount}</div>
-            </div>
-          `).join('')}
-        </div>` : `<div class="brief-leads"><div class="leads-title">No open leads this week</div></div>`}
-        <div class="brief-talking">
-          <div class="talking-title">Talking Points</div>
-          ${d.talking.map(t=>`<div class="talking-point">${t}</div>`).join('')}
-        </div>
-      </div>`;
-  });
+function handleSelect(name) {
+  if (!name) return;
+  document.getElementById('selectorWrap').style.display = 'none';
+  document.getElementById('cardView').style.display = 'block';
+  renderSingleCard(name);
 }
 
-renderCards();
+function goBack() {
+  document.getElementById('cardView').style.display = 'none';
+  document.getElementById('selectorWrap').style.display = 'flex';
+  document.getElementById('hcaSelect').value = '';
+}
+
+function renderSingleCard(name) {
+  const d = briefData[name];
+  if (!d) return;
+  const conv = d.totalLeads>0 ? Math.round((d.conversions/d.totalLeads)*100) : 0;
+  const doc  = d.attempts>0   ? Math.round((d.documented/d.attempts)*100)   : 0;
+  document.getElementById('singleCard').innerHTML = `
+    <div class="hca-brief">
+      <div class="brief-header">
+        <div class="brief-name">${name}</div>
+        <div class="brief-pts">${d.pts} pts</div>
+      </div>
+      <div class="brief-stats">
+        <div class="brief-stat">
+          <div class="stat-val ${getStatColor(conv,'conv')}">${conv}%</div>
+          <div class="stat-lbl">Conv Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getStatColor(doc,'doc')}">${doc}%</div>
+          <div class="stat-lbl">Doc Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getStatColor(d.attempts,'att')}">${d.attempts}</div>
+          <div class="stat-lbl">Attempts</div>
+        </div>
+      </div>
+      ${d.leads.length > 0 ? `
+      <div class="brief-leads">
+        <div class="leads-title">Oldest Open Leads</div>
+        ${d.leads.map(l=>`
+          <div class="lead-row">
+            <div class="urgency-dot ${getDotClass(l.urgency)}"></div>
+            <div class="lead-name">${l.name}</div>
+            <div class="lead-days">${l.days}d</div>
+            <div class="lead-amount">${l.amount}</div>
+          </div>
+        `).join('')}
+      </div>` : `<div class="brief-leads"><div class="leads-title">No open leads this week</div></div>`}
+      <div class="brief-talking">
+        <div class="talking-title">Talking Points</div>
+        ${d.talking.map(t=>`<div class="talking-point">${t}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderCards() {} // no-op, kept for fetchLiveData compatibility
+
 fetchLiveData();
 </script>
 </body>
