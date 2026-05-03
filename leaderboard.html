@@ -365,8 +365,6 @@ body::before {
   text-transform:uppercase;
   letter-spacing:0.5px;
 }
-.conv-val { color:var(--green); }
-.doc-val  { color:var(--blue); }
 .att-val  { color:var(--orange); }
 .dc-bar { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; }
 .dc-bar-fill {
@@ -391,6 +389,15 @@ body::before {
   transition:background 0.3s;
 }
 .cd-dot.on { background:var(--orange); }
+
+.loading {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  font-size:18px;
+  color:var(--muted);
+}
 </style>
 </head>
 <body>
@@ -426,50 +433,55 @@ body::before {
 <div class="countdown" id="countdown"></div>
 
 <script>
-// ─── POINTS WEIGHTS (conversion first, doc second, attempts third) ───
+const API_URL = 'https://script.google.com/macros/s/AKfycbxxX2VPLE9LG127so1PLk_dziaXoXpmSXAUJdU-66u9ZXM66A8w2WwG5fJ_SLxDXNq6/exec';
+
+// Points calculation
 const PTS = {
-  conversion:  100,  // #1 priority
-  earlyHit:    25,   // contacted within 3 days
-  hotWindow:   15,   // contacted days 4-14
-  docEntry:    20,   // documented with notes (#2 priority)
-  attempt:     10,   // each follow-up attempt (#3 priority)
-  fullSeq:     50,   // completed 4-attempt sequence
+  attempt: 10,
+  earlyHit: 25,
+  hotWindow: 15,
 };
 
-const HCA_COLORS = {
-  Amber:'#f472b6', Chester:'#a78bfa', Davis:'#34d399',
-  Jay:'#38bdf8', Joe:'#fb923c', Joseph:'#fbbf24',
-  Kyle:'#4ade80', Samir:'#e879f9', Trevor:'#67e8f9'
-};
+let allLeads = [];
 
-// Demo data — will be replaced by live Sheet data
-let data = {
-  Amber:   { conversions:1, attempts:8,  documented:7,  totalLeads:11 },
-  Chester: { conversions:2, attempts:14, documented:10, totalLeads:24 },
-  Davis:   { conversions:0, attempts:6,  documented:4,  totalLeads:16 },
-  Jay:     { conversions:2, attempts:12, documented:11, totalLeads:18 },
-  Joe:     { conversions:1, attempts:5,  documented:3,  totalLeads:10 },
-  Joseph:  { conversions:1, attempts:9,  documented:8,  totalLeads:13 },
-  Kyle:    { conversions:1, attempts:11, documented:9,  totalLeads:16 },
-  Samir:   { conversions:0, attempts:4,  documented:2,  totalLeads:0  },
-  Trevor:  { conversions:1, attempts:7,  documented:6,  totalLeads:7  },
-};
-
-function calcPts(d) {
-  return (d.conversions * PTS.conversion)
-       + (d.documented  * PTS.docEntry)
-       + (d.attempts    * PTS.attempt);
+function calcPtsForHCA(hcaName) {
+  const hcaLeads = allLeads.filter(l => l.hca === hcaName);
+  let pts = 0;
+  
+  hcaLeads.forEach(lead => {
+    // Points per attempt
+    pts += (lead.attempts || 0) * PTS.attempt;
+    
+    // Urgency bonus for early attempts
+    const daysOld = Math.round(lead.daysOld) || 0;
+    if (daysOld <= 3) pts += PTS.earlyHit;
+    else if (daysOld <= 14) pts += PTS.hotWindow;
+  });
+  
+  return pts;
 }
-function convRate(d){ return d.totalLeads > 0 ? Math.round((d.conversions/d.totalLeads)*100) : 0; }
-function docRate(d) { return d.attempts > 0   ? Math.round((d.documented/d.attempts)*100)   : 0; }
+
+function calcMetricsForHCA(hcaName) {
+  const hcaLeads = allLeads.filter(l => l.hca === hcaName);
+  const attempts = hcaLeads.reduce((s, l) => s + (l.attempts || 0), 0);
+  return {
+    attempts: attempts,
+    leads: hcaLeads.length,
+    avgDaysOld: hcaLeads.length > 0 ? Math.round(hcaLeads.reduce((s, l) => s + (l.daysOld || 0), 0) / hcaLeads.length) : 0
+  };
+}
 
 function ranked() {
-  return Object.entries(data)
-    .map(([n,d]) => ({ name:n, ...d, pts:calcPts(d), conv:convRate(d), doc:docRate(d) }))
-    .sort((a,b) => b.pts - a.pts);
+  const hcaNames = [...new Set(allLeads.map(l => l.hca))];
+  return hcaNames
+    .map(name => ({
+      name: name,
+      pts: calcPtsForHCA(name),
+      ...calcMetricsForHCA(name)
+    }))
+    .sort((a, b) => b.pts - a.pts);
 }
 
-// ─── SET WEEK LABEL ───
 function setWeek() {
   const now = new Date();
   const day = now.getDay();
@@ -479,29 +491,25 @@ function setWeek() {
   document.getElementById('weekLabel').textContent = `Week of ${fmt(mon)} — ${fmt(sun)}`;
 }
 
-// ─── RENDER RANKINGS ───
 function renderRankings() {
   const r = ranked();
-  const maxPts = r[0].pts || 1;
+  const maxPts = r[0]?.pts || 1;
 
   const podiumEl = document.getElementById('podium');
   const lowerEl  = document.getElementById('lower');
 
   podiumEl.innerHTML = r.slice(0,3).map((h,i) => {
     const cls = ['rank-1-card','rank-2-card','rank-3-card'][i];
-    const medalEl = i===0
-      ? `<div class="crown">👑</div>`
-      : `<div class="medal">${i+1}</div>`;
+    const medalEl = i===0 ? `<div class="crown">👑</div>` : `<div class="medal">${i+1}</div>`;
     const ptsColor = i===0 ? 'var(--gold)' : i===1 ? 'var(--silver)' : 'var(--bronze)';
     return `
       <div class="${cls}">
         ${medalEl}
         <div class="card-info">
-          <div class="card-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
+          <div class="card-name">${h.name}</div>
           <div class="card-stats">
-            <div class="card-stat">Conv: <strong>${h.conv}%</strong></div>
-            <div class="card-stat">Doc: <strong>${h.doc}%</strong></div>
             <div class="card-stat">Attempts: <strong>${h.attempts}</strong></div>
+            <div class="card-stat">Leads: <strong>${h.leads}</strong></div>
           </div>
         </div>
         <div>
@@ -514,25 +522,24 @@ function renderRankings() {
   lowerEl.innerHTML = r.slice(3).map((h,i) => `
     <div class="rank-row">
       <div class="row-num">${i+4}</div>
-      <div class="row-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
+      <div class="row-name">${h.name}</div>
       <div class="row-bar-wrap">
-        <div class="row-bar" style="width:${Math.round((h.pts/maxPts)*100)}%;background:${HCA_COLORS[h.name]||'var(--orange)'}"></div>
+        <div class="row-bar" style="width:${Math.round((h.pts/maxPts)*100)}%"></div>
       </div>
       <div class="row-pts">${h.pts}</div>
     </div>`).join('');
 }
 
-// ─── RENDER DETAIL ───
 function renderDetail() {
   const r = ranked();
-  const maxPts = r[0].pts || 1;
+  const maxPts = r[0]?.pts || 1;
   const el = document.getElementById('detail-view');
   el.innerHTML = r.map((h,i) => `
     <div class="hca-card ${i===0?'top-card':''}">
       <div class="dc-header">
         <div>
           <div class="dc-rank">#${i+1} ${i===0?'👑':''}</div>
-          <div class="dc-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
+          <div class="dc-name">${h.name}</div>
         </div>
         <div>
           <div class="dc-pts">${h.pts}</div>
@@ -541,16 +548,12 @@ function renderDetail() {
       </div>
       <div class="dc-metrics">
         <div class="metric">
-          <div class="metric-val conv-val">${h.conv}%</div>
-          <div class="metric-lbl">Conv</div>
-        </div>
-        <div class="metric">
-          <div class="metric-val doc-val">${h.doc}%</div>
-          <div class="metric-lbl">Doc</div>
-        </div>
-        <div class="metric">
           <div class="metric-val att-val">${h.attempts}</div>
           <div class="metric-lbl">Attempts</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val att-val">${h.leads}</div>
+          <div class="metric-lbl">Leads</div>
         </div>
       </div>
       <div class="dc-bar">
@@ -559,7 +562,22 @@ function renderDetail() {
     </div>`).join('');
 }
 
-// ─── VIEW SWITCHING ───
+async function loadData() {
+  try {
+    const response = await fetch(API_URL);
+    allLeads = await response.json();
+    setWeek();
+    renderRankings();
+    renderDetail();
+    buildDots();
+    startCycle();
+  } catch (err) {
+    console.error('Failed to load data:', err);
+    document.getElementById('rankings-view').innerHTML = '<div class="loading">Failed to load leaderboard data</div>';
+  }
+}
+
+// View switching & cycling
 let currentView = 'rankings';
 function switchView(name, btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -570,7 +588,6 @@ function switchView(name, btn) {
   resetCycle();
 }
 
-// ─── AUTO-CYCLE (15s) ───
 const CYCLE = 15;
 let cycleTimer, dotTimer, elapsed = 0;
 
@@ -602,12 +619,8 @@ function startCycle() {
   }, 1000);
 }
 
-// ─── INIT ───
-setWeek();
-renderRankings();
-renderDetail();
-buildDots();
-startCycle();
+// Load on startup
+loadData();
 </script>
 </body>
 </html>
