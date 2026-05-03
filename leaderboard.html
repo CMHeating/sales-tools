@@ -426,14 +426,14 @@ body::before {
 <div class="countdown" id="countdown"></div>
 
 <script>
-// ─── POINTS WEIGHTS (conversion first, doc second, attempts third) ───
+// ─── LIVE DATA SOURCE ───
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgTdK0JDzddliXVWr7jHajDMYMoIO7Wb3Hnqx0n8caM-OEjr3NhSoMjNjcX8gHF2fA/exec';
+
+// ─── POINTS WEIGHTS ───
 const PTS = {
-  conversion:  100,  // #1 priority
-  earlyHit:    25,   // contacted within 3 days
-  hotWindow:   15,   // contacted days 4-14
-  docEntry:    20,   // documented with notes (#2 priority)
-  attempt:     10,   // each follow-up attempt (#3 priority)
-  fullSeq:     50,   // completed 4-attempt sequence
+  conversion: 100,
+  docEntry:    20,
+  attempt:     10,
 };
 
 const HCA_COLORS = {
@@ -442,7 +442,7 @@ const HCA_COLORS = {
   Kyle:'#4ade80', Samir:'#e879f9', Trevor:'#67e8f9'
 };
 
-// Demo data — will be replaced by live Sheet data
+// ─── FALLBACK DATA (used until live fetch succeeds) ───
 let data = {
   Amber:   { conversions:1, attempts:8,  documented:7,  totalLeads:11 },
   Chester: { conversions:2, attempts:14, documented:10, totalLeads:24 },
@@ -454,6 +454,30 @@ let data = {
   Samir:   { conversions:0, attempts:4,  documented:2,  totalLeads:0  },
   Trevor:  { conversions:1, attempts:7,  documented:6,  totalLeads:7  },
 };
+
+// ─── LIVE FETCH — renders immediately with fallback, upgrades when data arrives ───
+async function fetchLiveData() {
+  if (!SCRIPT_URL || SCRIPT_URL.includes('PASTE')) return;
+  try {
+    const res  = await fetch(SCRIPT_URL + '?cb=' + Date.now());
+    const json = await res.json();
+    if (!json.hcas || json.error) return;
+    const live = {};
+    json.hcas.forEach(h => {
+      live[h.name] = {
+        conversions: h.conversions,
+        attempts:    h.attempts,
+        documented:  h.documented,
+        totalLeads:  h.totalLeads
+      };
+    });
+    data = live;
+    renderRankings();
+    renderDetail();
+  } catch (e) {
+    console.warn('Leaderboard: live fetch failed, using fallback data');
+  }
+}
 
 function calcPts(d) {
   return (d.conversions * PTS.conversion)
@@ -608,6 +632,7 @@ renderRankings();
 renderDetail();
 buildDots();
 startCycle();
+fetchLiveData();
 </script>
 </body>
 </html>
