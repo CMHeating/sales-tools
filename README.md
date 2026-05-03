@@ -1,7 +1,7 @@
 CM Heating Sales Operations Hub
 Follow-up accountability system for Home Comfort Advisors — built to drive conversion, documentation culture, and leadership visibility.
 
-What We Built
+What We Built:
 A complete weekly sales operations system connecting ServiceTitan data to daily follow-up accountability, live leaderboard display, and executive reporting.
 
 The Tools
