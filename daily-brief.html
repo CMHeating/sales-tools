@@ -64,39 +64,9 @@ body {
   text-transform: uppercase;
   cursor: pointer;
 }
-.selector-bar {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 24px;
-  margin-bottom: 24px;
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-.selector-label {
-  font-weight: 600;
-  color: var(--dark);
-  font-size: 14px;
-}
-.hca-select {
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: 'Barlow', sans-serif;
-  font-size: 14px;
-  color: var(--dark);
-  background: var(--white);
-  cursor: pointer;
-  min-width: 200px;
-  transition: border-color 0.2s;
-}
-.hca-select:hover { border-color: var(--orange); }
-.hca-select:focus { outline: none; border-color: var(--orange); }
 .cards-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  max-width: 600px;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 .hca-brief {
@@ -128,7 +98,7 @@ body {
 }
 .brief-stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--border);
 }
 .brief-stat {
@@ -136,7 +106,7 @@ body {
   text-align: center;
   border-right: 1px solid var(--border);
 }
-.brief-stat:nth-child(even) { border-right: none; }
+.brief-stat:last-child { border-right: none; }
 .stat-val {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 26px;
@@ -151,8 +121,11 @@ body {
   text-transform: uppercase;
   margin-top: 3px;
 }
+.green { color: var(--green); }
+.yellow { color: var(--yellow); }
+.red { color: var(--red); }
+.blue { color: var(--blue); }
 .orange { color: var(--orange); }
-
 .brief-leads {
   padding: 12px 18px;
 }
@@ -170,7 +143,6 @@ body {
   gap: 8px;
   padding: 7px 0;
   border-bottom: 1px solid #f8fafc;
-  font-size: 12px;
 }
 .lead-row:last-child { border-bottom: none; }
 .urgency-dot {
@@ -180,11 +152,12 @@ body {
 }
 .dot-green { background: var(--green); }
 .dot-yellow { background: var(--yellow); }
-.dot-orange { background: var(--orange); }
+.dot-orange { background: #f97316; }
 .dot-red { background: var(--red); }
 .lead-name {
   flex: 1;
   font-weight: 500;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -201,7 +174,6 @@ body {
   color: var(--dark);
   white-space: nowrap;
 }
-
 .brief-talking {
   background: #f8fafc;
   border-top: 1px solid var(--border);
@@ -230,17 +202,10 @@ body {
   color: var(--orange);
   font-weight: 700;
 }
-
 @media print {
   body { padding: 16px; background: white; }
   .print-btn { display: none; }
-  .selector-bar { display: none; }
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: var(--muted);
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 </head>
@@ -257,122 +222,198 @@ body {
   <button class="print-btn" onclick="window.print()">⎙ Print / Save PDF</button>
 </div>
 
-<div class="selector-bar">
-  <label class="selector-label">Focus on HCA:</label>
-  <select class="hca-select" id="hcaSelector" onchange="selectHCA(this.value)">
-    <option value="">Pick a team member</option>
-  </select>
-</div>
-
 <div class="cards-grid" id="cards"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbwdv7ergbHro5N5vBj8ksUY6ObKNsBm1G0tE4ZwIPheCzrgpnr0CD06YRCMa4myvWJu/exec';
+// ─── CONFIG ───
+const SHEET_ID = '1cnPXu58HkWNV4EFJOeH48dxhGZsRFXLDzOJOty2uJTY';
+const HCA_GIDS = {
+  Amber:   1971598712,
+  Chester: 1892905163,
+  Davis:   1087019900,
+  Jay:     889592596,
+  Joe:     1950853191,
+  Joseph:  525514927,
+  Kyle:    258471659,
+  Samir:   664255734,
+  Trevor:  104563368,
+};
 
-let allLeads = [];
-let selectedHCA = '';
+// Demo data — replaced by live Sheet pull
+const briefData = {
+  Amber:   { attempts:8,  documented:7,  conversions:1, totalLeads:11, pts:207,
+    leads:[
+      {name:'Han Lin',days:25,amount:'$24,750',urgency:'red'},
+      {name:'Adam Ismail',days:10,amount:'$25,297',urgency:'orange'},
+      {name:'Sri Hari Ravindran',days:5,amount:'$23,771',urgency:'yellow'},
+      {name:'Matt Larrick',days:3,amount:'$18,633',urgency:'green'},
+    ],
+    talking:[
+      'Han Lin is 25 days old — what is the real objection?',
+      'Documentation rate 88% — strong, keep it up',
+      '1 conversion this week — what moved them?',
+    ]
+  },
+  Chester: { attempts:14, documented:10, conversions:2, totalLeads:24, pts:580,
+    leads:[
+      {name:'Vinit Ogale',days:75,amount:'$23,187',urgency:'red'},
+      {name:'Shawn Pate',days:86,amount:'$27,100',urgency:'red'},
+      {name:'Bill & Chris Olson',days:37,amount:'$18,808',urgency:'red'},
+      {name:'Rex Wiegand',days:28,amount:'$20,971',urgency:'red'},
+    ],
+    talking:[
+      '4 leads 28+ days — need a close or cut conversation',
+      'Highest attempts on team — acknowledge the effort',
+      'Doc rate 71% — gap between attempts and docs',
+    ]
+  },
+  Davis:   { attempts:6,  documented:4,  conversions:0, totalLeads:16, pts:100,
+    leads:[
+      {name:'Andrew Sale',days:29,amount:'$20,316',urgency:'red'},
+      {name:'Asrat Damena',days:26,amount:'$17,068',urgency:'red'},
+      {name:'Craig Bernhard',days:22,amount:'$24,465',urgency:'red'},
+      {name:'Jonas Malm',days:22,amount:'$12,924',urgency:'red'},
+    ],
+    talking:[
+      '0 conversions — explore what objections keep coming up',
+      'Doc rate 67% — 2 attempts not logged',
+      'Several critical leads — needs a reset strategy call',
+    ]
+  },
+  Jay:     { attempts:12, documented:11, conversions:2, totalLeads:18, pts:560,
+    leads:[
+      {name:'Ethan Hemmati',days:26,amount:'$11,757',urgency:'red'},
+      {name:'Tom Davis',days:27,amount:'$21,070',urgency:'red'},
+      {name:'Cherie & Tony Finazzo',days:21,amount:'$17,422',urgency:'red'},
+      {name:'Min & Patrick Sue',days:21,amount:'$21,017',urgency:'red'},
+    ],
+    talking:[
+      'Best doc rate on team at 92% — highlight for the group',
+      '2 conversions matches Chester for team lead',
+      'Several older leads — are these dead or still alive?',
+    ]
+  },
+  Joe:     { attempts:5,  documented:3,  conversions:1, totalLeads:10, pts:180,
+    leads:[
+      {name:'Wayne Ho',days:24,amount:'$26,001',urgency:'red'},
+      {name:'Payton Parkerson',days:17,amount:'$15,799',urgency:'red'},
+      {name:'Michael Klein',days:17,amount:'$13,845',urgency:'red'},
+      {name:'Mykenzie Hering',days:12,amount:'$24,878',urgency:'orange'},
+    ],
+    talking:[
+      'Doc rate 60% — 2 attempts not documented',
+      'Wayne Ho at $26K — 24 days, what is the status?',
+      '1 conversion — what was the winning factor?',
+    ]
+  },
+  Joseph:  { attempts:9,  documented:8,  conversions:1, totalLeads:13, pts:290,
+    leads:[
+      {name:'Vivek Kumar',days:26,amount:'$19,704',urgency:'red'},
+      {name:'Angela Pfleiderer',days:26,amount:'$43,466',urgency:'red'},
+      {name:'Rebecca Carbajal',days:24,amount:'$26,523',urgency:'red'},
+      {name:'Teresa Robertson',days:24,amount:'$18,093',urgency:'red'},
+    ],
+    talking:[
+      'Angela Pfleiderer at $43K — highest single value, what is the status?',
+      'Doc rate 89% — excellent accountability',
+      '4 critical leads need resolution this week',
+    ]
+  },
+  Kyle:    { attempts:11, documented:9,  conversions:1, totalLeads:16, pts:300,
+    leads:[
+      {name:'David Delgado',days:53,amount:'$15,792',urgency:'red'},
+      {name:'Nancy Lam',days:53,amount:'$14,931',urgency:'red'},
+      {name:'Anita Farris',days:36,amount:'$21,614',urgency:'red'},
+      {name:'Marjorie Forbes',days:37,amount:'$7,178',urgency:'red'},
+    ],
+    talking:[
+      'David Delgado & Nancy Lam at 53 days — close or cut',
+      'Doc rate 82% — solid, 2 more entries would be perfect',
+      'Most leads on team — review pipeline size vs capacity',
+    ]
+  },
+  Samir:   { attempts:4,  documented:2,  conversions:0, totalLeads:0,  pts:60,
+    leads:[],
+    talking:[
+      'No leads in current unsold report — new to pipeline',
+      'Set expectations for logging from day one',
+      'Check in on ServiceTitan activity this week',
+    ]
+  },
+  Trevor:  { attempts:7,  documented:6,  conversions:1, totalLeads:7, pts:230,
+    leads:[
+      {name:'Corey Hansen',days:29,amount:'$16,389',urgency:'red'},
+      {name:'Kushal Kewlani',days:24,amount:'$18,017',urgency:'red'},
+      {name:'Aaron Schlund',days:11,amount:'$26,798',urgency:'orange'},
+      {name:'Kevin & Diana Boyle',days:10,amount:'$23,054',urgency:'orange'},
+    ],
+    talking:[
+      'Doc rate 86% — strong habits forming',
+      'Corey Hansen 29 days — needs a final push or close',
+      'Kevin & Diana Boyle at $23K — in hot window, push now',
+    ]
+  },
+};
 
-function getUrgencyClass(daysOld) {
-  if (daysOld <= 3) return 'dot-green';
-  if (daysOld <= 7) return 'dot-yellow';
-  if (daysOld <= 14) return 'dot-orange';
-  return 'dot-red';
+function convRate(d){ return d.totalLeads>0 ? Math.round((d.conversions/d.totalLeads)*100) : 0; }
+function docRate(d) { return d.attempts>0   ? Math.round((d.documented/d.attempts)*100)   : 0; }
+
+function getDotClass(urgency) {
+  return `dot-${urgency}`;
 }
 
-function formatCurrency(n) {
-  if (!n) return '$0';
-  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
-  if (n >= 1000) return '$' + Math.round(n/1000) + 'K';
-  return '$' + Math.round(n);
+function getStatColor(val, type) {
+  if(type==='conv') return val >= 10 ? 'green' : val > 0 ? 'yellow' : 'red';
+  if(type==='doc')  return val >= 80 ? 'green' : val >= 60 ? 'yellow' : 'red';
+  if(type==='att')  return val >= 8  ? 'green' : val >= 4  ? 'yellow' : 'red';
+  return 'blue';
 }
 
-async function loadData() {
-  try {
-    const response = await fetch(API_URL);
-    allLeads = await response.json();
-    
-    document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    
-    populateSelector();
-  } catch (err) {
-    console.error('Failed to load data:', err);
-    document.getElementById('cards').innerHTML = '<div class="loading">Failed to load brief data</div>';
-  }
-}
+document.getElementById('dateLabel').textContent =
+  new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
-function populateSelector() {
-  const hcaNames = [...new Set(allLeads.map(l => l.hca))].sort();
-  const selector = document.getElementById('hcaSelector');
-  
-  hcaNames.forEach(hca => {
-    const option = document.createElement('option');
-    option.value = hca;
-    option.textContent = hca;
-    selector.appendChild(option);
-  });
-}
-
-function selectHCA(hca) {
-  selectedHCA = hca;
-  renderCards();
-}
-
-function renderCards() {
-  const cardsEl = document.getElementById('cards');
-  
-  // If no HCA selected, show nothing
-  if (!selectedHCA) {
-    cardsEl.innerHTML = '';
-    return;
-  }
-  
-  const hcaLeads = allLeads.filter(l => l.hca === selectedHCA).sort((a, b) => (b.daysOld || 0) - (a.daysOld || 0));
-  const attempts = hcaLeads.reduce((s, l) => s + (l.attempts || 0), 0);
-  const oldestFour = hcaLeads.slice(0, 4);
-  
-  cardsEl.innerHTML = `
+const cards = document.getElementById('cards');
+Object.entries(briefData).forEach(([name, d]) => {
+  const conv = convRate(d);
+  const doc  = docRate(d);
+  cards.innerHTML += `
     <div class="hca-brief">
       <div class="brief-header">
-        <div class="brief-name">${selectedHCA}</div>
-        <div class="brief-pts">${attempts} att</div>
+        <div class="brief-name">${name}</div>
+        <div class="brief-pts">${d.pts} pts</div>
       </div>
       <div class="brief-stats">
         <div class="brief-stat">
-          <div class="stat-val orange">${hcaLeads.length}</div>
-          <div class="stat-lbl">Open Leads</div>
+          <div class="stat-val ${getStatColor(conv,'conv')}">${conv}%</div>
+          <div class="stat-lbl">Conv Rate</div>
         </div>
         <div class="brief-stat">
-          <div class="stat-val orange">${attempts}</div>
+          <div class="stat-val ${getStatColor(doc,'doc')}">${doc}%</div>
+          <div class="stat-lbl">Doc Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getStatColor(d.attempts,'att')}">${d.attempts}</div>
           <div class="stat-lbl">Attempts</div>
         </div>
       </div>
-      ${oldestFour.length > 0 ? `
+      ${d.leads.length > 0 ? `
       <div class="brief-leads">
         <div class="leads-title">Oldest Open Leads</div>
-        ${oldestFour.map(l => `
+        ${d.leads.map(l=>`
           <div class="lead-row">
-            <div class="urgency-dot ${getUrgencyClass(l.daysOld || 0)}"></div>
-            <div class="lead-name">${l.customer}</div>
-            <div class="lead-days">${Math.round(l.daysOld || 0)}d</div>
-            <div class="lead-amount">${formatCurrency(l.estValue)}</div>
+            <div class="urgency-dot ${getDotClass(l.urgency)}"></div>
+            <div class="lead-name">${l.name}</div>
+            <div class="lead-days">${l.days}d</div>
+            <div class="lead-amount">${l.amount}</div>
           </div>
         `).join('')}
-      </div>` : ''}
+      </div>` : `<div class="brief-leads"><div class="leads-title">No open leads this week</div></div>`}
       <div class="brief-talking">
-        <div class="talking-title">Key Points</div>
-        <div class="talking-point">${hcaLeads.length} open leads · Review urgency</div>
-        <div class="talking-point">${attempts} follow-up attempts this week</div>
-        <div class="talking-point">Focus on leads 14+ days old</div>
+        <div class="talking-title">Talking Points</div>
+        ${d.talking.map(t=>`<div class="talking-point">${t}</div>`).join('')}
       </div>
     </div>`;
-}
-
-loadData();
+});
 </script>
 </body>
 </html>
