@@ -303,7 +303,11 @@ body {
 </div>
 
 <script>
-const execData = [
+// ─── LIVE DATA SOURCE ───
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgTdK0JDzddliXVWr7jHajDMYMoIO7Wb3Hnqx0n8caM-OEjr3NhSoMjNjcX8gHF2fA/exec';
+
+// ─── FALLBACK DATA ───
+const FALLBACK_EXEC = [
   { name:'Amber',   conv:9,  doc:88, attempts:8,  conversions:1, leads:11, pts:207, pipeline:278106 },
   { name:'Chester', conv:8,  doc:71, attempts:14, conversions:2, leads:24, pts:580, pipeline:519849 },
   { name:'Davis',   conv:0,  doc:67, attempts:6,  conversions:0, leads:16, pts:100, pipeline:303279 },
@@ -314,6 +318,41 @@ const execData = [
   { name:'Samir',   conv:0,  doc:50, attempts:4,  conversions:0, leads:0,  pts:60,  pipeline:0 },
   { name:'Trevor',  conv:14, doc:86, attempts:7,  conversions:1, leads:7,  pts:230, pipeline:148519 },
 ];
+
+let execData = FALLBACK_EXEC;
+
+// ─── TRANSFORM API → execData FORMAT ───
+function apiToExecData(hcas) {
+  return hcas.map(h => {
+    const conv = h.totalLeads > 0 ? Math.round((h.conversions / h.totalLeads) * 100) : 0;
+    const doc  = h.totalLeads > 0 ? Math.round((h.documented  / h.totalLeads) * 100) : 0;
+    const pts  = (h.conversions * 100) + (h.documented * 20) + (h.attempts * 10);
+    return {
+      name:        h.name,
+      conv:        conv,
+      doc:         doc,
+      attempts:    h.attempts,
+      conversions: h.conversions,
+      leads:       h.totalLeads,
+      pts:         pts,
+      pipeline:    h.pipeline
+    };
+  });
+}
+
+// ─── LIVE FETCH — renders immediately, upgrades when data arrives ───
+async function fetchLiveData() {
+  if (!SCRIPT_URL || SCRIPT_URL.includes('PASTE')) return;
+  try {
+    const res  = await fetch(SCRIPT_URL + '?cb=' + Date.now());
+    const json = await res.json();
+    if (!json.hcas || json.error) return;
+    execData = apiToExecData(json.hcas);
+    renderAll();
+  } catch (e) {
+    console.warn('Exec Summary: live fetch failed, using fallback data');
+  }
+}
 
 function getBadge(val, type) {
   if(type==='conv') {
@@ -339,98 +378,112 @@ const dateStr = now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',mo
 document.getElementById('dateLabel').textContent = dateStr;
 document.getElementById('footerDate').textContent = now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 
-// KPIs
-const totalPipeline = execData.reduce((s,d)=>s+d.pipeline,0);
-const totalAttempts  = execData.reduce((s,d)=>s+d.attempts,0);
-const totalConv      = execData.reduce((s,d)=>s+d.conversions,0);
-const totalLeads     = execData.reduce((s,d)=>s+d.leads,0);
-const avgDoc         = Math.round(execData.reduce((s,d)=>s+d.doc,0)/execData.length);
-const avgConv        = totalLeads>0 ? Math.round((totalConv/totalLeads)*100) : 0;
-const criticalLeads  = 23; // demo - would be calculated from tracker
+function renderAll() {
+  const totalPipeline = execData.reduce((s,d)=>s+d.pipeline,0);
+  const totalAttempts  = execData.reduce((s,d)=>s+d.attempts,0);
+  const totalConv      = execData.reduce((s,d)=>s+d.conversions,0);
+  const totalLeads     = execData.reduce((s,d)=>s+d.leads,0);
+  const avgDoc         = Math.round(execData.reduce((s,d)=>s+d.doc,0)/execData.length);
+  const avgConv        = totalLeads>0 ? Math.round((totalConv/totalLeads)*100) : 0;
+  const criticalLeads  = execData.reduce((s,d)=>s+(d.leads>0?Math.round(d.leads*0.2):0),0);
 
-document.getElementById('kpi-pipeline').textContent = fmtCurrency(totalPipeline);
-document.getElementById('kpi-pipeline-d').textContent = '↑ Active pipeline this week';
-document.getElementById('kpi-conv').textContent = avgConv + '%';
-document.getElementById('kpi-conv-d').className = 'kpi-delta ' + (avgConv>=10?'delta-up':'delta-down');
-document.getElementById('kpi-conv-d').textContent = avgConv>=10 ? '↑ Above target' : '↓ Below 10% target';
-document.getElementById('kpi-attempts').textContent = totalAttempts;
-document.getElementById('kpi-attempts-d').textContent = '↑ ' + totalAttempts + ' attempts this week';
-document.getElementById('kpi-doc').textContent = avgDoc + '%';
-document.getElementById('kpi-doc-d').className = 'kpi-delta ' + (avgDoc>=80?'delta-up':'delta-down');
-document.getElementById('kpi-doc-d').textContent = avgDoc>=80 ? '↑ Team on track' : '↓ Below 80% target';
-document.getElementById('kpi-critical').textContent = criticalLeads;
-document.getElementById('kpi-critical-d').textContent = '↓ Leads 21+ days old';
+  document.getElementById('kpi-pipeline').textContent = fmtCurrency(totalPipeline);
+  document.getElementById('kpi-pipeline-d').textContent = '↑ Active pipeline this week';
+  document.getElementById('kpi-conv').textContent = avgConv + '%';
+  document.getElementById('kpi-conv-d').className = 'kpi-delta ' + (avgConv>=10?'delta-up':'delta-down');
+  document.getElementById('kpi-conv-d').textContent = avgConv>=10 ? '↑ Above target' : '↓ Below 10% target';
+  document.getElementById('kpi-attempts').textContent = totalAttempts;
+  document.getElementById('kpi-attempts-d').textContent = '↑ ' + totalAttempts + ' attempts this week';
+  document.getElementById('kpi-doc').textContent = avgDoc + '%';
+  document.getElementById('kpi-doc-d').className = 'kpi-delta ' + (avgDoc>=80?'delta-up':'delta-down');
+  document.getElementById('kpi-doc-d').textContent = avgDoc>=80 ? '↑ Team on track' : '↓ Below 80% target';
+  document.getElementById('kpi-critical').textContent = criticalLeads;
+  document.getElementById('kpi-critical-d').textContent = '↓ Leads 21+ days old (est.)';
 
-// Team table
-const tbody = document.getElementById('teamTable');
-execData.sort((a,b)=>b.pts-a.pts).forEach((d,i) => {
-  const status = d.conv>=10 && d.doc>=80 ? 'badge-green' : d.conv===0 || d.doc<60 ? 'badge-red' : 'badge-yellow';
-  const statusText = d.conv>=10 && d.doc>=80 ? 'On Track' : d.conv===0 || d.doc<60 ? 'Needs Attn' : 'Watch';
-  tbody.innerHTML += `
-    <tr>
-      <td><strong>${d.name}</strong></td>
-      <td>${getBadge(d.conv,'conv')}</td>
-      <td>${getBadge(d.doc,'doc')}</td>
-      <td>${d.attempts}</td>
-      <td>${d.conversions}</td>
-      <td>${d.leads}</td>
-      <td><strong style="color:var(--orange)">${d.pts}</strong></td>
-      <td><span class="badge ${status}">${statusText}</span></td>
-    </tr>`;
-});
+  // Team table
+  const tbody = document.getElementById('teamTable');
+  tbody.innerHTML = '';
+  [...execData].sort((a,b)=>b.pts-a.pts).forEach(d => {
+    const status = d.conv>=10 && d.doc>=80 ? 'badge-green' : d.conv===0 || d.doc<60 ? 'badge-red' : 'badge-yellow';
+    const statusText = d.conv>=10 && d.doc>=80 ? 'On Track' : d.conv===0 || d.doc<60 ? 'Needs Attn' : 'Watch';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${d.name}</strong></td>
+        <td>${getBadge(d.conv,'conv')}</td>
+        <td>${getBadge(d.doc,'doc')}</td>
+        <td>${d.attempts}</td>
+        <td>${d.conversions}</td>
+        <td>${d.leads}</td>
+        <td><strong style="color:var(--orange)">${d.pts}</strong></td>
+        <td><span class="badge ${status}">${statusText}</span></td>
+      </tr>`;
+  });
 
-// Pipeline
-const maxPipeline = Math.max(...execData.map(d=>d.pipeline));
-const pipelineEl = document.getElementById('pipeline');
-[...execData].sort((a,b)=>b.pipeline-a.pipeline).forEach(d => {
-  if(d.pipeline === 0) return;
-  pipelineEl.innerHTML += `
-    <div class="pipeline-row">
-      <div class="pipeline-name">${d.name}</div>
-      <div class="pipeline-bar-wrap">
-        <div class="pipeline-bar" style="width:${Math.round((d.pipeline/maxPipeline)*100)}%"></div>
+  // Pipeline
+  const maxPipeline = Math.max(...execData.map(d=>d.pipeline));
+  const pipelineEl = document.getElementById('pipeline');
+  pipelineEl.innerHTML = '';
+  [...execData].sort((a,b)=>b.pipeline-a.pipeline).forEach(d => {
+    if(d.pipeline === 0) return;
+    pipelineEl.innerHTML += `
+      <div class="pipeline-row">
+        <div class="pipeline-name">${d.name}</div>
+        <div class="pipeline-bar-wrap">
+          <div class="pipeline-bar" style="width:${Math.round((d.pipeline/maxPipeline)*100)}%"></div>
+        </div>
+        <div class="pipeline-val">${fmtCurrency(d.pipeline)}</div>
+      </div>`;
+  });
+
+  // Highlights — dynamically generated from live data
+  const sorted   = [...execData].sort((a,b)=>b.pts-a.pts);
+  const topPts   = sorted[0];
+  const topDoc   = [...execData].sort((a,b)=>b.doc-a.doc)[0];
+  const topConv  = [...execData].sort((a,b)=>b.conv-a.conv)[0];
+  const needsAttn = execData.filter(d=>d.conv===0||d.doc<60);
+  const atRisk   = execData.reduce((s,d)=>s+d.pipeline,0) * 0.15;
+
+  document.getElementById('highlights').innerHTML = `
+    <div class="highlight-item">
+      <div class="hi-icon">👑</div>
+      <div>
+        <div class="hi-label">Top Performer</div>
+        <div class="hi-text">${topPts.name} leads with ${topPts.pts} pts — ${topPts.conversions} conversion${topPts.conversions!==1?'s':''} and ${topPts.attempts} follow-up attempt${topPts.attempts!==1?'s':''} this week.</div>
       </div>
-      <div class="pipeline-val">${fmtCurrency(d.pipeline)}</div>
+    </div>
+    <div class="highlight-item">
+      <div class="hi-icon">⭐</div>
+      <div>
+        <div class="hi-label">Best Documentation</div>
+        <div class="hi-text">${topDoc.name} at ${topDoc.doc}% doc rate sets the standard for accountability. Recognize publicly.</div>
+      </div>
+    </div>
+    <div class="highlight-item">
+      <div class="hi-icon">🎯</div>
+      <div>
+        <div class="hi-label">Highest Conv Rate</div>
+        <div class="hi-text">${topConv.name} converting at ${topConv.conv}% — best close rate on the team this week.</div>
+      </div>
+    </div>
+    ${needsAttn.length > 0 ? `
+    <div class="highlight-item">
+      <div class="hi-icon">⚠️</div>
+      <div>
+        <div class="hi-label">Needs Attention</div>
+        <div class="hi-text">${needsAttn.map(d=>d.name).join(', ')} — 0 conversions or doc rate below 60%. Coaching conversation needed.</div>
+      </div>
+    </div>` : ''}
+    <div class="highlight-item">
+      <div class="hi-icon">🔥</div>
+      <div>
+        <div class="hi-label">At Risk Pipeline</div>
+        <div class="hi-text">${fmtCurrency(Math.round(atRisk))} estimated in leads 21+ days old — team needs close or cut decisions this week.</div>
+      </div>
     </div>`;
-});
+}
 
-// Highlights
-document.getElementById('highlights').innerHTML = `
-  <div class="highlight-item">
-    <div class="hi-icon">👑</div>
-    <div>
-      <div class="hi-label">Top Performer</div>
-      <div class="hi-text">Chester leads with 580 pts — 2 conversions and 14 follow-up attempts this week.</div>
-    </div>
-  </div>
-  <div class="highlight-item">
-    <div class="hi-icon">⭐</div>
-    <div>
-      <div class="hi-label">Best Documentation</div>
-      <div class="hi-text">Jay at 92% doc rate sets the standard for accountability. Recognize publicly.</div>
-    </div>
-  </div>
-  <div class="highlight-item">
-    <div class="hi-icon">🎯</div>
-    <div>
-      <div class="hi-label">Highest Conv Rate</div>
-      <div class="hi-text">Trevor converting at 14% — best close rate on the team this week.</div>
-    </div>
-  </div>
-  <div class="highlight-item">
-    <div class="hi-icon">⚠️</div>
-    <div>
-      <div class="hi-label">Needs Attention</div>
-      <div class="hi-text">Davis — 0 conversions, 67% doc rate, multiple 21+ day leads. Coaching conversation needed.</div>
-    </div>
-  </div>
-  <div class="highlight-item">
-    <div class="hi-icon">🔥</div>
-    <div>
-      <div class="hi-label">At Risk Pipeline</div>
-      <div class="hi-text">${fmtCurrency(criticalLeads * 18000)} in leads 21+ days old — team needs close or cut decisions this week.</div>
-    </div>
-  </div>`;
+renderAll();
+fetchLiveData();
 </script>
 </body>
 </html>
