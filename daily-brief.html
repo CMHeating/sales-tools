@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM Heating — HCA 1-on-1</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f1f5f9;
+  --white: #ffffff;
+  --dark: #0f172a;
+  --surface: #1e293b;
+  --orange: #f97316;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --green: #16a34a;
+  --yellow: #d97706;
+  --red: #dc2626;
+  --blue: #0891b2;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Barlow', sans-serif;
+  background: var(--bg);
+  color: var(--dark);
+  padding: 32px;
+  font-size: 14px;
+}
+.page-header {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.page-header img { height: 48px; }
+.header-center { text-align: center; }
+.page-header-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.page-header-date {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.print-btn {
+  padding: 10px 20px;
+  background: var(--orange);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* SELECTOR BAR */
+.selector-bar {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 20px 28px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.selector-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--dark);
+  white-space: nowrap;
+}
+.hca-select {
+  padding: 10px 16px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  border: 2px solid var(--orange);
+  border-radius: 6px;
+  background: white;
+  color: var(--dark);
+  cursor: pointer;
+  min-width: 220px;
+  letter-spacing: 0.5px;
+}
+.hca-select:focus { outline: none; }
+.selector-hint {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* SINGLE CARD — full width */
+.card-container {
+  max-width: 700px;
+}
+.hca-brief {
+  background: var(--white);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.brief-header {
+  background: var(--surface);
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brief-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: white;
+}
+.brief-pts {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--orange);
+}
+.brief-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+.brief-stat {
+  padding: 16px;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+.brief-stat:last-child { border-right: none; }
+.stat-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+.stat-lbl {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.green { color: var(--green); }
+.yellow { color: var(--yellow); }
+.red { color: var(--red); }
+.blue { color: var(--blue); }
+.brief-leads {
+  padding: 16px 24px;
+}
+.leads-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.lead-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+.lead-row:last-child { border-bottom: none; }
+.urgency-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-green { background: var(--green); }
+.dot-yellow { background: var(--yellow); }
+.dot-orange { background: #f97316; }
+.dot-red { background: var(--red); }
+.lead-name {
+  flex: 1;
+  font-weight: 500;
+  font-size: 14px;
+}
+.lead-days {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lead-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  white-space: nowrap;
+}
+.brief-talking {
+  background: #f8fafc;
+  border-top: 1px solid var(--border);
+  padding: 16px 24px;
+}
+.talking-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.talking-point {
+  font-size: 13px;
+  color: var(--dark);
+  line-height: 1.6;
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+.talking-point::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--orange);
+  font-weight: 700;
+}
+.empty-state {
+  text-align: center;
+  padding: 60px 40px;
+  color: var(--muted);
+}
+.empty-state h2 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--dark);
+}
+@media print {
+  body { padding: 16px; background: white; }
+  .print-btn, .selector-bar { display: none; }
+  .card-container { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div><img src="data:image/webp;base64,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" alt="CM Heating"></div>
+  <div class="header-center">
+    <div class="page-header-title">HCA 1-on-1</div>
+    <div class="page-header-date" id="dateLabel"></div>
+  </div>
+  <div class="header-actions">
+    <button class="print-btn" onclick="window.print()">⎙ Print</button>
+  </div>
+</div>
+
+<div class="selector-bar">
+  <div class="selector-label">Select HCA:</div>
+  <select class="hca-select" id="hcaSelect" onchange="showHCA(this.value)">
+    <option value="">— Choose HCA —</option>
+    <option value="Amber">Amber Maddalena</option>
+    <option value="Chester">Chester Granard</option>
+    <option value="Davis">Davis Diosdado</option>
+    <option value="Jay">Jay (Javierre Milo)</option>
+    <option value="Joe">Joe Chounramany</option>
+    <option value="Joseph">Joseph Ruble</option>
+    <option value="Kyle">Kyle McAlister</option>
+    <option value="Samir">Samir Khoury</option>
+    <option value="Trevor">Trevor Bohm</option>
+  </select>
+  <div class="selector-hint" id="hint">Select an HCA to load their 1-on-1 brief</div>
+</div>
+
+<div class="card-container" id="cardContainer">
+  <div class="empty-state">
+    <h2>Ready when you are</h2>
+    <p>Select an HCA from the dropdown above to pull up their brief.</p>
+  </div>
+</div>
+
+<script>
+const briefData = {
+  Amber: { attempts:8, documented:7, conversions:1, totalLeads:11, pts:207,
+    leads:[
+      {name:'Han Lin',days:25,amount:'$24,750',urgency:'red'},
+      {name:'Adam Ismail',days:10,amount:'$25,297',urgency:'orange'},
+      {name:'Sri Hari Ravindran',days:5,amount:'$23,771',urgency:'yellow'},
+      {name:'Matt Larrick',days:3,amount:'$18,633',urgency:'green'},
+    ],
+    talking:[
+      'Han Lin is 25 days old — what is the real objection?',
+      'Documentation rate 88% — strong, keep it up',
+      '1 conversion this week — what moved them?',
+    ]
+  },
+  Chester: { attempts:14, documented:10, conversions:2, totalLeads:24, pts:580,
+    leads:[
+      {name:'Vinit Ogale',days:75,amount:'$23,187',urgency:'red'},
+      {name:'Shawn Pate',days:86,amount:'$27,100',urgency:'red'},
+      {name:'Bill & Chris Olson',days:37,amount:'$18,808',urgency:'red'},
+      {name:'Rex Wiegand',days:28,amount:'$20,971',urgency:'red'},
+    ],
+    talking:[
+      '4 leads 28+ days — need a close or cut conversation',
+      'Highest attempts on team — acknowledge the effort',
+      'Doc rate 71% — gap between attempts and docs',
+    ]
+  },
+  Davis: { attempts:6, documented:4, conversions:0, totalLeads:16, pts:100,
+    leads:[
+      {name:'Andrew Sale',days:29,amount:'$20,316',urgency:'red'},
+      {name:'Asrat Damena',days:26,amount:'$17,068',urgency:'red'},
+      {name:'Craig Bernhard',days:22,amount:'$24,465',urgency:'red'},
+      {name:'Jonas Malm',days:22,amount:'$12,924',urgency:'red'},
+    ],
+    talking:[
+      '0 conversions — explore what objections keep coming up',
+      'Doc rate 67% — 2 attempts not logged',
+      'Several critical leads — needs a reset strategy call',
+    ]
+  },
+  Jay: { attempts:12, documented:11, conversions:2, totalLeads:18, pts:560,
+    leads:[
+      {name:'Ethan Hemmati',days:26,amount:'$11,757',urgency:'red'},
+      {name:'Tom Davis',days:27,amount:'$21,070',urgency:'red'},
+      {name:'Cherie & Tony Finazzo',days:21,amount:'$17,422',urgency:'red'},
+      {name:'Min & Patrick Sue',days:21,amount:'$21,017',urgency:'red'},
+    ],
+    talking:[
+      'Best doc rate on team at 92% — highlight for the group',
+      '2 conversions matches Chester for team lead',
+      'Several older leads — are these dead or still alive?',
+    ]
+  },
+  Joe: { attempts:5, documented:3, conversions:1, totalLeads:10, pts:180,
+    leads:[
+      {name:'Wayne Ho',days:24,amount:'$26,001',urgency:'red'},
+      {name:'Payton Parkerson',days:17,amount:'$15,799',urgency:'red'},
+      {name:'Michael Klein',days:17,amount:'$13,845',urgency:'red'},
+      {name:'Mykenzie Hering',days:12,amount:'$24,878',urgency:'orange'},
+    ],
+    talking:[
+      'Doc rate 60% — 2 attempts not documented',
+      'Wayne Ho at $26K — 24 days, what is the status?',
+      '1 conversion — what was the winning factor?',
+    ]
+  },
+  Joseph: { attempts:9, documented:8, conversions:1, totalLeads:13, pts:290,
+    leads:[
+      {name:'Vivek Kumar',days:26,amount:'$19,704',urgency:'red'},
+      {name:'Angela Pfleiderer',days:26,amount:'$43,466',urgency:'red'},
+      {name:'Rebecca Carbajal',days:24,amount:'$26,523',urgency:'red'},
+      {name:'Teresa Robertson',days:24,amount:'$18,093',urgency:'red'},
+    ],
+    talking:[
+      'Angela Pfleiderer at $43K — highest single value, what is the status?',
+      'Doc rate 89% — excellent accountability',
+      '4 critical leads need resolution this week',
+    ]
+  },
+  Kyle: { attempts:11, documented:9, conversions:1, totalLeads:16, pts:300,
+    leads:[
+      {name:'David Delgado',days:53,amount:'$15,792',urgency:'red'},
+      {name:'Nancy Lam',days:53,amount:'$14,931',urgency:'red'},
+      {name:'Anita Farris',days:36,amount:'$21,614',urgency:'red'},
+      {name:'Marjorie Forbes',days:37,amount:'$7,178',urgency:'red'},
+    ],
+    talking:[
+      'David Delgado & Nancy Lam at 53 days — close or cut',
+      'Doc rate 82% — solid, 2 more entries would be perfect',
+      'Most leads on team — review pipeline size vs capacity',
+    ]
+  },
+  Samir: { attempts:4, documented:2, conversions:0, totalLeads:0, pts:60,
+    leads:[],
+    talking:[
+      'No leads in current unsold report — new to pipeline',
+      'Set expectations for logging from day one',
+      'Check in on ServiceTitan activity this week',
+    ]
+  },
+  Trevor: { attempts:7, documented:6, conversions:1, totalLeads:7, pts:230,
+    leads:[
+      {name:'Corey Hansen',days:29,amount:'$16,389',urgency:'red'},
+      {name:'Kushal Kewlani',days:24,amount:'$18,017',urgency:'red'},
+      {name:'Aaron Schlund',days:11,amount:'$26,798',urgency:'orange'},
+      {name:'Kevin & Diana Boyle',days:10,amount:'$23,054',urgency:'orange'},
+    ],
+    talking:[
+      'Doc rate 86% — strong habits forming',
+      'Corey Hansen 29 days — needs a final push or close',
+      'Kevin & Diana Boyle at $23K — in hot window, push now',
+    ]
+  },
+};
+
+function convRate(d){ return d.totalLeads>0 ? Math.round((d.conversions/d.totalLeads)*100) : 0; }
+function docRate(d) { return d.attempts>0   ? Math.round((d.documented/d.attempts)*100)   : 0; }
+function getColor(val, type) {
+  if(type==='conv') return val>=10?'green':val>0?'yellow':'red';
+  if(type==='doc')  return val>=80?'green':val>=60?'yellow':'red';
+  if(type==='att')  return val>=8?'green':val>=4?'yellow':'red';
+  return 'blue';
+}
+
+function showHCA(name) {
+  const container = document.getElementById('cardContainer');
+  const hint = document.getElementById('hint');
+
+  if(!name) {
+    container.innerHTML = `<div class="empty-state"><h2>Ready when you are</h2><p>Select an HCA from the dropdown above to pull up their brief.</p></div>`;
+    hint.textContent = 'Select an HCA to load their 1-on-1 brief';
+    return;
+  }
+
+  const d = briefData[name];
+  const conv = convRate(d);
+  const doc  = docRate(d);
+  hint.textContent = `Showing brief for ${name} — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}`;
+
+  container.innerHTML = `
+    <div class="hca-brief">
+      <div class="brief-header">
+        <div class="brief-name">${name}</div>
+        <div class="brief-pts">${d.pts} pts</div>
+      </div>
+      <div class="brief-stats">
+        <div class="brief-stat">
+          <div class="stat-val ${getColor(conv,'conv')}">${conv}%</div>
+          <div class="stat-lbl">Conv Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getColor(doc,'doc')}">${doc}%</div>
+          <div class="stat-lbl">Doc Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getColor(d.attempts,'att')}">${d.attempts}</div>
+          <div class="stat-lbl">Attempts</div>
+        </div>
+      </div>
+      ${d.leads.length > 0 ? `
+      <div class="brief-leads">
+        <div class="leads-title">Oldest Open Leads</div>
+        ${d.leads.map(l=>`
+          <div class="lead-row">
+            <div class="urgency-dot dot-${l.urgency}"></div>
+            <div class="lead-name">${l.name}</div>
+            <div class="lead-days">${l.days}d</div>
+            <div class="lead-amount">${l.amount}</div>
+          </div>`).join('')}
+      </div>` : `<div class="brief-leads"><div class="leads-title">No open leads this week</div></div>`}
+      <div class="brief-talking">
+        <div class="talking-title">Talking Points</div>
+        ${d.talking.map(t=>`<div class="talking-point">${t}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+document.getElementById('dateLabel').textContent =
+  new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+</script>
+</body>
+</html>
