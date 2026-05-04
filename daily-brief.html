@@ -324,7 +324,7 @@ body {
 
 <script>
 const briefData = {
-  Amber:   { attempts:8,  documented:7,  conversions:1, totalLeads:11, pts:207,
+  Amber:   { attempts:8,  documented:7,  conversions:1, totalLeads:11,
     leads:[
       {name:'Han Lin',days:25,amount:'$24,750',urgency:'red'},
       {name:'Adam Ismail',days:10,amount:'$25,297',urgency:'orange'},
@@ -337,7 +337,7 @@ const briefData = {
       '1 conversion this week — what moved them?',
     ]
   },
-  Chester: { attempts:14, documented:10, conversions:2, totalLeads:24, pts:580,
+  Chester: { attempts:14, documented:10, conversions:2, totalLeads:24,
     leads:[
       {name:'Vinit Ogale',days:75,amount:'$23,187',urgency:'red'},
       {name:'Shawn Pate',days:86,amount:'$27,100',urgency:'red'},
@@ -350,7 +350,7 @@ const briefData = {
       'Doc rate 71% — gap between attempts and docs',
     ]
   },
-  Davis:   { attempts:6,  documented:4,  conversions:0, totalLeads:16, pts:100,
+  Davis:   { attempts:6,  documented:4,  conversions:0, totalLeads:16,
     leads:[
       {name:'Andrew Sale',days:29,amount:'$20,316',urgency:'red'},
       {name:'Asrat Damena',days:26,amount:'$17,068',urgency:'red'},
@@ -363,7 +363,7 @@ const briefData = {
       'Several critical leads — needs a reset strategy call',
     ]
   },
-  Jay:     { attempts:12, documented:11, conversions:2, totalLeads:18, pts:560,
+  Jay:     { attempts:12, documented:11, conversions:2, totalLeads:18,
     leads:[
       {name:'Ethan Hemmati',days:26,amount:'$11,757',urgency:'red'},
       {name:'Tom Davis',days:27,amount:'$21,070',urgency:'red'},
@@ -376,7 +376,7 @@ const briefData = {
       'Several older leads — are these dead or still alive?',
     ]
   },
-  Joe:     { attempts:5,  documented:3,  conversions:1, totalLeads:10, pts:180,
+  Joe:     { attempts:5,  documented:3,  conversions:1, totalLeads:10,
     leads:[
       {name:'Wayne Ho',days:24,amount:'$26,001',urgency:'red'},
       {name:'Payton Parkerson',days:17,amount:'$15,799',urgency:'red'},
@@ -389,7 +389,7 @@ const briefData = {
       '1 conversion — what was the winning factor?',
     ]
   },
-  Joseph:  { attempts:9,  documented:8,  conversions:1, totalLeads:13, pts:290,
+  Joseph:  { attempts:9,  documented:8,  conversions:1, totalLeads:13,
     leads:[
       {name:'Vivek Kumar',days:26,amount:'$19,704',urgency:'red'},
       {name:'Angela Pfleiderer',days:26,amount:'$43,466',urgency:'red'},
@@ -402,7 +402,7 @@ const briefData = {
       '4 critical leads need resolution this week',
     ]
   },
-  Kyle:    { attempts:11, documented:9,  conversions:1, totalLeads:16, pts:300,
+  Kyle:    { attempts:11, documented:9,  conversions:1, totalLeads:16,
     leads:[
       {name:'David Delgado',days:53,amount:'$15,792',urgency:'red'},
       {name:'Nancy Lam',days:53,amount:'$14,931',urgency:'red'},
@@ -415,7 +415,7 @@ const briefData = {
       'Most leads on team — review pipeline size vs capacity',
     ]
   },
-  Samir:   { attempts:4,  documented:2,  conversions:0, totalLeads:0,  pts:60,
+  Samir:   { attempts:4,  documented:2,  conversions:0, totalLeads:0,
     leads:[],
     talking:[
       'No leads in current unsold report — new to pipeline',
@@ -423,7 +423,7 @@ const briefData = {
       'Check in on ServiceTitan activity this week',
     ]
   },
-  Trevor:  { attempts:7,  documented:6,  conversions:1, totalLeads:7, pts:230,
+  Trevor:  { attempts:7,  documented:6,  conversions:1, totalLeads:7,
     leads:[
       {name:'Corey Hansen',days:29,amount:'$16,389',urgency:'red'},
       {name:'Kushal Kewlani',days:24,amount:'$18,017',urgency:'red'},
@@ -438,6 +438,9 @@ const briefData = {
   },
 };
 
+function calcPts(d) {
+  return (d.conversions * 100) + (d.documented * 20) + (d.attempts * 10);
+}
 function convRate(d){ return d.totalLeads>0 ? Math.round((d.conversions/d.totalLeads)*100) : 0; }
 function docRate(d) { return d.attempts>0   ? Math.round((d.documented/d.attempts)*100)   : 0; }
 function getDotClass(urgency) { return `dot-${urgency}`; }
@@ -458,13 +461,14 @@ const cardsGrid = document.getElementById('cardsGrid');
 Object.entries(briefData).forEach(([name, d]) => {
   const conv = convRate(d);
   const doc = docRate(d);
+  const pts = calcPts(d);
   const card = document.createElement('div');
   card.className = 'hca-brief';
   card.id = `card-${name}`;
   card.innerHTML = `
     <div class="brief-header">
       <div class="brief-name">${name}</div>
-      <div class="brief-pts">${d.pts} pts</div>
+      <div class="brief-pts">${pts} pts</div>
     </div>
     <div class="brief-stats">
       <div class="brief-stat">
