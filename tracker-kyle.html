@@ -57,12 +57,25 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
 .st-reminder.visible{display:block;}
 .st-reminder-title{font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;}
 .copy-btn{width:100%;padding:8px 10px;background:#d97706;color:white;border:none;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
-.copy-btn:hover{background:#b45309;}
-.copy-btn.copied{background:#16a34a;cursor:default;}
+.copy-btn:hover{background:#b45309;}.copy-btn.copied{background:#16a34a;cursor:default;}
 .copy-note-preview{font-size:10px;color:#92400e;margin-top:5px;line-height:1.4;word-break:break-word;font-style:italic;}
+.prior-notes-section{border-top:1px solid var(--border);}
+.prior-notes-toggle{width:100%;padding:10px 20px;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-align:left;transition:background .15s;}
+.prior-notes-toggle:hover{background:#f8fafc;}
+.prior-notes-toggle .toggle-label{display:flex;align-items:center;gap:6px;}
+.prior-notes-toggle .note-count{display:inline-block;background:var(--surface);color:white;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;}
+.prior-notes-toggle .chevron{font-size:10px;transition:transform .2s;}
+.prior-notes-toggle.open .chevron{transform:rotate(180deg);}
+.prior-notes-body{display:none;padding:12px 20px 16px;background:#f8fafc;}
+.prior-notes-body.open{display:block;}
+.prior-note-entry{padding:8px 12px;background:white;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;}
+.prior-note-entry:last-child{margin-bottom:0;}
+.prior-note-ts{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.prior-note-text{font-size:12px;color:var(--dark);line-height:1.5;}
+.no-notes{font-size:12px;color:var(--muted);font-style:italic;}
 .empty-state{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:48px;text-align:center;color:var(--muted);}
 .footer{text-align:center;font-size:12px;color:var(--muted);margin-top:28px;padding-top:16px;border-top:1px solid var(--border);}
-@media print{body{padding:16px;background:white;}.print-btn,.save-btn,.filters,.st-reminder{display:none;}}
+@media print{body{padding:16px;background:white;}.print-btn,.save-btn,.filters,.st-reminder{display:none;}.prior-notes-body{display:block!important;}}
 </style>
 </head>
 <body>
@@ -780,49 +793,87 @@ function renderFilters(){document.getElementById('filters').innerHTML=[{key:'all
 function setFilter(key){activeFilter=key;renderFilters();document.querySelectorAll('.lead-card').forEach(c=>c.classList.toggle('hidden',key!=='all'&&c.dataset.urg!==key));}
 renderFilters();
 const listEl=document.getElementById('leadsList');
-if(leads.length===0){listEl.innerHTML='<div class="empty-state"><div style="font-size:48px">✅</div><div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;margin-top:12px">No Open Leads</div><p style="margin-top:8px;font-size:13px">You have no open leads this week.</p></div>';}
-else{leads.forEach((lead,i)=>{const urg=getUrgency(lead.daysOld);const card=document.createElement('div');card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;
-card.innerHTML=`
-  <div class="lead-header">
-    <div class="urgency-bar ${urg.cls}"></div>
-    <div class="lead-info">
-      <div class="lead-name">${lead.customer}</div>
-      <div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div>
-    </div>
-    <div class="lead-stats">
-      <div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div>
-      <div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div>
-      <div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div>
-    </div>
-  </div>
-  <div class="lead-body">
-    <div class="status-group">
-      <div class="field-label">Update Status</div>
-      <select class="status-select" id="status-${i}">
-        <option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option>
-        <option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option>
-        <option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option>
-        <option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option>
-        <option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option>
-      </select>
-    </div>
-    <div class="notes-group">
-      <div class="field-label">Follow-Up Notes (required to save)</div>
-      <textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea>
-    </div>
-    <div class="save-group">
-      <button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button>
-      <div class="save-feedback" id="saveFeedback-${i}"></div>
-      <div class="st-reminder" id="stReminder-${i}">
-        <div class="st-reminder-title">📋 Paste this into ServiceTitan:</div>
-        <button class="copy-btn" id="copyBtn-${i}" onclick="copyNote(${i})">📋 Copy Note</button>
-        <div class="copy-note-preview" id="notePreview-${i}"></div>
-      </div>
-    </div>
-  </div>`;
-listEl.appendChild(card);});}
-
 const savedNotes={};
+const sessionNotes={};
+
+function togglePriorNotes(i){
+  const toggle=document.getElementById(`pnToggle-${i}`);
+  const body=document.getElementById(`pnBody-${i}`);
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+function buildPriorNotesHTML(lead, i){
+  const notes=lead.notes||'';
+  const lines=notes.split('\n').filter(l=>l.trim());
+  const count=lines.length;
+  const entriesHTML=count>0
+    ? lines.map(line=>{
+        const match=line.match(/^\[(.+?)\]\s*(.*)$/);
+        const ts=match?match[1]:'';
+        const txt=match?match[2]:line;
+        return `<div class="prior-note-entry"><div class="prior-note-ts">${ts}</div><div class="prior-note-text">${txt}</div></div>`;
+      }).join('')
+    : '<div class="no-notes">No prior notes logged yet.</div>';
+  return `
+    <div class="prior-notes-section">
+      <button class="prior-notes-toggle" id="pnToggle-${i}" onclick="togglePriorNotes(${i})">
+        <span class="toggle-label">Prior Notes <span class="note-count">${count}</span></span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="prior-notes-body" id="pnBody-${i}">${entriesHTML}</div>
+    </div>`;
+}
+
+if(leads.length===0){
+  listEl.innerHTML='<div class="empty-state"><div style="font-size:48px">✅</div><div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;margin-top:12px">No Open Leads</div><p style="margin-top:8px;font-size:13px">You have no open leads this week.</p></div>';
+}else{
+  leads.forEach((lead,i)=>{
+    const urg=getUrgency(lead.daysOld);
+    const card=document.createElement('div');
+    card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;
+    card.innerHTML=`
+      <div class="lead-header">
+        <div class="urgency-bar ${urg.cls}"></div>
+        <div class="lead-info">
+          <div class="lead-name">${lead.customer}</div>
+          <div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div>
+        </div>
+        <div class="lead-stats">
+          <div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div>
+          <div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div>
+          <div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div>
+        </div>
+      </div>
+      <div class="lead-body">
+        <div class="status-group">
+          <div class="field-label">Update Status</div>
+          <select class="status-select" id="status-${i}">
+            <option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option>
+            <option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option>
+            <option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option>
+            <option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option>
+            <option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option>
+          </select>
+        </div>
+        <div class="notes-group">
+          <div class="field-label">Follow-Up Notes (required to save)</div>
+          <textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea>
+        </div>
+        <div class="save-group">
+          <button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button>
+          <div class="save-feedback" id="saveFeedback-${i}"></div>
+          <div class="st-reminder" id="stReminder-${i}">
+            <div class="st-reminder-title">📋 Paste into ServiceTitan:</div>
+            <button class="copy-btn" id="copyBtn-${i}" onclick="copyNote(${i})">📋 Copy Note</button>
+            <div class="copy-note-preview" id="notePreview-${i}"></div>
+          </div>
+        </div>
+      </div>
+      ${buildPriorNotesHTML(lead,i)}`;
+    listEl.appendChild(card);
+  });
+}
 
 function logFollowUp(i){
   const lead=leads[i];
@@ -833,50 +884,44 @@ function logFollowUp(i){
   const badge=document.getElementById(`badge-${i}`);
   const reminder=document.getElementById(`stReminder-${i}`);
   const preview=document.getElementById(`notePreview-${i}`);
-
   if(!notes){feedback.textContent='Add a note before saving.';feedback.className='save-feedback err';return;}
-
-  btn.disabled=true;btn.textContent='Saving...';
-  feedback.textContent='';feedback.className='save-feedback';
-
+  btn.disabled=true;btn.textContent='Saving...';feedback.textContent='';feedback.className='save-feedback';
   const ts=new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
   const stNote=`[${ts}] Status: ${status} | ${notes}`;
   savedNotes[i]=stNote;
-
   fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({hca:HCA_NAME,customer:lead.customer,status,notes,timestamp:ts,daysOld:lead.daysOld,estimate:lead.estimate})})
   .then(()=>{
-    btn.textContent='Logged ✓';
-    btn.className='save-btn success';
-    feedback.textContent='Saved '+ts;
-    feedback.className='save-feedback ok';
+    btn.textContent='Logged ✓';btn.className='save-btn success';
+    feedback.textContent='Saved '+ts;feedback.className='save-feedback ok';
     document.getElementById(`notes-${i}`).value='';
-    badge.textContent=status;
-    badge.className=`status-badge badge-${status}`;
+    badge.textContent=status;badge.className=`status-badge badge-${status}`;
     document.getElementById(`card-${i}`).classList.add('saved');
-    preview.textContent=stNote;
-    reminder.classList.add('visible');
+    preview.textContent=stNote;reminder.classList.add('visible');
+    // Add new note to prior notes section immediately
+    const body=document.getElementById(`pnBody-${i}`);
+    const toggle=document.getElementById(`pnToggle-${i}`);
+    const noNotes=body.querySelector('.no-notes');
+    if(noNotes)noNotes.remove();
+    const entry=document.createElement('div');
+    entry.className='prior-note-entry';
+    entry.innerHTML=`<div class="prior-note-ts">${ts}</div><div class="prior-note-text">Status: ${status} | ${notes}</div>`;
+    body.insertBefore(entry,body.firstChild);
+    // Update count
+    const countEl=toggle.querySelector('.note-count');
+    countEl.textContent=parseInt(countEl.textContent||0)+1;
+    // Auto-open the prior notes to show the new entry
+    if(!body.classList.contains('open')){toggle.classList.add('open');body.classList.add('open');}
   })
-  .catch(()=>{
-    btn.disabled=false;btn.textContent='Log Follow-Up';
-    feedback.textContent='Error — try again.';feedback.className='save-feedback err';
-  });
+  .catch(()=>{btn.disabled=false;btn.textContent='Log Follow-Up';feedback.textContent='Error — try again.';feedback.className='save-feedback err';});
 }
 
 function copyNote(i){
   const copyBtn=document.getElementById(`copyBtn-${i}`);
   const note=savedNotes[i]||'';
   if(!note)return;
-  navigator.clipboard.writeText(note).then(()=>{
-    copyBtn.textContent='✓ Copied!';
-    copyBtn.className='copy-btn copied';
-  }).catch(()=>{
-    const ta=document.createElement('textarea');
-    ta.value=note;document.body.appendChild(ta);ta.select();
-    document.execCommand('copy');document.body.removeChild(ta);
-    copyBtn.textContent='✓ Copied!';
-    copyBtn.className='copy-btn copied';
-  });
+  navigator.clipboard.writeText(note).then(()=>{copyBtn.textContent='✓ Copied!';copyBtn.className='copy-btn copied';})
+  .catch(()=>{const ta=document.createElement('textarea');ta.value=note;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);copyBtn.textContent='✓ Copied!';copyBtn.className='copy-btn copied';});
 }
 </script>
 </body>
