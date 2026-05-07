@@ -6,321 +6,59 @@
 <title>CM Heating — Chester Granard — Follow-Up Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #f1f5f9;
-  --white: #ffffff;
-  --dark: #0f172a;
-  --surface: #1e293b;
-  --orange: #f97316;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --green: #16a34a;
-  --yellow: #d97706;
-  --red: #dc2626;
-  --blue: #0891b2;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: 'Barlow', sans-serif;
-  background: var(--bg);
-  color: var(--dark);
-  padding: 32px;
-  font-size: 14px;
-  line-height: 1.6;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-.page-header {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 24px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-.page-header img { height: 48px; }
-.header-center { text-align: center; }
-.header-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 26px;
-  font-weight: 900;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  line-height: 1;
-}
-.header-sub {
-  font-size: 13px;
-  color: #94a3b8;
-  font-weight: 500;
-  margin-top: 4px;
-}
-.print-btn {
-  padding: 10px 20px;
-  background: var(--orange);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.summary-bar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.summary-tile {
-  background: var(--white);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  padding: 16px;
-  text-align: center;
-}
-.tile-val {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 32px;
-  font-weight: 900;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-.tile-lbl {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.filter-btn {
-  padding: 8px 16px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--white);
-  font-family: 'Barlow', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.filter-btn.active {
-  background: var(--surface);
-  color: white;
-  border-color: var(--surface);
-}
-.filter-btn .count {
-  display: inline-block;
-  background: var(--bg);
-  color: var(--dark);
-  border-radius: 10px;
-  padding: 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  margin-left: 4px;
-}
-.filter-btn.active .count {
-  background: rgba(255,255,255,0.2);
-  color: white;
-}
-.leads-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.lead-card {
-  background: var(--white);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-.lead-card.hidden { display: none; }
-.lead-card.saved  { border-color: #bbf7d0; }
-.lead-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.urgency-bar {
-  width: 5px;
-  align-self: stretch;
-  border-radius: 3px;
-  flex-shrink: 0;
-  min-height: 52px;
-}
-.urg-green  { background: #16a34a; }
-.urg-yellow { background: #d97706; }
-.urg-orange { background: #f97316; }
-.urg-red    { background: #dc2626; }
-.urg-black  { background: #1e293b; }
-.lead-info { flex: 1; min-width: 0; }
-.lead-name {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 20px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.lead-meta {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 3px;
-}
-.lead-stats {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  flex-shrink: 0;
-}
-.stat-block { text-align: right; }
-.stat-val {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1;
-}
-.stat-lbl {
-  font-size: 10px;
-  color: var(--muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.badge-Contacted    { background: #dcfce7; color: #16a34a; }
-.badge-Unreachable  { background: #fef3c7; color: #d97706; }
-.badge-NotAttempted { background: #f1f5f9; color: #64748b; }
-.badge-Lost         { background: #fee2e2; color: #dc2626; }
-.badge-Sold         { background: #dbeafe; color: #0891b2; }
-.lead-body {
-  padding: 16px 20px;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-.status-group { min-width: 190px; }
-.field-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.status-select {
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: 'Barlow', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--dark);
-  background: var(--white);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 32px;
-}
-.status-select:focus { outline: none; border-color: var(--orange); }
-.notes-group { flex: 1; }
-.notes-input {
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: 'Barlow', sans-serif;
-  font-size: 13px;
-  color: var(--dark);
-  resize: vertical;
-  min-height: 72px;
-}
-.notes-input:focus { outline: none; border-color: var(--orange); }
-.save-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-end;
-  min-width: 130px;
-  padding-top: 22px;
-}
-.save-btn {
-  padding: 10px 20px;
-  background: var(--orange);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  width: 100%;
-  transition: background 0.15s;
-}
-.save-btn:hover    { background: #ea6c10; }
-.save-btn.success  { background: var(--green); cursor: default; }
-.save-btn:disabled { background: var(--muted); cursor: not-allowed; }
-.save-feedback {
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  min-height: 16px;
-  width: 100%;
-}
-.save-feedback.ok  { color: var(--green); }
-.save-feedback.err { color: var(--red); }
-.empty-state {
-  background: var(--white);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 48px;
-  text-align: center;
-  color: var(--muted);
-}
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; text-transform: uppercase; }
-.footer {
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 28px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-@media print {
-  body { padding: 16px; background: white; }
-  .print-btn, .save-btn, .filters { display: none; }
-}
+:root {--bg:#f1f5f9;--white:#fff;--dark:#0f172a;--surface:#1e293b;--orange:#f97316;--muted:#64748b;--border:#e2e8f0;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--blue:#0891b2;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padding:32px;font-size:14px;line-height:1.6;max-width:1100px;margin:0 auto;}
+.page-header{background:var(--surface);border-radius:12px;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.page-header img{height:48px;}
+.header-center{text-align:center;}
+.header-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;line-height:1;}
+.header-sub{font-size:13px;color:#94a3b8;font-weight:500;margin-top:4px;}
+.print-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.summary-tile{background:var(--white);border-radius:8px;border:1px solid var(--border);padding:16px;text-align:center;}
+.tile-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1;margin-bottom:4px;}
+.tile-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.filter-btn{padding:8px 16px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;}
+.filter-btn.active{background:var(--surface);color:white;border-color:var(--surface);}
+.filter-btn .count{display:inline-block;background:var(--bg);color:var(--dark);border-radius:10px;padding:0 6px;font-size:11px;font-weight:700;margin-left:4px;}
+.filter-btn.active .count{background:rgba(255,255,255,.2);color:white;}
+.leads-list{display:flex;flex-direction:column;gap:12px;}
+.lead-card{background:var(--white);border-radius:10px;border:1px solid var(--border);overflow:hidden;}
+.lead-card.hidden{display:none;}
+.lead-card.saved{border-color:#bbf7d0;}
+.lead-header{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border);}
+.urgency-bar{width:5px;align-self:stretch;border-radius:3px;flex-shrink:0;min-height:52px;}
+.urg-green{background:#16a34a;}.urg-yellow{background:#d97706;}.urg-orange{background:#f97316;}.urg-red{background:#dc2626;}.urg-black{background:#1e293b;}
+.lead-info{flex:1;min-width:0;}
+.lead-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lead-meta{font-size:12px;color:var(--muted);margin-top:3px;}
+.lead-stats{display:flex;gap:24px;align-items:center;flex-shrink:0;}
+.stat-block{text-align:right;}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;line-height:1;}
+.stat-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.status-badge{display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;}
+.badge-Contacted{background:#dcfce7;color:#16a34a;}.badge-Unreachable{background:#fef3c7;color:#d97706;}.badge-NotAttempted{background:#f1f5f9;color:#64748b;}.badge-Lost{background:#fee2e2;color:#dc2626;}.badge-Sold{background:#dbeafe;color:#0891b2;}
+.lead-body{padding:16px 20px;display:flex;gap:16px;align-items:flex-start;}
+.status-group{min-width:190px;}
+.field-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
+.status-select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--dark);background:var(--white);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
+.status-select:focus{outline:none;border-color:var(--orange);}
+.notes-group{flex:1;}
+.notes-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--dark);resize:vertical;min-height:72px;}
+.notes-input:focus{outline:none;border-color:var(--orange);}
+.save-group{display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:130px;padding-top:22px;}
+.save-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;transition:background .15s;}
+.save-btn:hover{background:#ea6c10;}.save-btn.success{background:var(--green);cursor:default;}.save-btn:disabled{background:var(--muted);cursor:not-allowed;}
+.save-feedback{font-size:11px;font-weight:700;text-align:center;min-height:16px;width:100%;}
+.save-feedback.ok{color:var(--green);}.save-feedback.err{color:var(--red);}
+.empty-state{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:48px;text-align:center;color:var(--muted);}
+.footer{text-align:center;font-size:12px;color:var(--muted);margin-top:28px;padding-top:16px;border-top:1px solid var(--border);}
+@media print{body{padding:16px;background:white;}.print-btn,.save-btn,.filters{display:none;}}
 </style>
 </head>
 <body>
-
 <div class="page-header">
   <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
   <div class="header-center">
@@ -329,27 +67,20 @@ body {
   </div>
   <button class="print-btn" onclick="window.print()">&#8982; Print / PDF</button>
 </div>
-
 <div class="summary-bar" id="summaryBar"></div>
 <div class="filters" id="filters"></div>
 <div class="leads-list" id="leadsList"></div>
-
-<div class="footer">
-  CM Heating Sales Operations &nbsp;&middot;&nbsp; Follow-Up Tracker &nbsp;&middot;&nbsp; <span id="footerDate"></span>
-</div>
-
+<div class="footer">CM Heating Sales Operations &nbsp;&middot;&nbsp; Follow-Up Tracker &nbsp;&middot;&nbsp; <span id="footerDate"></span></div>
 <script>
-const HCA_NAME   = 'Chester Granard';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxycTbR_soPrxXz7oKALVDfmv3wAJFxUnBEnDJ3wV_Q2DhscNMb5EdGl0JyhZ5bz741Bg/exec';
-
-const leads = [
+const HCA_NAME='Chester Granard',SCRIPT_URL='https://script.google.com/macros/s/AKfycbxycTbR_soPrxXz7oKALVDfmv3wAJFxUnBEnDJ3wV_Q2DhscNMb5EdGl0JyhZ5bz741Bg/exec';
+const leads=[
   {
     "customer": "Shawn Pate",
     "address": "11503 Exeter Avenue Northeast, Seattle, WA 98125 USA",
     "phone": "(734) 730-1389",
     "estimate": "$27K",
     "estimateRaw": 27100,
-    "daysOld": 456,
+    "daysOld": 457,
     "createdOn": "02/04/2025",
     "status": "Unreachable",
     "lastFollowUp": "04/14/2026",
@@ -362,7 +93,7 @@ const leads = [
     "phone": "(425) 923-8008",
     "estimate": "$0",
     "estimateRaw": 0,
-    "daysOld": 127,
+    "daysOld": 128,
     "createdOn": "12/30/2025",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -375,7 +106,7 @@ const leads = [
     "phone": "(425) 387-5588",
     "estimate": "$23K",
     "estimateRaw": 23205,
-    "daysOld": 124,
+    "daysOld": 125,
     "createdOn": "01/02/2026",
     "status": "Unreachable",
     "lastFollowUp": "01/06/2026",
@@ -388,23 +119,10 @@ const leads = [
     "phone": "(425) 220-4226",
     "estimate": "$10K",
     "estimateRaw": 9681,
-    "daysOld": 122,
+    "daysOld": 123,
     "createdOn": "01/04/2026",
     "status": "Unreachable",
     "lastFollowUp": "01/05/2026",
-    "followUps": 1,
-    "notes": ""
-  },
-  {
-    "customer": "Karyn Zupke",
-    "address": "4601 224th Street Southeast, Bothell, WA 98021 USA",
-    "phone": "(425) 418-2046",
-    "estimate": "$10K",
-    "estimateRaw": 9516,
-    "daysOld": 121,
-    "createdOn": "01/05/2026",
-    "status": "Unreachable",
-    "lastFollowUp": "02/03/2026",
     "followUps": 1,
     "notes": ""
   },
@@ -414,7 +132,7 @@ const leads = [
     "phone": "(206) 898-4340",
     "estimate": "$16K",
     "estimateRaw": 16498,
-    "daysOld": 121,
+    "daysOld": 122,
     "createdOn": "01/05/2026",
     "status": "Contacted",
     "lastFollowUp": "02/03/2026",
@@ -422,16 +140,16 @@ const leads = [
     "notes": ""
   },
   {
-    "customer": "Gary Scott Gilbertson",
-    "address": "6513 Elliott Way, Everett, WA 98203 USA",
-    "phone": "(425) 231-8965",
-    "estimate": "$8K",
-    "estimateRaw": 7570,
-    "daysOld": 117,
-    "createdOn": "01/09/2026",
+    "customer": "Karyn Zupke",
+    "address": "4601 224th Street Southeast, Bothell, WA 98021 USA",
+    "phone": "(425) 418-2046",
+    "estimate": "$10K",
+    "estimateRaw": 9516,
+    "daysOld": 122,
+    "createdOn": "01/05/2026",
     "status": "Unreachable",
     "lastFollowUp": "02/03/2026",
-    "followUps": 2,
+    "followUps": 1,
     "notes": ""
   },
   {
@@ -440,11 +158,24 @@ const leads = [
     "phone": "(206) 697-8330",
     "estimate": "$18K",
     "estimateRaw": 17620,
-    "daysOld": 117,
+    "daysOld": 118,
     "createdOn": "01/09/2026",
     "status": "Unreachable",
     "lastFollowUp": "01/31/2026",
     "followUps": 1,
+    "notes": ""
+  },
+  {
+    "customer": "Gary Scott Gilbertson",
+    "address": "6513 Elliott Way, Everett, WA 98203 USA",
+    "phone": "(425) 231-8965",
+    "estimate": "$8K",
+    "estimateRaw": 7570,
+    "daysOld": 118,
+    "createdOn": "01/09/2026",
+    "status": "Unreachable",
+    "lastFollowUp": "02/03/2026",
+    "followUps": 2,
     "notes": ""
   },
   {
@@ -453,7 +184,7 @@ const leads = [
     "phone": "(425) 327-4809",
     "estimate": "$11K",
     "estimateRaw": 10610,
-    "daysOld": 110,
+    "daysOld": 111,
     "createdOn": "01/16/2026",
     "status": "Unreachable",
     "lastFollowUp": "01/26/2026",
@@ -466,7 +197,7 @@ const leads = [
     "phone": "(425) 870-9481",
     "estimate": "$9K",
     "estimateRaw": 8590,
-    "daysOld": 107,
+    "daysOld": 108,
     "createdOn": "01/19/2026",
     "status": "Unreachable",
     "lastFollowUp": "01/26/2026",
@@ -479,7 +210,7 @@ const leads = [
     "phone": "(206) 816-2031",
     "estimate": "$22K",
     "estimateRaw": 21801,
-    "daysOld": 104,
+    "daysOld": 105,
     "createdOn": "01/22/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -492,7 +223,7 @@ const leads = [
     "phone": "(206) 670-8856",
     "estimate": "$20K",
     "estimateRaw": 19756,
-    "daysOld": 102,
+    "daysOld": 103,
     "createdOn": "01/24/2026",
     "status": "Unreachable",
     "lastFollowUp": "01/31/2026",
@@ -505,24 +236,11 @@ const leads = [
     "phone": "(206) 245-7299",
     "estimate": "$14K",
     "estimateRaw": 13841,
-    "daysOld": 99,
+    "daysOld": 100,
     "createdOn": "01/27/2026",
     "status": "Unreachable",
     "lastFollowUp": "02/03/2026",
     "followUps": 2,
-    "notes": ""
-  },
-  {
-    "customer": "Jack Yang",
-    "address": "14218 Northeast 66th Street, Redmond, WA 98052 USA",
-    "phone": "(425) 638-9107",
-    "estimate": "$12K",
-    "estimateRaw": 12255,
-    "daysOld": 93,
-    "createdOn": "02/02/2026",
-    "status": "NotAttempted",
-    "lastFollowUp": "Never",
-    "followUps": 0,
     "notes": ""
   },
   {
@@ -531,7 +249,20 @@ const leads = [
     "phone": "(206) 384-1172",
     "estimate": "$6K",
     "estimateRaw": 6331,
-    "daysOld": 93,
+    "daysOld": 94,
+    "createdOn": "02/02/2026",
+    "status": "NotAttempted",
+    "lastFollowUp": "Never",
+    "followUps": 0,
+    "notes": ""
+  },
+  {
+    "customer": "Jack Yang",
+    "address": "14218 Northeast 66th Street, Redmond, WA 98052 USA",
+    "phone": "(425) 638-9107",
+    "estimate": "$12K",
+    "estimateRaw": 12255,
+    "daysOld": 94,
     "createdOn": "02/02/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -544,7 +275,7 @@ const leads = [
     "phone": "(206) 981-0252",
     "estimate": "$15K",
     "estimateRaw": 15119,
-    "daysOld": 90,
+    "daysOld": 91,
     "createdOn": "02/05/2026",
     "status": "Unreachable",
     "lastFollowUp": "02/19/2026",
@@ -557,7 +288,7 @@ const leads = [
     "phone": "(512) 913-0948",
     "estimate": "$23K",
     "estimateRaw": 23187,
-    "daysOld": 79,
+    "daysOld": 80,
     "createdOn": "02/16/2026",
     "status": "Contacted",
     "lastFollowUp": "04/13/2026",
@@ -570,7 +301,7 @@ const leads = [
     "phone": "(360) 421-8070",
     "estimate": "$21K",
     "estimateRaw": 21422,
-    "daysOld": 78,
+    "daysOld": 79,
     "createdOn": "02/17/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/20/2026",
@@ -583,7 +314,7 @@ const leads = [
     "phone": "(206) 240-2577",
     "estimate": "$43K",
     "estimateRaw": 43167,
-    "daysOld": 76,
+    "daysOld": 77,
     "createdOn": "02/19/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/03/2026",
@@ -596,7 +327,7 @@ const leads = [
     "phone": "(360) 599-8009",
     "estimate": "$12K",
     "estimateRaw": 11535,
-    "daysOld": 72,
+    "daysOld": 73,
     "createdOn": "02/23/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/05/2026",
@@ -609,7 +340,7 @@ const leads = [
     "phone": "(313) 671-4408",
     "estimate": "$28K",
     "estimateRaw": 27817,
-    "daysOld": 70,
+    "daysOld": 71,
     "createdOn": "02/25/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/05/2026",
@@ -622,7 +353,7 @@ const leads = [
     "phone": "(512) 965-2393",
     "estimate": "$26K",
     "estimateRaw": 26286,
-    "daysOld": 70,
+    "daysOld": 71,
     "createdOn": "02/25/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/20/2026",
@@ -635,7 +366,7 @@ const leads = [
     "phone": "(425) 583-6409",
     "estimate": "$8K",
     "estimateRaw": 7752,
-    "daysOld": 69,
+    "daysOld": 70,
     "createdOn": "02/26/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/05/2026",
@@ -648,11 +379,24 @@ const leads = [
     "phone": "(702) 722-7960",
     "estimate": "$17K",
     "estimateRaw": 16738,
-    "daysOld": 69,
+    "daysOld": 70,
     "createdOn": "02/26/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
     "followUps": 0,
+    "notes": ""
+  },
+  {
+    "customer": "Alex Eding",
+    "address": "9727 162nd Avenue Northeast, Redmond, WA 98052 USA",
+    "phone": "(360) 910-7410",
+    "estimate": "$39K",
+    "estimateRaw": 38795,
+    "daysOld": 69,
+    "createdOn": "02/27/2026",
+    "status": "Contacted",
+    "lastFollowUp": "03/20/2026",
+    "followUps": 3,
     "notes": ""
   },
   {
@@ -661,7 +405,7 @@ const leads = [
     "phone": "(206) 755-9046",
     "estimate": "$25K",
     "estimateRaw": 25391,
-    "daysOld": 63,
+    "daysOld": 64,
     "createdOn": "03/04/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/07/2026",
@@ -674,7 +418,7 @@ const leads = [
     "phone": "(720) 272-5176",
     "estimate": "$21K",
     "estimateRaw": 20757,
-    "daysOld": 57,
+    "daysOld": 58,
     "createdOn": "03/10/2026",
     "status": "Contacted",
     "lastFollowUp": "03/18/2026",
@@ -687,7 +431,7 @@ const leads = [
     "phone": "(360) 302-0231",
     "estimate": "$28K",
     "estimateRaw": 28354,
-    "daysOld": 57,
+    "daysOld": 58,
     "createdOn": "03/10/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/17/2026",
@@ -700,7 +444,7 @@ const leads = [
     "phone": "(206) 491-2296",
     "estimate": "$20K",
     "estimateRaw": 19518,
-    "daysOld": 57,
+    "daysOld": 58,
     "createdOn": "03/10/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/02/2026",
@@ -713,7 +457,7 @@ const leads = [
     "phone": "(425) 335-4853",
     "estimate": "$21K",
     "estimateRaw": 21351,
-    "daysOld": 56,
+    "daysOld": 57,
     "createdOn": "03/11/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/07/2026",
@@ -726,7 +470,7 @@ const leads = [
     "phone": "(425) 215-5390",
     "estimate": "$23K",
     "estimateRaw": 22799,
-    "daysOld": 56,
+    "daysOld": 57,
     "createdOn": "03/11/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/01/2026",
@@ -739,7 +483,7 @@ const leads = [
     "phone": "(415) 286-2023",
     "estimate": "$30K",
     "estimateRaw": 30377,
-    "daysOld": 50,
+    "daysOld": 51,
     "createdOn": "03/17/2026",
     "status": "Unreachable",
     "lastFollowUp": "03/30/2026",
@@ -752,7 +496,7 @@ const leads = [
     "phone": "(425) 533-1876",
     "estimate": "$18K",
     "estimateRaw": 18121,
-    "daysOld": 49,
+    "daysOld": 50,
     "createdOn": "03/18/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/07/2026",
@@ -765,7 +509,7 @@ const leads = [
     "phone": "(206) 747-9551",
     "estimate": "$21K",
     "estimateRaw": 21405,
-    "daysOld": 47,
+    "daysOld": 48,
     "createdOn": "03/20/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/01/2026",
@@ -778,7 +522,7 @@ const leads = [
     "phone": "(425) 359-8152",
     "estimate": "$19K",
     "estimateRaw": 18808,
-    "daysOld": 41,
+    "daysOld": 42,
     "createdOn": "03/26/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/30/2026",
@@ -791,7 +535,7 @@ const leads = [
     "phone": "(206) 883-2792",
     "estimate": "$22K",
     "estimateRaw": 22177,
-    "daysOld": 38,
+    "daysOld": 39,
     "createdOn": "03/29/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/01/2026",
@@ -804,7 +548,7 @@ const leads = [
     "phone": "(425) 585-8768",
     "estimate": "$0",
     "estimateRaw": 0,
-    "daysOld": 38,
+    "daysOld": 39,
     "createdOn": "03/29/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -817,7 +561,7 @@ const leads = [
     "phone": "(206) 639-3320",
     "estimate": "$10K",
     "estimateRaw": 10287,
-    "daysOld": 37,
+    "daysOld": 38,
     "createdOn": "03/30/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/06/2026",
@@ -830,7 +574,7 @@ const leads = [
     "phone": "(425) 232-6916",
     "estimate": "$8K",
     "estimateRaw": 7638,
-    "daysOld": 37,
+    "daysOld": 38,
     "createdOn": "03/30/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/06/2026",
@@ -843,7 +587,7 @@ const leads = [
     "phone": "(214) 435-4059",
     "estimate": "$22K",
     "estimateRaw": 21936,
-    "daysOld": 35,
+    "daysOld": 36,
     "createdOn": "04/01/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/26/2026",
@@ -856,7 +600,7 @@ const leads = [
     "phone": "(425) 533-3736",
     "estimate": "$20K",
     "estimateRaw": 19531,
-    "daysOld": 34,
+    "daysOld": 35,
     "createdOn": "04/02/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/13/2026",
@@ -869,7 +613,7 @@ const leads = [
     "phone": "(812) 369-0624",
     "estimate": "$22K",
     "estimateRaw": 22232,
-    "daysOld": 34,
+    "daysOld": 35,
     "createdOn": "04/02/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/30/2026",
@@ -882,7 +626,7 @@ const leads = [
     "phone": "(406) 544-4666",
     "estimate": "$21K",
     "estimateRaw": 20971,
-    "daysOld": 32,
+    "daysOld": 33,
     "createdOn": "04/04/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/20/2026",
@@ -895,7 +639,7 @@ const leads = [
     "phone": "(573) 250-9886",
     "estimate": "$9K",
     "estimateRaw": 9013,
-    "daysOld": 30,
+    "daysOld": 31,
     "createdOn": "04/06/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/13/2026",
@@ -908,7 +652,7 @@ const leads = [
     "phone": "(425) 293-4074",
     "estimate": "$0",
     "estimateRaw": 0,
-    "daysOld": 28,
+    "daysOld": 29,
     "createdOn": "04/08/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -921,7 +665,7 @@ const leads = [
     "phone": "(206) 240-1026",
     "estimate": "$20K",
     "estimateRaw": 20164,
-    "daysOld": 27,
+    "daysOld": 28,
     "createdOn": "04/09/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/21/2026",
@@ -934,7 +678,7 @@ const leads = [
     "phone": "(425) 478-9859",
     "estimate": "$21K",
     "estimateRaw": 20757,
-    "daysOld": 26,
+    "daysOld": 27,
     "createdOn": "04/10/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/21/2026",
@@ -947,7 +691,7 @@ const leads = [
     "phone": "(425) 786-6041",
     "estimate": "$19K",
     "estimateRaw": 19239,
-    "daysOld": 25,
+    "daysOld": 26,
     "createdOn": "04/11/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -960,7 +704,7 @@ const leads = [
     "phone": "(425) 501-1428",
     "estimate": "$22K",
     "estimateRaw": 21507,
-    "daysOld": 23,
+    "daysOld": 24,
     "createdOn": "04/13/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/30/2026",
@@ -973,7 +717,7 @@ const leads = [
     "phone": "(425) 922-7319",
     "estimate": "$16K",
     "estimateRaw": 15558,
-    "daysOld": 23,
+    "daysOld": 24,
     "createdOn": "04/13/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/14/2026",
@@ -986,7 +730,7 @@ const leads = [
     "phone": "(425) 922-8224",
     "estimate": "$17K",
     "estimateRaw": 16711,
-    "daysOld": 22,
+    "daysOld": 23,
     "createdOn": "04/14/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/30/2026",
@@ -999,7 +743,7 @@ const leads = [
     "phone": "(425) 361-3607",
     "estimate": "$19K",
     "estimateRaw": 19455,
-    "daysOld": 21,
+    "daysOld": 22,
     "createdOn": "04/15/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/21/2026",
@@ -1012,7 +756,7 @@ const leads = [
     "phone": "(425) 628-8777",
     "estimate": "$32K",
     "estimateRaw": 31930,
-    "daysOld": 20,
+    "daysOld": 21,
     "createdOn": "04/16/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/23/2026",
@@ -1025,7 +769,7 @@ const leads = [
     "phone": "(847) 274-8364",
     "estimate": "$15K",
     "estimateRaw": 15387,
-    "daysOld": 20,
+    "daysOld": 21,
     "createdOn": "04/16/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/20/2026",
@@ -1038,7 +782,7 @@ const leads = [
     "phone": "(206) 214-5930",
     "estimate": "$19K",
     "estimateRaw": 19158,
-    "daysOld": 17,
+    "daysOld": 18,
     "createdOn": "04/19/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/21/2026",
@@ -1051,7 +795,7 @@ const leads = [
     "phone": "(425) 286-7043",
     "estimate": "$19K",
     "estimateRaw": 19018,
-    "daysOld": 17,
+    "daysOld": 18,
     "createdOn": "04/19/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/21/2026",
@@ -1064,7 +808,7 @@ const leads = [
     "phone": "(425) 353-9390",
     "estimate": "$12K",
     "estimateRaw": 11505,
-    "daysOld": 16,
+    "daysOld": 17,
     "createdOn": "04/20/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/26/2026",
@@ -1077,11 +821,11 @@ const leads = [
     "phone": "(206) 348-6343",
     "estimate": "$13K",
     "estimateRaw": 12988,
-    "daysOld": 15,
+    "daysOld": 16,
     "createdOn": "04/21/2026",
     "status": "Unreachable",
-    "lastFollowUp": "04/30/2026",
-    "followUps": 1,
+    "lastFollowUp": "05/07/2026",
+    "followUps": 2,
     "notes": ""
   },
   {
@@ -1090,7 +834,7 @@ const leads = [
     "phone": "(425) 263-7209",
     "estimate": "$20K",
     "estimateRaw": 19632,
-    "daysOld": 14,
+    "daysOld": 15,
     "createdOn": "04/22/2026",
     "status": "Unreachable",
     "lastFollowUp": "05/05/2026",
@@ -1103,7 +847,7 @@ const leads = [
     "phone": "(608) 504-0334",
     "estimate": "$24K",
     "estimateRaw": 24086,
-    "daysOld": 12,
+    "daysOld": 13,
     "createdOn": "04/24/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/30/2026",
@@ -1116,7 +860,7 @@ const leads = [
     "phone": "(925) 566-4082",
     "estimate": "$22K",
     "estimateRaw": 21633,
-    "daysOld": 12,
+    "daysOld": 13,
     "createdOn": "04/24/2026",
     "status": "Unreachable",
     "lastFollowUp": "05/05/2026",
@@ -1129,7 +873,7 @@ const leads = [
     "phone": "(425) 239-5900",
     "estimate": "$28K",
     "estimateRaw": 27992,
-    "daysOld": 11,
+    "daysOld": 12,
     "createdOn": "04/25/2026",
     "status": "Unreachable",
     "lastFollowUp": "04/30/2026",
@@ -1142,7 +886,7 @@ const leads = [
     "phone": "(360) 990-1535",
     "estimate": "$21K",
     "estimateRaw": 20999,
-    "daysOld": 7,
+    "daysOld": 8,
     "createdOn": "04/29/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -1155,7 +899,7 @@ const leads = [
     "phone": "(805) 444-6559",
     "estimate": "$21K",
     "estimateRaw": 21031,
-    "daysOld": 6,
+    "daysOld": 7,
     "createdOn": "04/30/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -1168,7 +912,7 @@ const leads = [
     "phone": "(425) 427-0526",
     "estimate": "$24K",
     "estimateRaw": 24011,
-    "daysOld": 4,
+    "daysOld": 5,
     "createdOn": "05/02/2026",
     "status": "Unreachable",
     "lastFollowUp": "05/05/2026",
@@ -1181,7 +925,7 @@ const leads = [
     "phone": "(425) 508-9329",
     "estimate": "$44K",
     "estimateRaw": 44021,
-    "daysOld": 3,
+    "daysOld": 4,
     "createdOn": "05/03/2026",
     "status": "NotAttempted",
     "lastFollowUp": "Never",
@@ -1189,210 +933,39 @@ const leads = [
     "notes": ""
   }
 ];
-
-function getUrgency(days) {
-  if (days <= 3)  return { cls: 'urg-green',  filter: 'fresh',    label: 'Fresh' };
-  if (days <= 7)  return { cls: 'urg-yellow', filter: 'fresh',    label: 'Follow-Up' };
-  if (days <= 14) return { cls: 'urg-orange', filter: 'hot',      label: 'Hot' };
-  if (days <= 21) return { cls: 'urg-red',    filter: 'critical', label: 'Critical' };
-  return           { cls: 'urg-black',  filter: 'critical', label: 'At Risk' };
-}
-
-function getDaysColor(days) {
-  if (days <= 7)  return '#16a34a';
-  if (days <= 14) return '#f97316';
-  return '#dc2626';
-}
-
-function fmtK(n) {
-  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
-  if (n >= 1000)    return '$' + Math.round(n/1000) + 'K';
-  return '$' + n;
-}
-
-leads.sort((a,b) => b.daysOld - a.daysOld);
-
-const now = new Date();
-document.getElementById('hcaTitle').textContent  = HCA_NAME + ' — Follow-Up Tracker';
-document.getElementById('dateLabel').textContent  = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-document.getElementById('footerDate').textContent = now.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-
-const totalPipeline = leads.reduce((s,l) => s + l.estimateRaw, 0);
-const criticalCount = leads.filter(l => l.daysOld > 14).length;
-const avgDays       = leads.length ? Math.round(leads.reduce((s,l) => s + l.daysOld, 0) / leads.length) : 0;
-
-document.getElementById('summaryBar').innerHTML = `
-  <div class="summary-tile">
-    <div class="tile-val" style="color:var(--orange)">${leads.length}</div>
-    <div class="tile-lbl">Open Leads</div>
-  </div>
-  <div class="summary-tile">
-    <div class="tile-val" style="color:var(--orange)">${fmtK(totalPipeline)}</div>
-    <div class="tile-lbl">Pipeline Value</div>
-  </div>
-  <div class="summary-tile">
-    <div class="tile-val" style="color:${criticalCount > 0 ? '#dc2626' : '#16a34a'}">${criticalCount}</div>
-    <div class="tile-lbl">Critical (15+ Days)</div>
-  </div>
-  <div class="summary-tile">
-    <div class="tile-val" style="color:var(--muted)">${avgDays}d</div>
-    <div class="tile-lbl">Avg Days Old</div>
-  </div>
-`;
-
-const counts = {
-  all:      leads.length,
-  critical: leads.filter(l => l.daysOld > 14).length,
-  hot:      leads.filter(l => l.daysOld > 7 && l.daysOld <= 14).length,
-  fresh:    leads.filter(l => l.daysOld <= 7).length,
-};
-let activeFilter = 'all';
-
-function renderFilters() {
-  document.getElementById('filters').innerHTML = [
-    { key:'all',      label:'All Leads' },
-    { key:'critical', label:'Critical (15+ days)' },
-    { key:'hot',      label:'Hot (8–14 days)' },
-    { key:'fresh',    label:'Fresh (0–7 days)' },
-  ].map(f => `
-    <button class="filter-btn ${f.key === activeFilter ? 'active' : ''}" onclick="setFilter('${f.key}')">
-      ${f.label} <span class="count">${counts[f.key]}</span>
-    </button>
-  `).join('');
-}
-
-function setFilter(key) {
-  activeFilter = key;
-  renderFilters();
-  document.querySelectorAll('.lead-card').forEach(card => {
-    card.classList.toggle('hidden', key !== 'all' && card.dataset.urg !== key);
-  });
-}
-
+function getUrgency(d){if(d<=3)return{cls:'urg-green',filter:'fresh'};if(d<=7)return{cls:'urg-yellow',filter:'fresh'};if(d<=14)return{cls:'urg-orange',filter:'hot'};if(d<=21)return{cls:'urg-red',filter:'critical'};return{cls:'urg-black',filter:'critical'};}
+function getDaysColor(d){if(d<=7)return'#16a34a';if(d<=14)return'#f97316';return'#dc2626';}
+function fmtK(n){if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+Math.round(n/1e3)+'K';return'$'+n;}
+leads.sort((a,b)=>b.daysOld-a.daysOld);
+const now=new Date();
+document.getElementById('hcaTitle').textContent=HCA_NAME+' — Follow-Up Tracker';
+document.getElementById('dateLabel').textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('footerDate').textContent=now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+const totalPipeline=leads.reduce((s,l)=>s+l.estimateRaw,0);
+const criticalCount=leads.filter(l=>l.daysOld>14).length;
+const avgDays=leads.length?Math.round(leads.reduce((s,l)=>s+l.daysOld,0)/leads.length):0;
+document.getElementById('summaryBar').innerHTML=`
+  <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${leads.length}</div><div class="tile-lbl">Open Leads</div></div>
+  <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${fmtK(totalPipeline)}</div><div class="tile-lbl">Pipeline Value</div></div>
+  <div class="summary-tile"><div class="tile-val" style="color:${criticalCount>0?'#dc2626':'#16a34a'}">${criticalCount}</div><div class="tile-lbl">Critical (15+ Days)</div></div>
+  <div class="summary-tile"><div class="tile-val" style="color:var(--muted)">${avgDays}d</div><div class="tile-lbl">Avg Days Old</div></div>`;
+const counts={all:leads.length,critical:leads.filter(l=>l.daysOld>14).length,hot:leads.filter(l=>l.daysOld>7&&l.daysOld<=14).length,fresh:leads.filter(l=>l.daysOld<=7).length};
+let activeFilter='all';
+function renderFilters(){document.getElementById('filters').innerHTML=[{key:'all',label:'All Leads'},{key:'critical',label:'Critical (15+ days)'},{key:'hot',label:'Hot (8-14 days)'},{key:'fresh',label:'Fresh (0-7 days)'}].map(f=>`<button class="filter-btn ${f.key===activeFilter?'active':''}" onclick="setFilter('${f.key}')">${f.label} <span class="count">${counts[f.key]}</span></button>`).join('');}
+function setFilter(key){activeFilter=key;renderFilters();document.querySelectorAll('.lead-card').forEach(c=>c.classList.toggle('hidden',key!=='all'&&c.dataset.urg!==key));}
 renderFilters();
-
-const listEl = document.getElementById('leadsList');
-
-if (leads.length === 0) {
-  listEl.innerHTML = `
-    <div class="empty-state">
-      <div class="empty-icon">&#x2705;</div>
-      <div class="empty-title">No Open Leads</div>
-      <p style="margin-top:8px;font-size:13px">You have no open leads this week. Nice work!</p>
-    </div>`;
-} else {
-  leads.forEach((lead, i) => {
-    const urg  = getUrgency(lead.daysOld);
-    const card = document.createElement('div');
-    card.className   = 'lead-card';
-    card.id          = `card-${i}`;
-    card.dataset.urg = urg.filter;
-
-    card.innerHTML = `
-      <div class="lead-header">
-        <div class="urgency-bar ${urg.cls}"></div>
-        <div class="lead-info">
-          <div class="lead-name">${lead.customer}</div>
-          <div class="lead-meta">
-            ${lead.address} &nbsp;&middot;&nbsp; ${lead.phone}
-            &nbsp;&middot;&nbsp; Created ${lead.createdOn}
-            &nbsp;&middot;&nbsp; ${lead.followUps} follow-up${lead.followUps !== 1 ? 's' : ''} logged
-          </div>
-        </div>
-        <div class="lead-stats">
-          <div class="stat-block">
-            <div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div>
-            <div class="stat-lbl">Days Old</div>
-          </div>
-          <div class="stat-block">
-            <div class="stat-val">${lead.estimate}</div>
-            <div class="stat-lbl">Estimate</div>
-          </div>
-          <div class="stat-block">
-            <span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span>
-          </div>
-        </div>
-      </div>
-      <div class="lead-body">
-        <div class="status-group">
-          <div class="field-label">Update Status</div>
-          <select class="status-select" id="status-${i}">
-            <option value="Contacted"    ${lead.status==='Contacted'    ?'selected':''}>Contacted</option>
-            <option value="Unreachable"  ${lead.status==='Unreachable'  ?'selected':''}>Unreachable</option>
-            <option value="NotAttempted" ${lead.status==='NotAttempted' ?'selected':''}>Not Attempted</option>
-            <option value="Lost"         ${lead.status==='Lost'         ?'selected':''}>Lost</option>
-            <option value="Sold"         ${lead.status==='Sold'         ?'selected':''}>Sold &#x2713;</option>
-          </select>
-        </div>
-        <div class="notes-group">
-          <div class="field-label">Follow-Up Notes (required to save)</div>
-          <textarea class="notes-input" id="notes-${i}" placeholder="What happened on this call? Any objections? Next step?"></textarea>
-        </div>
-        <div class="save-group">
-          <button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button>
-          <div class="save-feedback" id="saveFeedback-${i}"></div>
-        </div>
-      </div>
-    `;
-    listEl.appendChild(card);
-  });
-}
-
-function logFollowUp(i) {
-  const lead     = leads[i];
-  const status   = document.getElementById(`status-${i}`).value;
-  const notes    = document.getElementById(`notes-${i}`).value.trim();
-  const btn      = document.getElementById(`saveBtn-${i}`);
-  const feedback = document.getElementById(`saveFeedback-${i}`);
-  const badge    = document.getElementById(`badge-${i}`);
-
-  if (!notes) {
-    feedback.textContent = 'Add a note before saving.';
-    feedback.className   = 'save-feedback err';
-    return;
-  }
-
-  btn.disabled    = true;
-  btn.textContent = 'Saving...';
-  feedback.textContent = '';
-  feedback.className   = 'save-feedback';
-
-  const timestamp = new Date().toLocaleString('en-US', {
-    month:'2-digit', day:'2-digit', year:'numeric',
-    hour:'2-digit', minute:'2-digit', hour12:true
-  });
-
-  fetch(SCRIPT_URL, {
-    method:  'POST',
-    mode:    'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      hca:       HCA_NAME,
-      customer:  lead.customer,
-      status:    status,
-      notes:     notes,
-      timestamp: timestamp,
-      daysOld:   lead.daysOld,
-      estimate:  lead.estimate
-    })
-  })
-  .then(() => {
-    btn.textContent = 'Logged &#x2713;';
-    btn.className   = 'save-btn success';
-    feedback.textContent = 'Saved ' + timestamp;
-    feedback.className   = 'save-feedback ok';
-    document.getElementById(`notes-${i}`).value = '';
-    badge.textContent = status;
-    badge.className   = `status-badge badge-${status}`;
-    document.getElementById(`card-${i}`).classList.add('saved');
-  })
-  .catch(() => {
-    btn.disabled    = false;
-    btn.textContent = 'Log Follow-Up';
-    feedback.textContent = 'Error — try again.';
-    feedback.className   = 'save-feedback err';
-  });
-}
+const listEl=document.getElementById('leadsList');
+if(leads.length===0){listEl.innerHTML='<div class="empty-state"><div style="font-size:48px">✅</div><div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;margin-top:12px">No Open Leads</div><p style="margin-top:8px;font-size:13px">You have no open leads this week.</p></div>';}
+else{leads.forEach((lead,i)=>{const urg=getUrgency(lead.daysOld);const card=document.createElement('div');card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;
+card.innerHTML=`<div class="lead-header"><div class="urgency-bar ${urg.cls}"></div><div class="lead-info"><div class="lead-name">${lead.customer}</div><div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div></div><div class="lead-stats"><div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div><div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div><div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div></div></div><div class="lead-body"><div class="status-group"><div class="field-label">Update Status</div><select class="status-select" id="status-${i}"><option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option><option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option><option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option><option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option><option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option></select></div><div class="notes-group"><div class="field-label">Follow-Up Notes (required to save)</div><textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea></div><div class="save-group"><button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button><div class="save-feedback" id="saveFeedback-${i}"></div></div></div>`;
+listEl.appendChild(card);});}
+function logFollowUp(i){const lead=leads[i],status=document.getElementById(`status-${i}`).value,notes=document.getElementById(`notes-${i}`).value.trim(),btn=document.getElementById(`saveBtn-${i}`),feedback=document.getElementById(`saveFeedback-${i}`),badge=document.getElementById(`badge-${i}`);
+if(!notes){feedback.textContent='Add a note before saving.';feedback.className='save-feedback err';return;}
+btn.disabled=true;btn.textContent='Saving...';feedback.textContent='';feedback.className='save-feedback';
+const ts=new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hca:HCA_NAME,customer:lead.customer,status,notes,timestamp:ts,daysOld:lead.daysOld,estimate:lead.estimate})})
+.then(()=>{btn.textContent='Logged ✓';btn.className='save-btn success';feedback.textContent='Saved '+ts;feedback.className='save-feedback ok';document.getElementById(`notes-${i}`).value='';badge.textContent=status;badge.className=`status-badge badge-${status}`;document.getElementById(`card-${i}`).classList.add('saved');})
+.catch(()=>{btn.disabled=false;btn.textContent='Log Follow-Up';feedback.textContent='Error — try again.';feedback.className='save-feedback err';});}
 </script>
 </body>
 </html>
