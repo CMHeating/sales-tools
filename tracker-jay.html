@@ -48,14 +48,21 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
 .notes-group{flex:1;}
 .notes-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--dark);resize:vertical;min-height:72px;}
 .notes-input:focus{outline:none;border-color:var(--orange);}
-.save-group{display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:130px;padding-top:22px;}
+.save-group{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:140px;padding-top:22px;}
 .save-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;transition:background .15s;}
 .save-btn:hover{background:#ea6c10;}.save-btn.success{background:var(--green);cursor:default;}.save-btn:disabled{background:var(--muted);cursor:not-allowed;}
 .save-feedback{font-size:11px;font-weight:700;text-align:center;min-height:16px;width:100%;}
 .save-feedback.ok{color:var(--green);}.save-feedback.err{color:var(--red);}
+.st-reminder{display:none;width:100%;background:#fef3c7;border:1px solid #d97706;border-radius:6px;padding:10px;}
+.st-reminder.visible{display:block;}
+.st-reminder-title{font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;}
+.copy-btn{width:100%;padding:8px 10px;background:#d97706;color:white;border:none;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
+.copy-btn:hover{background:#b45309;}
+.copy-btn.copied{background:#16a34a;cursor:default;}
+.copy-note-preview{font-size:10px;color:#92400e;margin-top:5px;line-height:1.4;word-break:break-word;font-style:italic;}
 .empty-state{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:48px;text-align:center;color:var(--muted);}
 .footer{text-align:center;font-size:12px;color:var(--muted);margin-top:28px;padding-top:16px;border-top:1px solid var(--border);}
-@media print{body{padding:16px;background:white;}.print-btn,.save-btn,.filters{display:none;}}
+@media print{body{padding:16px;background:white;}.print-btn,.save-btn,.filters,.st-reminder{display:none;}}
 </style>
 </head>
 <body>
@@ -918,15 +925,102 @@ renderFilters();
 const listEl=document.getElementById('leadsList');
 if(leads.length===0){listEl.innerHTML='<div class="empty-state"><div style="font-size:48px">✅</div><div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;margin-top:12px">No Open Leads</div><p style="margin-top:8px;font-size:13px">You have no open leads this week.</p></div>';}
 else{leads.forEach((lead,i)=>{const urg=getUrgency(lead.daysOld);const card=document.createElement('div');card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;
-card.innerHTML=`<div class="lead-header"><div class="urgency-bar ${urg.cls}"></div><div class="lead-info"><div class="lead-name">${lead.customer}</div><div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div></div><div class="lead-stats"><div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div><div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div><div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div></div></div><div class="lead-body"><div class="status-group"><div class="field-label">Update Status</div><select class="status-select" id="status-${i}"><option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option><option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option><option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option><option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option><option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option></select></div><div class="notes-group"><div class="field-label">Follow-Up Notes (required to save)</div><textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea></div><div class="save-group"><button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button><div class="save-feedback" id="saveFeedback-${i}"></div></div></div>`;
+card.innerHTML=`
+  <div class="lead-header">
+    <div class="urgency-bar ${urg.cls}"></div>
+    <div class="lead-info">
+      <div class="lead-name">${lead.customer}</div>
+      <div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div>
+    </div>
+    <div class="lead-stats">
+      <div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div>
+      <div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div>
+      <div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div>
+    </div>
+  </div>
+  <div class="lead-body">
+    <div class="status-group">
+      <div class="field-label">Update Status</div>
+      <select class="status-select" id="status-${i}">
+        <option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option>
+        <option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option>
+        <option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option>
+        <option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option>
+        <option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option>
+      </select>
+    </div>
+    <div class="notes-group">
+      <div class="field-label">Follow-Up Notes (required to save)</div>
+      <textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea>
+    </div>
+    <div class="save-group">
+      <button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button>
+      <div class="save-feedback" id="saveFeedback-${i}"></div>
+      <div class="st-reminder" id="stReminder-${i}">
+        <div class="st-reminder-title">📋 Paste this into ServiceTitan:</div>
+        <button class="copy-btn" id="copyBtn-${i}" onclick="copyNote(${i})">📋 Copy Note</button>
+        <div class="copy-note-preview" id="notePreview-${i}"></div>
+      </div>
+    </div>
+  </div>`;
 listEl.appendChild(card);});}
-function logFollowUp(i){const lead=leads[i],status=document.getElementById(`status-${i}`).value,notes=document.getElementById(`notes-${i}`).value.trim(),btn=document.getElementById(`saveBtn-${i}`),feedback=document.getElementById(`saveFeedback-${i}`),badge=document.getElementById(`badge-${i}`);
-if(!notes){feedback.textContent='Add a note before saving.';feedback.className='save-feedback err';return;}
-btn.disabled=true;btn.textContent='Saving...';feedback.textContent='';feedback.className='save-feedback';
-const ts=new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
-fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hca:HCA_NAME,customer:lead.customer,status,notes,timestamp:ts,daysOld:lead.daysOld,estimate:lead.estimate})})
-.then(()=>{btn.textContent='Logged ✓';btn.className='save-btn success';feedback.textContent='Saved '+ts;feedback.className='save-feedback ok';document.getElementById(`notes-${i}`).value='';badge.textContent=status;badge.className=`status-badge badge-${status}`;document.getElementById(`card-${i}`).classList.add('saved');})
-.catch(()=>{btn.disabled=false;btn.textContent='Log Follow-Up';feedback.textContent='Error — try again.';feedback.className='save-feedback err';});}
+
+const savedNotes={};
+
+function logFollowUp(i){
+  const lead=leads[i];
+  const status=document.getElementById(`status-${i}`).value;
+  const notes=document.getElementById(`notes-${i}`).value.trim();
+  const btn=document.getElementById(`saveBtn-${i}`);
+  const feedback=document.getElementById(`saveFeedback-${i}`);
+  const badge=document.getElementById(`badge-${i}`);
+  const reminder=document.getElementById(`stReminder-${i}`);
+  const preview=document.getElementById(`notePreview-${i}`);
+
+  if(!notes){feedback.textContent='Add a note before saving.';feedback.className='save-feedback err';return;}
+
+  btn.disabled=true;btn.textContent='Saving...';
+  feedback.textContent='';feedback.className='save-feedback';
+
+  const ts=new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+  const stNote=`[${ts}] Status: ${status} | ${notes}`;
+  savedNotes[i]=stNote;
+
+  fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({hca:HCA_NAME,customer:lead.customer,status,notes,timestamp:ts,daysOld:lead.daysOld,estimate:lead.estimate})})
+  .then(()=>{
+    btn.textContent='Logged ✓';
+    btn.className='save-btn success';
+    feedback.textContent='Saved '+ts;
+    feedback.className='save-feedback ok';
+    document.getElementById(`notes-${i}`).value='';
+    badge.textContent=status;
+    badge.className=`status-badge badge-${status}`;
+    document.getElementById(`card-${i}`).classList.add('saved');
+    preview.textContent=stNote;
+    reminder.classList.add('visible');
+  })
+  .catch(()=>{
+    btn.disabled=false;btn.textContent='Log Follow-Up';
+    feedback.textContent='Error — try again.';feedback.className='save-feedback err';
+  });
+}
+
+function copyNote(i){
+  const copyBtn=document.getElementById(`copyBtn-${i}`);
+  const note=savedNotes[i]||'';
+  if(!note)return;
+  navigator.clipboard.writeText(note).then(()=>{
+    copyBtn.textContent='✓ Copied!';
+    copyBtn.className='copy-btn copied';
+  }).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=note;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    copyBtn.textContent='✓ Copied!';
+    copyBtn.className='copy-btn copied';
+  });
+}
 </script>
 </body>
 </html>
