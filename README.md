@@ -44,6 +44,7 @@ cmheating.github.io/sales-tools/tracker-joe.html
 cmheating.github.io/sales-tools/tracker-joseph.html
 cmheating.github.io/sales-tools/tracker-kyle.html
 cmheating.github.io/sales-tools/tracker-samir.html
+cmheating.github.io/sales-tools/tracker-trevor.html
 
 4. Daily 1-on-1 Brief
 URL: (https://cmheating.github.io/sales-tools/daily-brief.html)
