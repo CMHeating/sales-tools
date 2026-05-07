@@ -36,6 +36,15 @@ Takes 20 seconds. Feeds directly into daily reports.
 
 HCA Tabs: Amber · Chester · Davis · Jay · Joe · Joseph · Kyle · Samir · Trevor
 
+cmheating.github.io/sales-tools/tracker-amber.html
+cmheating.github.io/sales-tools/tracker-chester.html
+cmheating.github.io/sales-tools/tracker-davis.html
+cmheating.github.io/sales-tools/tracker-jay.html
+cmheating.github.io/sales-tools/tracker-joe.html
+cmheating.github.io/sales-tools/tracker-joseph.html
+cmheating.github.io/sales-tools/tracker-kyle.html
+cmheating.github.io/sales-tools/tracker-samir.html
+
 4. Daily 1-on-1 Brief
 URL: (https://cmheating.github.io/sales-tools/daily-brief.html)
 
