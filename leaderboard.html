@@ -19,7 +19,8 @@ body::before{content:'';position:fixed;inset:0;
 .app{display:flex;flex-direction:column;height:100vh;padding:18px 32px 14px;gap:14px;}
 .header{display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
 .header-left{display:flex;align-items:center;gap:18px;}
-.header-left img{height:48px;}
+.header-left img{height:48px;display:block;}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:white;letter-spacing:1px;display:none;}
 .title h1{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;text-transform:uppercase;letter-spacing:3px;line-height:1;}
 .title .sub{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;}
 .header-right{display:flex;align-items:center;gap:14px;}
@@ -75,7 +76,8 @@ body::before{content:'';position:fixed;inset:0;
 <div class="app">
   <div class="header">
     <div class="header-left">
-      <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
+      <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating" id="logoImg">
+      <span class="logo-text" id="logoFallback">CM Heating</span>
       <div class="title">
         <h1>Follow-Up Leaderboard</h1>
         <div class="sub" id="subLabel"></div>
@@ -107,13 +109,16 @@ body::before{content:'';position:fixed;inset:0;
 <div class="countdown" id="countdown"></div>
 
 <script>
-// ─── PASTE YOUR AGGREGATOR URL HERE after deploying the Apps Script ───
-const AGGREGATOR_URL = https://script.google.com/macros/s/AKfycbzadkmyc4WzBzW5da2PN2Ib8XNGmHLBQILAr7bdL98CV6QwU_9vXyVXJ9PvOPoZCuVG/exec;
+const AGGREGATOR_URL = 'https://script.google.com/macros/s/AKfycbzadkmyc4WzBzW5da2PN2Ib8XNGmHLBQILAr7bdL98CV6QwU_9vXyVXJ9PvOPoZCuVG/exec';
 
-const HCA_COLORS = {"Amber": "#f472b6", "Chester": "#a78bfa", "Davis": "#34d399", "Jay": "#38bdf8", "Joe": "#fb923c", "Joseph": "#fbbf24", "Kyle": "#4ade80", "Samir": "#e879f9", "Trevor": "#67e8f9"};
+const HCA_COLORS = {"Amber":"#f472b6","Chester":"#a78bfa","Davis":"#34d399","Jay":"#38bdf8","Joe":"#fb923c","Joseph":"#fbbf24","Kyle":"#4ade80","Samir":"#e879f9","Trevor":"#67e8f9"};
 
-// Fallback data (from last Excel rebuild — used until live data loads)
-let stats = {"Amber": {"ytd": {"attempts": 51, "documented": 43, "leads": 41, "dismissed": 19, "pipeline": 1344563, "pts": 1655}, "rolling90": {"attempts": 31, "documented": 30, "leads": 28, "dismissed": 13, "pipeline": 1003349, "pts": 1105}}, "Chester": {"ytd": {"attempts": 86, "documented": 60, "leads": 75, "dismissed": 0, "pipeline": 1447897, "pts": 2060}, "rolling90": {"attempts": 71, "documented": 49, "leads": 60, "dismissed": 0, "pipeline": 1246564, "pts": 1690}}, "Davis": {"ytd": {"attempts": 17, "documented": 15, "leads": 53, "dismissed": 17, "pipeline": 1219864, "pts": 725}, "rolling90": {"attempts": 9, "documented": 9, "leads": 41, "dismissed": 8, "pipeline": 856421, "pts": 390}}, "Jay": {"ytd": {"attempts": 19, "documented": 17, "leads": 69, "dismissed": 4, "pipeline": 1161076, "pts": 590}, "rolling90": {"attempts": 7, "documented": 6, "leads": 50, "dismissed": 2, "pipeline": 879353, "pts": 220}}, "Joe": {"ytd": {"attempts": 2, "documented": 2, "leads": 63, "dismissed": 3, "pipeline": 1094804, "pts": 105}, "rolling90": {"attempts": 2, "documented": 2, "leads": 46, "dismissed": 3, "pipeline": 787042, "pts": 105}}, "Joseph": {"ytd": {"attempts": 0, "documented": 0, "leads": 80, "dismissed": 0, "pipeline": 1509767, "pts": 0}, "rolling90": {"attempts": 0, "documented": 0, "leads": 56, "dismissed": 0, "pipeline": 1075055, "pts": 0}}, "Kyle": {"ytd": {"attempts": 38, "documented": 26, "leads": 49, "dismissed": 14, "pipeline": 1148813, "pts": 1110}, "rolling90": {"attempts": 22, "documented": 17, "leads": 34, "dismissed": 8, "pipeline": 813344, "pts": 680}}, "Samir": {"ytd": {"attempts": 26, "documented": 21, "leads": 63, "dismissed": 2, "pipeline": 1036425, "pts": 710}, "rolling90": {"attempts": 12, "documented": 10, "leads": 40, "dismissed": 0, "pipeline": 644862, "pts": 320}}, "Trevor": {"ytd": {"attempts": 55, "documented": 36, "leads": 21, "dismissed": 17, "pipeline": 825875, "pts": 1525}, "rolling90": {"attempts": 55, "documented": 36, "leads": 21, "dismissed": 17, "pipeline": 825875, "pts": 1525}}};
+let stats = {"Amber":{"ytd":{"attempts":51,"documented":43,"leads":41,"dismissed":19,"pipeline":1344563,"pts":1655},"rolling90":{"attempts":31,"documented":30,"leads":28,"dismissed":13,"pipeline":1003349,"pts":1105}},"Chester":{"ytd":{"attempts":86,"documented":60,"leads":75,"dismissed":0,"pipeline":1447897,"pts":2060},"rolling90":{"attempts":71,"documented":49,"leads":60,"dismissed":0,"pipeline":1246564,"pts":1690}},"Davis":{"ytd":{"attempts":17,"documented":15,"leads":53,"dismissed":17,"pipeline":1219864,"pts":725},"rolling90":{"attempts":9,"documented":9,"leads":41,"dismissed":8,"pipeline":856421,"pts":390}},"Jay":{"ytd":{"attempts":19,"documented":17,"leads":69,"dismissed":4,"pipeline":1161076,"pts":590},"rolling90":{"attempts":7,"documented":6,"leads":50,"dismissed":2,"pipeline":879353,"pts":220}},"Joe":{"ytd":{"attempts":2,"documented":2,"leads":63,"dismissed":3,"pipeline":1094804,"pts":105},"rolling90":{"attempts":2,"documented":2,"leads":46,"dismissed":3,"pipeline":787042,"pts":105}},"Joseph":{"ytd":{"attempts":0,"documented":0,"leads":80,"dismissed":0,"pipeline":1509767,"pts":0},"rolling90":{"attempts":0,"documented":0,"leads":56,"dismissed":0,"pipeline":1075055,"pts":0}},"Kyle":{"ytd":{"attempts":38,"documented":26,"leads":49,"dismissed":14,"pipeline":1148813,"pts":1110},"rolling90":{"attempts":22,"documented":17,"leads":34,"dismissed":8,"pipeline":813344,"pts":680}},"Samir":{"ytd":{"attempts":26,"documented":21,"leads":63,"dismissed":2,"pipeline":1036425,"pts":710},"rolling90":{"attempts":12,"documented":10,"leads":40,"dismissed":0,"pipeline":644862,"pts":320}},"Trevor":{"ytd":{"attempts":55,"documented":36,"leads":21,"dismissed":17,"pipeline":825875,"pts":1525},"rolling90":{"attempts":55,"documented":36,"leads":21,"dismissed":17,"pipeline":825875,"pts":1525}}};
+
+document.getElementById('logoImg').onerror = function() {
+  this.style.display = 'none';
+  document.getElementById('logoFallback').style.display = 'block';
+};
 
 function ranked(period) {
   return Object.entries(stats)
@@ -137,39 +142,14 @@ function renderBoard(period) {
 
   document.getElementById(podiumId).innerHTML = r.slice(0,3).map((h,i) => {
     const cls = ['rank-1','rank-2','rank-3'][i];
-    const medal = i===0 ? '<div class="crown">👑</div>' : '<div class="medal">'+(i+1)+'</div>';
+    const medal = i===0 ? '<div class="crown">\ud83d\udc51</div>' : '<div class="medal">'+(i+1)+'</div>';
     const ptsColor = i===0?'var(--gold)':i===1?'var(--silver)':'var(--bronze)';
-    return `<div class="${cls}">
-      ${medal}
-      <div class="card-info">
-        <div class="card-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
-        <div class="card-stats">
-          <div class="card-stat">Attempts: <strong>${h.attempts||0}</strong></div>
-          <div class="card-stat">Documented: <strong>${h.documented||0}</strong></div>
-          <div class="card-stat">Resolved: <strong>${h.dismissed||0}</strong></div>
-          <div class="card-stat">Pipeline: <strong>${fmtPipeline(h.pipeline)}</strong></div>
-        </div>
-      </div>
-      <div>
-        <div class="card-pts" style="color:${ptsColor}">${h.pts||0}</div>
-        <div class="pts-lbl">points</div>
-      </div>
-    </div>`;
+    return '<div class="'+cls+'">'+medal+'<div class="card-info"><div class="card-name" style="color:'+( HCA_COLORS[h.name]||'var(--white)')+'">'+h.name+'</div><div class="card-stats"><div class="card-stat">Attempts: <strong>'+(h.attempts||0)+'</strong></div><div class="card-stat">Documented: <strong>'+(h.documented||0)+'</strong></div><div class="card-stat">Resolved: <strong>'+(h.dismissed||0)+'</strong></div><div class="card-stat">Pipeline: <strong>'+fmtPipeline(h.pipeline)+'</strong></div></div></div><div><div class="card-pts" style="color:'+ptsColor+'">'+(h.pts||0)+'</div><div class="pts-lbl">points</div></div></div>';
   }).join('');
 
-  document.getElementById(lowerId).innerHTML = r.slice(3).map((h,i) => `
-    <div class="rank-row">
-      <div class="row-num">${i+4}</div>
-      <div class="row-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
-      <div class="row-stats">
-        <div class="row-stat">Att: <strong>${h.attempts||0}</strong></div>
-        <div class="row-stat">Doc: <strong>${h.documented||0}</strong></div>
-      </div>
-      <div class="row-bar-wrap">
-        <div class="row-bar" style="width:${Math.round(((h.pts||0)/maxPts)*100)}%;background:${HCA_COLORS[h.name]||'var(--orange)'}"></div>
-      </div>
-      <div class="row-pts">${h.pts||0}</div>
-    </div>`).join('');
+  document.getElementById(lowerId).innerHTML = r.slice(3).map((h,i) =>
+    '<div class="rank-row"><div class="row-num">'+(i+4)+'</div><div class="row-name" style="color:'+(HCA_COLORS[h.name]||'var(--white)')+'">'+h.name+'</div><div class="row-stats"><div class="row-stat">Att: <strong>'+(h.attempts||0)+'</strong></div><div class="row-stat">Doc: <strong>'+(h.documented||0)+'</strong></div></div><div class="row-bar-wrap"><div class="row-bar" style="width:'+Math.round(((h.pts||0)/maxPts)*100)+'%;background:'+(HCA_COLORS[h.name]||'var(--orange)')+'"></div></div><div class="row-pts">'+(h.pts||0)+'</div></div>'
+  ).join('');
 }
 
 function setLabel(period) {
@@ -178,38 +158,32 @@ function setLabel(period) {
   const r90Start = new Date(now.getTime() - 90*24*60*60*1000);
   const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   document.getElementById('subLabel').textContent = period==='ytd'
-    ? 'Year to Date — '+fmt(ytdStart)+' through '+fmt(now)
-    : 'Rolling 90-Day — '+fmt(r90Start)+' through '+fmt(now);
+    ? 'Year to Date \u2014 '+fmt(ytdStart)+' through '+fmt(now)
+    : 'Rolling 90-Day \u2014 '+fmt(r90Start)+' through '+fmt(now);
 }
 
-// ─── LIVE FETCH ───
 function fetchLive() {
-  if (!AGGREGATOR_URL || AGGREGATOR_URL.indexOf('PASTE') !== -1) return;
   fetch(AGGREGATOR_URL)
     .then(r => r.json())
     .then(data => {
       stats = data;
       renderBoard('ytd');
       renderBoard('rolling90');
-      const dot = document.getElementById('liveDot');
-      const txt = document.getElementById('liveText');
-      dot.classList.add('active');
-      txt.classList.add('active');
-      txt.textContent = 'Live';
+      document.getElementById('liveDot').classList.add('active');
+      document.getElementById('liveText').classList.add('active');
+      document.getElementById('liveText').textContent = 'Live';
       const updated = data._updated ? new Date(data._updated) : new Date();
       document.getElementById('lastUpdated').textContent =
         'Live data as of ' + updated.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     })
     .catch(() => {
-      document.getElementById('liveText').textContent = 'Offline (showing last rebuild)';
+      document.getElementById('liveText').textContent = 'Offline \u2014 showing last rebuild';
     });
 }
 
-// Fetch on load, then every 5 minutes
 fetchLive();
 setInterval(fetchLive, 5 * 60 * 1000);
 
-// ─── VIEW SWITCHING ───
 let currentView = 'ytd';
 function switchView(name, btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -221,32 +195,30 @@ function switchView(name, btn) {
   resetCycle();
 }
 
-// ─── COUNTDOWN / AUTOCYCLE ───
 const CYCLE = 15;
 let dotTimer, elapsed = 0;
 function buildDots() {
   document.getElementById('countdown').innerHTML =
-    Array.from({length:CYCLE},(_,i)=>`<div class="cd-dot" id="d${i}"></div>`).join('');
+    Array.from({length:CYCLE},(_,i)=>'<div class="cd-dot" id="d'+i+'"></div>').join('');
 }
 function resetCycle() {
   clearInterval(dotTimer); elapsed = 0; buildDots(); startCycle();
 }
 function startCycle() {
-  dotTimer = setInterval(()=>{
-    const dot = document.getElementById('d'+elapsed);
+  dotTimer = setInterval(function(){
+    var dot = document.getElementById('d'+elapsed);
     if(dot) dot.classList.add('on');
     elapsed++;
     if(elapsed >= CYCLE) {
       clearInterval(dotTimer);
-      const next = currentView==='ytd' ? 'rolling90' : 'ytd';
-      const btn = [...document.querySelectorAll('.toggle-btn')]
-        .find(b => b.textContent.toLowerCase().includes(next==='ytd'?'ytd':'rolling'));
+      var next = currentView==='ytd' ? 'rolling90' : 'ytd';
+      var btn = Array.from(document.querySelectorAll('.toggle-btn'))
+        .find(function(b){ return b.textContent.toLowerCase().indexOf(next==='ytd'?'ytd':'rolling') !== -1; });
       switchView(next, btn);
     }
   }, 1000);
 }
 
-// ─── INIT ───
 renderBoard('ytd');
 renderBoard('rolling90');
 setLabel('ytd');
