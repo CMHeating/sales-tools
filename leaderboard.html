@@ -6,575 +6,231 @@
 <title>CM Heating — Follow-Up Leaderboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0a0f1a;
-  --surface: #111827;
-  --surface2: #1a2336;
-  --orange: #f97316;
-  --gold: #fbbf24;
-  --silver: #94a3b8;
-  --bronze: #cd7c2f;
-  --white: #f8fafc;
-  --muted: #64748b;
-  --green: #22c55e;
-  --blue: #38bdf8;
-  --pink: #f472b6;
+:root{
+  --bg:#0a0f1a;--surface:#111827;--surface2:#1a2336;
+  --orange:#f97316;--gold:#fbbf24;--silver:#94a3b8;--bronze:#cd7c2f;
+  --white:#f8fafc;--muted:#64748b;--green:#22c55e;--blue:#38bdf8;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  font-family: 'Barlow', sans-serif;
-  background: var(--bg);
-  color: var(--white);
-  height: 100vh;
-  overflow: hidden;
-}
-body::before {
-  content:'';
-  position:fixed;
-  inset:0;
-  background-image:
-    linear-gradient(rgba(249,115,22,0.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(249,115,22,0.04) 1px,transparent 1px);
-  background-size:60px 60px;
-  pointer-events:none;
-}
-.app {
-  display:flex;
-  flex-direction:column;
-  height:100vh;
-  padding:20px 36px 16px;
-  gap:16px;
-}
-
-/* HEADER */
-.header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-shrink:0;
-}
-.header-left { display:flex; align-items:center; gap:20px; }
-.logo-area img { height:52px; width:auto; }
-.title h1 {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:34px;
-  font-weight:900;
-  text-transform:uppercase;
-  letter-spacing:3px;
-  line-height:1;
-}
-.title .week {
-  font-size:12px;
-  color:var(--muted);
-  font-weight:600;
-  letter-spacing:1.5px;
-  text-transform:uppercase;
-  margin-top:4px;
-}
-.header-right { display:flex; align-items:center; gap:16px; }
-.live-badge {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:2px;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-.live-dot {
-  width:8px; height:8px;
-  border-radius:50%;
-  background:var(--green);
-  box-shadow:0 0 10px var(--green);
-  animation:blink 2s infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.toggle {
-  display:flex;
-  background:var(--surface);
-  border-radius:8px;
-  padding:4px;
-  gap:4px;
-}
-.toggle-btn {
-  padding:8px 22px;
-  border:none;
-  border-radius:6px;
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:13px;
-  font-weight:800;
-  letter-spacing:1.5px;
-  text-transform:uppercase;
-  cursor:pointer;
-  transition:all 0.2s;
-  background:transparent;
-  color:var(--muted);
-}
-.toggle-btn.active {
-  background:var(--orange);
-  color:white;
-}
-
-/* VIEWS */
-.view { display:none; flex:1; overflow:hidden; }
-.view.active { display:flex; }
-
-/* ===== RANKINGS VIEW ===== */
-#rankings-view { flex-direction:row; gap:20px; }
-.left-col { flex:1.3; display:flex; flex-direction:column; gap:10px; }
-.right-col { flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; }
-
-/* TOP 3 */
-.rank-1-card {
-  background:linear-gradient(135deg, rgba(251,191,36,0.1), rgba(249,115,22,0.06));
-  border:1px solid rgba(251,191,36,0.25);
-  border-radius:12px;
-  padding:22px 28px;
-  display:flex;
-  align-items:center;
-  gap:20px;
-  position:relative;
-  overflow:hidden;
-  animation:slideRight 0.5s ease both;
-}
-.rank-1-card::before {
-  content:'';
-  position:absolute;
-  top:0;left:0;right:0;
-  height:3px;
-  background:linear-gradient(90deg,var(--gold),var(--orange));
-}
-.rank-2-card, .rank-3-card {
-  background:var(--surface);
-  border:1px solid var(--surface2);
-  border-radius:12px;
-  display:flex;
-  align-items:center;
-  gap:20px;
-  padding:16px 24px;
-  animation:slideRight 0.5s ease both;
-}
-.rank-2-card { animation-delay:0.1s; }
-.rank-3-card { animation-delay:0.2s; }
-@keyframes slideRight {
-  from { opacity:0; transform:translateX(-24px); }
-  to   { opacity:1; transform:translateX(0); }
-}
-.crown { font-size:32px; animation:float 3s ease-in-out infinite; }
-@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-.medal {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:44px;
-  font-weight:900;
-  min-width:56px;
-  text-align:center;
-  line-height:1;
-}
-.rank-2-card .medal { color:var(--silver); }
-.rank-3-card .medal { color:var(--bronze); }
-.card-info { flex:1; }
-.card-name {
-  font-family:'Barlow Condensed',sans-serif;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:1px;
-  line-height:1;
-}
-.rank-1-card .card-name { font-size:40px; }
-.rank-2-card .card-name, .rank-3-card .card-name { font-size:30px; }
-.card-stats {
-  display:flex;
-  gap:18px;
-  margin-top:6px;
-}
-.card-stat {
-  font-size:12px;
-  color:var(--muted);
-  font-weight:500;
-}
-.card-stat strong { color:var(--white); font-weight:700; }
-.card-pts {
-  font-family:'Barlow Condensed',sans-serif;
-  font-weight:900;
-  line-height:1;
-  text-align:right;
-}
-.rank-1-card .card-pts { font-size:56px; color:var(--gold); }
-.rank-2-card .card-pts, .rank-3-card .card-pts { font-size:42px; color:var(--silver); }
-.rank-3-card .card-pts { color:var(--bronze); }
-.pts-lbl {
-  font-size:11px;
-  color:var(--muted);
-  letter-spacing:1px;
-  text-transform:uppercase;
-  text-align:right;
-  margin-top:2px;
-  font-weight:600;
-}
-
-/* ROWS 4-9 */
-.rank-row {
-  background:var(--surface);
-  border:1px solid var(--surface2);
-  border-radius:8px;
-  padding:12px 20px;
-  display:flex;
-  align-items:center;
-  gap:16px;
-  animation:slideRight 0.4s ease both;
-}
-.rank-row:nth-child(1){animation-delay:0.3s}
-.rank-row:nth-child(2){animation-delay:0.35s}
-.rank-row:nth-child(3){animation-delay:0.4s}
-.rank-row:nth-child(4){animation-delay:0.45s}
-.rank-row:nth-child(5){animation-delay:0.5s}
-.rank-row:nth-child(6){animation-delay:0.55s}
-.row-num {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:20px; font-weight:700;
-  color:var(--muted);
-  min-width:28px;
-  text-align:center;
-}
-.row-name {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:22px; font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:0.5px;
-  flex:1;
-}
-.row-bar-wrap {
-  flex:2;
-  height:6px;
-  background:var(--surface2);
-  border-radius:3px;
-  overflow:hidden;
-}
-.row-bar {
-  height:100%;
-  border-radius:3px;
-  background:var(--orange);
-}
-.row-pts {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:22px; font-weight:800;
-  color:var(--orange);
-  min-width:80px;
-  text-align:right;
-}
-
-/* ===== DETAIL VIEW ===== */
-#detail-view.active {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  grid-template-rows:repeat(3,1fr);
-  gap:12px;
-}
-.hca-card {
-  background:var(--surface);
-  border:1px solid var(--surface2);
-  border-radius:12px;
-  padding:18px 20px;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  animation:fadeUp 0.4s ease both;
-  position:relative;
-  overflow:hidden;
-}
-.hca-card.top-card {
-  border-color:rgba(251,191,36,0.3);
-  background:linear-gradient(135deg,rgba(251,191,36,0.07),var(--surface));
-}
-.hca-card.top-card::before {
-  content:'';
-  position:absolute;
-  top:0;left:0;right:0;
-  height:2px;
-  background:linear-gradient(90deg,var(--gold),var(--orange));
-}
-@keyframes fadeUp {
-  from{opacity:0;transform:translateY(12px)}
-  to{opacity:1;transform:translateY(0)}
-}
-.hca-card:nth-child(1){animation-delay:0.05s}
-.hca-card:nth-child(2){animation-delay:0.1s}
-.hca-card:nth-child(3){animation-delay:0.15s}
-.hca-card:nth-child(4){animation-delay:0.2s}
-.hca-card:nth-child(5){animation-delay:0.25s}
-.hca-card:nth-child(6){animation-delay:0.3s}
-.hca-card:nth-child(7){animation-delay:0.35s}
-.hca-card:nth-child(8){animation-delay:0.4s}
-.hca-card:nth-child(9){animation-delay:0.45s}
-.dc-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-}
-.dc-rank {
-  font-size:12px;
-  color:var(--muted);
-  font-weight:700;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  margin-bottom:2px;
-}
-.dc-name {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:26px; font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:1px;
-}
-.dc-pts {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:38px; font-weight:900;
-  color:var(--orange);
-  line-height:1;
-  text-align:right;
-}
-.dc-pts-lbl {
-  font-size:10px;
-  color:var(--muted);
-  letter-spacing:1px;
-  text-transform:uppercase;
-  text-align:right;
-  font-weight:600;
-}
-.dc-metrics {
-  display:flex;
-  gap:8px;
-}
-.metric {
-  flex:1;
-  background:var(--surface2);
-  border-radius:6px;
-  padding:8px 6px;
-  text-align:center;
-}
-.metric-val {
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:22px; font-weight:800;
-  line-height:1;
-}
-.metric-lbl {
-  font-size:10px;
-  color:var(--muted);
-  font-weight:500;
-  margin-top:2px;
-  text-transform:uppercase;
-  letter-spacing:0.5px;
-}
-.conv-val { color:var(--green); }
-.doc-val  { color:var(--blue); }
-.att-val  { color:var(--orange); }
-.dc-bar { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; }
-.dc-bar-fill {
-  height:100%;
-  border-radius:2px;
-  background:linear-gradient(90deg,var(--orange),var(--gold));
-}
-
-/* COUNTDOWN */
-.countdown {
-  position:fixed;
-  bottom:14px;
-  right:24px;
-  display:flex;
-  gap:4px;
-  align-items:center;
-}
-.cd-dot {
-  width:6px; height:6px;
-  border-radius:50%;
-  background:var(--surface2);
-  transition:background 0.3s;
-}
-.cd-dot.on { background:var(--orange); }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--white);height:100vh;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(249,115,22,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(249,115,22,.04) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;}
+.app{display:flex;flex-direction:column;height:100vh;padding:18px 32px 14px;gap:14px;}
+.header{display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.header-left{display:flex;align-items:center;gap:18px;}
+.header-left img{height:48px;}
+.title h1{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;text-transform:uppercase;letter-spacing:3px;line-height:1;}
+.title .sub{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.live-badge{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#475569;box-shadow:none;}
+.live-dot.active{background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 2s infinite;}
+.live-text{color:var(--muted);}
+.live-text.active{color:var(--green);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.toggle{display:flex;background:var(--surface);border-radius:8px;padding:4px;gap:4px;}
+.toggle-btn{padding:7px 20px;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted);}
+.toggle-btn.active{background:var(--orange);color:white;}
+.view{display:none;flex:1;overflow:hidden;}
+.view.active{display:flex;}
+.board-view{flex-direction:row;gap:18px;}
+.left-col{flex:1.3;display:flex;flex-direction:column;gap:10px;}
+.right-col{flex:1;display:flex;flex-direction:column;gap:7px;justify-content:center;}
+.rank-1{background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(249,115,22,.06));border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:20px 26px;display:flex;align-items:center;gap:18px;position:relative;overflow:hidden;animation:slideR .5s ease both;}
+.rank-1::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--orange));}
+.rank-2,.rank-3{background:var(--surface);border:1px solid var(--surface2);border-radius:12px;display:flex;align-items:center;gap:18px;padding:14px 22px;animation:slideR .5s ease both;}
+.rank-2{animation-delay:.1s;}.rank-3{animation-delay:.2s;}
+@keyframes slideR{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+.crown{font-size:30px;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.medal{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;min-width:52px;text-align:center;line-height:1;}
+.rank-2 .medal{color:var(--silver);}.rank-3 .medal{color:var(--bronze);}
+.card-info{flex:1;}
+.card-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:1px;line-height:1;}
+.rank-1 .card-name{font-size:38px;}.rank-2 .card-name,.rank-3 .card-name{font-size:28px;}
+.card-stats{display:flex;gap:16px;margin-top:5px;}
+.card-stat{font-size:12px;color:var(--muted);font-weight:500;}
+.card-stat strong{color:var(--white);font-weight:700;}
+.card-pts{font-family:'Barlow Condensed',sans-serif;font-weight:900;line-height:1;text-align:right;}
+.rank-1 .card-pts{font-size:52px;color:var(--gold);}
+.rank-2 .card-pts{font-size:40px;color:var(--silver);}.rank-3 .card-pts{font-size:40px;color:var(--bronze);}
+.pts-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:right;margin-top:2px;font-weight:600;}
+.rank-row{background:var(--surface);border:1px solid var(--surface2);border-radius:8px;padding:10px 18px;display:flex;align-items:center;gap:14px;animation:slideR .4s ease both;}
+.row-num{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--muted);min-width:26px;text-align:center;}
+.row-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex:1;}
+.row-stats{display:flex;gap:12px;}
+.row-stat{font-size:11px;color:var(--muted);}
+.row-stat strong{color:var(--white);}
+.row-bar-wrap{flex:1.5;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.row-bar{height:100%;border-radius:3px;}
+.row-pts{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--orange);min-width:70px;text-align:right;}
+.scoring-note{flex-shrink:0;text-align:center;font-size:10px;color:var(--muted);letter-spacing:.5px;padding-top:2px;}
+.countdown{position:fixed;bottom:12px;right:22px;display:flex;gap:4px;align-items:center;}
+.cd-dot{width:6px;height:6px;border-radius:50%;background:var(--surface2);transition:background .3s;}
+.cd-dot.on{background:var(--orange);}
 </style>
 </head>
 <body>
 <div class="app">
-
   <div class="header">
     <div class="header-left">
-      <div class="logo-area">
-        <img src="data:image/webp;base64,UklGRnQOAABXRUJQVlA4WAoAAAAQAAAAvQAAewAAQUxQSC0IAAAB8BvbWh5t27Yte4sAb0tBVSSBL48wtlAIA5c88BQBEagKfxnQu5BaV1+/910RMQH4f0D6H6/8dr7JT2fUny4x/nJSmX66zvrLBbLJD2ck/Q9XSNrvJo1k+d18J9l+t8BRfrY0CT9bmdjP1iflV/OcNvnRbEb/o6UP8TeT+iH9YqKxf6hB5aeSYKXyz70W8/ILiY+pdq7tNUUvv4toSKV13ttbsaDyc0iwUjuf2msxLz9GKo3PbcXCbzGKj6n221pNUQU/qwYrbVlN5gU/sIRU2t96KxYEv7R46x9aUMHvLfVDwk/q3HanA5A+RADbvnT7sK91bt/33WF/I7fnfJy3GgD74AFkLrUPB5fuLh85mzvlbWTPvD8D8LMmAI41eebONRkuIx+Z7mX2g088BZA+KQCEaw+Z7LwjH8f2Ki7zmecGoE4SgG3R6Sa26HSyYXPbJm+ynXzqDiBNAgBbxH2SF3HD++4nH5sBxIkCyKtscqyy99lPPvcA4DvJBsAdq/LgzkVnfp3t5INPAaSRLAC2c9Ux7Fx9vI07+OgNQCFpAIyrTwfAlp3uZTKfbQASyQAgL+MOIC/j/i7b+awzAwhkVwDHOgNwrLN3yXz4IYB2VgCO6zMgXJ/fRByffjpAKhOA/YYD2G443gT5cdwBFEYAdgMd7Aa6F5HjeQbA6AHkO3bkO/YX2fj8DMA3AeS4w+S4w17EvuAQQIoA7rwju/OO/CJ5zZnvdQAigJ13HjvvPNy7ZYf7BUC+5cy3cHs3h4few/Oe/T2OFQce6o57bs7vkVec7iEbr5/nonPB8WrM7hn7giMvyivcq/HMd29DXpBt0XZc4/Ya+5rbz8mxwPY1J/ICe43tKw4ZzgWbW5NhC/JryPENGQA2Xj8dzkX7guM1kL/BBluQgbxkhyygvMb2DfuQn7MBx4L9NZC/wAGQY8EO2IrTAXmBvcd+Pu4AAHcucMC24gCwL8jvgfy4POy8fgBw54IMYDuvHfIe7niaDbYgA8CxwADIcY3uPbCdD9uHvMCGvGAHgLxgfxHs56NOB0COBdtgC9xg1878JtjPJx0AsJ3XTjfs147Jdo3vgv18zpmHndczxu1axujOa4e8Clx+DPfBlrlzEfK1c3sXiJ1P2Ya8YJ/guGTLuL8MIHY84nDDucDN8qV9ti/IrwPIZvk4b2YGAMfrh8zskpuI+4cwittudpN9IeZuv4qP+8KX+o9I9SoQ7xXqpzqo94D4j6LeQ70XQL0XABpi8HJNfIxBBRAfg5/5GL0A4r1OvPcQ7wUQ7xWAhhi8fou0XgXaepHapxGA770pYv8Ya+8ovRtgvQdo6SR7veRrJ9kNoXayFwW0dJI1IPSeBmm9IvWeAOs9QlIjyaZfw6GzSOV0SCQTjB9jJVHIHmBkkMZpueI7pzF0Tqto5bT7QH5gQyJ7gJFRCqdN3qDHEIIC2kg20RASmULQD2xqZDSymw8WZm5zk0o2CzFpJUuIjTQjawiFLPESmx8CyeRDtC/qKZUPpRQDYGQhI4BIGoBPLImMlYxqFs0P+8lzB6Cd3QOAdjYBAlkqGQBp7AtYExkTmcTMYvye+TAWAJVNGqtc62SbdB9JMg2Z5OEAJRsmZAGgZG2kAKikXepkn5mSZP2eXmvts1KKAYGsVkl/LXaSjIWMvpR6qbP7SWcTIJClkgHQzh4vWSPJaGSSUuo3VRGdteC9FxTOyzWNQzCymY8f9pOnAZBKthhi8pUsITbSElljKGSJZA0hhE8h9CGQPflQvgsfplE7e2uts+s1pEEa5xNs+4bRd05j4LyKVE67D5xW/SQ2SOL8RRJpAIxMC6SQAVo6yV7C5I+hDt0QKsleFNDSSdaABUAiIyS1odqXQFUBqCpEp6KqAkBUBaIqAFQVqgpAVAWAhuAV10VD8CqA+BBUAEB8CF4A0TlUFaIqgKgKAA0hqOAfrWCpQPAfy97MLCoQYhgkRg9IjB4h+kmIAcHMLCoQYpAQowA+RgHUUrLoL0icBgkxDhLiVAC1lCxq/OiDmVlUwMcogMSULPrBLA4ao96ROPaIyjZ4MgGeTGhsAiB0FhSOPaKxSSENKOyK2DiWC4HTqo1t0M6xq1jjaPxYCscWkUiPUDkWAIGkAjAy3tQ62f0KkgZIIetQKtk+9TDxnNtE9l1uipyHv7VONhm0c5oAKSTTMwISaYu6IvCDSv0Lmw6FLApRHdxBHm6WZPxLFRFBI4tCg6p6sqpKIRWFDEMiqxfxCvjOzi7PkEVCkkkqyTaU0rv9gWVopMZSSgmAGEnus95aC39ia82E7IK5kgXAIIX0iQyVDJgndiPtEbWSPSzQoSd+Itnih15JzsRIMgLIg83GCyRNyYYFtZENs+5n0lilscoTRsMHJavAyOTJSpK9sUkhvVZSZ823SSWjj7FNtpM83KyEEORPNYSg0sm4gGQPgy9kkomRrTQyPKEk80BlTyklrWQtnQyeTIWklVmMjfQfJPTBSJZU+gTOzGFWU0omjT2llHxnSyklKSRLKtX/zSppk0iyplJNKudlKCmlcEPAWDnVyGlBIM13NinsWjht8gk2SOF88jlwWrVx6jvHrlI5tb+pJ5sOkjgtgawppUp649RWWa1+UupUEEpr1QSh1oBUDakWTbXWVpOi1CKpFoGkWhRitbVaolyo0yKlTn2dFoVYba2WAEitCUCqVZBqTVarArG01qqlWj2AWKvFOo2rREQmMgcgIgJARAQigIhApgBEBCICQEQwigguyxwyh8wBQEQEo4gAEBEAMgUAGSEiGOWvq/4PbABWUDggIAYAAFAdAJ0BKr4AfAA+tVKjTackIyMlFmug4BaJbG7AQsAjoyWzV3f9j+sL1Hno2n/GfifjpDVdp+dP/Wfq17h/MA8b71K/1b0C/y7+8fuP7x/+0/aT3G/2r1AP6B6UXqE/uz7AH7TenH+6Xwbf2v/0elt1AH//60nPW3y/un7AF9HIlvDpEvS+2xwI/7UGkRysH9iw1hzGvOb7eb5dli6WeywsyxD6He3LjYQJt8jvOS9HBXcF1VNDr2gN00JKnVJiOmVrYgDKUyl7lLPrmNQj48pk0M/SXZdXoIpn/2rFdk4nUyiCAu8ZuppUHmlrRNOY6uWEgAD+AzbG2Oi84BzME3LgDS9v//VK9W5RpQKVBZUXol8ZoM8yAJZjCCf1/AO5XdikAB3AgTX2bnW02A84+MLiGPwBPUXJdSt82jUqSyftdJuhp3IWJEQlIYA23lnma0gamKQKPIjotQ8cguZMQmH4g3TA0D23aTobH/C/nSse93wSI3BfhIFl0+QUhpI4QH4AxN8ZimOyasVV9wIfoLAWt/0f/2HhPwZ1L4OCS9TIa6Kq4pufs0eNCdT///fMzRO2f6b8uFCmzH15rlsgfb+N6xC/bxymprm34c6Dcbh0OxGVS6v9c56edW2LtKwL76QEyIwHfbgx+kgS5hzQzYFOGGuGxJccK+N8iXKCzi7E6xcvwK+1GXICkmeQOAwVLd8txhzir85QK4+E+GtemS3exTBMtXdSO6O/nP4uzhlZ4aOz1YgYaehUhwHt+Uievcr+m2jiFeBnq8ICKxvIz+18/hgdPiC1aOaEbiDMeEdoddbXEtNO/sPJdGY80z8T9ft+MW6Jp/2XK0kvFrE6Y2NQyQz0SFCjGCfbDtlQBGhxO/M/s+TKpCH2QgwcT9Epoplzb/UPp5OFWJql8bixVMBLu++6KtMAjQAaxhzBlUcdoSpY51M3ssSN/MCu2qewkIhhMkIuBrRBvCZbX7r7SAV4DqKmW04QB8uVN171+uYTLb9buVxGOO09y4ooAZh0N/RbAvXMyGAfX6yDsk+Z4Ym3PmJeOld2cS9rAjzutVLoBqmPNdPNSClZQ7cg8gUXjk3/0OltCYstwr6tYm+vDgEmUyzqrRhQ8s+uKB7tbikCe+Yg3/q3dIP/JsrBPlqoNlxPI0cLFztduwqSnvBXvc64y6qbW/amWRSq/TdJtXiCvTWlMVYSy67WZECh/XVXcSztmuihn2S1dCeGrImxjOlcQ1f6kUcXf736DiGCBeq7Rrir6yZgJNFscx/5NBbFfKv47kx/xHJ7cnewjfNyXQqBaKGs+AYbKZ+L4qJzmeR+hvB5zu8yMrCHkpXnXP2g1ZxYMxz/bm6g0OXI670Qj9PnTSNB+0CggETYD+KX7htXq/MIPqF0W3Dey6uMKg45T3NPr2MTtNvAwxn6zT7QHHwZuJk2WBXAhN4ddQD7wU3gJXGq+MgyUf/9Uhwv790iRRIH68tx8KCI07vP0vw7B6VsQKuq9+NMKlxHlm8hr3hCh+YUm6Z1Jy/UkK/n2rGSWmHMsZcPOxqzgzQavE6MDIgLYnCFkPphZocI9Lyt0QlaKNFXcNlJ+g0xnts0fM1s2Pa7DDvaHRVqmP1dHpsN3E7y0UzLB+XDs+xRb81Eez110+l/BePjoGNqX29BHn19fMLfTGF02mvNQ0VUfyYh/Qb/6e2eVE3vkrqGDrLroe8UmwJi1LCY57s8ffqyMx87dy7L7ie/lXk7mZ50M8Szgmc37cJqIr9dJCBBbXHRZQwJqeMvc8480YDzeVz7HIgOBDPTzkmUbrpWxn7YKiPGbe51Mnl8UXlPY5WszEEw9cwy295MA2oPWQOt/GTfifnbOKs7rFT7qnYwnYBIUSlp8biR0GfHoJFnSBCgJmj+fPSAIS7dsVXo2DTPu63DZS7H64nYlWSI+so4fHFtwKDHJjl/cp1+FAxIrnRYfq8Cnj6jJXsv4lCBz1Lm3R1WpfahqW1IAAagDrk2coJBs+pxVy6OXblPW1Fu3d12JuehlSAvSgPhuoYpAclw599i4CdC7o0LWmEc9mwSmsqLUxWmax/4vMF7dsyLWolmgHMwRAAA" alt="CM Heating">
-      </div>
+      <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
       <div class="title">
         <h1>Follow-Up Leaderboard</h1>
-        <div class="week" id="weekLabel"></div>
+        <div class="sub" id="subLabel"></div>
       </div>
     </div>
     <div class="header-right">
-      <div class="live-badge"><div class="live-dot"></div>Live</div>
+      <div class="live-badge">
+        <div class="live-dot" id="liveDot"></div>
+        <span class="live-text" id="liveText">Loading...</span>
+      </div>
       <div class="toggle">
-        <button class="toggle-btn active" onclick="switchView('rankings',this)">Rankings</button>
-        <button class="toggle-btn" onclick="switchView('detail',this)">Detail</button>
+        <button class="toggle-btn active" onclick="switchView('ytd',this)">YTD Total</button>
+        <button class="toggle-btn" onclick="switchView('rolling90',this)">Rolling 90-Day</button>
       </div>
     </div>
   </div>
 
-  <div id="rankings-view" class="view active">
-    <div class="left-col" id="podium"></div>
-    <div class="right-col" id="lower"></div>
+  <div id="ytd-view" class="view board-view active">
+    <div class="left-col" id="ytd-podium"></div>
+    <div class="right-col" id="ytd-lower"></div>
+  </div>
+  <div id="rolling90-view" class="view board-view">
+    <div class="left-col" id="r90-podium"></div>
+    <div class="right-col" id="r90-lower"></div>
   </div>
 
-  <div id="detail-view" class="view" id="detailGrid"></div>
-
+  <div class="scoring-note">Points: 10 per follow-up attempt &nbsp;·&nbsp; 20 per documented lead &nbsp;·&nbsp; 15 per resolved/dismissed lead &nbsp;·&nbsp; <span id="lastUpdated"></span></div>
 </div>
 <div class="countdown" id="countdown"></div>
 
 <script>
-// ─── UNIFIED DATA — MATCHES BRIEF EXACTLY ───
-const briefData = {
-  Amber:   { attempts:8,  documented:7,  conversions:1, totalLeads:11 },
-  Chester: { attempts:14, documented:10, conversions:2, totalLeads:24 },
-  Davis:   { attempts:6,  documented:4,  conversions:0, totalLeads:16 },
-  Jay:     { attempts:12, documented:11, conversions:2, totalLeads:18 },
-  Joe:     { attempts:5,  documented:3,  conversions:1, totalLeads:10 },
-  Joseph:  { attempts:9,  documented:8,  conversions:1, totalLeads:13 },
-  Kyle:    { attempts:11, documented:9,  conversions:1, totalLeads:16 },
-  Samir:   { attempts:4,  documented:2,  conversions:0, totalLeads:0 },
-  Trevor:  { attempts:7,  documented:6,  conversions:1, totalLeads:7 },
-};
+// ─── PASTE YOUR AGGREGATOR URL HERE after deploying the Apps Script ───
+const AGGREGATOR_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
 
-const HCA_COLORS = {
-  Amber:'#f472b6', Chester:'#a78bfa', Davis:'#34d399',
-  Jay:'#38bdf8', Joe:'#fb923c', Joseph:'#fbbf24',
-  Kyle:'#4ade80', Samir:'#e879f9', Trevor:'#67e8f9'
-};
+const HCA_COLORS = {"Amber": "#f472b6", "Chester": "#a78bfa", "Davis": "#34d399", "Jay": "#38bdf8", "Joe": "#fb923c", "Joseph": "#fbbf24", "Kyle": "#4ade80", "Samir": "#e879f9", "Trevor": "#67e8f9"};
 
-function calcPts(d) {
-  return (d.conversions * 100) + (d.documented * 20) + (d.attempts * 10);
-}
-function convRate(d){ return d.totalLeads > 0 ? Math.round((d.conversions/d.totalLeads)*100) : 0; }
-function docRate(d) { return d.attempts > 0   ? Math.round((d.documented/d.attempts)*100)   : 0; }
+// Fallback data (from last Excel rebuild — used until live data loads)
+let stats = {"Amber": {"ytd": {"attempts": 51, "documented": 43, "leads": 41, "dismissed": 19, "pipeline": 1344563, "pts": 1655}, "rolling90": {"attempts": 31, "documented": 30, "leads": 28, "dismissed": 13, "pipeline": 1003349, "pts": 1105}}, "Chester": {"ytd": {"attempts": 86, "documented": 60, "leads": 75, "dismissed": 0, "pipeline": 1447897, "pts": 2060}, "rolling90": {"attempts": 71, "documented": 49, "leads": 60, "dismissed": 0, "pipeline": 1246564, "pts": 1690}}, "Davis": {"ytd": {"attempts": 17, "documented": 15, "leads": 53, "dismissed": 17, "pipeline": 1219864, "pts": 725}, "rolling90": {"attempts": 9, "documented": 9, "leads": 41, "dismissed": 8, "pipeline": 856421, "pts": 390}}, "Jay": {"ytd": {"attempts": 19, "documented": 17, "leads": 69, "dismissed": 4, "pipeline": 1161076, "pts": 590}, "rolling90": {"attempts": 7, "documented": 6, "leads": 50, "dismissed": 2, "pipeline": 879353, "pts": 220}}, "Joe": {"ytd": {"attempts": 2, "documented": 2, "leads": 63, "dismissed": 3, "pipeline": 1094804, "pts": 105}, "rolling90": {"attempts": 2, "documented": 2, "leads": 46, "dismissed": 3, "pipeline": 787042, "pts": 105}}, "Joseph": {"ytd": {"attempts": 0, "documented": 0, "leads": 80, "dismissed": 0, "pipeline": 1509767, "pts": 0}, "rolling90": {"attempts": 0, "documented": 0, "leads": 56, "dismissed": 0, "pipeline": 1075055, "pts": 0}}, "Kyle": {"ytd": {"attempts": 38, "documented": 26, "leads": 49, "dismissed": 14, "pipeline": 1148813, "pts": 1110}, "rolling90": {"attempts": 22, "documented": 17, "leads": 34, "dismissed": 8, "pipeline": 813344, "pts": 680}}, "Samir": {"ytd": {"attempts": 26, "documented": 21, "leads": 63, "dismissed": 2, "pipeline": 1036425, "pts": 710}, "rolling90": {"attempts": 12, "documented": 10, "leads": 40, "dismissed": 0, "pipeline": 644862, "pts": 320}}, "Trevor": {"ytd": {"attempts": 55, "documented": 36, "leads": 21, "dismissed": 17, "pipeline": 825875, "pts": 1525}, "rolling90": {"attempts": 55, "documented": 36, "leads": 21, "dismissed": 17, "pipeline": 825875, "pts": 1525}}};
 
-function ranked() {
-  return Object.entries(briefData)
-    .map(([n,d]) => ({ name:n, ...d, pts:calcPts(d), conv:convRate(d), doc:docRate(d) }))
+function ranked(period) {
+  return Object.entries(stats)
+    .filter(([k]) => k !== '_updated')
+    .map(([name, s]) => ({ name, ...s[period] }))
     .sort((a,b) => b.pts - a.pts);
 }
 
-// ─── SET WEEK LABEL ───
-function setWeek() {
-  const now = new Date();
-  const day = now.getDay();
-  const mon = new Date(now); mon.setDate(now.getDate() - ((day+6)%7));
-  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
-  const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  document.getElementById('weekLabel').textContent = `Week of ${fmt(mon)} — ${fmt(sun)}`;
+function fmtPipeline(v) {
+  if (!v) return '$0';
+  if(v >= 1000000) return '$'+(v/1000000).toFixed(1)+'M';
+  if(v >= 1000) return '$'+Math.round(v/1000)+'K';
+  return '$'+v;
 }
 
-// ─── RENDER RANKINGS ───
-function renderRankings() {
-  const r = ranked();
-  const maxPts = r[0].pts || 1;
+function renderBoard(period) {
+  const r = ranked(period);
+  const maxPts = r[0] ? r[0].pts || 1 : 1;
+  const podiumId = period==='ytd' ? 'ytd-podium' : 'r90-podium';
+  const lowerId  = period==='ytd' ? 'ytd-lower'  : 'r90-lower';
 
-  const podiumEl = document.getElementById('podium');
-  const lowerEl  = document.getElementById('lower');
-
-  podiumEl.innerHTML = r.slice(0,3).map((h,i) => {
-    const cls = ['rank-1-card','rank-2-card','rank-3-card'][i];
-    const medalEl = i===0
-      ? `<div class="crown">👑</div>`
-      : `<div class="medal">${i+1}</div>`;
-    const ptsColor = i===0 ? 'var(--gold)' : i===1 ? 'var(--silver)' : 'var(--bronze)';
-    return `
-      <div class="${cls}">
-        ${medalEl}
-        <div class="card-info">
-          <div class="card-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
-          <div class="card-stats">
-            <div class="card-stat">Conv: <strong>${h.conv}%</strong></div>
-            <div class="card-stat">Doc: <strong>${h.doc}%</strong></div>
-            <div class="card-stat">Attempts: <strong>${h.attempts}</strong></div>
-          </div>
+  document.getElementById(podiumId).innerHTML = r.slice(0,3).map((h,i) => {
+    const cls = ['rank-1','rank-2','rank-3'][i];
+    const medal = i===0 ? '<div class="crown">👑</div>' : '<div class="medal">'+(i+1)+'</div>';
+    const ptsColor = i===0?'var(--gold)':i===1?'var(--silver)':'var(--bronze)';
+    return `<div class="${cls}">
+      ${medal}
+      <div class="card-info">
+        <div class="card-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
+        <div class="card-stats">
+          <div class="card-stat">Attempts: <strong>${h.attempts||0}</strong></div>
+          <div class="card-stat">Documented: <strong>${h.documented||0}</strong></div>
+          <div class="card-stat">Resolved: <strong>${h.dismissed||0}</strong></div>
+          <div class="card-stat">Pipeline: <strong>${fmtPipeline(h.pipeline)}</strong></div>
         </div>
-        <div>
-          <div class="card-pts" style="color:${ptsColor}">${h.pts}</div>
-          <div class="pts-lbl">points</div>
-        </div>
-      </div>`;
+      </div>
+      <div>
+        <div class="card-pts" style="color:${ptsColor}">${h.pts||0}</div>
+        <div class="pts-lbl">points</div>
+      </div>
+    </div>`;
   }).join('');
 
-  lowerEl.innerHTML = r.slice(3).map((h,i) => `
+  document.getElementById(lowerId).innerHTML = r.slice(3).map((h,i) => `
     <div class="rank-row">
       <div class="row-num">${i+4}</div>
       <div class="row-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
-      <div class="row-bar-wrap">
-        <div class="row-bar" style="width:${Math.round((h.pts/maxPts)*100)}%;background:${HCA_COLORS[h.name]||'var(--orange)'}"></div>
+      <div class="row-stats">
+        <div class="row-stat">Att: <strong>${h.attempts||0}</strong></div>
+        <div class="row-stat">Doc: <strong>${h.documented||0}</strong></div>
       </div>
-      <div class="row-pts">${h.pts}</div>
+      <div class="row-bar-wrap">
+        <div class="row-bar" style="width:${Math.round(((h.pts||0)/maxPts)*100)}%;background:${HCA_COLORS[h.name]||'var(--orange)'}"></div>
+      </div>
+      <div class="row-pts">${h.pts||0}</div>
     </div>`).join('');
 }
 
-// ─── RENDER DETAIL ───
-function renderDetail() {
-  const r = ranked();
-  const maxPts = r[0].pts || 1;
-  const el = document.getElementById('detail-view');
-  el.innerHTML = r.map((h,i) => `
-    <div class="hca-card ${i===0?'top-card':''}">
-      <div class="dc-header">
-        <div>
-          <div class="dc-rank">#${i+1} ${i===0?'👑':''}</div>
-          <div class="dc-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
-        </div>
-        <div>
-          <div class="dc-pts">${h.pts}</div>
-          <div class="dc-pts-lbl">pts</div>
-        </div>
-      </div>
-      <div class="dc-metrics">
-        <div class="metric">
-          <div class="metric-val conv-val">${h.conv}%</div>
-          <div class="metric-lbl">Conv</div>
-        </div>
-        <div class="metric">
-          <div class="metric-val doc-val">${h.doc}%</div>
-          <div class="metric-lbl">Doc</div>
-        </div>
-        <div class="metric">
-          <div class="metric-val att-val">${h.attempts}</div>
-          <div class="metric-lbl">Attempts</div>
-        </div>
-      </div>
-      <div class="dc-bar">
-        <div class="dc-bar-fill" style="width:${Math.round((h.pts/maxPts)*100)}%"></div>
-      </div>
-    </div>`).join('');
+function setLabel(period) {
+  const now = new Date();
+  const ytdStart = new Date('2026-01-01');
+  const r90Start = new Date(now.getTime() - 90*24*60*60*1000);
+  const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('subLabel').textContent = period==='ytd'
+    ? 'Year to Date — '+fmt(ytdStart)+' through '+fmt(now)
+    : 'Rolling 90-Day — '+fmt(r90Start)+' through '+fmt(now);
 }
+
+// ─── LIVE FETCH ───
+function fetchLive() {
+  if (!AGGREGATOR_URL || AGGREGATOR_URL.indexOf('PASTE') !== -1) return;
+  fetch(AGGREGATOR_URL)
+    .then(r => r.json())
+    .then(data => {
+      stats = data;
+      renderBoard('ytd');
+      renderBoard('rolling90');
+      const dot = document.getElementById('liveDot');
+      const txt = document.getElementById('liveText');
+      dot.classList.add('active');
+      txt.classList.add('active');
+      txt.textContent = 'Live';
+      const updated = data._updated ? new Date(data._updated) : new Date();
+      document.getElementById('lastUpdated').textContent =
+        'Live data as of ' + updated.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    })
+    .catch(() => {
+      document.getElementById('liveText').textContent = 'Offline (showing last rebuild)';
+    });
+}
+
+// Fetch on load, then every 5 minutes
+fetchLive();
+setInterval(fetchLive, 5 * 60 * 1000);
 
 // ─── VIEW SWITCHING ───
-let currentView = 'rankings';
+let currentView = 'ytd';
 function switchView(name, btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(name+'-view').classList.add('active');
   if(btn) btn.classList.add('active');
   currentView = name;
+  setLabel(name);
   resetCycle();
 }
 
-// ─── AUTO-CYCLE (15s) ───
+// ─── COUNTDOWN / AUTOCYCLE ───
 const CYCLE = 15;
-let cycleTimer, dotTimer, elapsed = 0;
-
+let dotTimer, elapsed = 0;
 function buildDots() {
-  const c = document.getElementById('countdown');
-  c.innerHTML = Array.from({length:CYCLE},(_,i)=>`<div class="cd-dot" id="d${i}"></div>`).join('');
+  document.getElementById('countdown').innerHTML =
+    Array.from({length:CYCLE},(_,i)=>`<div class="cd-dot" id="d${i}"></div>`).join('');
 }
-
 function resetCycle() {
-  clearInterval(cycleTimer);
-  clearInterval(dotTimer);
-  elapsed = 0;
-  buildDots();
-  startCycle();
+  clearInterval(dotTimer); elapsed = 0; buildDots(); startCycle();
 }
-
 function startCycle() {
   dotTimer = setInterval(()=>{
     const dot = document.getElementById('d'+elapsed);
@@ -582,18 +238,18 @@ function startCycle() {
     elapsed++;
     if(elapsed >= CYCLE) {
       clearInterval(dotTimer);
-      const next = currentView === 'rankings' ? 'detail' : 'rankings';
+      const next = currentView==='ytd' ? 'rolling90' : 'ytd';
       const btn = [...document.querySelectorAll('.toggle-btn')]
-        .find(b=>b.textContent.toLowerCase().includes(next==='rankings'?'rank':'detail'));
+        .find(b => b.textContent.toLowerCase().includes(next==='ytd'?'ytd':'rolling'));
       switchView(next, btn);
     }
   }, 1000);
 }
 
 // ─── INIT ───
-setWeek();
-renderRankings();
-renderDetail();
+renderBoard('ytd');
+renderBoard('rolling90');
+setLabel('ytd');
 buildDots();
 startCycle();
 </script>
