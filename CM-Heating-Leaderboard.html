@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM Heating — Follow-Up Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0f1a; --surface:#111827; --surface2:#1a2336;
+  --orange:#f97316; --gold:#fbbf24; --silver:#94a3b8; --bronze:#cd7c2f;
+  --white:#f8fafc; --muted:#64748b; --green:#22c55e; --blue:#38bdf8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Barlow',sans-serif; background:var(--bg); color:var(--white); height:100vh; overflow:hidden; }
+body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(249,115,22,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(249,115,22,0.04) 1px,transparent 1px); background-size:60px 60px; pointer-events:none; }
+.app { display:flex; flex-direction:column; height:100vh; padding:20px 36px 16px; gap:16px; }
+.header { display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.header-left { display:flex; align-items:center; gap:20px; }
+.logo-area img { height:52px; width:auto; }
+.title h1 { font-family:'Barlow Condensed',sans-serif; font-size:34px; font-weight:900; text-transform:uppercase; letter-spacing:3px; line-height:1; }
+.title .week { font-size:12px; color:var(--muted); font-weight:600; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; }
+.header-right { display:flex; align-items:center; gap:16px; }
+.live-badge { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.live-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 10px var(--green); animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.toggle { display:flex; background:var(--surface); border-radius:8px; padding:4px; gap:4px; }
+.toggle-btn { padding:8px 22px; border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; background:transparent; color:var(--muted); }
+.toggle-btn.active { background:var(--orange); color:white; }
+.view { display:none; flex:1; overflow:hidden; }
+.view.active { display:flex; }
+#rankings-view { flex-direction:row; gap:20px; }
+.left-col { flex:1.3; display:flex; flex-direction:column; gap:10px; }
+.right-col { flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; }
+.rank-1-card { background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(249,115,22,0.06)); border:1px solid rgba(251,191,36,0.25); border-radius:12px; padding:22px 28px; display:flex; align-items:center; gap:20px; position:relative; overflow:hidden; animation:slideRight 0.5s ease both; }
+.rank-1-card::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; background:linear-gradient(90deg,var(--gold),var(--orange)); }
+.rank-2-card,.rank-3-card { background:var(--surface); border:1px solid var(--surface2); border-radius:12px; display:flex; align-items:center; gap:20px; padding:16px 24px; animation:slideRight 0.5s ease both; }
+.rank-2-card { animation-delay:0.1s; } .rank-3-card { animation-delay:0.2s; }
+@keyframes slideRight { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:translateX(0)} }
+.crown { font-size:32px; animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+.medal { font-family:'Barlow Condensed',sans-serif; font-size:44px; font-weight:900; min-width:56px; text-align:center; line-height:1; }
+.rank-2-card .medal { color:var(--silver); } .rank-3-card .medal { color:var(--bronze); }
+.card-info { flex:1; }
+.card-name { font-family:'Barlow Condensed',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:1px; line-height:1; }
+.rank-1-card .card-name { font-size:40px; } .rank-2-card .card-name,.rank-3-card .card-name { font-size:30px; }
+.card-stats { display:flex; gap:18px; margin-top:6px; }
+.card-stat { font-size:12px; color:var(--muted); font-weight:500; }
+.card-stat strong { color:var(--white); font-weight:700; }
+.card-pts { font-family:'Barlow Condensed',sans-serif; font-weight:900; line-height:1; text-align:right; }
+.rank-1-card .card-pts { font-size:56px; color:var(--gold); }
+.rank-2-card .card-pts,.rank-3-card .card-pts { font-size:42px; color:var(--silver); }
+.rank-3-card .card-pts { color:var(--bronze); }
+.pts-lbl { font-size:11px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; text-align:right; margin-top:2px; font-weight:600; }
+.rank-row { background:var(--surface); border:1px solid var(--surface2); border-radius:8px; padding:12px 20px; display:flex; align-items:center; gap:16px; animation:slideRight 0.4s ease both; }
+.rank-row:nth-child(1){animation-delay:0.3s} .rank-row:nth-child(2){animation-delay:0.35s}
+.rank-row:nth-child(3){animation-delay:0.4s} .rank-row:nth-child(4){animation-delay:0.45s}
+.rank-row:nth-child(5){animation-delay:0.5s} .rank-row:nth-child(6){animation-delay:0.55s}
+.row-num { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:700; color:var(--muted); min-width:28px; text-align:center; }
+.row-name { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; flex:1; }
+.row-bar-wrap { flex:2; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+.row-bar { height:100%; border-radius:3px; }
+.row-pts { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:800; color:var(--orange); min-width:80px; text-align:right; }
+#detail-view.active { display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:12px; }
+.hca-card { background:var(--surface); border:1px solid var(--surface2); border-radius:12px; padding:18px 20px; display:flex; flex-direction:column; gap:12px; animation:fadeUp 0.4s ease both; position:relative; overflow:hidden; }
+.hca-card.top-card { border-color:rgba(251,191,36,0.3); background:linear-gradient(135deg,rgba(251,191,36,0.07),var(--surface)); }
+.hca-card.top-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(90deg,var(--gold),var(--orange)); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.hca-card:nth-child(1){animation-delay:0.05s} .hca-card:nth-child(2){animation-delay:0.1s}
+.hca-card:nth-child(3){animation-delay:0.15s} .hca-card:nth-child(4){animation-delay:0.2s}
+.hca-card:nth-child(5){animation-delay:0.25s} .hca-card:nth-child(6){animation-delay:0.3s}
+.hca-card:nth-child(7){animation-delay:0.35s} .hca-card:nth-child(8){animation-delay:0.4s}
+.hca-card:nth-child(9){animation-delay:0.45s}
+.dc-header { display:flex; justify-content:space-between; align-items:flex-start; }
+.dc-rank { font-size:12px; color:var(--muted); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px; }
+.dc-name { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:800; text-transform:uppercase; letter-spacing:1px; }
+.dc-pts { font-family:'Barlow Condensed',sans-serif; font-size:38px; font-weight:900; color:var(--orange); line-height:1; text-align:right; }
+.dc-pts-lbl { font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; text-align:right; font-weight:600; }
+.dc-metrics { display:flex; gap:8px; }
+.metric { flex:1; background:var(--surface2); border-radius:6px; padding:8px 6px; text-align:center; }
+.metric-val { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:800; line-height:1; }
+.metric-lbl { font-size:10px; color:var(--muted); font-weight:500; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
+.conv-val { color:var(--green); } .doc-val { color:var(--blue); } .att-val { color:var(--orange); }
+.dc-bar { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+.dc-bar-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--orange),var(--gold)); }
+.countdown { position:fixed; bottom:14px; right:24px; display:flex; gap:4px; align-items:center; }
+.cd-dot { width:6px; height:6px; border-radius:50%; background:var(--surface2); transition:background 0.3s; }
+.cd-dot.on { background:var(--orange); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-area"><img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating"></div>
+      <div class="title">
+        <h1>Follow-Up Leaderboard</h1>
+        <div class="week" id="weekLabel"></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div>Live</div>
+      <div class="toggle">
+        <button class="toggle-btn active" onclick="switchView('rankings',this)">Rankings</button>
+        <button class="toggle-btn" onclick="switchView('detail',this)">Detail</button>
+      </div>
+    </div>
+  </div>
+  <div id="rankings-view" class="view active">
+    <div class="left-col" id="podium"></div>
+    <div class="right-col" id="lower"></div>
+  </div>
+  <div id="detail-view" class="view"></div>
+</div>
+<div class="countdown" id="countdown"></div>
+
+<script>
+const PTS = { conversion:100, docEntry:20, attempt:10 };
+const HCA_COLORS = {
+  Amber:'#f472b6', Chester:'#a78bfa', Davis:'#34d399', Jay:'#38bdf8',
+  Joe:'#fb923c', Joseph:'#fbbf24', Kyle:'#4ade80', Samir:'#e879f9', Trevor:'#67e8f9'
+};
+
+// Data — May 15, 2026 | ServiceTitan sold+unsold export
+let data = {
+  Amber:   { conversions:39, attempts:64,  documented:53, totalLeads:109 },
+  Chester: { conversions:40, attempts:110, documented:73, totalLeads:127 },
+  Davis:   { conversions:52, attempts:32,  documented:29, totalLeads:131 },
+  Jay:     { conversions:53, attempts:24,  documented:22, totalLeads:131 },
+  Joe:     { conversions:48, attempts:2,   documented:2,  totalLeads:117 },
+  Joseph:  { conversions:58, attempts:2,   documented:1,  totalLeads:150 },
+  Kyle:    { conversions:61, attempts:58,  documented:38, totalLeads:143 },
+  Samir:   { conversions:37, attempts:28,  documented:23, totalLeads:112 },
+  Trevor:  { conversions:30, attempts:61,  documented:41, totalLeads:71  },
+};
+
+function calcPts(d) { return d.conversions*PTS.conversion + d.documented*PTS.docEntry + d.attempts*PTS.attempt; }
+function convRate(d) { return d.totalLeads > 0 ? Math.round((d.conversions/d.totalLeads)*100) : 0; }
+function docRate(d)  { return d.totalLeads > 0 ? Math.round((d.documented/d.totalLeads)*100)  : 0; }
+
+function ranked() {
+  return Object.entries(data)
+    .map(([n,d]) => ({name:n,...d,pts:calcPts(d),conv:convRate(d),doc:docRate(d)}))
+    .sort((a,b) => b.pts - a.pts);
+}
+
+function setWeek() {
+  const now = new Date(), day = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate()-((day+6)%7));
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  document.getElementById('weekLabel').textContent = `Week of ${fmt(mon)} — ${fmt(sun)}`;
+}
+
+function renderRankings() {
+  const r = ranked(), maxPts = r[0].pts || 1;
+  document.getElementById('podium').innerHTML = r.slice(0,3).map((h,i) => {
+    const cls = ['rank-1-card','rank-2-card','rank-3-card'][i];
+    const medalEl = i===0 ? `<div class="crown">👑</div>` : `<div class="medal">${i+1}</div>`;
+    const ptsColor = i===0 ? 'var(--gold)' : i===1 ? 'var(--silver)' : 'var(--bronze)';
+    return `<div class="${cls}">${medalEl}
+      <div class="card-info">
+        <div class="card-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
+        <div class="card-stats">
+          <div class="card-stat">Conv: <strong>${h.conv}%</strong></div>
+          <div class="card-stat">Doc: <strong>${h.doc}%</strong></div>
+          <div class="card-stat">Attempts: <strong>${h.attempts}</strong></div>
+        </div>
+      </div>
+      <div><div class="card-pts" style="color:${ptsColor}">${h.pts.toLocaleString()}</div><div class="pts-lbl">points</div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('lower').innerHTML = r.slice(3).map((h,i) => `
+    <div class="rank-row">
+      <div class="row-num">${i+4}</div>
+      <div class="row-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div>
+      <div class="row-bar-wrap"><div class="row-bar" style="width:${Math.round((h.pts/maxPts)*100)}%;background:${HCA_COLORS[h.name]||'var(--orange)'}"></div></div>
+      <div class="row-pts">${h.pts.toLocaleString()}</div>
+    </div>`).join('');
+}
+
+function renderDetail() {
+  const r = ranked(), maxPts = r[0].pts || 1;
+  document.getElementById('detail-view').innerHTML = r.map((h,i) => `
+    <div class="hca-card ${i===0?'top-card':''}">
+      <div class="dc-header">
+        <div><div class="dc-rank">#${i+1} ${i===0?'👑':''}</div><div class="dc-name" style="color:${HCA_COLORS[h.name]||'var(--white)'}">${h.name}</div></div>
+        <div><div class="dc-pts">${h.pts.toLocaleString()}</div><div class="dc-pts-lbl">pts</div></div>
+      </div>
+      <div class="dc-metrics">
+        <div class="metric"><div class="metric-val conv-val">${h.conv}%</div><div class="metric-lbl">Conv</div></div>
+        <div class="metric"><div class="metric-val doc-val">${h.doc}%</div><div class="metric-lbl">Doc</div></div>
+        <div class="metric"><div class="metric-val att-val">${h.attempts}</div><div class="metric-lbl">Attempts</div></div>
+      </div>
+      <div class="dc-bar"><div class="dc-bar-fill" style="width:${Math.round((h.pts/maxPts)*100)}%"></div></div>
+    </div>`).join('');
+}
+
+let currentView = 'rankings';
+function switchView(name, btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(name+'-view').classList.add('active');
+  if(btn) btn.classList.add('active');
+  currentView = name; resetCycle();
+}
+
+const CYCLE = 15; let dotTimer, elapsed = 0;
+function buildDots() {
+  document.getElementById('countdown').innerHTML = Array.from({length:CYCLE},(_,i)=>`<div class="cd-dot" id="d${i}"></div>`).join('');
+}
+function resetCycle() { clearInterval(dotTimer); elapsed = 0; buildDots(); startCycle(); }
+function startCycle() {
+  dotTimer = setInterval(()=>{
+    const dot = document.getElementById('d'+elapsed);
+    if(dot) dot.classList.add('on');
+    elapsed++;
+    if(elapsed >= CYCLE) {
+      clearInterval(dotTimer);
+      const next = currentView==='rankings' ? 'detail' : 'rankings';
+      const btn = [...document.querySelectorAll('.toggle-btn')].find(b=>b.textContent.toLowerCase().includes(next==='rankings'?'rank':'detail'));
+      switchView(next, btn);
+    }
+  }, 1000);
+}
+
+setWeek(); renderRankings(); renderDetail(); buildDots(); startCycle();
+</script>
+</body>
+</html>

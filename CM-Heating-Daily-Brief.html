@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM Heating — Daily 1-on-1 Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f1f5f9; --white: #ffffff; --dark: #0f172a; --surface: #1e293b;
+  --orange: #f97316; --muted: #64748b; --border: #e2e8f0;
+  --green: #16a34a; --yellow: #d97706; --red: #dc2626; --blue: #0891b2;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Barlow',sans-serif; background:var(--bg); color:var(--dark); padding:32px; font-size:14px; min-height:100vh; }
+.page-header { background:var(--surface); border-radius:12px; padding:24px 32px; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.page-header img { height:48px; }
+.header-center { text-align:center; }
+.page-header-title { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900; color:white; text-transform:uppercase; letter-spacing:2px; }
+.page-header-date { font-size:13px; color:#94a3b8; font-weight:500; margin-top:4px; }
+.print-btn { padding:10px 20px; background:var(--orange); color:white; border:none; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; letter-spacing:1px; text-transform:uppercase; cursor:pointer; }
+.selector-bar { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:16px 24px; display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+.selector-label { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+.hca-select { flex:1; max-width:320px; padding:10px 14px; border:1px solid var(--border); border-radius:6px; font-family:'Barlow',sans-serif; font-size:14px; font-weight:500; color:var(--dark); background:var(--bg); cursor:pointer; outline:none; }
+.hca-select:focus { border-color:var(--orange); }
+.reset-btn { padding:10px 20px; background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
+.reset-btn:not(:disabled):hover { border-color:var(--orange); color:var(--orange); }
+.reset-btn:disabled { opacity:0.35; cursor:not-allowed; }
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; gap:16px; }
+.empty-icon { font-size:52px; opacity:0.5; }
+.empty-text { font-size:16px; font-weight:500; color:var(--muted); }
+.card-wrap { display:flex; justify-content:center; }
+.hca-brief { background:var(--white); border-radius:10px; border:1px solid var(--border); overflow:hidden; width:100%; max-width:700px; }
+.brief-header { background:var(--surface); padding:20px 24px; display:flex; justify-content:space-between; align-items:center; }
+.brief-name { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:white; }
+.brief-right { text-align:right; }
+.brief-pts { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900; color:var(--orange); line-height:1; }
+.brief-rev { font-size:12px; color:#94a3b8; margin-top:3px; font-weight:500; }
+.brief-stats { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid var(--border); }
+.brief-stat { padding:16px; text-align:center; border-right:1px solid var(--border); }
+.brief-stat:last-child { border-right:none; }
+.stat-val { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:800; line-height:1; }
+.stat-lbl { font-size:11px; color:var(--muted); font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px; }
+.green { color:var(--green); } .yellow { color:var(--yellow); } .red { color:var(--red); } .orange { color:var(--orange); }
+.brief-leads { padding:16px 24px; border-bottom:1px solid var(--border); }
+.leads-title { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+.lead-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f8fafc; }
+.lead-row:last-child { border-bottom:none; }
+.urgency-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-green { background:var(--green); } .dot-yellow { background:var(--yellow); } .dot-orange { background:#f97316; } .dot-red { background:var(--red); }
+.lead-name { flex:1; font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lead-status { font-size:11px; padding:2px 8px; border-radius:4px; font-weight:600; white-space:nowrap; }
+.status-not { background:#f1f5f9; color:var(--muted); } .status-cont { background:#dcfce7; color:var(--green); }
+.status-unr { background:#fef3c7; color:var(--yellow); } .status-dis { background:#fee2e2; color:var(--red); }
+.lead-days { font-size:12px; color:var(--muted); font-weight:600; white-space:nowrap; }
+.lead-amount { font-size:13px; font-weight:700; color:var(--dark); white-space:nowrap; }
+.brief-talking { background:#f8fafc; padding:16px 24px; }
+.talking-title { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+.talking-point { font-size:13px; color:var(--dark); line-height:1.6; padding:4px 0 4px 16px; position:relative; }
+.talking-point::before { content:'→'; position:absolute; left:0; color:var(--orange); font-weight:700; }
+@media print {
+  body { padding:16px; background:white; }
+  .print-btn, .selector-bar { display:none; }
+  .card-wrap { justify-content:flex-start; }
+  .hca-brief { max-width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
+  <div class="header-center">
+    <div class="page-header-title">Daily 1-on-1 Brief</div>
+    <div class="page-header-date" id="dateLabel"></div>
+  </div>
+  <button class="print-btn" onclick="window.print()">⎙ Print / Save PDF</button>
+</div>
+
+<div class="selector-bar">
+  <div class="selector-label">HCA</div>
+  <select class="hca-select" id="hcaSelect" onchange="selectHCA(this.value)">
+    <option value="">— Choose an HCA —</option>
+    <option value="Amber Maddalena">Amber Maddalena</option>
+    <option value="Chester Granard">Chester Granard</option>
+    <option value="Davis Diosdado">Davis Diosdado</option>
+    <option value="Javierre Milo (Jay)">Javierre Milo (Jay)</option>
+    <option value="Joe Chounramany">Joe Chounramany</option>
+    <option value="Joseph Ruble">Joseph Ruble</option>
+    <option value="Kyle McAlister">Kyle McAlister</option>
+    <option value="Samir Khoury">Samir Khoury</option>
+    <option value="Trevor Bohm">Trevor Bohm</option>
+  </select>
+  <button class="reset-btn" id="resetBtn" onclick="resetSelection()" disabled>Reset</button>
+</div>
+
+<div id="content">
+  <div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <div class="empty-text">Select an HCA to view their brief.</div>
+  </div>
+</div>
+
+<script>
+// Data — May 15, 2026 | ServiceTitan sold+unsold export
+// convRate = wins/totalLeads | docRate = leads_with_followup/totalLeads | revenue = closed $
+const briefData = {
+  'Amber Maddalena': {
+    short:'Amber', convRate:36, docRate:49, attempts:64,
+    totalLeads:109, conversions:39, revenue:597346, openLeads:70, pts:5600,
+    leads:[
+      {name:'Teresa Richards', days:135, amount:'$11,799', urgency:'red', status:'Dismissed'},
+      {name:'Brian Melvin',    days:135, amount:'$8,616',  urgency:'red', status:'Contacted'},
+      {name:'Romel Jocson',    days:134, amount:'$19,698', urgency:'red', status:'Dismissed'},
+      {name:'Zia Qadir',       days:134, amount:'$33,213', urgency:'red', status:'Unreachable'},
+    ],
+    talking:[
+      'Zia Qadir ($33K, 134d, Unreachable) — 6 open estimates still on the table. Last push or formal close?',
+      'Tim Neustel ($24K, 134d, Contacted) — follow-up shows. What\'s the status — is this still live?',
+      '49% doc rate with 70 open leads — solid habits. The 51% not yet followed up is next month\'s revenue.',
+    ]
+  },
+  'Chester Granard': {
+    short:'Chester', convRate:31, docRate:57, attempts:110,
+    totalLeads:127, conversions:40, revenue:587416, openLeads:87, pts:6560,
+    leads:[
+      {name:'Allyson Evers',   days:496, amount:'$10,369', urgency:'red', status:'Unreachable'},
+      {name:'Shawn Pate',      days:464, amount:'$27,101', urgency:'red', status:'Unreachable'},
+      {name:'Dorian Goettler', days:149, amount:'$21,784', urgency:'red', status:'Dismissed'},
+      {name:'Ian Stanaway',    days:136, amount:'$27,379', urgency:'red', status:'Unreachable'},
+    ],
+    talking:[
+      'Allyson Evers (496d) and Shawn Pate (464d) — both Unreachable over a year. Close or cut, today.',
+      '110 attempts leads the team — strong hustle. But 31% conv is below team average. Is the pitch landing?',
+      'Ian Stanaway ($27K, 136d) — Unreachable. Tried a different contact method or referral path?',
+    ]
+  },
+  'Davis Diosdado': {
+    short:'Davis', convRate:40, docRate:22, attempts:32,
+    totalLeads:131, conversions:52, revenue:627374, openLeads:79, pts:6100,
+    leads:[
+      {name:'Sean and Rebecca Weaver', days:149, amount:'$52,044', urgency:'red', status:'Unreachable'},
+      {name:'Du Le',                   days:135, amount:'$31,096', urgency:'red', status:'Dismissed'},
+      {name:'Michelle Petelle',        days:134, amount:'$22,526', urgency:'red', status:'NotAttempted'},
+      {name:'Kaity Hoard',             days:127, amount:'$9,811',  urgency:'red', status:'Dismissed'},
+    ],
+    talking:[
+      'Sean & Rebecca Weaver — $52K, 149d, Unreachable. Team\'s largest open lead. Needs a new angle or close.',
+      '40% conv is strong — but 22% doc rate means most open leads have never been followed up.',
+      'Michelle Petelle ($22K, 134d) — still NotAttempted. This lead needs a first call today.',
+    ]
+  },
+  'Javierre Milo (Jay)': {
+    short:'Jay', convRate:40, docRate:17, attempts:24,
+    totalLeads:131, conversions:53, revenue:766697, openLeads:78, pts:5980,
+    leads:[
+      {name:'Behuailu Tafese', days:154, amount:'$15,924', urgency:'red', status:'Contacted'},
+      {name:'Eljo George',     days:136, amount:'$15,080', urgency:'red', status:'NotAttempted'},
+      {name:'Andres Garcia',   days:136, amount:'$21,182', urgency:'red', status:'Dismissed'},
+      {name:'Thi Pham',        days:135, amount:'$7,062',  urgency:'red', status:'Dismissed'},
+    ],
+    talking:[
+      '$767K revenue — highest on the team. Strong appointment closer. The open pipeline is the next chapter.',
+      '17% doc rate on 78 open leads — 65 leads with no follow-up. Working even 10 could add $150K+.',
+      'Behuailu Tafese ($16K, 154d, Contacted) — what\'s the real status? Is this still openable?',
+    ]
+  },
+  'Joe Chounramany': {
+    short:'Joe', convRate:41, docRate:2, attempts:2,
+    totalLeads:117, conversions:48, revenue:637838, openLeads:69, pts:4860,
+    leads:[
+      {name:'Heather Conradt',  days:135, amount:'$11,194', urgency:'red', status:'NotAttempted'},
+      {name:'Spencer Lane',     days:134, amount:'$9,045',  urgency:'red', status:'NotAttempted'},
+      {name:'Joshua Henderson', days:134, amount:'$5,792',  urgency:'red', status:'NotAttempted'},
+      {name:'Ron Barrow',       days:132, amount:'$14,940', urgency:'red', status:'NotAttempted'},
+    ],
+    talking:[
+      '41% conv rate — you close at the appointment. The gap: 69 open leads, 2 total follow-up attempts.',
+      '$1M+ of open pipeline with almost no outreach. This is recoverable revenue sitting on the table.',
+      'Start with 5 this week: Heather Conradt ($11K), Ron Barrow ($15K), and 3 more. One call each.',
+    ]
+  },
+  'Joseph Ruble': {
+    short:'Joseph', convRate:39, docRate:1, attempts:2,
+    totalLeads:150, conversions:58, revenue:824221, openLeads:92, pts:5840,
+    leads:[
+      {name:'Mike Horner',                  days:135, amount:'$25,176', urgency:'red', status:'NotAttempted'},
+      {name:'Mukilteo Presbyterian Church', days:135, amount:'$36,523', urgency:'red', status:'NotAttempted'},
+      {name:'Mike Schireman',               days:135, amount:'$12,655', urgency:'red', status:'NotAttempted'},
+      {name:'Jon Samuelson',                days:134, amount:'$24,649', urgency:'red', status:'NotAttempted'},
+    ],
+    talking:[
+      '$824K closed revenue — one of the top earners. Strong appointment closer.',
+      '92 open leads, 1% doc rate, 2 total follow-ups. Mukilteo Presbyterian ($36K) open 135 days.',
+      '10% follow-up on open pipeline ≈ $170K potential. What\'s the plan this week?',
+    ]
+  },
+  'Kyle McAlister': {
+    short:'Kyle', convRate:43, docRate:27, attempts:58,
+    totalLeads:143, conversions:61, revenue:839976, openLeads:82, pts:7440,
+    leads:[
+      {name:'Ola Fademisin',      days:275, amount:'$9,849',  urgency:'red', status:'NotAttempted'},
+      {name:'Genevieve Matteson', days:262, amount:'$27,045', urgency:'red', status:'NotAttempted'},
+      {name:'Lisa Nilsen',        days:225, amount:'$16,239', urgency:'red', status:'NotAttempted'},
+      {name:'Lisa Ammerman',      days:210, amount:'$9,270',  urgency:'red', status:'NotAttempted'},
+    ],
+    talking:[
+      'Team leader — 43% conv rate, $840K revenue, highest points on the board.',
+      'Ola Fademisin (275d) and Genevieve Matteson ($27K, 262d) — nearly a year old, never contacted.',
+      '27% doc rate on 143 leads — focus on $15K+ open ones that have never been attempted.',
+    ]
+  },
+  'Samir Khoury': {
+    short:'Samir', convRate:33, docRate:21, attempts:28,
+    totalLeads:112, conversions:37, revenue:496829, openLeads:75, pts:4440,
+    leads:[
+      {name:'Cara Decarlow', days:135, amount:'$7,949',  urgency:'red', status:'Contacted'},
+      {name:'David Carrell', days:132, amount:'$25,950', urgency:'red', status:'NotAttempted'},
+      {name:'Stacey Drimmer',days:132, amount:'$19,811', urgency:'red', status:'NotAttempted'},
+      {name:'David Carrell', days:132, amount:'$24,121', urgency:'red', status:'NotAttempted'},
+    ],
+    talking:[
+      'Two David Carrell entries ($25K + $24K, 132d) — same customer, different properties? Coordinate.',
+      '33% conv is 5pts below team average — is there a pattern in objections worth coaching through?',
+      '21% doc rate — 89 of 112 leads have no follow-up. Large uncovered opportunity here.',
+    ]
+  },
+  'Trevor Bohm': {
+    short:'Trevor', convRate:42, docRate:58, attempts:61,
+    totalLeads:71, conversions:30, revenue:528637, openLeads:41, pts:4430,
+    leads:[
+      {name:'SOLD HOME',       days:433, amount:'$23,350', urgency:'red', status:'Contacted'},
+      {name:'Avinit Mohanty',  days:87,  amount:'$26,547', urgency:'red', status:'Unreachable'},
+      {name:'Diane Smith',     days:86,  amount:'$15,303', urgency:'red', status:'Contacted'},
+      {name:'Veronica Pohle',  days:83,  amount:'$36,273', urgency:'red', status:'Dismissed'},
+    ],
+    talking:[
+      '"SOLD HOME" at 433 days — remove from pipeline or verify status. Shouldn\'t be in open leads.',
+      '58% doc rate with 42% conv — most balanced follow-up habits on the team. Keep building.',
+      'Avinit Mohanty ($26K, 87d) and Veronica Pohle ($36K, 83d) — confirm status on both this week.',
+    ]
+  },
+};
+
+function getConvColor(v)   { return v >= 40 ? 'green' : v >= 30 ? 'yellow' : 'red'; }
+function getDocColor(v)    { return v >= 50 ? 'green' : v >= 25 ? 'yellow' : 'red'; }
+function getAttColor(v)    { return v >= 40 ? 'green' : v >= 10 ? 'yellow' : 'red'; }
+function getStatusClass(s) {
+  if (!s) return 'status-not';
+  const l = s.toLowerCase();
+  if (l === 'contacted')   return 'status-cont';
+  if (l === 'unreachable') return 'status-unr';
+  if (l === 'dismissed')   return 'status-dis';
+  return 'status-not';
+}
+function fmtRevenue(n) {
+  if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
+  return '$' + Math.round(n/1000) + 'K';
+}
+
+document.getElementById('dateLabel').textContent =
+  new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+function selectHCA(key) {
+  const resetBtn = document.getElementById('resetBtn');
+  const content  = document.getElementById('content');
+  if (!key) {
+    resetBtn.disabled = true;
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Select an HCA to view their brief.</div></div>`;
+    return;
+  }
+  resetBtn.disabled = false;
+  const d = briefData[key];
+  content.innerHTML = `
+    <div class="card-wrap"><div class="hca-brief">
+      <div class="brief-header">
+        <div class="brief-name">${d.short}</div>
+        <div class="brief-right">
+          <div class="brief-pts">${d.pts.toLocaleString()} pts</div>
+          <div class="brief-rev">${fmtRevenue(d.revenue)} won &nbsp;·&nbsp; ${d.openLeads} open leads</div>
+        </div>
+      </div>
+      <div class="brief-stats">
+        <div class="brief-stat">
+          <div class="stat-val ${getConvColor(d.convRate)}">${d.convRate}%</div>
+          <div class="stat-lbl">Conv Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getDocColor(d.docRate)}">${d.docRate}%</div>
+          <div class="stat-lbl">Doc Rate</div>
+        </div>
+        <div class="brief-stat">
+          <div class="stat-val ${getAttColor(d.attempts)}">${d.attempts}</div>
+          <div class="stat-lbl">Attempts</div>
+        </div>
+      </div>
+      <div class="brief-leads">
+        <div class="leads-title">Oldest Open Leads</div>
+        ${d.leads.map(l=>`
+          <div class="lead-row">
+            <div class="urgency-dot dot-${l.urgency}"></div>
+            <div class="lead-name">${l.name}</div>
+            <span class="lead-status ${getStatusClass(l.status)}">${l.status}</span>
+            <div class="lead-days">${l.days}d</div>
+            <div class="lead-amount">${l.amount}</div>
+          </div>`).join('')}
+      </div>
+      <div class="brief-talking">
+        <div class="talking-title">Talking Points</div>
+        ${d.talking.map(t=>`<div class="talking-point">${t}</div>`).join('')}
+      </div>
+    </div></div>`;
+}
+
+function resetSelection() {
+  document.getElementById('hcaSelect').value = '';
+  selectHCA('');
+}
+</script>
+</body>
+</html>
