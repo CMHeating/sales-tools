@@ -532,7 +532,6 @@ body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", 
 .btn:hover { border-color: var(--cm-blue); color: var(--cm-blue); }
 .btn-admin { background: rgba(0, 90, 169, .10); border-color: rgba(0, 90, 169, .30); color: var(--cm-blue); }
 .btn-admin.active { background: rgba(245, 130, 32, .13); border-color: rgba(245, 130, 32, .45); color: var(--cm-orange); }
-.btn-hca { background: rgba(245, 130, 32, .10); border-color: rgba(245, 130, 32, .35); color: var(--cm-orange); text-decoration: none; }
 #savingBadge { display: none; align-items: center; gap: 6px; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--cm-blue); }
 .spinner { width: 10px; height: 10px; border: 2px solid rgba(0, 90, 169, .25); border-top-color: var(--cm-blue); border-radius: 50%; animation: spin .6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -632,7 +631,6 @@ tbody tr:last-child { border-bottom: none; }
   </div>
   <div class="topbar-right">
     <div id="savingBadge"><div class="spinner"></div>&nbsp;Saving…</div>
-    <a class="btn btn-hca" href="https://cmheating.github.io/caas-calculator" target="_blank">← HCA Tools</a>
     <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN EDIT</button>
   </div>
 </div>
