@@ -71,7 +71,6 @@ let adminMode = false;
 let currentWeekIndex = 0;
 let scheduleData = { weeks: [] };
 let availabilityData = {};
-let activeLocks = {};
 let editTarget = null;
 let pendingStatus = null;
 let isSaving = false;
@@ -101,12 +100,6 @@ onValue(availabilityRef, (snap) => {
 }, (err) => {
   console.error(err);
 });
-
-onValue(ref(db, "cmh_edit_locks"), (snap) => {
-  activeLocks = snap.val() || {};
-  renderWeek(currentWeekIndex);
-});
-
 
 function badge(txt, color) {
   const el = document.getElementById("connBadge");
@@ -206,60 +199,6 @@ function refreshProjectDatalist() {
     .join("");
 }
 
-
-
-function getFreshLock(key) {
-  const lock = activeLocks[key];
-
-  if (!lock || !lock.timestamp) return null;
-
-  const ageMs = Date.now() - Number(lock.timestamp);
-
-  // Locks older than 2 minutes are considered stale.
-  if (ageMs > 120000) return null;
-
-  return lock;
-}
-
-function isLockedByOtherUser(key) {
-  const lock = getFreshLock(key);
-  if (!lock || !currentEditor) return false;
-
-  return lock.editorId !== `${currentEditor.role}:${currentEditor.name}`;
-}
-
-async function acquireSlotLock(key) {
-  if (!currentEditor) return true;
-
-  const lock = getFreshLock(key);
-
-  if (lock && lock.editorId !== `${currentEditor.role}:${currentEditor.name}`) {
-    alert(`${lock.editorName} is currently editing this slot. Try again in a minute.`);
-    return false;
-  }
-
-  const editorId = `${currentEditor.role}:${currentEditor.name}`;
-
-  const updates = {};
-  updates[`cmh_edit_locks/${key}`] = {
-    editorId,
-    editorName: currentEditor.name,
-    editorRole: currentEditor.role,
-    timestamp: Date.now()
-  };
-
-  await update(ref(db), updates);
-  return true;
-}
-
-async function releaseSlotLock(key) {
-  if (!key) return;
-
-  const updates = {};
-  updates[`cmh_edit_locks/${key}`] = null;
-
-  await update(ref(db), updates);
-}
 
 function installTypeToStatus(installType) {
   if (installType === "fullDay") return "FILLED";
@@ -438,20 +377,15 @@ function renderWeek(idx) {
     item.statuses.forEach((def, di) => {
       const key = getKey(week.title, item.rowIndex, di);
       const st = getStatus(week.title, item.rowIndex, di, def);
-      const lock = getFreshLock(key);
-      const lockedByOther = isLockedByOtherUser(key);
-      const lockHtml = lock
-        ? `<div class="lock-note">${lockedByOther ? "Editing: " : "You are editing: "}${escapeHtml(lock.editorName || "Someone")}</div>`
-        : "";
-      const edCls = adminMode ? (lockedByOther ? " locked" : " editable") : "";
-      const click = adminMode && !lockedByOther
+      const edCls = adminMode ? " editable" : "";
+      const click = adminMode
         ? (item.isOnCall
           ? `onclick="openOnCallEdit(event,'${key}','${escapeHtml(def)}')"`
           : `onclick="openDrop(event,'${key}','${escapeHtml(def)}')"`
         )
         : "";
 
-      table += `<td class="status-cell${edCls}" ${click}>${statusBadge(st)}${getCellDetails(key)}${lockHtml}</td>`;
+      table += `<td class="status-cell${edCls}" ${click}>${statusBadge(st)}${getCellDetails(key)}</td>`;
     });
 
     table += `</tr>`;
@@ -533,11 +467,8 @@ window.toggleAdmin = () => {
   renderWeek(currentWeekIndex);
 };
 
-window.openDrop = async (e, key, def) => {
+window.openDrop = (e, key, def) => {
   e.stopPropagation();
-
-  const locked = await acquireSlotLock(key);
-  if (!locked) return;
 
   editTarget = { key, def };
 
@@ -550,9 +481,6 @@ window.openDrop = async (e, key, def) => {
 window.openOnCallEdit = async (e, key, def) => {
   e.stopPropagation();
 
-  const locked = await acquireSlotLock(key);
-  if (!locked) return;
-
   const currentValue = (availabilityData.overrides && availabilityData.overrides[key]) || def || "";
 
   const newValue = prompt(
@@ -560,18 +488,13 @@ window.openOnCallEdit = async (e, key, def) => {
     currentValue === "—" ? "" : currentValue
   );
 
-  if (newValue === null) {
-    await releaseSlotLock(key);
-    return;
-  }
+  if (newValue === null) return;
 
   const cleanValue = newValue.trim() || "—";
 
   if (!isSaving) {
     await writeStatus(key, cleanValue, def, "fullDay", {});
   }
-
-  await releaseSlotLock(key);
 };
 
 window.continueStatusChoice = async () => {
@@ -601,7 +524,6 @@ window.continueStatusChoice = async () => {
         pm: null
       }
     );
-    await releaseSlotLock(key);
     renderWeek(currentWeekIndex);
     return;
   }
@@ -616,11 +538,9 @@ window.continueStatusChoice = async () => {
   openDetailsModal(key);
 };
 
-window.closeStatusModal = async () => {
-  const key = editTarget ? editTarget.key : null;
+window.closeStatusModal = () => {
   editTarget = null;
   document.getElementById("statusModal").classList.remove("visible");
-  await releaseSlotLock(key);
 };
 
 function setJobPanelVisibility() {
@@ -673,11 +593,9 @@ function openDetailsModal(key) {
   document.getElementById("detailsModal").classList.add("visible");
 }
 
-window.closeDetailsModal = async () => {
-  const key = pendingStatus ? pendingStatus.key : null;
+window.closeDetailsModal = () => {
   pendingStatus = null;
   document.getElementById("detailsModal").classList.remove("visible");
-  await releaseSlotLock(key);
 };
 
 window.saveDetailsModal = async () => {
@@ -711,10 +629,8 @@ window.saveDetailsModal = async () => {
     jobs
   );
 
-  const keyToRelease = pendingStatus.key;
   pendingStatus = null;
   document.getElementById("detailsModal").classList.remove("visible");
-  await releaseSlotLock(keyToRelease);
   renderWeek(currentWeekIndex);
 };
 
@@ -1118,27 +1034,6 @@ body {
   .status-select-large {
     font-size: 16px !important;
   }
-}
-
-
-.status-cell.locked {
-  opacity: .62;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(245, 130, 32, .08),
-    rgba(245, 130, 32, .08) 6px,
-    rgba(245, 130, 32, .14) 6px,
-    rgba(245, 130, 32, .14) 12px
-  );
-  cursor: not-allowed;
-}
-
-.lock-note {
-  margin-top: 5px;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--cm-orange);
 }
 
 </style>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CM Heating — Audit Logs</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+const ADMIN_PIN = "1500";
+
+const pin = prompt("Enter Admin PIN:");
+
+if (pin !== ADMIN_PIN) {
+  document.body.innerHTML = `
+    <div class="blocked">
+      <h1>Access denied</h1>
+      <p>Admin PIN required.</p>
+    </div>
+  `;
+  throw new Error("Unauthorized");
+}
+
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getDatabase(app);
+
+let allLogs = [];
+
+onValue(ref(db, "cmh_audit_logs"), (snap) => {
+  const raw = snap.val() || {};
+
+  allLogs = Object.entries(raw)
+    .map(([id, log]) => ({ id, ...log }))
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+  renderLogs();
+});
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString();
+}
+
+function summarizeJobs(jobs) {
+  if (!jobs) return "—";
+
+  const parts = [];
+
+  ["fullDay", "am", "pm"].forEach(slot => {
+    const job = jobs[slot];
+    if (!job) return;
+
+    const label = slot === "fullDay" ? "Full Day" : slot.toUpperCase();
+    const hca = job.hcaName || "No HCA";
+    const project = job.projectName || "No homeowner";
+    const caas = job.isCaas ? "CaaS" : "Standard";
+
+    parts.push(`${label}: ${hca} / ${project} / ${caas}`);
+  });
+
+  return parts.length ? parts.join(" | ") : "—";
+}
+
+function renderLogs() {
+  const editorFilter = document.getElementById("editorFilter").value;
+  const roleFilter = document.getElementById("roleFilter").value;
+
+  let logs = allLogs;
+
+  if (editorFilter) {
+    logs = logs.filter(log => log.editorName === editorFilter);
+  }
+
+  if (roleFilter) {
+    logs = logs.filter(log => log.editorRole === roleFilter);
+  }
+
+  const editors = [...new Set(allLogs.map(log => log.editorName).filter(Boolean))].sort();
+
+  document.getElementById("editorFilter").innerHTML =
+    `<option value="">All editors</option>` +
+    editors.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+
+  document.getElementById("editorFilter").value = editorFilter;
+
+  document.getElementById("count").textContent = `${logs.length} log entries`;
+
+  document.getElementById("logs").innerHTML = logs.map(log => `
+    <div class="log-card">
+      <div class="log-top">
+        <div>
+          <div class="who">${escapeHtml(log.editorName || "Unknown")} <span>${escapeHtml(log.editorRole || "")}</span></div>
+          <div class="when">${escapeHtml(formatDate(log.timestamp))}</div>
+        </div>
+        <div class="status-pill">${escapeHtml(log.newStatus || "—")}</div>
+      </div>
+
+      <div class="grid">
+        <div><strong>Previous:</strong> ${escapeHtml(log.previousStatus || "—")}</div>
+        <div><strong>New:</strong> ${escapeHtml(log.newStatus || "—")}</div>
+        <div><strong>Sold Type:</strong> ${escapeHtml(log.soldType || "—")}</div>
+        <div><strong>Cell:</strong> <code>${escapeHtml(log.cellKey || "—")}</code></div>
+      </div>
+
+      <div class="jobs">
+        <strong>Jobs:</strong> ${escapeHtml(summarizeJobs(log.jobs))}
+      </div>
+    </div>
+  `).join("") || `<div class="empty">No audit logs found.</div>`;
+}
+
+window.renderLogs = renderLogs;
+
+window.exportCsv = () => {
+  const rows = [
+    ["Timestamp", "Editor", "Role", "Previous Status", "New Status", "Sold Type", "Cell Key", "Jobs"]
+  ];
+
+  allLogs.forEach(log => {
+    rows.push([
+      log.timestamp || "",
+      log.editorName || "",
+      log.editorRole || "",
+      log.previousStatus || "",
+      log.newStatus || "",
+      log.soldType || "",
+      log.cellKey || "",
+      summarizeJobs(log.jobs)
+    ]);
+  });
+
+  const csv = rows.map(row =>
+    row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(",")
+  ).join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "cmh-audit-logs.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+</script>
+
+<style>
+:root {
+  --bg: #f5f8fb;
+  --surface: #ffffff;
+  --border: #d7e2ea;
+  --text: #10324a;
+  --text2: #4d6575;
+  --cm-blue: #005aa9;
+  --cm-orange: #f58220;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "IBM Plex Sans", sans-serif;
+}
+.topbar {
+  background: white;
+  border-bottom: 3px solid var(--cm-orange);
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo img {
+  height: 42px;
+}
+.title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--cm-blue);
+}
+.main {
+  padding: 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+select, button {
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: white;
+  font-size: 14px;
+}
+button {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--cm-blue);
+}
+.count {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+.log-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+.log-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.who {
+  font-size: 16px;
+  font-weight: 800;
+}
+.who span {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--cm-orange);
+}
+.when {
+  color: var(--text2);
+  font-size: 13px;
+}
+.status-pill {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 800;
+  font-size: 12px;
+  background: rgba(0,90,169,.1);
+  color: var(--cm-blue);
+  border: 1px solid rgba(0,90,169,.25);
+  border-radius: 999px;
+  padding: 5px 9px;
+  height: fit-content;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  color: var(--text2);
+  font-size: 14px;
+}
+.jobs {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  color: var(--text2);
+}
+code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+}
+.empty, .blocked {
+  padding: 40px;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="topbar">
+  <div class="logo">
+    <img src="cm-logo.png" alt="CM Heating logo" />
+    <div class="title">Audit Logs</div>
+  </div>
+  <a href="index.html" style="color:#005aa9;font-weight:800;text-decoration:none;">← Back to Board</a>
+</div>
+
+<div class="main">
+  <div class="controls">
+    <select id="editorFilter" onchange="renderLogs()">
+      <option value="">All editors</option>
+    </select>
+
+    <select id="roleFilter" onchange="renderLogs()">
+      <option value="">All roles</option>
+      <option value="ADMIN">Admin</option>
+      <option value="HCA">HCA</option>
+    </select>
+
+    <button onclick="exportCsv()">Export CSV</button>
+  </div>
+
+  <div class="count" id="count">Loading logs…</div>
+  <div id="logs"></div>
+</div>
+</body>
+</html>

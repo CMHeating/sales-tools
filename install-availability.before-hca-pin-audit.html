@@ -22,28 +22,14 @@ const FIREBASE_CONFIG = {
 
 const ADMIN_PIN = "1500";
 
-const HCA_PINS = {
-  "2393": "Amber",
-  "1876": "Chester",
-  "6633": "Davis",
-  "0085": "Jay",
-  "5669": "Joe",
-  "7634": "Joseph",
-  "1143": "Kyle",
-  "4578": "Samir",
-  "3493": "Trevor"
-};
-
-let currentEditor = null;
-
 const app = initializeApp(FIREBASE_CONFIG);
 const db = getDatabase(app);
 
 const STATUS_LABELS = {
-  "FILLED": "FULLY SOLD",
-  "FULL DAY AVAIL": "FULL DAY OPEN",
-  "HALF DAY PM": "AM OPEN / PM SOLD",
-  "HALF DAY AM": "AM SOLD / PM OPEN",
+  "FILLED": "FILLED",
+  "FULL DAY AVAIL": "FULL AVAIL",
+  "HALF DAY PM": "HALF PM",
+  "HALF DAY AM": "HALF AM",
   "TEAM OFF": "TEAM OFF",
   "NOT AVAILABLE": "N/A",
   "NOT SCHEDULED": "NOT SCHED",
@@ -71,7 +57,6 @@ let adminMode = false;
 let currentWeekIndex = 0;
 let scheduleData = { weeks: [] };
 let availabilityData = {};
-let activeLocks = {};
 let editTarget = null;
 let pendingStatus = null;
 let isSaving = false;
@@ -101,12 +86,6 @@ onValue(availabilityRef, (snap) => {
 }, (err) => {
   console.error(err);
 });
-
-onValue(ref(db, "cmh_edit_locks"), (snap) => {
-  activeLocks = snap.val() || {};
-  renderWeek(currentWeekIndex);
-});
-
 
 function badge(txt, color) {
   const el = document.getElementById("connBadge");
@@ -204,91 +183,6 @@ function refreshProjectDatalist() {
   dl.innerHTML = getProjectNames()
     .map(name => `<option value="${escapeHtml(name)}"></option>`)
     .join("");
-}
-
-
-
-function getFreshLock(key) {
-  const lock = activeLocks[key];
-
-  if (!lock || !lock.timestamp) return null;
-
-  const ageMs = Date.now() - Number(lock.timestamp);
-
-  // Locks older than 2 minutes are considered stale.
-  if (ageMs > 120000) return null;
-
-  return lock;
-}
-
-function isLockedByOtherUser(key) {
-  const lock = getFreshLock(key);
-  if (!lock || !currentEditor) return false;
-
-  return lock.editorId !== `${currentEditor.role}:${currentEditor.name}`;
-}
-
-async function acquireSlotLock(key) {
-  if (!currentEditor) return true;
-
-  const lock = getFreshLock(key);
-
-  if (lock && lock.editorId !== `${currentEditor.role}:${currentEditor.name}`) {
-    alert(`${lock.editorName} is currently editing this slot. Try again in a minute.`);
-    return false;
-  }
-
-  const editorId = `${currentEditor.role}:${currentEditor.name}`;
-
-  const updates = {};
-  updates[`cmh_edit_locks/${key}`] = {
-    editorId,
-    editorName: currentEditor.name,
-    editorRole: currentEditor.role,
-    timestamp: Date.now()
-  };
-
-  await update(ref(db), updates);
-  return true;
-}
-
-async function releaseSlotLock(key) {
-  if (!key) return;
-
-  const updates = {};
-  updates[`cmh_edit_locks/${key}`] = null;
-
-  await update(ref(db), updates);
-}
-
-function installTypeToStatus(installType) {
-  if (installType === "fullDay") return "FILLED";
-  if (installType === "amOnly") return "HALF DAY AM";
-  if (installType === "pmOnly") return "HALF DAY PM";
-  if (installType === "amPm") return "FILLED";
-  if (installType === "open") return "FULL DAY AVAIL";
-  if (installType === "hold") return "HOLD";
-  if (installType === "teamOff") return "TEAM OFF";
-  if (installType === "notAvailable") return "NOT AVAILABLE";
-  return "FULL DAY AVAIL";
-}
-
-function statusToDefaultInstallType(status) {
-  const s = normalizeStatus(status);
-
-  if (s === "FILLED") return "fullDay";
-  if (s === "HALF DAY AM") return "amOnly";
-  if (s === "HALF DAY PM") return "pmOnly";
-  if (s === "FULL DAY AVAIL") return "open";
-  if (s === "HOLD") return "hold";
-  if (s === "TEAM OFF") return "teamOff";
-  if (s === "NOT AVAILABLE") return "notAvailable";
-
-  return "fullDay";
-}
-
-function makeAuditKey() {
-  return String(Date.now()) + "_" + Math.random().toString(36).slice(2, 8);
 }
 
 function statusBadge(status) {
@@ -438,20 +332,15 @@ function renderWeek(idx) {
     item.statuses.forEach((def, di) => {
       const key = getKey(week.title, item.rowIndex, di);
       const st = getStatus(week.title, item.rowIndex, di, def);
-      const lock = getFreshLock(key);
-      const lockedByOther = isLockedByOtherUser(key);
-      const lockHtml = lock
-        ? `<div class="lock-note">${lockedByOther ? "Editing: " : "You are editing: "}${escapeHtml(lock.editorName || "Someone")}</div>`
-        : "";
-      const edCls = adminMode ? (lockedByOther ? " locked" : " editable") : "";
-      const click = adminMode && !lockedByOther
+      const edCls = adminMode ? " editable" : "";
+      const click = adminMode
         ? (item.isOnCall
           ? `onclick="openOnCallEdit(event,'${key}','${escapeHtml(def)}')"`
           : `onclick="openDrop(event,'${key}','${escapeHtml(def)}')"`
         )
         : "";
 
-      table += `<td class="status-cell${edCls}" ${click}>${statusBadge(st)}${getCellDetails(key)}${lockHtml}</td>`;
+      table += `<td class="status-cell${edCls}" ${click}>${statusBadge(st)}${getCellDetails(key)}</td>`;
     });
 
     table += `</tr>`;
@@ -497,61 +386,30 @@ window.switchWeek = (idx) => {
 
 window.toggleAdmin = () => {
   if (!adminMode) {
-    const pin = prompt("Enter Admin PIN or HCA PIN:");
-
-    if (pin === null) return;
-
-    if (pin === ADMIN_PIN) {
-      currentEditor = {
-        role: "ADMIN",
-        name: "Admin",
-        pin: "ADMIN"
-      };
-      adminMode = true;
-    } else if (HCA_PINS[pin]) {
-      currentEditor = {
-        role: "HCA",
-        name: HCA_PINS[pin],
-        pin
-      };
-      adminMode = true;
-    } else {
-      alert("Incorrect PIN.");
+    const pin = prompt("Enter admin PIN:");
+    if (pin !== ADMIN_PIN) {
+      if (pin !== null) alert("Incorrect PIN.");
       return;
     }
+    adminMode = true;
   } else {
     adminMode = false;
-    currentEditor = null;
   }
 
   const btn = document.getElementById("btnAdmin");
   btn.classList.toggle("active", adminMode);
-  btn.textContent = adminMode
-    ? `EXIT ${currentEditor.role}: ${currentEditor.name}`
-    : "ADMIN / HCA EDIT";
-
+  btn.textContent = adminMode ? "EXIT ADMIN" : "ADMIN EDIT";
   renderWeek(currentWeekIndex);
 };
 
-window.openDrop = async (e, key, def) => {
+window.openDrop = (e, key, def) => {
   e.stopPropagation();
-
-  const locked = await acquireSlotLock(key);
-  if (!locked) return;
-
   editTarget = { key, def };
-
-  const select = document.getElementById("installTypeSelect");
-  select.value = statusToDefaultInstallType(def);
-
   document.getElementById("statusModal").classList.add("visible");
 };
 
 window.openOnCallEdit = async (e, key, def) => {
   e.stopPropagation();
-
-  const locked = await acquireSlotLock(key);
-  if (!locked) return;
 
   const currentValue = (availabilityData.overrides && availabilityData.overrides[key]) || def || "";
 
@@ -560,67 +418,35 @@ window.openOnCallEdit = async (e, key, def) => {
     currentValue === "—" ? "" : currentValue
   );
 
-  if (newValue === null) {
-    await releaseSlotLock(key);
-    return;
-  }
+  if (newValue === null) return;
 
   const cleanValue = newValue.trim() || "—";
 
   if (!isSaving) {
     await writeStatus(key, cleanValue, def, "fullDay", {});
   }
-
-  await releaseSlotLock(key);
 };
 
-window.continueStatusChoice = async () => {
-  if (!editTarget || isSaving) return;
+document.querySelectorAll(".status-choice").forEach(item => {
+  item.addEventListener("click", async (e) => {
+    e.stopPropagation();
 
-  const { key, def } = editTarget;
-  const installType = document.getElementById("installTypeSelect").value;
-  const newSt = installTypeToStatus(installType);
+    if (!editTarget) return;
 
+    const { key, def } = editTarget;
+    const newSt = item.dataset.status;
+
+    editTarget = null;
+    document.getElementById("statusModal").classList.remove("visible");
+
+    pendingStatus = { key, newSt, def };
+    openDetailsModal(key);
+  });
+});
+
+window.closeStatusModal = () => {
   editTarget = null;
   document.getElementById("statusModal").classList.remove("visible");
-
-  if (
-    installType === "open" ||
-    installType === "hold" ||
-    installType === "teamOff" ||
-    installType === "notAvailable"
-  ) {
-    await writeStatus(
-      key,
-      newSt,
-      def,
-      installType,
-      {
-        fullDay: null,
-        am: null,
-        pm: null
-      }
-    );
-    await releaseSlotLock(key);
-    renderWeek(currentWeekIndex);
-    return;
-  }
-
-  pendingStatus = {
-    key,
-    newSt,
-    def,
-    initialSoldType: installType
-  };
-
-  openDetailsModal(key);
-};
-
-window.closeStatusModal = async () => {
-  const key = editTarget ? editTarget.key : null;
-  editTarget = null;
-  document.getElementById("statusModal").classList.remove("visible");
-  await releaseSlotLock(key);
 };
 
 function setJobPanelVisibility() {
@@ -656,7 +482,7 @@ function openDetailsModal(key) {
   const existing = (availabilityData.details && availabilityData.details[key]) || {};
   const jobs = existing.jobs || {};
 
-  let soldType = (pendingStatus && pendingStatus.initialSoldType) || existing.soldType || "fullDay";
+  let soldType = existing.soldType || "fullDay";
 
   if (!existing.soldType && (jobs.am || jobs.pm)) {
     soldType = jobs.am && jobs.pm ? "amPm" : jobs.am ? "amOnly" : "pmOnly";
@@ -673,11 +499,9 @@ function openDetailsModal(key) {
   document.getElementById("detailsModal").classList.add("visible");
 }
 
-window.closeDetailsModal = async () => {
-  const key = pendingStatus ? pendingStatus.key : null;
+window.closeDetailsModal = () => {
   pendingStatus = null;
   document.getElementById("detailsModal").classList.remove("visible");
-  await releaseSlotLock(key);
 };
 
 window.saveDetailsModal = async () => {
@@ -711,10 +535,8 @@ window.saveDetailsModal = async () => {
     jobs
   );
 
-  const keyToRelease = pendingStatus.key;
   pendingStatus = null;
   document.getElementById("detailsModal").classList.remove("visible");
-  await releaseSlotLock(keyToRelease);
   renderWeek(currentWeekIndex);
 };
 
@@ -723,15 +545,6 @@ async function writeStatus(key, newSt, def, soldType = "fullDay", jobs = {}) {
   document.getElementById("savingBadge").style.display = "flex";
 
   try {
-    const previousStatus =
-      (availabilityData.overrides && availabilityData.overrides[key] !== undefined)
-        ? availabilityData.overrides[key]
-        : def;
-
-    const previousDetails =
-      (availabilityData.details && availabilityData.details[key])
-        ? availabilityData.details[key]
-        : null;
     const now = new Date();
     const ts = now.toLocaleString("en-US", {
       month: "2-digit",
@@ -756,20 +569,6 @@ async function writeStatus(key, newSt, def, soldType = "fullDay", jobs = {}) {
     updates[`cmh_availability/details/${key}/projectName`] = null;
     updates[`cmh_availability/details/${key}/isCaas`] = null;
     updates[`cmh_availability/lastUpdated/${key}`] = ts;
-
-    const auditKey = makeAuditKey();
-    updates[`cmh_audit_logs/${auditKey}`] = {
-      timestamp: new Date().toISOString(),
-      editorName: currentEditor ? currentEditor.name : "Unknown",
-      editorRole: currentEditor ? currentEditor.role : "UNKNOWN",
-      editorPin: currentEditor ? currentEditor.pin : null,
-      cellKey: key,
-      previousStatus,
-      newStatus: newSt,
-      soldType,
-      jobs,
-      previousDetails
-    };
 
     await update(ref(db), updates);
   } catch (err) {
@@ -1076,71 +875,6 @@ body {
   }
 }
 
-
-.compact-status-card {
-  max-width: 520px !important;
-}
-
-.status-select-large {
-  font-size: 17px !important;
-  min-height: 54px !important;
-  font-weight: 800 !important;
-  border: 2px solid var(--cm-blue) !important;
-  background: #f8fbff !important;
-}
-
-.status-help {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(0, 90, 169, .07);
-  color: var(--text2);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.status-help strong {
-  color: var(--cm-blue);
-}
-
-@media (max-width: 700px) {
-  .details-modal.visible {
-    align-items: flex-start !important;
-    padding-top: 24px !important;
-  }
-
-  .compact-status-card {
-    width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 48px) !important;
-    overflow-y: auto !important;
-  }
-
-  .status-select-large {
-    font-size: 16px !important;
-  }
-}
-
-
-.status-cell.locked {
-  opacity: .62;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(245, 130, 32, .08),
-    rgba(245, 130, 32, .08) 6px,
-    rgba(245, 130, 32, .14) 6px,
-    rgba(245, 130, 32, .14) 12px
-  );
-  cursor: not-allowed;
-}
-
-.lock-note {
-  margin-top: 5px;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--cm-orange);
-}
-
 </style>
 </head>
 
@@ -1155,8 +889,7 @@ body {
   </div>
   <div class="topbar-right">
     <div id="savingBadge"><div class="spinner"></div>&nbsp;Saving…</div>
-    <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN / HCA EDIT</button>
-    <button class="btn" onclick="window.location.href='audit.html'">AUDIT LOGS</button>
+    <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN EDIT</button>
   </div>
 </div>
 
@@ -1167,31 +900,47 @@ body {
 </div>
 
 <div class="details-modal" id="statusModal">
-  <div class="details-card compact-status-card">
-    <div class="details-title">Choose Install Status</div>
-    <div class="details-subtitle">Use the wording below to show what is sold and what remains open.</div>
+  <div class="details-card">
+    <div class="details-title">Choose Status</div>
+    <div class="details-subtitle">Select install availability status</div>
 
-    <div class="field-label">Install Availability</div>
-    <select class="field-control status-select-large" id="installTypeSelect">
-      <option value="fullDay">Full Day Install — Fully Sold</option>
-      <option value="amOnly">Morning Install Only — Afternoon Open</option>
-      <option value="pmOnly">Afternoon Install Only — Morning Open</option>
-      <option value="amPm">AM + PM Installs — Fully Sold</option>
-      <option value="open">Full Day Open</option>
-      <option value="hold">Hold</option>
-      <option value="teamOff">Team Off</option>
-      <option value="notAvailable">Not Available</option>
-    </select>
-
-    <div class="status-help">
-      <div><strong>Morning Install Only</strong> means afternoon still has room.</div>
-      <div><strong>Afternoon Install Only</strong> means morning still has room.</div>
-      <div><strong>AM + PM Installs</strong> means two separate sold jobs.</div>
-    </div>
+    <div class="status-choice-grid">
+      <button class="status-choice s-FULL_DAY" data-status="FULL DAY AVAIL">
+        <span class="choice-title">FULL AVAIL</span>
+        <span class="choice-sub">Full day available</span>
+      </button>
+      <button class="status-choice s-HALF_AM" data-status="HALF DAY AM">
+        <span class="choice-title">HALF AM</span>
+        <span class="choice-sub">Morning only</span>
+      </button>
+      <button class="status-choice s-HALF_PM" data-status="HALF DAY PM">
+        <span class="choice-title">HALF PM</span>
+        <span class="choice-sub">Afternoon only</span>
+      </button>
+      <button class="status-choice s-FILLED" data-status="FILLED">
+        <span class="choice-title">FILLED</span>
+        <span class="choice-sub">Sold / booked project</span>
+      </button>
+      <button class="status-choice s-HOLD" data-status="HOLD">
+        <span class="choice-title">HOLD</span>
+        <span class="choice-sub">Temporarily held</span>
+      </button>
+      <button class="status-choice s-TEAM_OFF" data-status="TEAM OFF">
+        <span class="choice-title">TEAM OFF</span>
+        <span class="choice-sub">Unavailable / off</span>
+      </button>
+      <button class="status-choice s-NOT_AVAIL" data-status="NOT AVAILABLE">
+        <span class="choice-title">N/A</span>
+        <span class="choice-sub">Not available</span>
+      </button>
+      <button class="status-choice s-ON_CALL" data-status="ON CALL">
+        <span class="choice-title">ON CALL</span>
+        <span class="choice-sub">On-call assignment</span>
+      </button>
+    </div></div>
 
     <div class="details-actions">
       <button class="btn" onclick="closeStatusModal()">Cancel</button>
-      <button class="btn btn-admin active" onclick="continueStatusChoice()">Continue</button>
     </div>
   </div>
 </div>
