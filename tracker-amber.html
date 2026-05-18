@@ -6,7 +6,7 @@
 <title>CM Heating — Amber Maddalena — Follow-Up Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {--bg:#f1f5f9;--white:#fff;--dark:#0f172a;--surface:#1e293b;--orange:#f97316;--muted:#64748b;--border:#e2e8f0;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--blue:#0891b2;}
+:root{--bg:#f1f5f9;--white:#fff;--dark:#0f172a;--surface:#1e293b;--orange:#f97316;--muted:#64748b;--border:#e2e8f0;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--blue:#0891b2;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padding:32px;font-size:14px;line-height:1.6;max-width:1100px;margin:0 auto;}
 .page-header{background:var(--surface);border-radius:12px;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
@@ -618,7 +618,7 @@ const leads=[
 function getUrgency(d){if(d<=3)return{cls:'urg-green',filter:'fresh'};if(d<=7)return{cls:'urg-yellow',filter:'fresh'};if(d<=14)return{cls:'urg-orange',filter:'hot'};if(d<=21)return{cls:'urg-red',filter:'critical'};return{cls:'urg-black',filter:'critical'};}
 function getDaysColor(d){if(d<=7)return'#16a34a';if(d<=14)return'#f97316';return'#dc2626';}
 function fmtK(n){if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+Math.round(n/1e3)+'K';return'$'+n;}
-leads.sort((a,b)=>b.daysOld-a.daysOld);
+leads.sort((a,b)=>a.daysOld-b.daysOld);
 const now=new Date();
 document.getElementById('hcaTitle').textContent=HCA_NAME+' — Follow-Up Tracker';
 document.getElementById('dateLabel').textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -638,7 +638,6 @@ function setFilter(key){activeFilter=key;renderFilters();document.querySelectorA
 renderFilters();
 const listEl=document.getElementById('leadsList');
 const savedNotes={};
-const sessionNotes={};
 
 function togglePriorNotes(i){
   const toggle=document.getElementById(`pnToggle-${i}`);
@@ -647,7 +646,7 @@ function togglePriorNotes(i){
   body.classList.toggle('open');
 }
 
-function buildPriorNotesHTML(lead, i){
+function buildPriorNotesHTML(lead,i){
   const notes=lead.notes||'';
   const lines=notes.split('\n').filter(l=>l.trim());
   const count=lines.length;
@@ -742,7 +741,6 @@ function logFollowUp(i){
     badge.textContent=status;badge.className=`status-badge badge-${status}`;
     document.getElementById(`card-${i}`).classList.add('saved');
     preview.textContent=stNote;reminder.classList.add('visible');
-    // Add new note to prior notes section immediately
     const body=document.getElementById(`pnBody-${i}`);
     const toggle=document.getElementById(`pnToggle-${i}`);
     const noNotes=body.querySelector('.no-notes');
@@ -751,10 +749,8 @@ function logFollowUp(i){
     entry.className='prior-note-entry';
     entry.innerHTML=`<div class="prior-note-ts">${ts}</div><div class="prior-note-text">Status: ${status} | ${notes}</div>`;
     body.insertBefore(entry,body.firstChild);
-    // Update count
     const countEl=toggle.querySelector('.note-count');
     countEl.textContent=parseInt(countEl.textContent||0)+1;
-    // Auto-open the prior notes to show the new entry
     if(!body.classList.contains('open')){toggle.classList.add('open');body.classList.add('open');}
   })
   .catch(()=>{btn.disabled=false;btn.textContent='Log Follow-Up';feedback.textContent='Error — try again.';feedback.className='save-feedback err';});
