@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCA 3-Month Schedule</title>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--bd:#e2e8f0;--txt:#0f172a;--mut:#64748b;--sub:#f1f5f9}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:24px;font-size:13px;line-height:1.5}
+.wrap{max-width:1500px;margin:0 auto}
+h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.lead{color:var(--mut);font-size:12px;margin-bottom:20px}
+h2{font-size:14px;font-weight:600;margin-bottom:10px}
+.sec{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--mut);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1.5px solid var(--bd);text-align:left;white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.p{display:inline-flex;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;margin:1px 2px 1px 0;white-space:nowrap}
+.o{background:#d1fae5;color:#065f46}
+.n{background:#fef9c3;color:#78350f}
+.c{background:#dbeafe;color:#1e3a8a}
+.w{background:#ede9fe;color:#4c1d95}
+.x{background:#f1f5f9;color:#94a3b8}
+.b1{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block}
+.b2{background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block}
+.b3{background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block}
+.b4{background:#dbeafe;color:#1e3a8a;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block}
+.b5{background:#f3e8ff;color:#5b21b6;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block}
+.nm{font-weight:600;font-size:12px}
+.cv{color:var(--mut);font-weight:700;font-size:11px}
+.note{font-size:11px;color:var(--mut);margin-bottom:10px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.leg{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>HCA Recovery-Based Schedule — 3 Month / 12 Week Rotation</h1>
+<p class="lead">1 opener (8–4) + 1 closer (12–8) every weekday. Weekends: flat 10–4. Rules: closer ≠ next-day opener · no close if off tomorrow · no open if returning from days off.</p>
+
+<div class="legend">
+  <div class="leg"><span class="p o">8–4 open</span> opener</div>
+  <div class="leg"><span class="p n">10–6</span> regular</div>
+  <div class="leg"><span class="p c">12–8 close</span> closer / tech flips only</div>
+  <div class="leg"><span class="p w">10–4</span> weekend flat</div>
+  <div class="leg"><span class="p x">—</span> off</div>
+</div>
+
+<div class="sec">
+<h2>Daily Role Logic — Why Each Person Gets That Role</h2>
+<table>
+<thead><tr><th>Day</th><th>Opener 8–4</th><th>Closer 12–8</th><th>Constraint reasoning</th></tr></thead>
+<tbody>
+<tr><td><strong>Sun</strong></td><td colspan="2"><em>Flat 10–4 — Amber · Chester · Davis only</em></td><td>No opener / closer roles on weekends</td></tr>
+<tr><td><strong>Mon</strong></td><td>A / C / D weekly rotation</td><td>monFri[0]</td><td>Mon–Fri HCAs returning from Sat/Sun off → can't open. Trevor returning from Sun off → can't open; off Tue → can't close either. A/C/D are mid-week (day 2 of Sun–Thu) → eligible to open.</td></tr>
+<tr><td><strong>Tue</strong></td><td>monFri[1]</td><td>tueSat[0]</td><td>monFri[0] closed Mon → can't open Tue. Tue–Sat HCAs returning from Sun/Mon off → can't open. monFri[1] is day 2, didn't close Mon → eligible. tueSat[0] is returning but can close (return rule only blocks opening).</td></tr>
+<tr><td><strong>Wed</strong></td><td>tueSat[1]</td><td>Trevor</td><td>tueSat[0] closed Tue → can't open Wed. Trevor returning from Tue off → can't open. Trevor is NOT off tomorrow (Thu) → eligible to close. tueSat[1] didn't close Tue → eligible to open.</td></tr>
+<tr><td><strong>Thu</strong></td><td>tueSat[0]</td><td>monFri[1]</td><td>Trevor closed Wed → can't open Thu. A/C/D off tomorrow Fri → can't close. Trevor off tomorrow Fri → can't close. tueSat[0] closed Tue, was regular Wed, Thu is day 3 → eligible to open. monFri[1] opened Tue, day 4 Thu, not off tomorrow Fri → eligible to close.</td></tr>
+<tr><td><strong>Fri</strong></td><td>monFri[0]</td><td>tueSat[2]</td><td>monFri[1] closed Thu → can't open Fri. Mon–Fri HCAs off tomorrow Sat → can't close Fri. tueSat work Sat so not off tomorrow → only eligible Fri closers. tueSat[2] had no close role all week → assigned Fri close.</td></tr>
+<tr><td><strong>Sat</strong></td><td colspan="2"><em>Flat 10–4 — tueSat[0,1,2] + Trevor</em></td><td>No opener / closer roles on weekends</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="sec">
+<h2>5-Block Rotation</h2>
+<p class="note">Cycle repeats every 5 weeks. Each of Jay / Joe / Joseph / Kyle / Samir receives exactly 2 Mon–Fri blocks and 3 Tue–Sat blocks per cycle.</p>
+<table id="rotTbl">
+<thead><tr><th>Block</th><th>Mon–Fri (2)</th><th>Tue–Sat (3)</th><th>Mon close</th><th>Tue open</th><th>Tue close</th><th>Wed open</th><th>Wed close</th><th>Thu open</th><th>Thu close</th><th>Fri open</th><th>Fri close</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+
+<div class="sec">
+<h2>Block Schedule Templates — Every Person, Every Day</h2>
+<p class="note">Mon opener rotates weekly among Amber → Chester → Davis → repeat. Template shows one example opener per block. See 12-week calendar for exact weekly assignments.</p>
+<div id="tmpl"></div>
+</div>
+
+<div class="sec">
+<h2>12-Week Calendar — Exact Names by Week</h2>
+<table id="cal">
+<thead><tr>
+<th>Wk</th><th>Block</th>
+<th>Mon open</th><th>Mon close</th>
+<th>Tue open</th><th>Tue close</th>
+<th>Wed open</th><th>Wed close</th>
+<th>Thu open</th><th>Thu close</th>
+<th>Fri open</th><th>Fri close</th>
+<th>Sat 10–4</th>
+</tr></thead>
+<tbody></tbody>
+</table>
+</div>
+
+</div>
+<script>
+const AC=['Amber','Chester','Davis'];
+const BLOCKS=[
+  {id:1,mf:['Jay','Joe'],ts:['Joseph','Kyle','Samir']},
+  {id:2,mf:['Joseph','Kyle'],ts:['Jay','Joe','Samir']},
+  {id:3,mf:['Samir','Jay'],ts:['Joe','Joseph','Kyle']},
+  {id:4,mf:['Joe','Joseph'],ts:['Jay','Kyle','Samir']},
+  {id:5,mf:['Kyle','Samir'],ts:['Jay','Joe','Joseph']},
+];
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function p(name,cls){return `<span class="p ${cls}">${name}</span>`;}
+
+// Rotation table
+const rotTbody=document.querySelector('#rotTbl tbody');
+BLOCKS.forEach(b=>{
+  const [m0,m1]=b.mf,[t0,t1,t2]=b.ts;
+  rotTbody.innerHTML+=`<tr>
+    <td><span class="b${b.id}">Block ${b.id}</span></td>
+    <td>${p(m0,'n')}${p(m1,'n')}</td>
+    <td>${p(t0,'c')}${p(t1,'c')}${p(t2,'c')}</td>
+    <td>${p(m0,'c')}</td>
+    <td>${p(m1,'o')}</td>
+    <td>${p(t0,'c')}</td>
+    <td>${p(t1,'o')}</td>
+    <td>${p('Trevor','c')}</td>
+    <td>${p(t0,'o')}</td>
+    <td>${p(m1,'c')}</td>
+    <td>${p(m0,'o')}</td>
+    <td>${p(t2,'c')}</td>
+  </tr>`;
+});
+
+// Block templates
+const tmplDiv=document.getElementById('tmpl');
+BLOCKS.forEach((b,bi)=>{
+  const [m0,m1]=b.mf,[t0,t1,t2]=b.ts;
+  const sampleOpener=AC[bi%3];
+  const sampleRegular=AC.filter(x=>x!==sampleOpener);
+
+  const sch={};
+  [...AC,'Trevor',m0,m1,t0,t1,t2].forEach(nm=>{sch[nm]={};});
+
+  // Sun
+  AC.forEach(nm=>{sch[nm]['Sun']={s:'10–4',t:'w'};});
+  // Mon
+  sch[sampleOpener]['Mon']={s:'8–4 open',t:'o'};
+  sampleRegular.forEach(nm=>{sch[nm]['Mon']={s:'10–6',t:'n'};});
+  sch['Trevor']['Mon']={s:'10–6',t:'n'};
+  sch[m0]['Mon']={s:'12–8 close',t:'c'};
+  sch[m1]['Mon']={s:'10–6',t:'n'};
+  // Tue
+  AC.forEach(nm=>{sch[nm]['Tue']={s:'10–6',t:'n'};});
+  sch[m1]['Tue']={s:'8–4 open',t:'o'};
+  sch[m0]['Tue']={s:'10–6',t:'n'};
+  sch[t0]['Tue']={s:'12–8 close',t:'c'};
+  sch[t1]['Tue']={s:'10–6',t:'n'};
+  sch[t2]['Tue']={s:'10–6',t:'n'};
+  // Wed
+  AC.forEach(nm=>{sch[nm]['Wed']={s:'10–6',t:'n'};});
+  sch[m0]['Wed']={s:'10–6',t:'n'};
+  sch[m1]['Wed']={s:'10–6',t:'n'};
+  sch[t0]['Wed']={s:'10–6',t:'n'};
+  sch[t1]['Wed']={s:'8–4 open',t:'o'};
+  sch[t2]['Wed']={s:'10–6',t:'n'};
+  sch['Trevor']['Wed']={s:'12–8 close',t:'c'};
+  // Thu
+  AC.forEach(nm=>{sch[nm]['Thu']={s:'10–6',t:'n'};});
+  sch[m0]['Thu']={s:'10–6',t:'n'};
+  sch[m1]['Thu']={s:'12–8 close',t:'c'};
+  sch[t0]['Thu']={s:'8–4 open',t:'o'};
+  sch[t1]['Thu']={s:'10–6',t:'n'};
+  sch[t2]['Thu']={s:'10–6',t:'n'};
+  sch['Trevor']['Thu']={s:'10–6',t:'n'};
+  // Fri
+  sch[m0]['Fri']={s:'8–4 open',t:'o'};
+  sch[m1]['Fri']={s:'10–6',t:'n'};
+  sch[t0]['Fri']={s:'10–6',t:'n'};
+  sch[t1]['Fri']={s:'10–6',t:'n'};
+  sch[t2]['Fri']={s:'12–8 close',t:'c'};
+  // Sat
+  sch[t0]['Sat']={s:'10–4',t:'w'};
+  sch[t1]['Sat']={s:'10–4',t:'w'};
+  sch[t2]['Sat']={s:'10–4',t:'w'};
+  sch['Trevor']['Sat']={s:'10–4',t:'w'};
+
+  const groups=[
+    {lbl:'Sun–Thu',ppl:AC},
+    {lbl:'Custom',ppl:['Trevor']},
+    {lbl:'Mon–Fri',ppl:[m0,m1]},
+    {lbl:'Tue–Sat',ppl:[t0,t1,t2]},
+  ];
+
+  let html=`<div style="margin-bottom:22px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <span class="b${b.id}">Block ${b.id}</span>
+    <span style="font-size:12px;color:var(--mut)">Mon–Fri: ${p(m0,'n')}${p(m1,'n')} &nbsp;·&nbsp; Tue–Sat: ${p(t0,'c')}${p(t1,'c')}${p(t2,'c')} &nbsp;·&nbsp; Mon opener shown: ${p(sampleOpener,'o')} <em style="font-weight:400">(rotates — see calendar)</em></span>
+  </div>
+  <table>
+  <thead><tr><th>Person</th><th>Group</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+  <tbody>`;
+
+  groups.forEach(g=>{
+    g.ppl.forEach((nm,i)=>{
+      html+=`<tr><td class="nm">${nm}</td><td style="color:var(--mut);font-size:11px">${i===0?g.lbl:''}</td>`;
+      DAYS.forEach(d=>{
+        const e=sch[nm]?.[d];
+        html+=e?`<td>${p(e.s,e.t)}</td>`:`<td>${p('—','x')}</td>`;
+      });
+      html+='</tr>';
+    });
+  });
+
+  const cov={Sun:3,Mon:6,Tue:8,Wed:9,Thu:9,Fri:5,Sat:4};
+  html+=`<tr style="background:var(--sub)"><td class="cv">Coverage</td><td></td>${DAYS.map(d=>`<td class="cv">${cov[d]}</td>`).join('')}</tr>`;
+  html+='</tbody></table></div>';
+  tmplDiv.innerHTML+=html;
+});
+
+// 12-week calendar
+const calTbody=document.querySelector('#cal tbody');
+for(let wk=0;wk<12;wk++){
+  const b=BLOCKS[wk%5];
+  const [m0,m1]=b.mf,[t0,t1,t2]=b.ts;
+  const opener=AC[wk%3];
+  calTbody.innerHTML+=`<tr>
+    <td><strong>Wk ${wk+1}</strong></td>
+    <td><span class="b${b.id}">B${b.id}</span></td>
+    <td>${p(opener,'o')}</td>
+    <td>${p(m0,'c')}</td>
+    <td>${p(m1,'o')}</td>
+    <td>${p(t0,'c')}</td>
+    <td>${p(t1,'o')}</td>
+    <td>${p('Trevor','c')}</td>
+    <td>${p(t0,'o')}</td>
+    <td>${p(m1,'c')}</td>
+    <td>${p(m0,'o')}</td>
+    <td>${p(t2,'c')}</td>
+    <td>${[t0,t1,t2,'Trevor'].map(n=>p(n,'w')).join('')}</td>
+  </tr>`;
+}
+</script>
+</body>
+</html>
