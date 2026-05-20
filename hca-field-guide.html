@@ -2,222 +2,286 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-<title>CM Heating — HCA Field Guide</title>
-
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCA Field Guide | CM Heating</title>
 
 <style>
-
-:root{
-  --bg:#f5f8fb;
-  --surface:#ffffff;
-  --border:#d7e2ea;
-  --text:#10324a;
-  --text2:#4d6575;
-  --cm-blue:#005aa9;
-  --cm-orange:#f58220;
-}
-
-*{
-  box-sizing:border-box;
-}
-
 body{
   margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:"IBM Plex Sans",sans-serif;
+  font-family:Arial,sans-serif;
+  background:#0a1628;
+  color:white;
 }
 
-.topbar{
-  background:white;
-  border-bottom:3px solid var(--cm-orange);
-  padding:14px 18px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  position:sticky;
-  top:0;
-  z-index:100;
-}
-
-.logo{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.logo img{
-  height:42px;
-}
-
-.title{
-  font-size:20px;
-  font-weight:800;
-  color:var(--cm-blue);
-}
-
-.main{
-  max-width:1300px;
-  margin:auto;
+.header{
   padding:24px;
+  background:#111f36;
+  border-bottom:3px solid #f58220;
 }
 
-.hero{
-  margin-bottom:24px;
+.header h1{
+  margin:0;
+  font-size:32px;
 }
 
-.hero h1{
-  font-size:42px;
-  margin-bottom:8px;
+.header p{
+  color:#cbd5e1;
+  margin:8px 0 0;
 }
 
-.hero p{
-  color:var(--text2);
-  font-size:16px;
+.wrap{
+  max-width:1100px;
+  margin:0 auto;
+  padding:24px;
 }
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:18px;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:16px;
 }
 
 .card{
-  background:white;
-  border:1px solid var(--border);
+  display:block;
+  text-decoration:none;
+  color:white;
+  background:#16243c;
+  border:1px solid rgba(255,255,255,.12);
   border-radius:18px;
-  padding:20px;
-  box-shadow:0 4px 12px rgba(0,0,0,.05);
+  padding:22px;
+  transition:.15s;
 }
 
-.card h2{
-  margin-top:0;
-  margin-bottom:12px;
-  color:var(--cm-blue);
+.card:hover{
+  transform:translateY(-2px);
+  background:#1e3354;
 }
 
-.item{
-  padding:10px 0;
-  border-bottom:1px solid #eef3f7;
-  font-size:14px;
-}
-
-.item:last-child{
-  border-bottom:none;
-}
-
-.badge{
-  display:inline-block;
-  background:rgba(0,90,169,.1);
-  color:var(--cm-blue);
-  border-radius:999px;
-  padding:4px 8px;
-  font-size:11px;
-  font-weight:700;
+.icon{
+  font-size:30px;
   margin-bottom:10px;
 }
 
-.back{
-  color:var(--cm-blue);
-  text-decoration:none;
-  font-weight:700;
+.card h2{
+  margin:0 0 8px;
+  font-size:21px;
 }
 
-@media(max-width:700px){
+.card p{
+  margin:0;
+  color:#cbd5e1;
+  line-height:1.45;
+  font-size:14px;
+}
 
-  .hero h1{
-    font-size:30px;
-  }
+.back{
+  display:inline-block;
+  margin-bottom:22px;
+  color:#38bdf8;
+  text-decoration:none;
+  font-weight:bold;
+}
 
-  .main{
-    padding:16px;
-  }
+.section{
+  display:none;
+  margin-top:24px;
+  background:white;
+  color:#102033;
+  border-radius:20px;
+  padding:24px;
+}
 
+.section:target{
+  display:block;
+}
+
+.section h2{
+  margin-top:0;
+  color:#005aa9;
+}
+
+.button-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:16px;
+}
+
+.btn{
+  display:inline-block;
+  padding:12px 16px;
+  border-radius:10px;
+  background:#005aa9;
+  color:white;
+  text-decoration:none;
+  font-weight:bold;
+}
+
+.btn.secondary{
+  background:#f58220;
+}
+
+ul{
+  line-height:1.8;
+}
+
+.note{
+  background:#eef6ff;
+  border-left:4px solid #005aa9;
+  padding:14px;
+  border-radius:10px;
+  margin-top:16px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="topbar">
-
-  <div class="logo">
-    <img src="cm-logo.png">
-    <div class="title">HCA Field Guide</div>
-  </div>
-
-  <a class="back" href="install-availability.html">
-    ← Back
-  </a>
-
+<div class="header">
+  <h1>📚 HCA Field Guide</h1>
+  <p>Fast field answers for financing, rebates, permitting, electrical, labor, equipment, and escalation paths.</p>
 </div>
 
-<div class="main">
+<div class="wrap">
 
-  <div class="hero">
-    <h1>📚 HCA Field Guide</h1>
-
-    <p>
-      Internal operational intelligence for financing,
-      rebates, electrical, permitting,
-      labor times, and install guidance.
-    </p>
-  </div>
+  <a class="back" href="https://cmheating.github.io/caas-calculator/index.html">← Back to HCA Tools</a>
 
   <div class="grid">
 
-    <div class="card">
-      <div class="badge">FINANCING</div>
+    <a class="card" href="#financing">
+      <div class="icon">💳</div>
+      <h2>Financing</h2>
+      <p>Wells Fargo, Synchrony, Service Finance, GreenSky, GoodLeap, Fortiva.</p>
+    </a>
 
-      <h2>Financing Programs</h2>
+    <a class="card" href="#rebates">
+      <div class="icon">💵</div>
+      <h2>Rebates</h2>
+      <p>PUD, PSE, Energy Smart, Bosch exceptions, thermostat rules.</p>
+    </a>
 
-      <div class="item">Wells Fargo</div>
-      <div class="item">Synchrony</div>
-      <div class="item">Service Finance</div>
-      <div class="item">GreenSky</div>
-      <div class="item">GoodLeap</div>
-      <div class="item">Fortiva Second Look</div>
-    </div>
-
-    <div class="card">
-      <div class="badge">REBATES</div>
-
-      <h2>Rebate Guidance</h2>
-
-      <div class="item">PUD Qualification</div>
-      <div class="item">PSE Heat Pump Rules</div>
-      <div class="item">Targeted Electrification</div>
-      <div class="item">Bosch Non-Rebate Rules</div>
-      <div class="item">Thermostat Compatibility</div>
-    </div>
-
-    <div class="card">
-      <div class="badge">PERMITTING</div>
-
+    <a class="card" href="#jurisdictions">
+      <div class="icon">🏙️</div>
       <h2>Jurisdictions</h2>
+      <p>City rules, permitting notes, setbacks, special exceptions.</p>
+    </a>
 
-      <div class="item">Kirkland Critical Areas</div>
-      <div class="item">Bellevue Visibility Rules</div>
-      <div class="item">Edmonds Setbacks</div>
-      <div class="item">Mukilteo Exceptions</div>
-      <div class="item">Next-Day Install Rules</div>
+    <a class="card" href="#electrical">
+      <div class="icon">⚡</div>
+      <h2>Electrical</h2>
+      <p>Panel notes, load questions, escalation rules, add-on flags.</p>
+    </a>
+
+    <a class="card" href="#labor">
+      <div class="icon">🛠️</div>
+      <h2>Labor Times</h2>
+      <p>Install timing guidance, attic rules, oil removals, ductless notes.</p>
+    </a>
+
+    <a class="card" href="#equipment">
+      <div class="icon">🔥</div>
+      <h2>Equipment Rules</h2>
+      <p>Furnaces, AC, heat pumps, ductless, thermostats, CaaS fit.</p>
+    </a>
+
+    <a class="card" href="#contacts">
+      <div class="icon">☎️</div>
+      <h2>Escalation Contacts</h2>
+      <p>Sales, install, electrical, plumbing, permitting, operations.</p>
+    </a>
+
+  </div>
+
+  <div id="financing" class="section">
+    <h2>💳 Financing</h2>
+    <ul>
+      <li>Wells Fargo — financing screenshots/rates go here.</li>
+      <li>Synchrony — financing screenshots/rates go here.</li>
+      <li>Service Finance — financing screenshots/rates go here.</li>
+      <li>GreenSky — financing screenshots/rates go here.</li>
+      <li>GoodLeap — financing screenshots/rates go here.</li>
+      <li>Fortiva — second-look option.</li>
+    </ul>
+    <div class="button-row">
+      <a class="btn" href="#top">Back to top</a>
+      <a class="btn secondary" href="https://cmheating.github.io/caas-calculator/index.html">HCA Tools</a>
     </div>
+  </div>
 
-    <div class="card">
-      <div class="badge">INSTALL</div>
+  <div id="rebates" class="section">
+    <h2>💵 Rebates</h2>
+    <ul>
+      <li>PUD rebate rules.</li>
+      <li>PSE heat pump rules.</li>
+      <li>Energy Smart exceptions.</li>
+      <li>Bosch non-rebate reminders.</li>
+      <li>Thermostat compatibility notes.</li>
+    </ul>
+    <div class="note">Screenshots and direct source links can be added here next.</div>
+    <div class="button-row"><a class="btn" href="#top">Back to top</a></div>
+  </div>
 
-      <h2>Labor & Install</h2>
+  <div id="jurisdictions" class="section">
+    <h2>🏙️ Jurisdictions</h2>
+    <ul>
+      <li>Kirkland critical areas.</li>
+      <li>Bellevue visibility rules.</li>
+      <li>Edmonds setback notes.</li>
+      <li>Mukilteo exceptions.</li>
+      <li>Next-day install permitting flags.</li>
+    </ul>
+    <div class="button-row"><a class="btn" href="#top">Back to top</a></div>
+  </div>
 
-      <div class="item">Oil Furnace Removals</div>
-      <div class="item">Attic Furnace Rules</div>
-      <div class="item">Ductless Line Limits</div>
-      <div class="item">Manufactured Home Restrictions</div>
-      <div class="item">Electrical Escalations</div>
-    </div>
+  <div id="electrical" class="section">
+    <h2>⚡ Electrical</h2>
+    <ul>
+      <li>Panel upgrade questions.</li>
+      <li>Heat pump electrical flags.</li>
+      <li>Subpanel / disconnect notes.</li>
+      <li>Escalate unusual loads to electrical manager.</li>
+    </ul>
+    <div class="button-row"><a class="btn" href="#top">Back to top</a></div>
+  </div>
 
+  <div id="labor" class="section">
+    <h2>🛠️ Labor Times</h2>
+    <ul>
+      <li>Furnace-only timing guidance.</li>
+      <li>Furnace + AC timing guidance.</li>
+      <li>Full system timing guidance.</li>
+      <li>Oil furnace removal flags.</li>
+      <li>Attic / crawl / access difficulty notes.</li>
+    </ul>
+    <div class="button-row"><a class="btn" href="#top">Back to top</a></div>
+  </div>
+
+  <div id="equipment" class="section">
+    <h2>🔥 Equipment Rules</h2>
+    <ul>
+      <li>Furnace only.</li>
+      <li>Add AC.</li>
+      <li>Full system.</li>
+      <li>Heat pump considerations.</li>
+      <li>Ductless rules and line length notes.</li>
+      <li>Thermostat compatibility.</li>
+    </ul>
+    <div class="button-row"><a class="btn" href="#top">Back to top</a></div>
+  </div>
+
+  <div id="contacts" class="section">
+    <h2>☎️ Escalation Contacts</h2>
+    <ul>
+      <li>Electrical Manager: Jon Jansen</li>
+      <li>Plumbing Manager: Anthony Basham</li>
+      <li>Install Manager: Lyle Jones</li>
+      <li>Permitting: Sabrina</li>
+      <li>Sales Manager: Geoff Simons</li>
+      <li>Install Coordination Manager: Brittny</li>
+      <li>Operations: Laura Weiss</li>
+      <li>Sales Coordinator: Amy Liebel</li>
+    </ul>
+    <div class="button-row"><a class="btn" href="#top">Back to top</a></div>
   </div>
 
 </div>
