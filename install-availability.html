@@ -1145,27 +1145,12 @@ body {
 </head>
 
 <body>
-<div class="topbar">
-  <div class="topbar-left">
-    <img class="logo-img" src="cm-logo.png" alt="CM Heating logo" />
-    <div class="logo-text">Install <span>Availability</span></div>
-    <div class="divider-v"></div>
-    <div class="meta-pill" id="todayPill">—</div>
-    <div class="meta-pill" id="connBadge">○ CONNECTING…</div>
-  </div>
-  <div class="topbar-right">
-
-  <button class="btn" onclick="window.location.href='index.html'">
-    🏠 TOOLKIT HOME
-  </button>
- 
-  <button class="btn" onclick="window.location.href='hca-field-guide.html'">
-    📚 HCA FIELD GUIDE
-  </button>
-
-  <div id="savingBadge">
-    <div class="spinner"></div>&nbsp;Saving…
-  </div>
+<div class="topbar-right">
+  <div id="savingBadge"><div class="spinner"></div>&nbsp;Saving…</div>
+  <a class="btn btn-hca" href="https://cmheating.github.io/caas-calculator/" target="_blank">&larr; HCA Tools</a>
+  <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN / HCA EDIT</button>
+  <button class="btn" onclick="window.location.href='audit.html'">AUDIT LOGS</button>
+</div>
 
   <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">
     ADMIN / HCA EDIT
