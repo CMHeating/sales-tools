@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>CM Heating — HCA Field Guide</title>
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+  --bg:#f5f8fb;
+  --surface:#ffffff;
+  --border:#d7e2ea;
+  --text:#10324a;
+  --text2:#4d6575;
+  --cm-blue:#005aa9;
+  --cm-orange:#f58220;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"IBM Plex Sans",sans-serif;
+}
+
+.topbar{
+  background:white;
+  border-bottom:3px solid var(--cm-orange);
+  padding:14px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.logo img{
+  height:42px;
+}
+
+.title{
+  font-size:20px;
+  font-weight:800;
+  color:var(--cm-blue);
+}
+
+.main{
+  max-width:1300px;
+  margin:auto;
+  padding:24px;
+}
+
+.hero{
+  margin-bottom:24px;
+}
+
+.hero h1{
+  font-size:42px;
+  margin-bottom:8px;
+}
+
+.hero p{
+  color:var(--text2);
+  font-size:16px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:18px;
+}
+
+.card{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+
+.card h2{
+  margin-top:0;
+  margin-bottom:12px;
+  color:var(--cm-blue);
+}
+
+.item{
+  padding:10px 0;
+  border-bottom:1px solid #eef3f7;
+  font-size:14px;
+}
+
+.item:last-child{
+  border-bottom:none;
+}
+
+.badge{
+  display:inline-block;
+  background:rgba(0,90,169,.1);
+  color:var(--cm-blue);
+  border-radius:999px;
+  padding:4px 8px;
+  font-size:11px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+
+.back{
+  color:var(--cm-blue);
+  text-decoration:none;
+  font-weight:700;
+}
+
+@media(max-width:700px){
+
+  .hero h1{
+    font-size:30px;
+  }
+
+  .main{
+    padding:16px;
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+
+  <div class="logo">
+    <img src="cm-logo.png">
+    <div class="title">HCA Field Guide</div>
+  </div>
+
+  <a class="back" href="install-availability.html">
+    ← Back
+  </a>
+
+</div>
+
+<div class="main">
+
+  <div class="hero">
+    <h1>📚 HCA Field Guide</h1>
+
+    <p>
+      Internal operational intelligence for financing,
+      rebates, electrical, permitting,
+      labor times, and install guidance.
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="badge">FINANCING</div>
+
+      <h2>Financing Programs</h2>
+
+      <div class="item">Wells Fargo</div>
+      <div class="item">Synchrony</div>
+      <div class="item">Service Finance</div>
+      <div class="item">GreenSky</div>
+      <div class="item">GoodLeap</div>
+      <div class="item">Fortiva Second Look</div>
+    </div>
+
+    <div class="card">
+      <div class="badge">REBATES</div>
+
+      <h2>Rebate Guidance</h2>
+
+      <div class="item">PUD Qualification</div>
+      <div class="item">PSE Heat Pump Rules</div>
+      <div class="item">Targeted Electrification</div>
+      <div class="item">Bosch Non-Rebate Rules</div>
+      <div class="item">Thermostat Compatibility</div>
+    </div>
+
+    <div class="card">
+      <div class="badge">PERMITTING</div>
+
+      <h2>Jurisdictions</h2>
+
+      <div class="item">Kirkland Critical Areas</div>
+      <div class="item">Bellevue Visibility Rules</div>
+      <div class="item">Edmonds Setbacks</div>
+      <div class="item">Mukilteo Exceptions</div>
+      <div class="item">Next-Day Install Rules</div>
+    </div>
+
+    <div class="card">
+      <div class="badge">INSTALL</div>
+
+      <h2>Labor & Install</h2>
+
+      <div class="item">Oil Furnace Removals</div>
+      <div class="item">Attic Furnace Rules</div>
+      <div class="item">Ductless Line Limits</div>
+      <div class="item">Manufactured Home Restrictions</div>
+      <div class="item">Electrical Escalations</div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>
