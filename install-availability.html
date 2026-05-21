@@ -1,38 +1,22 @@
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import {
-    getDatabase,
-    ref,
-    onValue,
-    set,
-    push,
-    update
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
-  import {
-    getAuth,
-    signInAnonymously
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-  // YOUR FIREBASE CONFIG
+<script>
   const firebaseConfig = {
-  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
-  authDomain: "install-availability-tracker.firebaseapp.com",
-  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
-  projectId: "install-availability-tracker",
-  storageBucket: "install-availability-tracker.firebasestorage.app",
-  messagingSenderId: "187871662912",
-  appId: "1:187871662912:web:1d52671de23c4f38d620a5",
-  measurementId: "G-BSN236LQV4"
-};
+    apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+    authDomain: "install-availability-tracker.firebaseapp.com",
+    databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+    projectId: "install-availability-tracker",
+    storageBucket: "install-availability-tracker.firebasestorage.app",
+    messagingSenderId: "187871662912",
+    appId: "1:187871662912:web:1d52671de23c4f38d620a5",
+    measurementId: "G-BSN236LQV4"
+  };
 
-  // INIT FIREBASE
-  const app = initializeApp(firebaseConfig);
+  firebase.initializeApp(firebaseConfig);
 
-  // AUTH
-  const auth = getAuth(app);
-
-  signInAnonymously(auth)
+  firebase.auth().signInAnonymously()
     .then(() => {
       console.log("✅ Firebase anonymous auth connected");
     })
@@ -40,16 +24,7 @@
       console.error("❌ Firebase auth error:", error);
     });
 
-  // DATABASE
-  const db = getDatabase(app);
+  const db = firebase.database();
 
-  // GLOBAL ACCESS
-  window.firebaseDB = db;
-  window.firebaseRef = ref;
-  window.firebaseSet = set;
-  window.firebasePush = push;
-  window.firebaseUpdate = update;
-  window.firebaseOnValue = onValue;
-
-  console.log("✅ Firebase initialized");
+  console.log("✅ Firebase initialized with compat SDK");
 </script>
