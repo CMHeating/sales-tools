@@ -63,12 +63,7 @@ signInAnonymously(auth)
     console.log("✅ Firebase anon auth OK");
     startListeners();
   })
-  .catch(err => {
-    console.error("❌ Firebase auth error:", err);
-    badge("○ AUTH FAILED", "#dc2626");
-  });
-
-function startListeners() {
+  .catch(err => console.error("❌ Firebase auth error:", err));
 
 // ─── STATUS MAPS ──────────────────────────────────────────────────────────────
 const STATUS_LABELS = {
@@ -115,31 +110,32 @@ let undoSeconds         = 30;
 let isSaving            = false;
 
 // ─── FIREBASE LISTENERS ───────────────────────────────────────────────────────
-const scheduleRef    = ref(db, DB_SCHEDULE);
+const scheduleRef     = ref(db, DB_SCHEDULE);
 const availabilityRef = ref(db, DB_AVAIL);
 
-onValue(scheduleRef, snap => {
-  scheduleData = snap.val() || { weeks: [] };
-  if (!scheduleData.weeks) scheduleData.weeks = [];
-  if (currentWeekIndex >= scheduleData.weeks.length) currentWeekIndex = 0;
-  renderTabs();
-  renderWeek(currentWeekIndex);
-  badge("● LIVE SHEET", "#16a34a");
-}, err => {
-  console.error(err);
-  badge("○ SHEET OFFLINE", "#dc2626");
-});
+function startListeners() {
+  onValue(scheduleRef, snap => {
+    scheduleData = snap.val() || { weeks: [] };
+    if (!scheduleData.weeks) scheduleData.weeks = [];
+    if (currentWeekIndex >= scheduleData.weeks.length) currentWeekIndex = 0;
+    renderTabs();
+    renderWeek(currentWeekIndex);
+    badge("● LIVE SHEET", "#16a34a");
+  }, err => {
+    console.error(err);
+    badge("○ SHEET OFFLINE", "#dc2626");
+  });
 
-onValue(availabilityRef, snap => {
-  availabilityData = snap.val() || {};
-  renderWeek(currentWeekIndex);
-}, err => console.error(err));
+  onValue(availabilityRef, snap => {
+    availabilityData = snap.val() || {};
+    renderWeek(currentWeekIndex);
+  }, err => console.error(err));
 
-onValue(ref(db, DB_LOCKS), snap => {
-  activeLocks = snap.val() || {};
-  renderWeek(currentWeekIndex);
-});
-} // end startListeners
+  onValue(ref(db, DB_LOCKS), snap => {
+    activeLocks = snap.val() || {};
+    renderWeek(currentWeekIndex);
+  });
+}
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function badge(txt, color) {
