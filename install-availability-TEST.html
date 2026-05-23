@@ -440,6 +440,12 @@ window.toggleAdmin = () => {
   }
 };
 
+window.closeNoSlotsModal = () => {
+  document.getElementById("noSlotsModal").classList.remove("visible");
+  // Also close the move picker since there's nowhere to go
+  window.closeMovePickerModal();
+};
+
 window.closeAdminWelcome = () => {
   document.getElementById('adminWelcomeModal').classList.remove('visible');
 };
@@ -660,12 +666,23 @@ function getMoveSourceSummary() {
   return [hca, hw].filter(Boolean).join(" — ") || "Job details";
 }
 
+// Statuses that cannot be a move target
+const MOVE_BLOCKED_STATUSES = ["NOT AVAILABLE", "NOT SCHEDULED", "ON CALL"];
+
+function getTargetSummary(key) {
+  const d    = (availabilityData.details && availabilityData.details[key]) || {};
+  const jobs = d.jobs || {};
+  const job  = jobs.fullDay || jobs.am || jobs.pm || d;
+  const hca  = job.hcaName    ? `HCA: ${job.hcaName}` : "";
+  const hw   = job.projectName ? `Homeowner: ${job.projectName}` : "";
+  return [hca, hw].filter(Boolean).join(" — ") || null;
+}
+
 function openMovePickerModal() {
   const week = scheduleData.weeks[currentWeekIndex];
   if (!week) return;
   const { dayNames, dates, mainRows } = getWeekParts(week);
 
-  // Summary bar
   document.getElementById("moveSummary").textContent = getMoveSourceSummary();
 
   let html = `<div class="move-grid-wrap"><table class="move-table"><thead><tr>
@@ -674,6 +691,8 @@ function openMovePickerModal() {
   </tr></thead><tbody>`;
 
   let currentSection = "";
+  let targetCount    = 0;
+
   mainRows.forEach(item => {
     if (item.type === "section") {
       html += `<tr class="section-header"><td colspan="7">${escapeHtml(item.label)}</td></tr>`;
@@ -695,7 +714,8 @@ function openMovePickerModal() {
       const st    = getStatus(week.title, item.rowIndex, di, defStatus);
       const sNorm = normalizeStatus(st);
       const isSource     = key === moveSource.key;
-      const isTargetable = !isSource && (sNorm === "FULL DAY AVAIL" || sNorm === "TEAM OFF") && !item.isOnCall;
+      const isTargetable = !isSource && !item.isOnCall && !MOVE_BLOCKED_STATUSES.includes(sNorm);
+      const isSoldTarget = isTargetable && isSoldStatus(st);
 
       if (isSource) {
         html += `<td class="move-cell move-source">
@@ -703,11 +723,14 @@ function openMovePickerModal() {
           <div class="move-cell-label move-label-source">◀ SOURCE</div>
         </td>`;
       } else if (isTargetable) {
-        html += `<td class="move-cell move-target"
+        targetCount++;
+        const dropLabel = isSoldTarget ? "⇄ SWAP" : "↓ DROP HERE";
+        const cellClass = isSoldTarget ? "move-cell move-target move-swap" : "move-cell move-target";
+        html += `<td class="${cellClass}"
           data-target-key="${escapeHtml(key)}"
           data-target-def="${escapeHtml(defStatus)}">
           ${statusBadge(st)}
-          <div class="move-cell-label move-label-target">↓ DROP HERE</div>
+          <div class="move-cell-label move-label-target">${dropLabel}</div>
         </td>`;
       } else {
         html += `<td class="move-cell move-blocked">${statusBadge(st)}</td>`;
@@ -719,6 +742,13 @@ function openMovePickerModal() {
 
   html += `</tbody></table></div>`;
   document.getElementById("movePickerGrid").innerHTML = html;
+
+  if (targetCount === 0) {
+    // Board is full — show no-slots popup instead
+    document.getElementById("noSlotsModal").classList.add("visible");
+    return;
+  }
+
   document.getElementById("movePickerModal").classList.add("visible");
   startCountdown();
 }
@@ -1041,6 +1071,10 @@ select.field-control { padding-top: 6px; padding-bottom: 6px; }
 .move-target { cursor: pointer; background: rgba(58,170,53,.08); border: 2px solid rgba(58,170,53,.30) !important; transition: background .12s; }
 .move-target:hover { background: rgba(58,170,53,.22); }
 .move-blocked { opacity: .45; }
+.move-swap { background: rgba(0,90,169,.08) !important; border: 2px solid rgba(0,90,169,.35) !important; }
+.move-swap:hover { background: rgba(0,90,169,.18) !important; }
+.move-swap .move-label-target { color: var(--cm-blue) !important; }
+
 .move-cell-label { margin-top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: .05em; }
 .move-label-source { color: var(--cm-orange); }
 .move-label-target { color: var(--cm-green); }
@@ -1255,9 +1289,7 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     </div>
 
     <div class="move-instructions">
-      <span class="dot-green">■</span> Green = open slot, click to move there &nbsp;·&nbsp;
-      <span class="dot-orange">■</span> Orange = source (current location) &nbsp;·&nbsp;
-      Faded = unavailable target
+      <span class="dot-green">■</span> Green = open/off slot (move here) &nbsp;·&nbsp; <span style="color:var(--cm-blue);font-weight:800;">■</span> Blue = sold slot (swap) &nbsp;·&nbsp; <span class="dot-orange">■</span> Orange = source &nbsp;·&nbsp; Faded = blocked
     </div>
 
     <div id="movePickerGrid"></div>
@@ -1295,6 +1327,24 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   <div>
     <div class="countdown-msg">Please finish your selection</div>
     <div class="countdown-time" id="countdownTime">3:00</div>
+  </div>
+</div>
+
+
+<!-- ── NO SLOTS MODAL ──────────────────────────────────────────────────────── -->
+<div class="details-modal" id="noSlotsModal">
+  <div class="details-card compact-status-card" style="max-width:420px;">
+    <div class="details-title">⚠ No Available Slots</div>
+    <div class="details-subtitle">The board is fully booked.</div>
+    <div style="padding:14px;border-radius:10px;background:rgba(192,0,0,.07);border:1px solid rgba(192,0,0,.20);margin-bottom:16px;">
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;">
+        There are no open, team off, or swappable slots available on this week's board to move this job to.<br><br>
+        Try switching to a different week, or manually open a slot first before moving.
+      </div>
+    </div>
+    <div class="details-actions">
+      <button class="btn btn-admin active" onclick="closeNoSlotsModal()">Got it</button>
+    </div>
   </div>
 </div>
 
