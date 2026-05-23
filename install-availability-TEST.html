@@ -434,6 +434,14 @@ window.toggleAdmin = () => {
   btn.classList.toggle("active", adminMode);
   btn.textContent = adminMode ? `EXIT ${currentEditor.role}: ${currentEditor.name}` : "ADMIN / HCA EDIT";
   renderWeek(currentWeekIndex);
+
+  if (adminMode && currentEditor && currentEditor.role === "ADMIN") {
+    document.getElementById("adminWelcomeModal").classList.add("visible");
+  }
+};
+
+window.closeAdminWelcome = () => {
+  document.getElementById('adminWelcomeModal').classList.remove('visible');
 };
 
 // ─── CELL CLICK ───────────────────────────────────────────────────────────────
@@ -1164,6 +1172,27 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 
     <div class="details-actions" style="margin-top: 14px;">
       <button class="btn" onclick="closeMovePickerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADMIN WELCOME MODAL ─────────────────────────────────────────────────── -->
+<div class="details-modal" id="adminWelcomeModal">
+  <div class="details-card compact-status-card" style="max-width:460px;">
+    <div class="details-title">👋 Welcome, Admin</div>
+    <div class="details-subtitle">Here is what you can do in this mode.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+      <div style="padding:12px 14px;border-radius:10px;background:rgba(58,170,53,.08);border:1px solid rgba(58,170,53,.28);">
+        <div style="font-weight:800;color:#168a20;margin-bottom:3px;">⇄ Move Jobs</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.5;">Click any sold or open cell and use the <strong>Move to Another Crew</strong> button to reassign it to a different crew or a different day.</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:10px;background:rgba(0,90,169,.07);border:1px solid rgba(0,90,169,.20);">
+        <div style="font-weight:800;color:var(--cm-blue);margin-bottom:3px;">✏ Edit Any Cell</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.5;">Click any cell to change its status, assign an HCA, update the homeowner name, or mark it open, on hold, or off.</div>
+      </div>
+    </div>
+    <div class="details-actions">
+      <button class="btn btn-admin active" onclick="closeAdminWelcome()">Got it</button>
     </div>
   </div>
 </div>
