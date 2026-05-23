@@ -59,8 +59,16 @@ const auth = getAuth(app);
 const db   = getDatabase(app);
 
 signInAnonymously(auth)
-  .then(() => console.log("✅ Firebase anon auth OK"))
-  .catch(err => console.error("❌ Firebase auth error:", err));
+  .then(() => {
+    console.log("✅ Firebase anon auth OK");
+    startListeners();
+  })
+  .catch(err => {
+    console.error("❌ Firebase auth error:", err);
+    badge("○ AUTH FAILED", "#dc2626");
+  });
+
+function startListeners() {
 
 // ─── STATUS MAPS ──────────────────────────────────────────────────────────────
 const STATUS_LABELS = {
@@ -131,6 +139,7 @@ onValue(ref(db, DB_LOCKS), snap => {
   activeLocks = snap.val() || {};
   renderWeek(currentWeekIndex);
 });
+} // end startListeners
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function badge(txt, color) {
@@ -949,28 +958,33 @@ Target → receives job details`;
   renderWeek(currentWeekIndex);
 
   // Start undo window
-  startUndoCountdown();      // clears any old buffer first
-  undoBuffer = savedUndoBuffer; // set AFTER so stopUndoCountdown inside doesn't wipe it
+  undoBuffer = savedUndoBuffer;
+  startUndoCountdown();
 }
 
 // ─── UNDO ────────────────────────────────────────────────────────────────────
 
 function startUndoCountdown() {
-  stopUndoCountdown();
+  // Clear any existing interval directly — no calls to stopUndoCountdown
+  if (undoInterval) { clearInterval(undoInterval); undoInterval = null; }
   undoSeconds = 30;
   updateUndoDisplay();
   document.getElementById("undoToast").classList.add("visible");
   undoInterval = setInterval(() => {
     undoSeconds--;
     updateUndoDisplay();
-    if (undoSeconds <= 0) { undoBuffer = null; stopUndoCountdown(); }
+    if (undoSeconds <= 0) {
+      undoBuffer = null;
+      clearInterval(undoInterval);
+      undoInterval = null;
+      document.getElementById("undoToast").classList.remove("visible");
+    }
   }, 1000);
 }
 
 function stopUndoCountdown() {
   if (undoInterval) { clearInterval(undoInterval); undoInterval = null; }
   document.getElementById("undoToast").classList.remove("visible");
-  // undoBuffer nulled explicitly by executeUndo or when timer expires
 }
 
 function updateUndoDisplay() {
