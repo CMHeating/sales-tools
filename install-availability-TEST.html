@@ -451,12 +451,13 @@ window.openDrop = async (e, key, def) => {
   const select = document.getElementById("installTypeSelect");
   select.value = statusToDefaultInstallType(def);
 
-  // Show Move button only for ADMIN on sold slots
+  // Show Move button for any ADMIN on any non-TEAM-OFF slot
   const overrides   = availabilityData.overrides || {};
   const currentSt   = overrides[key] !== undefined ? overrides[key] : def;
   const moveBtn     = document.getElementById("btnMoveJob");
   if (moveBtn) {
-    const canMove = adminMode && currentEditor && currentEditor.role === "ADMIN" && isSoldStatus(currentSt);
+    const canMove = adminMode && currentEditor && currentEditor.role === "ADMIN"
+      && normalizeStatus(currentSt) !== "TEAM OFF";
     moveBtn.style.display = canMove ? "inline-block" : "none";
   }
 
@@ -673,7 +674,7 @@ function openMovePickerModal() {
       const st    = getStatus(week.title, item.rowIndex, di, defStatus);
       const sNorm = normalizeStatus(st);
       const isSource     = key === moveSource.key;
-      const isTargetable = !isSource && sNorm === "FULL DAY AVAIL" && !item.isOnCall;
+      const isTargetable = !isSource && (sNorm === "FULL DAY AVAIL" || sNorm === "TEAM OFF") && !item.isOnCall;
 
       if (isSource) {
         html += `<td class="move-cell move-source">
@@ -733,8 +734,16 @@ async function executeMoveJob(targetKey, targetDef) {
   try {
     const updates = {};
 
-    // ── Clear source — mark Full Day Open ────────────────────────────────────
-    updates[`overrides/${sourceKey}`]           = "FULL DAY AVAIL";
+    // ── Clear source — revert based on what it was ───────────────────────────
+    let sourceNewStatus;
+    if (isSoldStatus(sourceStatus)) {
+      sourceNewStatus = "FULL DAY AVAIL";   // sold job moved away → slot now open
+    } else if (normalizeStatus(sourceStatus) === "FULL DAY AVAIL") {
+      sourceNewStatus = "TEAM OFF";          // open slot moved away → crew no longer available
+    } else {
+      sourceNewStatus = null;                // anything else → revert to sheet default
+    }
+    updates[`overrides/${sourceKey}`]           = sourceNewStatus;
     updates[`details/${sourceKey}/soldType`]    = "open";
     updates[`details/${sourceKey}/jobs`]        = { fullDay: null, am: null, pm: null };
     updates[`details/${sourceKey}/hcaName`]     = null;
