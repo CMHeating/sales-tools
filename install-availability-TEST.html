@@ -771,15 +771,30 @@ window.closeMovePickerModal = async () => {
 async function executeMoveJob(targetKey, targetDef) {
   if (!moveSource || isSaving) return;
 
-  const summary = getMoveSourceSummary();
-  const confirmed = confirm(
-    `Move this job to the selected slot?\n\n${summary}\n\nSource slot → Full Day Open\nTarget slot → receives job details`
-  );
-  if (!confirmed) return;
+  const { key: sourceKey, status: sourceStatus, details: sourceDetails } = moveSource;
+  const sourceJobs     = sourceDetails.jobs || {};
+  const sourceSoldType = sourceDetails.soldType || "fullDay";
+  const sourceSummary  = getMoveSourceSummary();
 
-  const { key: sourceKey, def: sourceDef, status: sourceStatus, details: sourceDetails } = moveSource;
-  const jobs     = (sourceDetails.jobs) || {};
-  const soldType = sourceDetails.soldType || "fullDay";
+  // Read target current state for swap
+  const targetOverrides = availabilityData.overrides || {};
+  const targetCurrentSt = targetOverrides[targetKey] !== undefined ? targetOverrides[targetKey] : targetDef;
+  const targetDetails   = (availabilityData.details && availabilityData.details[targetKey]) || {};
+  const targetJobs      = targetDetails.jobs || {};
+  const targetSoldType  = targetDetails.soldType || "fullDay";
+  const targetIsSold    = isSoldStatus(targetCurrentSt);
+  const targetSummary   = getTargetSummary(targetKey);
+
+  // Confirm dialog
+  let confirmMsg;
+  if (targetIsSold && targetSummary) {
+    confirmMsg = `Swap these two jobs?\n\nFROM: ${sourceSummary}\nTO:   ${targetSummary}\n\nThey will exchange slots completely.`;
+  } else {
+    const targetLabel = STATUS_LABELS[normalizeStatus(targetCurrentSt)] || targetCurrentSt;
+    confirmMsg = `Move this job to the selected slot?\n\n${sourceSummary}\n\nSource → ${targetLabel}\nTarget → receives job details`;
+  }
+
+  if (!confirm(confirmMsg)) return;
 
   isSaving = true;
   document.getElementById("savingBadge").style.display = "flex";
@@ -787,26 +802,18 @@ async function executeMoveJob(targetKey, targetDef) {
   try {
     const updates = {};
 
-    // ── Clear source — revert based on what it was ───────────────────────────
-    let sourceNewStatus;
-    if (isSoldStatus(sourceStatus)) {
-      sourceNewStatus = "FULL DAY AVAIL";   // sold job moved away → slot now open
-    } else if (normalizeStatus(sourceStatus) === "FULL DAY AVAIL") {
-      sourceNewStatus = "TEAM OFF";          // open slot moved away → crew no longer available
-    } else {
-      sourceNewStatus = null;                // anything else → revert to sheet default
-    }
-    updates[`overrides/${sourceKey}`]           = sourceNewStatus;
-    updates[`details/${sourceKey}/soldType`]    = "open";
-    updates[`details/${sourceKey}/jobs`]        = { fullDay: null, am: null, pm: null };
+    // Source gets target's state
+    updates[`overrides/${sourceKey}`]           = targetCurrentSt;
+    updates[`details/${sourceKey}/soldType`]    = targetIsSold ? targetSoldType : "open";
+    updates[`details/${sourceKey}/jobs`]        = targetIsSold ? targetJobs : { fullDay: null, am: null, pm: null };
     updates[`details/${sourceKey}/hcaName`]     = null;
     updates[`details/${sourceKey}/projectName`] = null;
     updates[`details/${sourceKey}/isCaas`]      = null;
 
-    // ── Write job to target ───────────────────────────────────────────────────
+    // Target gets source's state
     updates[`overrides/${targetKey}`]           = sourceStatus;
-    updates[`details/${targetKey}/soldType`]    = soldType;
-    updates[`details/${targetKey}/jobs`]        = jobs;
+    updates[`details/${targetKey}/soldType`]    = isSoldStatus(sourceStatus) ? sourceSoldType : "open";
+    updates[`details/${targetKey}/jobs`]        = isSoldStatus(sourceStatus) ? sourceJobs : { fullDay: null, am: null, pm: null };
     updates[`details/${targetKey}/hcaName`]     = null;
     updates[`details/${targetKey}/projectName`] = null;
     updates[`details/${targetKey}/isCaas`]      = null;
@@ -815,25 +822,27 @@ async function executeMoveJob(targetKey, targetDef) {
 
     await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
       timestamp:    new Date().toISOString(),
-      action:       "MOVE",
+      action:       targetIsSold ? "SWAP" : "MOVE",
       editorName:   currentEditor ? currentEditor.name : "Unknown",
       editorRole:   currentEditor ? currentEditor.role : "UNKNOWN",
       sourceKey,
       targetKey,
       sourceStatus,
-      movedDetails: sourceDetails
+      targetStatus: targetCurrentSt,
+      sourceDetails,
+      targetDetails
     });
 
   } catch (err) {
     console.error(err);
-    alert("Move failed.");
+    alert("Move/swap failed.");
   } finally {
     isSaving = false;
     document.getElementById("savingBadge").style.display = "none";
   }
 
-  const keyToRelease = moveSource.key;
   stopCountdown();
+  const keyToRelease = moveSource.key;
   moveSource = null;
   document.getElementById("movePickerModal").classList.remove("visible");
   await releaseSlotLock(keyToRelease);
