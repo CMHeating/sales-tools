@@ -980,10 +980,9 @@ function updateUndoDisplay() {
 
 window.executeUndo = async () => {
   if (!undoBuffer || isSaving) return;
-  stopUndoCountdown();
-
-  const buf = undoBuffer;
+  const buf = undoBuffer;   // capture BEFORE stopUndoCountdown nulls it
   undoBuffer = null;
+  stopUndoCountdown();
   isSaving = true;
   document.getElementById("savingBadge").style.display = "flex";
 
