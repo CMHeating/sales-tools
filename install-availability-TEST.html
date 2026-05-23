@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⚠ TEST — CM Heating Install Availability</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+// ─── WRITE PATHS USE _TEST PREFIX — LIVE DATA IS SAFE ────────────────────────
+const DB_AVAIL    = "cmh_availability_TEST";
+const DB_LOCKS    = "cmh_edit_locks_TEST";
+const DB_AUDIT    = "cmh_audit_logs_TEST";
+// Schedule is read-only from live path so real data populates the grid
+const DB_SCHEDULE = "cmh_schedule";
+
+const ADMIN_PIN = "1500";
+
+const HCA_PINS = {
+  "2393": "Amber",
+  "1876": "Chester",
+  "6633": "Davis",
+  "0085": "Jay",
+  "5669": "Joe",
+  "7634": "Joseph",
+  "1143": "Kyle",
+  "4578": "Samir",
+  "3493": "Trevor"
+};
+
+let currentEditor = null;
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+signInAnonymously(auth)
+  .then(() => console.log("✅ Firebase anon auth OK"))
+  .catch(err => console.error("❌ Firebase auth error:", err));
+
+// ─── STATUS MAPS ──────────────────────────────────────────────────────────────
+const STATUS_LABELS = {
+  "FILLED":         "FULLY SOLD",
+  "FULL DAY AVAIL": "FULL DAY OPEN",
+  "HALF DAY PM":    "AM OPEN / PM SOLD",
+  "HALF DAY AM":    "AM SOLD / PM OPEN",
+  "TEAM OFF":       "TEAM OFF",
+  "NOT AVAILABLE":  "N/A",
+  "NOT SCHEDULED":  "NOT SCHED",
+  "HOLD":           "HOLD",
+  "ON CALL":        "ON CALL",
+  "—": "—",
+  "":  "—"
+};
+
+const STATUS_CLASS = {
+  "FILLED":         "s-FILLED",
+  "FULL DAY AVAIL": "s-FULL_DAY",
+  "HALF DAY PM":    "s-HALF_PM",
+  "HALF DAY AM":    "s-HALF_AM",
+  "TEAM OFF":       "s-TEAM_OFF",
+  "NOT AVAILABLE":  "s-NOT_AVAIL",
+  "NOT SCHEDULED":  "s-NOT_SCHED",
+  "HOLD":           "s-HOLD",
+  "ON CALL":        "s-ON_CALL",
+  "—": "s-TEAM_OFF",
+  "":  "s-TEAM_OFF"
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let adminMode        = false;
+let currentWeekIndex = 0;
+let scheduleData     = { weeks: [] };
+let availabilityData = {};
+let activeLocks      = {};
+let editTarget       = null;
+let pendingStatus    = null;
+let moveSource       = null;   // ← NEW: holds job being moved
+let isSaving         = false;
+
+// ─── FIREBASE LISTENERS ───────────────────────────────────────────────────────
+const scheduleRef    = ref(db, DB_SCHEDULE);
+const availabilityRef = ref(db, DB_AVAIL);
+
+onValue(scheduleRef, snap => {
+  scheduleData = snap.val() || { weeks: [] };
+  if (!scheduleData.weeks) scheduleData.weeks = [];
+  if (currentWeekIndex >= scheduleData.weeks.length) currentWeekIndex = 0;
+  renderTabs();
+  renderWeek(currentWeekIndex);
+  badge("● LIVE SHEET", "#16a34a");
+}, err => {
+  console.error(err);
+  badge("○ SHEET OFFLINE", "#dc2626");
+});
+
+onValue(availabilityRef, snap => {
+  availabilityData = snap.val() || {};
+  renderWeek(currentWeekIndex);
+}, err => console.error(err));
+
+onValue(ref(db, DB_LOCKS), snap => {
+  activeLocks = snap.val() || {};
+  renderWeek(currentWeekIndex);
+});
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function badge(txt, color) {
+  const el = document.getElementById("connBadge");
+  if (el) { el.textContent = txt; el.style.color = color; }
+}
+
+function normalizeStatus(value) {
+  return String(value || "—").trim().toUpperCase();
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+
+function slug(value) {
+  return String(value || "").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function getKey(weekTitle, rowIndex, dayIndex) {
+  return `${slug(weekTitle)}__r${rowIndex}__d${dayIndex}`;
+}
+
+function getStatus(weekTitle, rowIndex, dayIndex, def) {
+  const key      = getKey(weekTitle, rowIndex, dayIndex);
+  const overrides = availabilityData.overrides || {};
+  return overrides[key] !== undefined ? overrides[key] : def;
+}
+
+function isSoldStatus(st) {
+  const s = normalizeStatus(st);
+  return s === "FILLED" || s === "HALF DAY AM" || s === "HALF DAY PM";
+}
+
+function statusBadge(status) {
+  const s = normalizeStatus(status);
+  return `<span class="status-badge ${STATUS_CLASS[s] || "s-TEAM_OFF"}">${STATUS_LABELS[s] || escapeHtml(status)}</span>`;
+}
+
+function makeAuditKey() {
+  return String(Date.now()) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+// ─── CELL DETAILS ─────────────────────────────────────────────────────────────
+function renderJobLine(label, job) {
+  if (!job) return "";
+  const hca     = job.hcaName    || "";
+  const project = job.projectName || "";
+  const isCaas  = job.isCaas === true || job.isCaas === "true";
+  if (!hca && !project && !isCaas) return "";
+  return `<div class="job-line">
+    <div class="job-label">${label}</div>
+    ${isCaas  ? `<div class="caas-tag">CaaS</div>` : ""}
+    ${hca     ? `<div><span>HCA:</span> ${escapeHtml(hca)}</div>` : ""}
+    ${project ? `<div><span>Homeowner:</span> ${escapeHtml(project)}</div>` : ""}
+  </div>`;
+}
+
+function getCellDetails(key) {
+  const d    = (availabilityData.details && availabilityData.details[key]) || {};
+  if (d.jobs) {
+    return `<div class="cell-details">
+      ${renderJobLine("Full Day", d.jobs.fullDay)}
+      ${renderJobLine("AM",       d.jobs.am)}
+      ${renderJobLine("PM",       d.jobs.pm)}
+    </div>`;
+  }
+  const hca     = d.hcaName    || "";
+  const project = d.projectName || "";
+  const isCaas  = d.isCaas === true || d.isCaas === "true";
+  if (!hca && !project && !isCaas) return "";
+  return `<div class="cell-details">
+    ${isCaas  ? `<div class="caas-tag">CaaS</div>` : ""}
+    ${hca     ? `<div><span>HCA:</span> ${escapeHtml(hca)}</div>` : ""}
+    ${project ? `<div><span>Homeowner:</span> ${escapeHtml(project)}</div>` : ""}
+  </div>`;
+}
+
+// ─── LOCKS ────────────────────────────────────────────────────────────────────
+function getFreshLock(key) {
+  const lock = activeLocks[key];
+  if (!lock || !lock.timestamp) return null;
+  return (Date.now() - Number(lock.timestamp)) > 120000 ? null : lock;
+}
+
+function isLockedByOtherUser(key) {
+  const lock = getFreshLock(key);
+  if (!lock || !currentEditor) return false;
+  return lock.editorId !== `${currentEditor.role}:${currentEditor.name}`;
+}
+
+async function acquireSlotLock(key) {
+  if (!currentEditor) return true;
+  const lock = getFreshLock(key);
+  if (lock && lock.editorId !== `${currentEditor.role}:${currentEditor.name}`) {
+    alert(`${lock.editorName} is currently editing this slot. Try again in a minute.`);
+    return false;
+  }
+  await set(ref(db, `${DB_LOCKS}/${key}`), {
+    editorId:   `${currentEditor.role}:${currentEditor.name}`,
+    editorName:  currentEditor.name,
+    editorRole:  currentEditor.role,
+    timestamp:   Date.now()
+  });
+  return true;
+}
+
+async function releaseSlotLock(key) {
+  if (!key) return;
+  await set(ref(db, `${DB_LOCKS}/${key}`), null);
+}
+
+// ─── STATUS / INSTALL TYPE CONVERSION ─────────────────────────────────────────
+function installTypeToStatus(t) {
+  if (t === "fullDay")      return "FILLED";
+  if (t === "amOnly")       return "HALF DAY AM";
+  if (t === "pmOnly")       return "HALF DAY PM";
+  if (t === "amPm")         return "FILLED";
+  if (t === "open")         return "FULL DAY AVAIL";
+  if (t === "hold")         return "HOLD";
+  if (t === "teamOff")      return "TEAM OFF";
+  if (t === "notAvailable") return "NOT AVAILABLE";
+  return "FULL DAY AVAIL";
+}
+
+function statusToDefaultInstallType(status) {
+  const s = normalizeStatus(status);
+  if (s === "FILLED")         return "fullDay";
+  if (s === "HALF DAY AM")    return "amOnly";
+  if (s === "HALF DAY PM")    return "pmOnly";
+  if (s === "FULL DAY AVAIL") return "open";
+  if (s === "HOLD")           return "hold";
+  if (s === "TEAM OFF")       return "teamOff";
+  if (s === "NOT AVAILABLE")  return "notAvailable";
+  return "fullDay";
+}
+
+// ─── WEEK PARSING ─────────────────────────────────────────────────────────────
+function getWeekParts(week) {
+  const rows     = week.rows || [];
+  const dayNames = rows[1] ? rows[1].slice(2, 8) : ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const dates    = rows[2] ? rows[2].slice(2, 8) : ["","","","","",""];
+  const bodyRows = rows.slice(3);
+  const mainRows = [];
+  const notes    = [];
+  let section       = "CONSTRUCTION SERVICES";
+  let afterOnCall   = false;
+
+  bodyRows.forEach((row, i) => {
+    const absoluteRowIndex = i + 3;
+    const a      = String(row[0] || "").trim();
+    const b      = String(row[1] || "").trim();
+    const joined = row.join(" ").trim();
+    if (!joined) return;
+    if (a.toLowerCase().includes("install crews")) {
+      section = "INSTALL CREWS";
+      mainRows.push({ type: "section", label: "INSTALL CREWS" });
+      return;
+    }
+    if (b.toLowerCase() === "construction" || b.toLowerCase() === "services") return;
+    if (a.toLowerCase().includes("on call tech") || a.toLowerCase().includes("on call hca")) {
+      afterOnCall = true;
+      mainRows.push({ type: "team", section: "ON CALL", rowIndex: absoluteRowIndex,
+        team: a, crew: b, statuses: row.slice(2, 8), isOnCall: true });
+      return;
+    }
+    if (afterOnCall) {
+      const noteText = row.filter(Boolean).join(" — ").trim();
+      if (noteText) notes.push(noteText);
+      return;
+    }
+    if (a || b) {
+      mainRows.push({ type: "team", section, rowIndex: absoluteRowIndex,
+        team: a || section, crew: b, statuses: row.slice(2, 8), isOnCall: false });
+    }
+  });
+
+  if (!mainRows.some(r => r.type === "section" && r.label === "INSTALL CREWS")) {
+    const firstInstallIdx = mainRows.findIndex(r => r.type === "team" && String(r.team).toLowerCase().includes("div"));
+    if (firstInstallIdx >= 0) mainRows.splice(firstInstallIdx, 0, { type: "section", label: "INSTALL CREWS" });
+  }
+  if (!mainRows.length) mainRows.push({ type: "section", label: "NO SCHEDULE DATA" });
+  return { dayNames, dates, mainRows, notes };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderTabs() {
+  const weeks = scheduleData.weeks || [];
+  document.getElementById("weeknav").innerHTML = weeks.map((w, i) => {
+    const c = "week-tab" + (i === currentWeekIndex ? " active" : "") + (i === 0 ? " current" : "");
+    return `<div class="${c}" onclick="switchWeek(${i})">${escapeHtml(w.title || `Week ${i + 1}`)}</div>`;
+  }).join("");
+}
+
+function renderWeek(idx) {
+  const main  = document.getElementById("main");
+  if (!main) return;
+  const weeks = scheduleData.weeks || [];
+  if (!weeks.length) {
+    main.innerHTML = `<div class="empty-state">Waiting for Google Sheet sync…</div>`;
+    return;
+  }
+  const week = weeks[idx] || weeks[0];
+  const { dayNames, dates, mainRows, notes } = getWeekParts(week);
+
+  let table = `<div class="grid-wrap"><table><thead><tr>
+    <th class="team-col">Team</th>
+    ${dayNames.map((d, i) => `<th><div>${escapeHtml(d)}</div><div class="date-small">${escapeHtml(dates[i] || "")}</div></th>`).join("")}
+  </tr></thead><tbody>`;
+
+  let currentSection = "";
+  mainRows.forEach(item => {
+    if (item.type === "section") {
+      table += `<tr class="section-header"><td colspan="7">${escapeHtml(item.label)}</td></tr>`;
+      currentSection = item.label;
+      return;
+    }
+    if (item.section && item.section !== currentSection && item.section !== "CONSTRUCTION SERVICES") {
+      table += `<tr class="section-header"><td colspan="7">${escapeHtml(item.section)}</td></tr>`;
+      currentSection = item.section;
+    }
+    const rowClass = item.isOnCall ? " class='oncall-row'" : "";
+    table += `<tr${rowClass}>
+      <td class="team-cell">
+        <div class="team-name">${escapeHtml(item.team)}</div>
+        ${item.crew ? `<div class="crew-name">${escapeHtml(item.crew)}</div>` : ""}
+      </td>`;
+    item.statuses.forEach((def, di) => {
+      const key = getKey(week.title, item.rowIndex, di);
+      const st  = getStatus(week.title, item.rowIndex, di, def);
+      const lock         = getFreshLock(key);
+      const lockedByOther = isLockedByOtherUser(key);
+      const lockHtml     = lock
+        ? `<div class="lock-note">${lockedByOther ? "Editing: " : "You are editing: "}${escapeHtml(lock.editorName || "Someone")}</div>`
+        : "";
+      const edCls    = adminMode ? (lockedByOther ? " locked" : " editable") : "";
+      const dataAttrs = adminMode && !lockedByOther
+        ? `data-editable="true" data-key="${escapeHtml(key)}" data-def="${escapeHtml(def)}" data-oncall="${item.isOnCall ? "true" : "false"}"`
+        : "";
+      table += `<td class="status-cell${edCls}" ${dataAttrs}>${statusBadge(st)}${getCellDetails(key)}${lockHtml}</td>`;
+    });
+    table += `</tr>`;
+  });
+
+  table += `</tbody></table></div>`;
+
+  const notesHtml = notes.length
+    ? `<div class="notes-wrap"><div class="notes-card">
+        <div class="notes-title">Notes</div>
+        ${notes.map(n => `<div class="note-item">${escapeHtml(n)}</div>`).join("")}
+      </div></div>`
+    : "";
+
+  const updated = scheduleData.updated ? new Date(scheduleData.updated).toLocaleString() : "—";
+
+  main.innerHTML = `
+    <div class="week-header">
+      <div>
+        <div class="week-title">${escapeHtml(week.title)}</div>
+        <div class="sheet-subtitle">Synced from Google Sheet</div>
+      </div>
+      <div class="week-meta">
+        <div class="updated-badge">Sheet Sync: ${escapeHtml(updated)}</div>
+        ${adminMode ? "<div class='edit-badge'>EDIT MODE</div>" : ""}
+      </div>
+    </div>
+    ${table}
+    ${notesHtml}
+    <div class="legend">
+      <span class="legend-title">Legend</span>
+      ${["FILLED","FULL DAY AVAIL","HALF DAY PM","HALF DAY AM","TEAM OFF","NOT AVAILABLE","HOLD","ON CALL"]
+        .map(s => `<span>${statusBadge(s)}</span>`).join("")}
+    </div>`;
+}
+
+window.switchWeek = idx => {
+  currentWeekIndex = idx;
+  renderTabs();
+  renderWeek(idx);
+};
+
+// ─── ADMIN TOGGLE ─────────────────────────────────────────────────────────────
+window.toggleAdmin = () => {
+  if (!adminMode) {
+    const pin = prompt("Enter Admin PIN or HCA PIN:");
+    if (pin === null) return;
+    if (pin === ADMIN_PIN) {
+      currentEditor = { role: "ADMIN", name: "Admin", pin: "ADMIN" };
+      adminMode = true;
+    } else if (HCA_PINS[pin]) {
+      currentEditor = { role: "HCA", name: HCA_PINS[pin], pin };
+      adminMode = true;
+    } else {
+      alert("Incorrect PIN.");
+      return;
+    }
+  } else {
+    adminMode     = false;
+    currentEditor = null;
+  }
+  const btn = document.getElementById("btnAdmin");
+  btn.classList.toggle("active", adminMode);
+  btn.textContent = adminMode ? `EXIT ${currentEditor.role}: ${currentEditor.name}` : "ADMIN / HCA EDIT";
+  renderWeek(currentWeekIndex);
+};
+
+// ─── CELL CLICK ───────────────────────────────────────────────────────────────
+document.addEventListener("click", async event => {
+  const cell = event.target.closest(".status-cell[data-editable='true']");
+  if (!cell) return;
+  const key     = cell.dataset.key;
+  const def     = cell.dataset.def || "—";
+  const isOnCall = cell.dataset.oncall === "true";
+  if (isOnCall) {
+    await window.openOnCallEdit(event, key, def);
+  } else {
+    await window.openDrop(event, key, def);
+  }
+});
+
+// ─── STATUS MODAL ─────────────────────────────────────────────────────────────
+window.openDrop = async (e, key, def) => {
+  e.stopPropagation();
+  const locked = await acquireSlotLock(key);
+  if (!locked) return;
+  editTarget = { key, def };
+
+  const select = document.getElementById("installTypeSelect");
+  select.value = statusToDefaultInstallType(def);
+
+  // Show Move button only for ADMIN on sold slots
+  const overrides   = availabilityData.overrides || {};
+  const currentSt   = overrides[key] !== undefined ? overrides[key] : def;
+  const moveBtn     = document.getElementById("btnMoveJob");
+  if (moveBtn) {
+    const canMove = adminMode && currentEditor && currentEditor.role === "ADMIN" && isSoldStatus(currentSt);
+    moveBtn.style.display = canMove ? "inline-block" : "none";
+  }
+
+  document.getElementById("statusModal").classList.add("visible");
+};
+
+window.continueStatusChoice = async () => {
+  if (!editTarget || isSaving) return;
+  const { key, def }  = editTarget;
+  const installType   = document.getElementById("installTypeSelect").value;
+  const newSt         = installTypeToStatus(installType);
+  editTarget = null;
+  document.getElementById("statusModal").classList.remove("visible");
+
+  if (["open","hold","teamOff","notAvailable"].includes(installType)) {
+    await writeStatus(key, newSt, def, installType, { fullDay: null, am: null, pm: null });
+    await releaseSlotLock(key);
+    renderWeek(currentWeekIndex);
+    return;
+  }
+  pendingStatus = { key, newSt, def, initialSoldType: installType };
+  openDetailsModal(key);
+};
+
+window.closeStatusModal = async () => {
+  const key = editTarget ? editTarget.key : null;
+  editTarget = null;
+  document.getElementById("statusModal").classList.remove("visible");
+  await releaseSlotLock(key);
+};
+
+window.openOnCallEdit = async (e, key, def) => {
+  e.stopPropagation();
+  const locked = await acquireSlotLock(key);
+  if (!locked) return;
+  const currentValue = (availabilityData.overrides && availabilityData.overrides[key]) || def || "";
+  const newValue     = prompt("Enter On Call name(s):", currentValue === "—" ? "" : currentValue);
+  if (newValue === null) { await releaseSlotLock(key); return; }
+  const cleanValue = newValue.trim() || "—";
+  if (!isSaving) await writeStatus(key, cleanValue, def, "fullDay", {});
+  await releaseSlotLock(key);
+};
+
+// ─── DETAILS MODAL ────────────────────────────────────────────────────────────
+function setJobPanelVisibility() {
+  const soldType = document.getElementById("soldTypeSelect").value;
+  document.getElementById("fullDayJobPanel").style.display = soldType === "fullDay"              ? "block" : "none";
+  document.getElementById("amJobPanel").style.display      = (soldType === "amOnly" || soldType === "amPm") ? "block" : "none";
+  document.getElementById("pmJobPanel").style.display      = (soldType === "pmOnly" || soldType === "amPm") ? "block" : "none";
+}
+window.setJobPanelVisibility = setJobPanelVisibility;
+
+function hydrateJobFields(prefix, job) {
+  const safeJob = job || {};
+  document.getElementById(`${prefix}HcaSelect`).value     = safeJob.hcaName    || "";
+  document.getElementById(`${prefix}ProjectInput`).value  = safeJob.projectName || "";
+  document.getElementById(`${prefix}CaasSelect`).value    = (safeJob.isCaas === true || safeJob.isCaas === "true") ? "true" : "false";
+}
+
+function readJobFields(prefix) {
+  return {
+    hcaName:     document.getElementById(`${prefix}HcaSelect`).value.trim(),
+    projectName: document.getElementById(`${prefix}ProjectInput`).value.trim(),
+    isCaas:      document.getElementById(`${prefix}CaasSelect`).value === "true"
+  };
+}
+
+function openDetailsModal(key) {
+  const existing = (availabilityData.details && availabilityData.details[key]) || {};
+  const jobs     = existing.jobs || {};
+  let soldType   = (pendingStatus && pendingStatus.initialSoldType) || existing.soldType || "fullDay";
+  if (!existing.soldType && (jobs.am || jobs.pm)) {
+    soldType = jobs.am && jobs.pm ? "amPm" : jobs.am ? "amOnly" : "pmOnly";
+  }
+  document.getElementById("soldTypeSelect").value = soldType;
+  hydrateJobFields("fullDay", jobs.fullDay || existing);
+  hydrateJobFields("am",      jobs.am);
+  hydrateJobFields("pm",      jobs.pm);
+  setJobPanelVisibility();
+  document.getElementById("detailsModal").classList.add("visible");
+}
+
+window.closeDetailsModal = async () => {
+  const key = pendingStatus ? pendingStatus.key : null;
+  pendingStatus = null;
+  document.getElementById("detailsModal").classList.remove("visible");
+  await releaseSlotLock(key);
+};
+
+window.saveDetailsModal = async () => {
+  if (!pendingStatus || isSaving) return;
+  const soldType = document.getElementById("soldTypeSelect").value;
+  const jobs     = { fullDay: null, am: null, pm: null };
+  if (soldType === "fullDay")                        jobs.fullDay = readJobFields("fullDay");
+  if (soldType === "amOnly" || soldType === "amPm")  jobs.am      = readJobFields("am");
+  if (soldType === "pmOnly" || soldType === "amPm")  jobs.pm      = readJobFields("pm");
+
+  await writeStatus(pendingStatus.key, pendingStatus.newSt, pendingStatus.def, soldType, jobs);
+  const keyToRelease = pendingStatus.key;
+  pendingStatus = null;
+  document.getElementById("detailsModal").classList.remove("visible");
+  await releaseSlotLock(keyToRelease);
+  renderWeek(currentWeekIndex);
+};
+
+// ─── WRITE STATUS (all writes go to _TEST paths) ──────────────────────────────
+async function writeStatus(key, newSt, def, soldType = "fullDay", jobs = {}) {
+  isSaving = true;
+  document.getElementById("savingBadge").style.display = "flex";
+  try {
+    const previousStatus  = (availabilityData.overrides && availabilityData.overrides[key] !== undefined)
+      ? availabilityData.overrides[key] : def;
+    const previousDetails = (availabilityData.details && availabilityData.details[key]) || null;
+    const now = new Date();
+    const ts  = now.toLocaleString("en-US", { month:"2-digit", day:"2-digit", year:"numeric",
+      hour:"2-digit", minute:"2-digit", hour12:false });
+
+    const updates = {};
+    updates[`overrides/${key}`]              = newSt === def ? null : newSt;
+    updates[`details/${key}/soldType`]       = soldType;
+    updates[`details/${key}/jobs`]           = jobs;
+    updates[`details/${key}/hcaName`]        = null;
+    updates[`details/${key}/projectName`]    = null;
+    updates[`details/${key}/isCaas`]         = null;
+    updates[`lastUpdated/${key}`]            = ts;
+
+    await update(ref(db, DB_AVAIL), updates);
+
+    await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
+      timestamp:       new Date().toISOString(),
+      editorName:      currentEditor ? currentEditor.name : "Unknown",
+      editorRole:      currentEditor ? currentEditor.role : "UNKNOWN",
+      editorPin:       currentEditor ? currentEditor.pin  : null,
+      cellKey:         key,
+      previousStatus,
+      newStatus:       newSt,
+      soldType,
+      jobs,
+      previousDetails
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Save failed. Check Firebase config/rules.");
+  } finally {
+    isSaving = false;
+    document.getElementById("savingBadge").style.display = "none";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ── MOVE JOB FEATURE ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+window.startMoveJob = async () => {
+  if (!editTarget) return;
+  const { key, def } = editTarget;
+
+  // Snapshot current status + details before closing modal
+  const overrides    = availabilityData.overrides || {};
+  const currentSt    = overrides[key] !== undefined ? overrides[key] : def;
+  const currentDetails = (availabilityData.details && availabilityData.details[key]) || {};
+
+  moveSource = { key, def, status: currentSt, details: currentDetails };
+
+  // Close status modal (keep lock held — we'll release on cancel or after move)
+  editTarget = null;
+  document.getElementById("statusModal").classList.remove("visible");
+
+  openMovePickerModal();
+};
+
+function getMoveSourceSummary() {
+  if (!moveSource) return "";
+  const d    = moveSource.details;
+  const jobs = d.jobs || {};
+  const job  = jobs.fullDay || jobs.am || jobs.pm || d;
+  const hca  = job.hcaName    ? `HCA: ${job.hcaName}` : "";
+  const hw   = job.projectName ? `Homeowner: ${job.projectName}` : "";
+  return [hca, hw].filter(Boolean).join(" — ") || "Job details";
+}
+
+function openMovePickerModal() {
+  const week = scheduleData.weeks[currentWeekIndex];
+  if (!week) return;
+  const { dayNames, dates, mainRows } = getWeekParts(week);
+
+  // Summary bar
+  document.getElementById("moveSummary").textContent = getMoveSourceSummary();
+
+  let html = `<div class="move-grid-wrap"><table class="move-table"><thead><tr>
+    <th class="team-col">Team / Crew</th>
+    ${dayNames.map((d, i) => `<th>${escapeHtml(d)}<div class="date-small">${escapeHtml(dates[i] || "")}</div></th>`).join("")}
+  </tr></thead><tbody>`;
+
+  let currentSection = "";
+  mainRows.forEach(item => {
+    if (item.type === "section") {
+      html += `<tr class="section-header"><td colspan="7">${escapeHtml(item.label)}</td></tr>`;
+      currentSection = item.label;
+      return;
+    }
+    if (item.section && item.section !== currentSection && item.section !== "CONSTRUCTION SERVICES") {
+      html += `<tr class="section-header"><td colspan="7">${escapeHtml(item.section)}</td></tr>`;
+      currentSection = item.section;
+    }
+    const rowClass = item.isOnCall ? " class='oncall-row'" : "";
+    html += `<tr${rowClass}><td class="team-cell">
+      <div class="team-name">${escapeHtml(item.team)}</div>
+      ${item.crew ? `<div class="crew-name">${escapeHtml(item.crew)}</div>` : ""}
+    </td>`;
+
+    item.statuses.forEach((defStatus, di) => {
+      const key   = getKey(week.title, item.rowIndex, di);
+      const st    = getStatus(week.title, item.rowIndex, di, defStatus);
+      const sNorm = normalizeStatus(st);
+      const isSource     = key === moveSource.key;
+      const isTargetable = !isSource && sNorm === "FULL DAY AVAIL" && !item.isOnCall;
+
+      if (isSource) {
+        html += `<td class="move-cell move-source">
+          ${statusBadge(st)}
+          <div class="move-cell-label move-label-source">◀ SOURCE</div>
+        </td>`;
+      } else if (isTargetable) {
+        html += `<td class="move-cell move-target"
+          data-target-key="${escapeHtml(key)}"
+          data-target-def="${escapeHtml(defStatus)}">
+          ${statusBadge(st)}
+          <div class="move-cell-label move-label-target">↓ DROP HERE</div>
+        </td>`;
+      } else {
+        html += `<td class="move-cell move-blocked">${statusBadge(st)}</td>`;
+      }
+    });
+
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  document.getElementById("movePickerGrid").innerHTML = html;
+  document.getElementById("movePickerModal").classList.add("visible");
+}
+
+// Delegated click handler for move target cells
+document.getElementById("movePickerModal").addEventListener("click", async e => {
+  const cell = e.target.closest(".move-target");
+  if (!cell) return;
+  await executeMoveJob(cell.dataset.targetKey, cell.dataset.targetDef);
+});
+
+window.closeMovePickerModal = async () => {
+  const key = moveSource ? moveSource.key : null;
+  moveSource = null;
+  document.getElementById("movePickerModal").classList.remove("visible");
+  await releaseSlotLock(key);
+};
+
+async function executeMoveJob(targetKey, targetDef) {
+  if (!moveSource || isSaving) return;
+
+  const summary = getMoveSourceSummary();
+  const confirmed = confirm(
+    `Move this job to the selected slot?\n\n${summary}\n\nSource slot → Full Day Open\nTarget slot → receives job details`
+  );
+  if (!confirmed) return;
+
+  const { key: sourceKey, def: sourceDef, status: sourceStatus, details: sourceDetails } = moveSource;
+  const jobs     = (sourceDetails.jobs) || {};
+  const soldType = sourceDetails.soldType || "fullDay";
+
+  isSaving = true;
+  document.getElementById("savingBadge").style.display = "flex";
+
+  try {
+    const updates = {};
+
+    // ── Clear source — mark Full Day Open ────────────────────────────────────
+    updates[`overrides/${sourceKey}`]           = "FULL DAY AVAIL";
+    updates[`details/${sourceKey}/soldType`]    = "open";
+    updates[`details/${sourceKey}/jobs`]        = { fullDay: null, am: null, pm: null };
+    updates[`details/${sourceKey}/hcaName`]     = null;
+    updates[`details/${sourceKey}/projectName`] = null;
+    updates[`details/${sourceKey}/isCaas`]      = null;
+
+    // ── Write job to target ───────────────────────────────────────────────────
+    updates[`overrides/${targetKey}`]           = sourceStatus;
+    updates[`details/${targetKey}/soldType`]    = soldType;
+    updates[`details/${targetKey}/jobs`]        = jobs;
+    updates[`details/${targetKey}/hcaName`]     = null;
+    updates[`details/${targetKey}/projectName`] = null;
+    updates[`details/${targetKey}/isCaas`]      = null;
+
+    await update(ref(db, DB_AVAIL), updates);
+
+    await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
+      timestamp:    new Date().toISOString(),
+      action:       "MOVE",
+      editorName:   currentEditor ? currentEditor.name : "Unknown",
+      editorRole:   currentEditor ? currentEditor.role : "UNKNOWN",
+      sourceKey,
+      targetKey,
+      sourceStatus,
+      movedDetails: sourceDetails
+    });
+
+  } catch (err) {
+    console.error(err);
+    alert("Move failed.");
+  } finally {
+    isSaving = false;
+    document.getElementById("savingBadge").style.display = "none";
+  }
+
+  const keyToRelease = moveSource.key;
+  moveSource = null;
+  document.getElementById("movePickerModal").classList.remove("visible");
+  await releaseSlotLock(keyToRelease);
+  renderWeek(currentWeekIndex);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(function init() {
+  const n = new Date();
+  const D = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  document.getElementById("todayPill").textContent =
+    `${D[n.getDay()]} ${M[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()}`;
+})();
+</script>
+
+<style>
+:root {
+  --bg: #f5f8fb; --surface: #ffffff; --surface2: #eef5fa;
+  --border: #d7e2ea; --border2: #e8eef2;
+  --text: #10324a; --text2: #4d6575; --text3: #7c919e;
+  --cm-blue: #005aa9; --cm-blue2: #0077c8;
+  --cm-orange: #f58220; --cm-green: #3aaa35; --danger: #c00000;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; font-size: 15px; min-height: 100vh; }
+
+/* ── TEST BANNER ─────────────────────────────────────────────────────────────── */
+.test-banner {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(245,130,32,.18), rgba(245,130,32,.18) 10px,
+    rgba(245,130,32,.06) 10px, rgba(245,130,32,.06) 20px
+  );
+  border-bottom: 3px solid var(--cm-orange);
+  color: var(--cm-orange);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px; font-weight: 700;
+  text-align: center; padding: 8px 20px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.test-banner span { opacity: .7; font-weight: 400; }
+
+/* ── TOPBAR ──────────────────────────────────────────────────────────────────── */
+.topbar { background: var(--surface); border-bottom: 3px solid var(--cm-orange); display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; position: sticky; top: 0; z-index: 100; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.logo-img { height: 42px; width: auto; display: block; }
+.logo-text { font-weight: 800; font-size: 15px; color: var(--cm-blue); letter-spacing: .02em; text-transform: uppercase; }
+.logo-text span { color: var(--cm-orange); }
+.divider-v { width: 1px; height: 28px; background: var(--border); }
+.meta-pill { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.btn { font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600; padding: 7px 13px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; background: var(--surface2); color: var(--text2); transition: all .15s; white-space: nowrap; }
+.btn:hover { border-color: var(--cm-blue); color: var(--cm-blue); }
+.btn-admin { background: rgba(0,90,169,.10); border-color: rgba(0,90,169,.30); color: var(--cm-blue); }
+.btn-admin.active { background: rgba(245,130,32,.13); border-color: rgba(245,130,32,.45); color: var(--cm-orange); }
+.btn-move { background: rgba(58,170,53,.12); border-color: rgba(58,170,53,.40); color: #168a20; }
+.btn-move:hover { background: rgba(58,170,53,.22); border-color: var(--cm-green); color: #168a20; }
+#savingBadge { display: none; align-items: center; gap: 6px; font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--cm-blue); }
+.spinner { width: 10px; height: 10px; border: 2px solid rgba(0,90,169,.25); border-top-color: var(--cm-blue); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── WEEK TABS ───────────────────────────────────────────────────────────────── */
+.weeknav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: stretch; padding: 0 16px; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.weeknav::-webkit-scrollbar { display: none; }
+.week-tab { font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 10px 15px; border-bottom: 3px solid transparent; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all .15s; user-select: none; }
+.week-tab:hover { color: var(--cm-blue); }
+.week-tab.active { color: var(--cm-blue); border-bottom-color: var(--cm-blue); background: rgba(0,90,169,.04); }
+.week-tab.current { color: var(--cm-green); }
+.week-tab.current.active { border-bottom-color: var(--cm-green); }
+
+/* ── MAIN ────────────────────────────────────────────────────────────────────── */
+.main { padding: 18px 20px 42px; }
+.week-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 20px; flex-wrap: wrap; }
+.week-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--cm-blue); }
+.sheet-subtitle { font-family: "IBM Plex Mono", monospace; color: var(--text3); font-size: 12px; margin-top: 2px; }
+.week-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.edit-badge { font-family: "IBM Plex Mono", monospace; font-size: 12px; background: rgba(245,130,32,.13); border: 1px solid rgba(245,130,32,.35); color: var(--cm-orange); padding: 4px 10px; border-radius: 999px; }
+.updated-badge { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text3); }
+
+/* ── GRID ────────────────────────────────────────────────────────────────────── */
+.grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: 0 3px 14px rgba(0,0,0,.06); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; }
+thead th { font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 700; color: var(--text); text-align: center; padding: 9px 6px; border-bottom: 2px solid var(--cm-blue); background: #e8f3fb; white-space: nowrap; letter-spacing: .03em; }
+thead th.team-col { text-align: left; padding-left: 14px; min-width: 190px; }
+.date-small { margin-top: 2px; color: var(--text3); font-size: 10px; }
+.section-header td { background: var(--cm-blue); color: white; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: .08em; padding: 7px 14px; text-transform: uppercase; border-top: 1px solid var(--border2); font-weight: 700; }
+tbody tr { border-bottom: 1px solid var(--border2); }
+tbody tr:last-child { border-bottom: none; }
+.team-cell { padding: 8px 14px; min-width: 190px; border-right: 1px solid var(--border2); background: #fbfdff; }
+.team-name { font-weight: 800; font-size: 15px; color: var(--text); }
+.crew-name { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text2); margin-top: 1px; }
+.status-cell { text-align: center; padding: 6px 4px; min-width: 105px; vertical-align: middle; }
+.status-cell.editable { cursor: pointer; }
+.status-cell.editable:hover { background: rgba(0,90,169,.06); }
+.status-cell.editable:hover .status-badge { transform: scale(.97); }
+.status-badge { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 800; padding: 4px 7px; border-radius: 5px; letter-spacing: .03em; white-space: nowrap; transition: all .1s; }
+.cell-details { margin-top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.4; color: var(--text2); }
+.cell-details span { color: var(--text3); }
+.caas-tag { display: inline-block; margin-bottom: 3px; padding: 2px 6px; border-radius: 999px; background: rgba(124,58,237,.14); border: 1px solid rgba(124,58,237,.42); color: #6d28d9; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.s-FILLED    { background: rgba(192,0,0,.12);   color: #b00000; border: 1px solid rgba(192,0,0,.25); }
+.s-FULL_DAY  { background: rgba(58,170,53,.14);  color: #168a20; border: 1px solid rgba(58,170,53,.28); }
+.s-HALF_PM   { background: rgba(245,130,32,.18); color: #b75600; border: 1px solid rgba(245,130,32,.32); }
+.s-HALF_AM   { background: rgba(245,190,32,.20); color: #926500; border: 1px solid rgba(245,190,32,.34); }
+.s-TEAM_OFF  { background: rgba(102,116,128,.14); color: #657583; border: 1px solid rgba(102,116,128,.23); }
+.s-NOT_AVAIL { background: rgba(44,62,80,.13);   color: #3b4b59; border: 1px solid rgba(44,62,80,.22); }
+.s-NOT_SCHED { background: rgba(44,62,80,.08);   color: #71808c; border: 1px solid rgba(44,62,80,.16); }
+.s-HOLD      { background: rgba(245,130,32,.22); color: var(--cm-orange); border: 1px solid rgba(245,130,32,.38); }
+.s-ON_CALL   { background: rgba(0,90,169,.14);   color: var(--cm-blue); border: 1px solid rgba(0,90,169,.28); }
+.oncall-row td { background: rgba(0,90,169,.05); }
+.oncall-row .team-name { color: var(--cm-blue); }
+.status-cell.locked { opacity: .62; background: repeating-linear-gradient(45deg, rgba(245,130,32,.08), rgba(245,130,32,.08) 6px, rgba(245,130,32,.14) 6px, rgba(245,130,32,.14) 12px); cursor: not-allowed; }
+.lock-note { margin-top: 5px; font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 800; color: var(--cm-orange); }
+
+/* ── JOB LINES ───────────────────────────────────────────────────────────────── */
+.job-line { margin-top: 5px; padding-top: 4px; border-top: 1px dashed rgba(16,50,74,.16); }
+.job-line:first-child { border-top: none; padding-top: 0; }
+.job-label { display: inline-block; margin-bottom: 3px; padding: 2px 6px; border-radius: 999px; background: rgba(0,90,169,.10); color: var(--cm-blue); font-weight: 900; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+
+/* ── NOTES / LEGEND ──────────────────────────────────────────────────────────── */
+.notes-wrap { margin-top: 14px; display: flex; gap: 12px; flex-wrap: wrap; }
+.notes-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; flex: 1; min-width: 220px; max-width: 700px; box-shadow: 0 3px 14px rgba(0,0,0,.04); }
+.notes-title { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .1em; color: var(--cm-orange); text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
+.note-item { font-size: 12px; color: var(--text2); padding: 4px 0; border-bottom: 1px solid var(--border2); line-height: 1.5; }
+.note-item:last-child { border-bottom: none; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; align-items: center; }
+.legend-title { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; font-weight: 700; }
+
+/* ── MODALS ──────────────────────────────────────────────────────────────────── */
+.details-modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: flex-start; justify-content: center; z-index: 300; padding: 28px 20px; }
+.details-modal.visible { display: flex; }
+.details-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.20); width: 100%; max-width: 430px; padding: 18px; max-height: calc(100vh - 56px); overflow-y: auto; }
+.details-title { font-size: 17px; font-weight: 800; margin-bottom: 4px; color: var(--cm-blue); }
+.details-subtitle { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+.field-label { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text2); letter-spacing: .08em; text-transform: uppercase; margin: 12px 0 6px; }
+.field-control { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 7px; color: var(--text); padding: 10px; font-family: "IBM Plex Sans", sans-serif; font-size: 15px; min-height: 42px; }
+.field-control:focus { outline: none; border-color: var(--cm-blue); }
+select.field-control { padding-top: 6px; padding-bottom: 6px; }
+.details-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.compact-status-card { max-width: 520px !important; }
+.status-select-large { font-size: 17px !important; min-height: 54px !important; font-weight: 800 !important; border: 2px solid var(--cm-blue) !important; background: #f8fbff !important; }
+.status-help { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(0,90,169,.07); color: var(--text2); font-size: 13px; line-height: 1.45; }
+.status-help strong { color: var(--cm-blue); }
+.job-panel { margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdff; }
+.job-panel-title { font-size: 15px; font-weight: 900; color: var(--cm-blue); margin-bottom: 6px; }
+.jobs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ── MOVE PICKER MODAL ───────────────────────────────────────────────────────── */
+#movePickerModal .details-card {
+  max-width: min(980px, calc(100vw - 20px));
+  width: min(980px, calc(100vw - 20px));
+}
+.move-source-bar {
+  margin: 10px 0 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(245,130,32,.10);
+  border: 1px solid rgba(245,130,32,.35);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+.move-source-bar strong { color: var(--cm-orange); }
+.move-instructions {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.move-instructions .dot-green { color: var(--cm-green); font-weight: 800; }
+.move-instructions .dot-orange { color: var(--cm-orange); font-weight: 800; }
+.move-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; }
+.move-table { border-collapse: collapse; width: 100%; min-width: 640px; }
+.move-table thead th { font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700; text-align: center; padding: 8px 6px; border-bottom: 2px solid var(--cm-blue); background: #e8f3fb; white-space: nowrap; }
+.move-table thead th.team-col { text-align: left; padding-left: 12px; min-width: 180px; }
+.move-cell { text-align: center; padding: 8px 6px; border: 1px solid var(--border2); min-width: 105px; vertical-align: middle; }
+.move-source { background: rgba(245,130,32,.10); border: 2px solid rgba(245,130,32,.45) !important; }
+.move-target { cursor: pointer; background: rgba(58,170,53,.08); border: 2px solid rgba(58,170,53,.30) !important; transition: background .12s; }
+.move-target:hover { background: rgba(58,170,53,.22); }
+.move-blocked { opacity: .45; }
+.move-cell-label { margin-top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: .05em; }
+.move-label-source { color: var(--cm-orange); }
+.move-label-target { color: var(--cm-green); }
+
+/* ── EMPTY / RESPONSIVE ──────────────────────────────────────────────────────── */
+.empty-state { background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; padding: 40px; text-align: center; color: var(--text3); font-family: "IBM Plex Mono", monospace; }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+.main { width: 100%; max-width: 100vw; }
+.grid-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 820px) { .jobs-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .main { padding-left: 0 !important; padding-right: 0 !important; }
+  .week-header, .notes-wrap, .legend { margin-left: 10px; margin-right: 10px; }
+  .grid-wrap { border-left: none; border-right: none; border-radius: 0; }
+  table { min-width: 720px; }
+  .topbar { flex-wrap: wrap; gap: 8px; }
+  .topbar-left { width: 100%; flex-wrap: wrap; gap: 8px; }
+  .topbar-right { width: 100%; justify-content: flex-end; }
+  .logo-img { height: 34px; }
+  .logo-text { display: none; }
+  .topbar { padding: 9px 12px; }
+  .main { padding: 14px 10px 36px; }
+  .week-title { font-size: 18px; }
+  .divider-v { display: none; }
+  .status-select-large { font-size: 16px !important; }
+  .compact-status-card { width: calc(100vw - 24px) !important; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ── TEST BANNER ─────────────────────────────────────────────────────────── -->
+<div class="test-banner">
+  ⚠ TEST ENVIRONMENT &nbsp;|&nbsp; Writes → cmh_availability_TEST &nbsp;|&nbsp; Live sheet data is read-only &nbsp;|&nbsp;
+  <span>Safe to experiment — nothing touches the live schedule</span>
+</div>
+
+<!-- ── TOPBAR ──────────────────────────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <img class="logo-img" src="cm-logo.png" alt="CM Heating logo" />
+    <div class="logo-text">Install <span>Availability</span></div>
+    <div class="divider-v"></div>
+    <div class="meta-pill" id="todayPill">—</div>
+    <div class="meta-pill" id="connBadge">○ CONNECTING…</div>
+  </div>
+  <div class="topbar-right">
+    <div id="savingBadge"><div class="spinner"></div>&nbsp;Saving…</div>
+    <button class="btn" onclick="window.location.href='index.html'">← HCA Tools</button>
+    <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN / HCA EDIT</button>
+    <button class="btn" onclick="window.location.href='audit.html'">AUDIT LOGS</button>
+  </div>
+</div>
+
+<div class="weeknav" id="weeknav"></div>
+
+<div class="main" id="main">
+  <div class="empty-state">Connecting to Firebase schedule…</div>
+</div>
+
+<!-- ── STATUS MODAL ────────────────────────────────────────────────────────── -->
+<div class="details-modal" id="statusModal">
+  <div class="details-card compact-status-card">
+    <div class="details-title">Choose Install Status</div>
+    <div class="details-subtitle">Use the wording below to show what is sold and what remains open.</div>
+
+    <div class="field-label">Install Availability</div>
+    <select class="field-control status-select-large" id="installTypeSelect">
+      <option value="fullDay">Full Day Install — Fully Sold</option>
+      <option value="amOnly">Morning Install Only — Afternoon Open</option>
+      <option value="pmOnly">Afternoon Install Only — Morning Open</option>
+      <option value="amPm">AM + PM Installs — Fully Sold</option>
+      <option value="open">Full Day Open</option>
+      <option value="hold">Hold</option>
+      <option value="teamOff">Team Off</option>
+      <option value="notAvailable">Not Available</option>
+    </select>
+
+    <div class="status-help">
+      <div><strong>Morning Install Only</strong> means afternoon still has room.</div>
+      <div><strong>Afternoon Install Only</strong> means morning still has room.</div>
+      <div><strong>AM + PM Installs</strong> means two separate sold jobs.</div>
+    </div>
+
+    <div class="details-actions">
+      <button class="btn" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-move" id="btnMoveJob" style="display:none" onclick="startMoveJob()">⇄ Move to Another Crew</button>
+      <button class="btn btn-admin active" onclick="continueStatusChoice()">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DETAILS MODAL ───────────────────────────────────────────────────────── -->
+<div class="details-modal" id="detailsModal">
+  <div class="details-card" style="max-width: min(980px, calc(100vw - 20px)); width: min(980px, calc(100vw - 20px));">
+    <div class="details-title">Sold Project Details</div>
+    <div class="details-subtitle">Choose full day, morning, afternoon, or AM + PM installs.</div>
+
+    <div class="field-label">Sold Schedule Type</div>
+    <select class="field-control" id="soldTypeSelect" onchange="setJobPanelVisibility()">
+      <option value="fullDay">Full Day Install</option>
+      <option value="amOnly">Morning Install Only</option>
+      <option value="pmOnly">Afternoon Install Only</option>
+      <option value="amPm">AM + PM Installs</option>
+    </select>
+
+    <div class="job-panel" id="fullDayJobPanel">
+      <div class="job-panel-title">Full Day Project</div>
+      <div class="field-label">HCA</div>
+      <select class="field-control" id="fullDayHcaSelect">
+        <option value="">— Select HCA —</option>
+        <option value="Amber">Amber</option><option value="Chester">Chester</option>
+        <option value="Davis">Davis</option><option value="Jay">Jay</option>
+        <option value="Joe">Joe</option><option value="Joseph">Joseph</option>
+        <option value="Kyle">Kyle</option><option value="Samir">Samir</option>
+        <option value="Trevor">Trevor</option>
+      </select>
+      <div class="field-label">Homeowner Name</div>
+      <input class="field-control" id="fullDayProjectInput" placeholder="Enter homeowner name" />
+      <div class="field-label">CaaS / Comfort as a Service?</div>
+      <select class="field-control" id="fullDayCaasSelect">
+        <option value="false">No — COD / Standard</option>
+        <option value="true">Yes — CaaS</option>
+      </select>
+    </div>
+
+    <div class="jobs-grid">
+      <div class="job-panel" id="amJobPanel">
+        <div class="job-panel-title">Morning Install</div>
+        <div class="field-label">HCA</div>
+        <select class="field-control" id="amHcaSelect">
+          <option value="">— Select HCA —</option>
+          <option value="Amber">Amber</option><option value="Chester">Chester</option>
+          <option value="Davis">Davis</option><option value="Jay">Jay</option>
+          <option value="Joe">Joe</option><option value="Joseph">Joseph</option>
+          <option value="Kyle">Kyle</option><option value="Samir">Samir</option>
+          <option value="Trevor">Trevor</option>
+        </select>
+        <div class="field-label">Homeowner Name</div>
+        <input class="field-control" id="amProjectInput" placeholder="Enter homeowner name" />
+        <div class="field-label">CaaS / Comfort as a Service?</div>
+        <select class="field-control" id="amCaasSelect">
+          <option value="false">No — COD / Standard</option>
+          <option value="true">Yes — CaaS</option>
+        </select>
+      </div>
+
+      <div class="job-panel" id="pmJobPanel">
+        <div class="job-panel-title">Afternoon Install</div>
+        <div class="field-label">HCA</div>
+        <select class="field-control" id="pmHcaSelect">
+          <option value="">— Select HCA —</option>
+          <option value="Amber">Amber</option><option value="Chester">Chester</option>
+          <option value="Davis">Davis</option><option value="Jay">Jay</option>
+          <option value="Joe">Joe</option><option value="Joseph">Joseph</option>
+          <option value="Kyle">Kyle</option><option value="Samir">Samir</option>
+          <option value="Trevor">Trevor</option>
+        </select>
+        <div class="field-label">Homeowner Name</div>
+        <input class="field-control" id="pmProjectInput" placeholder="Enter homeowner name" />
+        <div class="field-label">CaaS / Comfort as a Service?</div>
+        <select class="field-control" id="pmCaasSelect">
+          <option value="false">No — COD / Standard</option>
+          <option value="true">Yes — CaaS</option>
+        </select>
+      </div>
+
+      <div class="details-actions" style="grid-column: 1 / -1;">
+        <button class="btn" onclick="closeDetailsModal()">Cancel</button>
+        <button class="btn btn-admin active" onclick="saveDetailsModal()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MOVE PICKER MODAL ───────────────────────────────────────────────────── -->
+<div class="details-modal" id="movePickerModal">
+  <div class="details-card">
+    <div class="details-title">⇄ Move Job — Pick a Target Crew</div>
+
+    <div class="move-source-bar">
+      <strong>Moving:</strong> <span id="moveSummary">—</span>
+    </div>
+
+    <div class="move-instructions">
+      <span class="dot-green">■</span> Green = open slot, click to move there &nbsp;·&nbsp;
+      <span class="dot-orange">■</span> Orange = source (current location) &nbsp;·&nbsp;
+      Faded = unavailable target
+    </div>
+
+    <div id="movePickerGrid"></div>
+
+    <div class="details-actions" style="margin-top: 14px;">
+      <button class="btn" onclick="closeMovePickerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
