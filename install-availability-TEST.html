@@ -479,6 +479,7 @@ window.openDrop = async (e, key, def) => {
   }
 
   document.getElementById("statusModal").classList.add("visible");
+  startCountdown();
 };
 
 window.continueStatusChoice = async () => {
@@ -502,6 +503,7 @@ window.continueStatusChoice = async () => {
 window.closeStatusModal = async () => {
   const key = editTarget ? editTarget.key : null;
   editTarget = null;
+  stopCountdown();
   document.getElementById("statusModal").classList.remove("visible");
   await releaseSlotLock(key);
 };
@@ -558,6 +560,7 @@ function openDetailsModal(key) {
 }
 
 window.closeDetailsModal = async () => {
+  stopCountdown();
   const key = pendingStatus ? pendingStatus.key : null;
   pendingStatus = null;
   document.getElementById("detailsModal").classList.remove("visible");
@@ -573,6 +576,7 @@ window.saveDetailsModal = async () => {
   if (soldType === "pmOnly" || soldType === "amPm")  jobs.pm      = readJobFields("pm");
 
   await writeStatus(pendingStatus.key, pendingStatus.newSt, pendingStatus.def, soldType, jobs);
+  stopCountdown();
   const keyToRelease = pendingStatus.key;
   pendingStatus = null;
   document.getElementById("detailsModal").classList.remove("visible");
@@ -716,6 +720,7 @@ function openMovePickerModal() {
   html += `</tbody></table></div>`;
   document.getElementById("movePickerGrid").innerHTML = html;
   document.getElementById("movePickerModal").classList.add("visible");
+  startCountdown();
 }
 
 // Delegated click handler for move target cells
@@ -726,6 +731,7 @@ document.getElementById("movePickerModal").addEventListener("click", async e => 
 });
 
 window.closeMovePickerModal = async () => {
+  stopCountdown();
   const key = moveSource ? moveSource.key : null;
   moveSource = null;
   document.getElementById("movePickerModal").classList.remove("visible");
@@ -797,10 +803,68 @@ async function executeMoveJob(targetKey, targetDef) {
   }
 
   const keyToRelease = moveSource.key;
+  stopCountdown();
   moveSource = null;
   document.getElementById("movePickerModal").classList.remove("visible");
   await releaseSlotLock(keyToRelease);
   renderWeek(currentWeekIndex);
+}
+
+// ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
+let countdownInterval = null;
+let countdownSeconds  = 180;
+
+function startCountdown() {
+  stopCountdown();
+  countdownSeconds = 180;
+  updateCountdownDisplay();
+  document.getElementById("countdownToast").classList.add("visible");
+
+  countdownInterval = setInterval(() => {
+    countdownSeconds--;
+    updateCountdownDisplay();
+    if (countdownSeconds <= 0) {
+      stopCountdown();
+      autoCloseActiveModal();
+    }
+  }, 1000);
+}
+
+function stopCountdown() {
+  if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+  const toast = document.getElementById("countdownToast");
+  toast.classList.remove("visible", "warning", "urgent");
+}
+
+function updateCountdownDisplay() {
+  const mins   = Math.floor(countdownSeconds / 60);
+  const secs   = countdownSeconds % 60;
+  const str    = `${mins}:${secs.toString().padStart(2, "0")}`;
+  const toast  = document.getElementById("countdownToast");
+  const timeEl = document.getElementById("countdownTime");
+  if (timeEl) timeEl.textContent = str;
+  if (countdownSeconds <= 30) {
+    toast.classList.add("urgent"); toast.classList.remove("warning");
+  } else if (countdownSeconds <= 60) {
+    toast.classList.add("warning"); toast.classList.remove("urgent");
+  } else {
+    toast.classList.remove("warning", "urgent");
+  }
+}
+
+async function autoCloseActiveModal() {
+  const timeEl = document.getElementById("countdownTime");
+  if (timeEl) timeEl.textContent = "Timed out";
+  document.getElementById("countdownToast").classList.add("visible", "urgent");
+  setTimeout(() => document.getElementById("countdownToast").classList.remove("visible", "urgent"), 2500);
+
+  if (document.getElementById("movePickerModal").classList.contains("visible")) {
+    await window.closeMovePickerModal();
+  } else if (document.getElementById("detailsModal").classList.contains("visible")) {
+    await window.closeDetailsModal();
+  } else if (document.getElementById("statusModal").classList.contains("visible")) {
+    await window.closeStatusModal();
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -1004,6 +1068,34 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   .status-select-large { font-size: 16px !important; }
   .compact-status-card { width: calc(100vw - 24px) !important; }
 }
+
+/* ── COUNTDOWN TOAST ─────────────────────────────────────────────────────────── */
+.countdown-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border: 2px solid var(--cm-blue);
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: none;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.18);
+  z-index: 400;
+  font-family: "IBM Plex Mono", monospace;
+  transition: border-color .3s;
+  min-width: 200px;
+}
+.countdown-toast.visible { display: flex; }
+.countdown-toast.warning { border-color: var(--cm-orange); }
+.countdown-toast.urgent  { border-color: var(--danger); }
+.countdown-icon { font-size: 22px; line-height: 1; }
+.countdown-msg  { font-size: 11px; color: var(--text2); margin-bottom: 3px; letter-spacing: .03em; }
+.countdown-time { font-size: 22px; font-weight: 800; color: var(--cm-blue); line-height: 1; transition: color .3s; }
+.countdown-toast.warning .countdown-time { color: var(--cm-orange); }
+.countdown-toast.urgent  .countdown-time { color: var(--danger); animation: pulse-count .5s ease-in-out infinite alternate; }
+@keyframes pulse-count { from { opacity: 1; } to { opacity: .4; } }
 </style>
 </head>
 
@@ -1196,6 +1288,16 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     </div>
   </div>
 </div>
+
+<!-- ── COUNTDOWN TOAST ──────────────────────────────────────────────────────── -->
+<div class="countdown-toast" id="countdownToast">
+  <div class="countdown-icon">⏱</div>
+  <div>
+    <div class="countdown-msg">Please finish your selection</div>
+    <div class="countdown-time" id="countdownTime">3:00</div>
+  </div>
+</div>
+
 
 </body>
 </html>
