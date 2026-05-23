@@ -99,8 +99,12 @@ let availabilityData = {};
 let activeLocks      = {};
 let editTarget       = null;
 let pendingStatus    = null;
-let moveSource       = null;   // ← NEW: holds job being moved
-let isSaving         = false;
+let moveSource          = null;   // holds job being moved
+let moveTargetWeekIndex = 0;      // which week the picker is targeting
+let undoBuffer          = null;   // stores last move for undo
+let undoInterval        = null;
+let undoSeconds         = 30;
+let isSaving            = false;
 
 // ─── FIREBASE LISTENERS ───────────────────────────────────────────────────────
 const scheduleRef    = ref(db, DB_SCHEDULE);
@@ -446,6 +450,10 @@ window.closeNoSlotsModal = () => {
   window.closeMovePickerModal();
 };
 
+window.closeHoldBlocked = () => {
+  document.getElementById("holdBlockedModal").classList.remove("visible");
+};
+
 window.closeAdminWelcome = () => {
   document.getElementById('adminWelcomeModal').classList.remove('visible');
 };
@@ -471,8 +479,17 @@ window.openDrop = async (e, key, def) => {
   if (!locked) return;
   editTarget = { key, def };
 
-  const select = document.getElementById("installTypeSelect");
-  select.value = statusToDefaultInstallType(def);
+  const select   = document.getElementById("installTypeSelect");
+  select.value   = statusToDefaultInstallType(def);
+
+  // Grey out HOLD for HCA logins
+  const holdOpt  = select.querySelector('option[value="hold"]');
+  const isHca    = currentEditor && currentEditor.role === "HCA";
+  if (holdOpt) {
+    holdOpt.disabled = isHca;
+    holdOpt.textContent = isHca ? "Hold — Admin Only" : "Hold";
+    holdOpt.style.color = isHca ? "#aaa" : "";
+  }
 
   // Show Move button for any ADMIN on any non-TEAM-OFF slot
   const overrides   = availabilityData.overrides || {};
@@ -492,6 +509,12 @@ window.continueStatusChoice = async () => {
   if (!editTarget || isSaving) return;
   const { key, def }  = editTarget;
   const installType   = document.getElementById("installTypeSelect").value;
+
+  // Block HCA from using HOLD
+  if (installType === "hold" && currentEditor && currentEditor.role === "HCA") {
+    document.getElementById("holdBlockedModal").classList.add("visible");
+    return;
+  }
   const newSt         = installTypeToStatus(installType);
   editTarget = null;
   document.getElementById("statusModal").classList.remove("visible");
@@ -678,12 +701,30 @@ function getTargetSummary(key) {
   return [hca, hw].filter(Boolean).join(" — ") || null;
 }
 
-function openMovePickerModal() {
-  const week = scheduleData.weeks[currentWeekIndex];
+function renderMoveWeekTabs() {
+  const weeks = scheduleData.weeks || [];
+  document.getElementById("moveWeekTabs").innerHTML = weeks.map((w, i) => {
+    const cls = "move-week-tab"
+      + (i === moveTargetWeekIndex ? " active" : "")
+      + (i === currentWeekIndex    ? " current" : "");
+    return `<div class="${cls}" onclick="switchMoveWeek(${i})">${escapeHtml(w.title || `Week ${i+1}`)}</div>`;
+  }).join("");
+}
+
+window.switchMoveWeek = (idx) => {
+  moveTargetWeekIndex = idx;
+  renderMoveWeekTabs();
+  renderMovePickerGrid(idx);
+  // Show/hide cross-week note
+  const note = document.getElementById("crossWeekNote");
+  if (note) note.style.display = idx !== currentWeekIndex ? "block" : "none";
+};
+
+function renderMovePickerGrid(weekIdx) {
+  const week = scheduleData.weeks[weekIdx];
   if (!week) return;
   const { dayNames, dates, mainRows } = getWeekParts(week);
-
-  document.getElementById("moveSummary").textContent = getMoveSourceSummary();
+  const isSameWeek = weekIdx === currentWeekIndex;
 
   let html = `<div class="move-grid-wrap"><table class="move-table"><thead><tr>
     <th class="team-col">Team / Crew</th>
@@ -710,12 +751,13 @@ function openMovePickerModal() {
     </td>`;
 
     item.statuses.forEach((defStatus, di) => {
-      const key   = getKey(week.title, item.rowIndex, di);
-      const st    = getStatus(week.title, item.rowIndex, di, defStatus);
-      const sNorm = normalizeStatus(st);
-      const isSource     = key === moveSource.key;
-      const isTargetable = !isSource && !item.isOnCall && !MOVE_BLOCKED_STATUSES.includes(sNorm);
-      const isSoldTarget = isTargetable && isSoldStatus(st);
+      const key        = getKey(week.title, item.rowIndex, di);
+      const st         = getStatus(week.title, item.rowIndex, di, defStatus);
+      const sNorm      = normalizeStatus(st);
+      const isSource   = isSameWeek && key === moveSource.key;
+      const isBlocked  = MOVE_BLOCKED_STATUSES.includes(sNorm) || item.isOnCall;
+      const isTargetable = !isSource && !isBlocked;
+      const isSoldTarget = isTargetable && isSoldStatus(st) && isSameWeek; // swap only same-week
 
       if (isSource) {
         html += `<td class="move-cell move-source">
@@ -724,7 +766,7 @@ function openMovePickerModal() {
         </td>`;
       } else if (isTargetable) {
         targetCount++;
-        const dropLabel = isSoldTarget ? "⇄ SWAP" : "↓ DROP HERE";
+        const dropLabel = isSoldTarget ? "⇄ SWAP" : "↓ MOVE HERE";
         const cellClass = isSoldTarget ? "move-cell move-target move-swap" : "move-cell move-target";
         html += `<td class="${cellClass}"
           data-target-key="${escapeHtml(key)}"
@@ -736,7 +778,6 @@ function openMovePickerModal() {
         html += `<td class="move-cell move-blocked">${statusBadge(st)}</td>`;
       }
     });
-
     html += `</tr>`;
   });
 
@@ -744,15 +785,19 @@ function openMovePickerModal() {
   document.getElementById("movePickerGrid").innerHTML = html;
 
   if (targetCount === 0) {
-    // Board is full — show no-slots popup instead
     document.getElementById("noSlotsModal").classList.add("visible");
-    return;
   }
+}
 
+function openMovePickerModal() {
+  moveTargetWeekIndex = currentWeekIndex;
+  document.getElementById("moveSummary").textContent = getMoveSourceSummary();
+  document.getElementById("crossWeekNote").style.display = "none";
+  renderMoveWeekTabs();
+  renderMovePickerGrid(currentWeekIndex);
   document.getElementById("movePickerModal").classList.add("visible");
   startCountdown();
 }
-
 // Delegated click handler for move target cells
 document.getElementById("movePickerModal").addEventListener("click", async e => {
   const cell = e.target.closest(".move-target");
@@ -775,8 +820,9 @@ async function executeMoveJob(targetKey, targetDef) {
   const sourceJobs     = sourceDetails.jobs || {};
   const sourceSoldType = sourceDetails.soldType || "fullDay";
   const sourceSummary  = getMoveSourceSummary();
+  const isSameWeek     = moveTargetWeekIndex === currentWeekIndex;
 
-  // Read target current state for swap
+  // Read target current state
   const targetOverrides = availabilityData.overrides || {};
   const targetCurrentSt = targetOverrides[targetKey] !== undefined ? targetOverrides[targetKey] : targetDef;
   const targetDetails   = (availabilityData.details && availabilityData.details[targetKey]) || {};
@@ -784,14 +830,33 @@ async function executeMoveJob(targetKey, targetDef) {
   const targetSoldType  = targetDetails.soldType || "fullDay";
   const targetIsSold    = isSoldStatus(targetCurrentSt);
   const targetSummary   = getTargetSummary(targetKey);
+  const doSwap          = isSameWeek && targetIsSold;
 
   // Confirm dialog
   let confirmMsg;
-  if (targetIsSold && targetSummary) {
-    confirmMsg = `Swap these two jobs?\n\nFROM: ${sourceSummary}\nTO:   ${targetSummary}\n\nThey will exchange slots completely.`;
+  if (doSwap && targetSummary) {
+    confirmMsg = `Swap these two jobs?
+
+FROM: ${sourceSummary}
+TO:   ${targetSummary}
+
+They will exchange slots completely.`;
+  } else if (!isSameWeek) {
+    const targetWeekTitle = (scheduleData.weeks[moveTargetWeekIndex] || {}).title || "next week";
+    confirmMsg = `Move this job to ${targetWeekTitle}?
+
+${sourceSummary}
+
+Source slot → Full Day Open
+Target slot → receives job details`;
   } else {
     const targetLabel = STATUS_LABELS[normalizeStatus(targetCurrentSt)] || targetCurrentSt;
-    confirmMsg = `Move this job to the selected slot?\n\n${sourceSummary}\n\nSource → ${targetLabel}\nTarget → receives job details`;
+    confirmMsg = `Move this job to the selected slot?
+
+${sourceSummary}
+
+Source → ${targetLabel}
+Target → receives job details`;
   }
 
   if (!confirm(confirmMsg)) return;
@@ -799,36 +864,68 @@ async function executeMoveJob(targetKey, targetDef) {
   isSaving = true;
   document.getElementById("savingBadge").style.display = "flex";
 
+  // Store pre-move state for undo
+  const savedUndoBuffer = {
+    isSameWeek,
+    doSwap,
+    sourceKey,
+    targetKey,
+    originalSourceStatus:  sourceStatus,
+    originalSourceDetails: sourceDetails,
+    originalTargetStatus:  targetCurrentSt,
+    originalTargetDetails: targetDetails
+  };
+
   try {
     const updates = {};
 
-    // Source gets target's state
-    updates[`overrides/${sourceKey}`]           = targetCurrentSt;
-    updates[`details/${sourceKey}/soldType`]    = targetIsSold ? targetSoldType : "open";
-    updates[`details/${sourceKey}/jobs`]        = targetIsSold ? targetJobs : { fullDay: null, am: null, pm: null };
-    updates[`details/${sourceKey}/hcaName`]     = null;
-    updates[`details/${sourceKey}/projectName`] = null;
-    updates[`details/${sourceKey}/isCaas`]      = null;
+    if (doSwap) {
+      // ── Full swap (same week, both sold) ─────────────────────────────────
+      updates[`overrides/${sourceKey}`]           = targetCurrentSt;
+      updates[`details/${sourceKey}/soldType`]    = targetSoldType;
+      updates[`details/${sourceKey}/jobs`]        = targetJobs;
+      updates[`details/${sourceKey}/hcaName`]     = null;
+      updates[`details/${sourceKey}/projectName`] = null;
+      updates[`details/${sourceKey}/isCaas`]      = null;
 
-    // Target gets source's state
-    updates[`overrides/${targetKey}`]           = sourceStatus;
-    updates[`details/${targetKey}/soldType`]    = isSoldStatus(sourceStatus) ? sourceSoldType : "open";
-    updates[`details/${targetKey}/jobs`]        = isSoldStatus(sourceStatus) ? sourceJobs : { fullDay: null, am: null, pm: null };
-    updates[`details/${targetKey}/hcaName`]     = null;
-    updates[`details/${targetKey}/projectName`] = null;
-    updates[`details/${targetKey}/isCaas`]      = null;
+      updates[`overrides/${targetKey}`]           = sourceStatus;
+      updates[`details/${targetKey}/soldType`]    = sourceSoldType;
+      updates[`details/${targetKey}/jobs`]        = sourceJobs;
+      updates[`details/${targetKey}/hcaName`]     = null;
+      updates[`details/${targetKey}/projectName`] = null;
+      updates[`details/${targetKey}/isCaas`]      = null;
+
+    } else {
+      // ── One-way move (cross-week OR target is open/off) ───────────────────
+      // Source gets target's state
+      updates[`overrides/${sourceKey}`]           = targetCurrentSt;
+      updates[`details/${sourceKey}/soldType`]    = targetIsSold ? targetSoldType : "open";
+      updates[`details/${sourceKey}/jobs`]        = targetIsSold ? targetJobs : { fullDay: null, am: null, pm: null };
+      updates[`details/${sourceKey}/hcaName`]     = null;
+      updates[`details/${sourceKey}/projectName`] = null;
+      updates[`details/${sourceKey}/isCaas`]      = null;
+
+      // Target gets source's sold state
+      updates[`overrides/${targetKey}`]           = sourceStatus;
+      updates[`details/${targetKey}/soldType`]    = sourceSoldType;
+      updates[`details/${targetKey}/jobs`]        = sourceJobs;
+      updates[`details/${targetKey}/hcaName`]     = null;
+      updates[`details/${targetKey}/projectName`] = null;
+      updates[`details/${targetKey}/isCaas`]      = null;
+    }
 
     await update(ref(db, DB_AVAIL), updates);
 
     await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
       timestamp:    new Date().toISOString(),
-      action:       targetIsSold ? "SWAP" : "MOVE",
+      action:       doSwap ? "SWAP" : "MOVE",
       editorName:   currentEditor ? currentEditor.name : "Unknown",
       editorRole:   currentEditor ? currentEditor.role : "UNKNOWN",
       sourceKey,
       targetKey,
       sourceStatus,
       targetStatus: targetCurrentSt,
+      crossWeek:    !isSameWeek,
       sourceDetails,
       targetDetails
     });
@@ -836,18 +933,93 @@ async function executeMoveJob(targetKey, targetDef) {
   } catch (err) {
     console.error(err);
     alert("Move/swap failed.");
-  } finally {
     isSaving = false;
     document.getElementById("savingBadge").style.display = "none";
+    return;
   }
 
+  isSaving = false;
+  document.getElementById("savingBadge").style.display = "none";
   stopCountdown();
+
   const keyToRelease = moveSource.key;
   moveSource = null;
   document.getElementById("movePickerModal").classList.remove("visible");
   await releaseSlotLock(keyToRelease);
   renderWeek(currentWeekIndex);
+
+  // Start undo window
+  undoBuffer = savedUndoBuffer;
+  startUndoCountdown();
 }
+
+// ─── UNDO ────────────────────────────────────────────────────────────────────
+
+function startUndoCountdown() {
+  stopUndoCountdown();
+  undoSeconds = 30;
+  updateUndoDisplay();
+  document.getElementById("undoToast").classList.add("visible");
+  undoInterval = setInterval(() => {
+    undoSeconds--;
+    updateUndoDisplay();
+    if (undoSeconds <= 0) stopUndoCountdown();
+  }, 1000);
+}
+
+function stopUndoCountdown() {
+  if (undoInterval) { clearInterval(undoInterval); undoInterval = null; }
+  document.getElementById("undoToast").classList.remove("visible");
+  undoBuffer = null;
+}
+
+function updateUndoDisplay() {
+  const el = document.getElementById("undoCountdown");
+  if (el) el.textContent = `${undoSeconds}s`;
+}
+
+window.executeUndo = async () => {
+  if (!undoBuffer || isSaving) return;
+  stopUndoCountdown();
+
+  const buf = undoBuffer;
+  undoBuffer = null;
+  isSaving = true;
+  document.getElementById("savingBadge").style.display = "flex";
+
+  try {
+    const updates = {};
+    const restoreCell = (key, status, details) => {
+      updates[`overrides/${key}`]           = status;
+      updates[`details/${key}/soldType`]    = details.soldType || (isSoldStatus(status) ? "fullDay" : "open");
+      updates[`details/${key}/jobs`]        = details.jobs || (isSoldStatus(status) ? {} : { fullDay: null, am: null, pm: null });
+      updates[`details/${key}/hcaName`]     = null;
+      updates[`details/${key}/projectName`] = null;
+      updates[`details/${key}/isCaas`]      = null;
+    };
+
+    restoreCell(buf.sourceKey, buf.originalSourceStatus, buf.originalSourceDetails);
+    restoreCell(buf.targetKey, buf.originalTargetStatus, buf.originalTargetDetails);
+
+    await update(ref(db, DB_AVAIL), updates);
+    await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
+      timestamp:  new Date().toISOString(),
+      action:     "UNDO",
+      editorName: currentEditor ? currentEditor.name : "Unknown",
+      editorRole: currentEditor ? currentEditor.role : "UNKNOWN",
+      sourceKey:  buf.sourceKey,
+      targetKey:  buf.targetKey
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Undo failed.");
+  } finally {
+    isSaving = false;
+    document.getElementById("savingBadge").style.display = "none";
+  }
+  renderWeek(currentWeekIndex);
+};
+
 
 // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────────
 let countdownInterval = null;
@@ -1139,6 +1311,24 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 .countdown-toast.warning .countdown-time { color: var(--cm-orange); }
 .countdown-toast.urgent  .countdown-time { color: var(--danger); animation: pulse-count .5s ease-in-out infinite alternate; }
 @keyframes pulse-count { from { opacity: 1; } to { opacity: .4; } }
+
+/* ── MOVE WEEK TABS ──────────────────────────────────────────────────────────── */
+.move-week-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.move-week-tabs::-webkit-scrollbar { display: none; }
+.move-week-tab { font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 7px 12px; border-bottom: 3px solid transparent; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all .15s; user-select: none; }
+.move-week-tab:hover { color: var(--cm-blue); }
+.move-week-tab.active { color: var(--cm-blue); border-bottom-color: var(--cm-blue); }
+.move-week-tab.current { color: var(--cm-green); }
+.move-week-tab.current.active { border-bottom-color: var(--cm-green); }
+.cross-week-note { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: #b75600; background: rgba(245,130,32,.09); border: 1px solid rgba(245,130,32,.28); padding: 7px 11px; border-radius: 7px; margin-bottom: 8px; }
+
+/* ── UNDO TOAST ───────────────────────────────────────────────────────────────── */
+.undo-toast { position: fixed; bottom: 24px; left: 24px; background: var(--surface); border: 2px solid var(--cm-green); border-radius: 14px; padding: 12px 16px; display: none; align-items: center; gap: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.18); z-index: 400; font-family: "IBM Plex Mono", monospace; }
+.undo-toast.visible { display: flex; }
+.undo-msg { font-size: 13px; font-weight: 700; color: var(--cm-green); margin-bottom: 2px; }
+.undo-sub { font-size: 11px; color: var(--text3); }
+.btn-undo { background: var(--cm-green); color: white; border: none; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 700; padding: 9px 14px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.btn-undo:hover { background: #2d9429; }
 </style>
 </head>
 
@@ -1301,6 +1491,8 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
       <span class="dot-green">■</span> Green = open/off slot (move here) &nbsp;·&nbsp; <span style="color:var(--cm-blue);font-weight:800;">■</span> Blue = sold slot (swap) &nbsp;·&nbsp; <span class="dot-orange">■</span> Orange = source &nbsp;·&nbsp; Faded = blocked
     </div>
 
+    <div class="move-week-tabs" id="moveWeekTabs"></div>
+    <div class="cross-week-note" id="crossWeekNote" style="display:none">⚠ Cross-week move — job will be placed on target week. Source slot becomes Full Day Open. No swap.</div>
     <div id="movePickerGrid"></div>
 
     <div class="details-actions" style="margin-top: 14px;">
@@ -1353,6 +1545,34 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     </div>
     <div class="details-actions">
       <button class="btn btn-admin active" onclick="closeNoSlotsModal()">Got it</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── UNDO TOAST ────────────────────────────────────────────────────────────── -->
+<div class="undo-toast" id="undoToast">
+  <div>
+    <div class="undo-msg">✓ Move complete</div>
+    <div class="undo-sub">Reversible for <span id="undoCountdown">30s</span></div>
+  </div>
+  <button class="btn-undo" onclick="executeUndo()">↩ Undo</button>
+</div>
+
+
+<!-- ── HOLD BLOCKED MODAL ───────────────────────────────────────────────────── -->
+<div class="details-modal" id="holdBlockedModal">
+  <div class="details-card compact-status-card" style="max-width:420px;">
+    <div class="details-title">🔒 Admin Approval Required</div>
+    <div class="details-subtitle">This action is restricted.</div>
+    <div style="padding:14px;border-radius:10px;background:rgba(245,130,32,.09);border:1px solid rgba(245,130,32,.28);margin-bottom:16px;">
+      <div style="font-size:14px;color:var(--text2);line-height:1.7;">
+        Only an <strong style="color:var(--cm-blue);">Admin</strong> can place a slot on <strong>Hold</strong>.<br><br>
+        Please get approval from <strong style="color:var(--cm-orange);">Amy</strong> or <strong style="color:var(--cm-orange);">Geoff</strong> before requesting this status.
+      </div>
+    </div>
+    <div class="details-actions">
+      <button class="btn btn-admin active" onclick="closeHoldBlocked()">Got it</button>
     </div>
   </div>
 </div>
