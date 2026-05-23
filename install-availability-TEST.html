@@ -949,8 +949,8 @@ Target → receives job details`;
   renderWeek(currentWeekIndex);
 
   // Start undo window
-  undoBuffer = savedUndoBuffer;
-  startUndoCountdown();
+  startUndoCountdown();      // clears any old buffer first
+  undoBuffer = savedUndoBuffer; // set AFTER so stopUndoCountdown inside doesn't wipe it
 }
 
 // ─── UNDO ────────────────────────────────────────────────────────────────────
@@ -963,14 +963,14 @@ function startUndoCountdown() {
   undoInterval = setInterval(() => {
     undoSeconds--;
     updateUndoDisplay();
-    if (undoSeconds <= 0) stopUndoCountdown();
+    if (undoSeconds <= 0) { undoBuffer = null; stopUndoCountdown(); }
   }, 1000);
 }
 
 function stopUndoCountdown() {
   if (undoInterval) { clearInterval(undoInterval); undoInterval = null; }
   document.getElementById("undoToast").classList.remove("visible");
-  undoBuffer = null;
+  // undoBuffer nulled explicitly by executeUndo or when timer expires
 }
 
 function updateUndoDisplay() {
