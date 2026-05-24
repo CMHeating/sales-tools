@@ -311,7 +311,7 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
       </div>
     </div>
     <div class="hero-actions">
-      <button class="ghostbtn" type="button" onclick="location.href='index.html'">← HCA Tools</button>
+      <button class="ghostbtn" type="button" onclick="location.href='https://cmheating.github.io/caas-calculator/index.html'">← HCA Tools</button>
       <button class="hbtn" type="button" onclick="copyQuote()">Copy Quote</button>
       <button class="ghostbtn" type="button" onclick="window.print()">Print</button>
     </div>
@@ -460,7 +460,7 @@ const P=[
 {id:"MI-MO1HE-HPAH",t:"HPAH",brand:"Midea",tier:"BEST",lbl:"MO1HE · 18 SEER HP+AH",su:"Ton",pmt:169.95,lab:1771.83,iaq:"Dynamic UV + Air Ranger",thermo:"EVOX G3",sz:{"2T":{mat:6083,msrp:24249},"2.5T":{mat:6694,msrp:26249},"3T":{mat:7137,msrp:27749},"4T":{mat:8014,msrp:30749},"5T":{mat:8513,msrp:32249}}},
 // Mitsubishi — from master sheet, not in HPAH BOM
 {id:"MT-SUZ-HPAH",t:"HPAH",brand:"Mitsubishi",tier:"BETTER",lbl:"SUZ/SVZ · 16 SEER HP+AH",su:"Ton",pmt:169.95,lab:1640.85,iaq:"4\" media + Dynamic UV",thermo:"MHK2",sz:{"1T":{mat:4715.7,msrp:22749},"1.5T":{mat:6158.9,msrp:24749},"2T":{mat:6554.9,msrp:25999},"2.5T":{mat:7025.7,msrp:27249},"3T":{mat:7392,msrp:28499},"4T":{mat:7921.1,msrp:29999},"5T":{mat:8549.2,msrp:31999}}},
-{id:"MT-SUZHH-HPAH",t:"HPAH",brand:"Mitsubishi",tier:"BEST",lbl:"SUZ/SVZ HH · 16 SEER HP+AH",su:"Ton",pmt:169.95,lab:1640.85,iaq:"Dynamic UV + Air Ranger",thermo:"MHK2",sz:{"1T":{mat:5505.5,msrp:25249},"1.5T":{mat:6948.7,msrp:26999},"2T":{mat:7606.5,msrp:28999},"2.5T":{mat:8356.7,msrp:31249},"3T":{mat:8674.6,msrp:32249},"4T":{mat:9523.8,msrp:34999}}},
+{id:"MT-SUZHH-HPAH",t:"HPAH",brand:"Mitsubishi",tier:"BEST",lbl:"SUZ/SVZ HH · Hyper-Heat HP+AH",su:"Ton",pmt:169.95,lab:1640.85,iaq:"Dynamic UV + Air Ranger",thermo:"MHK2",sz:{"1T":{mat:5505.5,msrp:25249},"1.5T":{mat:6948.7,msrp:26999},"2T":{mat:7606.5,msrp:28999},"2.5T":{mat:8356.7,msrp:31249},"3T":{mat:8674.6,msrp:32249},"4T":{mat:9523.8,msrp:34999}}},
 // AMS Quest 5HCL5: outdoor + AH 5TDM + HS BAYHTR 20KW; base=$2610.90
 {id:"AM-5HCL5-HPAH",t:"HPAH",brand:"American Standard",tier:"BETTER",lbl:"5HCL5 · 20 SEER Quest HP+AH",su:"Ton",pmt:169.95,lab:1575.27,iaq:"4\" media + Dynamic UV",thermo:"VisionPro 8000",sz:{"2T":{mat:6969.9,msrp:26249},"4T":{mat:8146.9,msrp:30499}}},
 // DF, permit $169.95
@@ -485,11 +485,14 @@ const P=[
 {id:"GM-GLXS5-ACGF9",t:"ACGF",brand:"Goodman",tier:"BEST",lbl:"GLXS5+GDVT96 · 17 SEER/96%",su:"Ton",pmt:169.95,lab:1771.83,iaq:"Dynamic UV + Air Ranger",thermo:"VisionPro 8000",sz:{"2T":{mat:6193,msrp:24999},"2.5T":{mat:6327.2,msrp:25499},"3T":{mat:6811.2,msrp:26999},"3.5T":{mat:7148.9,msrp:27999},"4T":{mat:7404.1,msrp:28749},"5T":{mat:7716.5,msrp:29749}}},
 // DL — mini-split, permit $169.95
 {id:"DK-1Z-DL",t:"DL",brand:"Daikin",tier:"BETTER",lbl:"1 Zone · 21 SEER · 24K BTU",su:"Zone",pmt:169.95,lab:983.37,iaq:"",thermo:"",sz:{"1 Zone 24K":{mat:3055.8,msrp:13249}}},
-{id:"MT-1Z-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"1 Zone · 35 SEER · 12K BTU",su:"Zone",pmt:169.95,lab:1081.65,iaq:"",thermo:"",sz:{"1 Zone 12K":{mat:3381.4,msrp:12749}}},
+{id:"MT-1Z-DL",t:"DL",brand:"Mitsubishi",tier:"BETTER",lbl:"1 Zone · 35 SEER · 12K BTU",su:"Zone",pmt:169.95,lab:1081.65,iaq:"",thermo:"",sz:{"1 Zone 12K":{mat:3381.4,msrp:12749}}},
+{id:"MT-1ZHH-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"1 Zone Hyper-Heat · 33 SEER · 12K BTU",su:"Zone",pmt:169.95,lab:1081.65,iaq:"",thermo:"",sz:{"1 Zone HH 12K":{mat:3820,msrp:14249}}},
 {id:"DK-2Z-DL",t:"DL",brand:"Daikin",tier:"BETTER",lbl:"2 Zone · 21 SEER · 18K BTU",su:"Zone",pmt:169.95,lab:1593.03,iaq:"",thermo:"",sz:{"2 Zone 18K":{mat:3910.5,msrp:17499}}},
-{id:"MT-2Z-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"2 Zone · 20 SEER · 20K BTU",su:"Zone",pmt:169.95,lab:1593.03,iaq:"",thermo:"",sz:{"2 Zone 20K":{mat:5108.4,msrp:18999}}},
+{id:"MT-2Z-DL",t:"DL",brand:"Mitsubishi",tier:"BETTER",lbl:"2 Zone · 20 SEER · 20K BTU",su:"Zone",pmt:169.95,lab:1593.03,iaq:"",thermo:"",sz:{"2 Zone 20K":{mat:5108.4,msrp:18999}}},
+{id:"MT-2ZHH-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"2 Zone Hyper-Heat · 20 SEER · 20K BTU",su:"Zone",pmt:169.95,lab:1593.03,iaq:"",thermo:"",sz:{"2 Zone HH 20K":{mat:5780,msrp:21499}}},
 {id:"DK-3Z-DL",t:"DL",brand:"Daikin",tier:"BETTER",lbl:"3 Zone · 21 SEER · 24K BTU",su:"Zone",pmt:169.95,lab:2104.41,iaq:"",thermo:"",sz:{"3 Zone 24K":{mat:6272.2,msrp:25749}}},
-{id:"MT-3Z-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"3 Zone · 20 SEER · 24K BTU",su:"Zone",pmt:169.95,lab:2104.41,iaq:"",thermo:"",sz:{"3 Zone 24K":{mat:6160,msrp:22749}}},
+{id:"MT-3Z-DL",t:"DL",brand:"Mitsubishi",tier:"BETTER",lbl:"3 Zone · 20 SEER · 24K BTU",su:"Zone",pmt:169.95,lab:2104.41,iaq:"",thermo:"",sz:{"3 Zone 24K":{mat:6160,msrp:22749}}},
+{id:"MT-3ZHH-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"3 Zone Hyper-Heat · 20 SEER · 24K BTU",su:"Zone",pmt:169.95,lab:2104.41,iaq:"",thermo:"",sz:{"3 Zone HH 24K":{mat:6980,msrp:25749}}},
 {id:"DK-4Z-DL",t:"DL",brand:"Daikin",tier:"BETTER",lbl:"4 Zone · 20 SEER · 36K BTU",su:"Zone",pmt:169.95,lab:2615.79,iaq:"",thermo:"",sz:{"4 Zone 36K":{mat:6477.9,msrp:27999}}},
 {id:"MT-4Z-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"4 Zone · 23 SEER · 48K BTU",su:"Zone",pmt:169.95,lab:2615.79,iaq:"",thermo:"",sz:{"4 Zone 48K":{mat:9814.2,msrp:33499}}},
 {id:"MT-5Z-DL",t:"DL",brand:"Mitsubishi",tier:"BEST",lbl:"5 Zone · 20 SEER · 60K BTU",su:"Zone",pmt:169.95,lab:3127.17,iaq:"",thermo:"",sz:{"5 Zone 60K":{mat:12586.2,msrp:41999}}},
