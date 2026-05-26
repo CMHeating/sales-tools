@@ -135,9 +135,38 @@ function startListeners() {
     badge("○ SHEET OFFLINE", "#dc2626");
   });
 
-  onValue(availabilityRef, snap => {
-    availabilityData = snap.val() || {};
+  const liveAvailabilityRef = ref(db, DB_AVAIL_LIVE_BASELINE);
+  let liveBaselineAvailability = {};
+  let testAvailability = {};
+
+  function mergeAvailabilityForTest() {
+    availabilityData = {
+      ...liveBaselineAvailability,
+      ...testAvailability,
+      overrides: {
+        ...(liveBaselineAvailability.overrides || {}),
+        ...(testAvailability.overrides || {})
+      },
+      details: {
+        ...(liveBaselineAvailability.details || {}),
+        ...(testAvailability.details || {})
+      },
+      lastUpdated: {
+        ...(liveBaselineAvailability.lastUpdated || {}),
+        ...(testAvailability.lastUpdated || {})
+      }
+    };
     renderWeek(currentWeekIndex);
+  }
+
+  onValue(liveAvailabilityRef, snap => {
+    liveBaselineAvailability = snap.val() || {};
+    mergeAvailabilityForTest();
+  }, err => console.error(err));
+
+  onValue(availabilityRef, snap => {
+    testAvailability = snap.val() || {};
+    mergeAvailabilityForTest();
   }, err => console.error(err));
 
   onValue(ref(db, DB_LOCKS), snap => {
