@@ -1494,6 +1494,43 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   }
 }
 
+
+/* ── iPAD STICKY CONTROL BAR — SAFE VERSION ──────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1366px) {
+  body.mode-ipad .topbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 200 !important;
+    background: rgba(255,255,255,.96) !important;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 24px rgba(15,47,69,.12);
+  }
+
+  body.mode-ipad .weeknav {
+    position: sticky !important;
+    top: 66px !important;
+    z-index: 190 !important;
+    background: rgba(255,255,255,.96) !important;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 6px 18px rgba(15,47,69,.08);
+  }
+
+  body.mode-ipad .week-header {
+    position: sticky;
+    top: 112px;
+    z-index: 175;
+    background: rgba(245,248,251,.96);
+    backdrop-filter: blur(10px);
+    padding: 10px 12px;
+    margin: -4px -10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  body.mode-ipad .grid-wrap {
+    scroll-margin-top: 160px;
+  }
+}
+
 </style>
 </head>
 <body>
