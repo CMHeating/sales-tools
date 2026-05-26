@@ -17,1102 +17,1651 @@ const FIREBASE_CONFIG = {
   databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
   projectId: "install-availability-tracker",
   storageBucket: "install-availability-tracker.firebasestorage.app",
-  messagingSenderId: "187834571165",
-  appId: "1:187834571165:web:6e32bc083df88f5beae99c"
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
 };
 
-const app = initializeApp(FIREBASE_CONFIG);
-const db = getDatabase(app);
-const auth = getAuth(app);
-
-const DB_AVAIL = "cmh_availability_TEST";
-const DB_LOCKS = "cmh_edit_locks_TEST";
-const DB_AUDIT = "cmh_audit_logs_TEST";
+const DB_AVAIL    = "cmh_availability_TEST";
+const DB_LOCKS    = "cmh_edit_locks_TEST";
+const DB_AUDIT    = "cmh_audit_logs_TEST";
 const DB_SCHEDULE = "cmh_schedule";
 
-let currentWeekKey = "";
-let currentData = {};
-let currentSchedule = {};
-let activeUser = null;
-let currentLock = null;
-let lockHeartbeatInterval = null;
-
 const ADMIN_PINS = {
-  "5613": "Geoff", "0762": "Amy", "1877": "Laura", "0082": "Jazryn",
-  "6474": "Sabrina", "9549": "Lily", "3313": "Jen", "2492": "Brittny"
+  "5613": "Geoff",
+  "0762": "Amy",
+  "1877": "Laura",
+  "0082": "Jazryn",
+  "6474": "Sabrina",
+  "9549": "Lily",
+  "3313": "Jen",
+  "2492": "Brittny"
 };
+
 const HCA_PINS = {
-  "2393": "Amber", "1876": "Chester", "6633": "Davis", "0085": "Jay",
-  "5669": "Joe", "7634": "Joseph", "1143": "Kyle", "4578": "Samir", "3493": "Trevor"
+  "2393": "Amber",
+  "1876": "Chester",
+  "6633": "Davis",
+  "0085": "Jay",
+  "5669": "Joe",
+  "7634": "Joseph",
+  "1143": "Kyle",
+  "4578": "Samir",
+  "3493": "Trevor"
 };
 
-window.onload = function() {
-  initWeek();
-  signInAnonymously(auth).then(() => {
-    loadScheduleAndData();
-    checkUrlParamsForAutoLogin();
-  }).catch(err => console.error("Auth failed:", err));
+let currentEditor = null;
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+signInAnonymously(auth)
+  .then(() => { startListeners(); })
+  .catch(err => console.error("❌ Firebase auth error:", err));
+
+// ─── STATUS MAPS — labels match the Google Sheet exactly ─────────────────────
+const STATUS_LABELS = {
+  "FILLED":         "FILLED",
+  "FULL DAY AVAIL": "FULL DAY AVAIL",
+  "HALF DAY PM":    "HALF DAY PM",
+  "HALF DAY AM":    "HALF DAY AM",
+  "TEAM OFF":       "TEAM OFF",
+  "NOT AVAILABLE":  "NOT AVAILABLE",
+  "NOT SCHEDULED":  "NOT SCHEDULED",
+  "HOLD":           "HOLD",
+  "ON CALL":        "ON CALL",
+  "—": "—",
+  "":  "—"
 };
 
-function checkUrlParamsForAutoLogin() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const pinParam = urlParams.get('pin');
-  if (pinParam) {
-    const pinInput = document.getElementById("pinInput");
-    if (pinInput) {
-      pinInput.value = pinParam;
-      handleLogin();
-    }
-  }
-}
+// Badge classes used in legend + move picker
+const STATUS_CLASS = {
+  "FILLED":         "s-FILLED",
+  "FULL DAY AVAIL": "s-FULL_DAY",
+  "HALF DAY PM":    "s-HALF_PM",
+  "HALF DAY AM":    "s-HALF_AM",
+  "TEAM OFF":       "s-TEAM_OFF",
+  "NOT AVAILABLE":  "s-NOT_AVAIL",
+  "NOT SCHEDULED":  "s-NOT_SCHED",
+  "HOLD":           "s-HOLD",
+  "ON CALL":        "s-ON_CALL",
+  "—": "s-TEAM_OFF",
+  "":  "s-TEAM_OFF"
+};
 
-function initWeek() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let w = urlParams.get('w');
-  if (!w) {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const mon = new Date(today.setDate(diff));
-    w = mon.toISOString().split('T')[0];
-  }
-  currentWeekKey = w;
-  document.getElementById("currentWeekDisplay").innerText = "Week of " + formatDateLabel(w);
-}
+// Full-cell TD classes — used in main grid (Google Sheets color palette)
+const CELL_CLASS = {
+  "FILLED":         "td-FILLED",
+  "FULL DAY AVAIL": "td-FULL_DAY",
+  "HALF DAY PM":    "td-HALF_PM",
+  "HALF DAY AM":    "td-HALF_AM",
+  "TEAM OFF":       "td-TEAM_OFF",
+  "NOT AVAILABLE":  "td-NOT_AVAIL",
+  "NOT SCHEDULED":  "td-NOT_SCHED",
+  "HOLD":           "td-HOLD",
+  "ON CALL":        "td-ON_CALL",
+  "—": "td-TEAM_OFF",
+  "":  "td-TEAM_OFF"
+};
 
-function formatDateLabel(dateStr) {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let adminMode        = false;
+let currentWeekIndex = 0;
+let scheduleData     = { weeks: [] };
+let availabilityData = {};
+let activeLocks      = {};
+let editTarget       = null;
+let pendingStatus    = null;
+let moveSource          = null;
+let moveTargetWeekIndex = 0;
+let undoBuffer          = null;
+let undoInterval        = null;
+let undoSeconds         = 30;
+let isSaving            = false;
 
-function changeWeek(offset) {
-  const d = new Date(currentWeekKey + "T00:00:00");
-  d.setDate(d.getDate() + (offset * 7));
-  const newW = d.toISOString().split('T')[0];
-  const urlParams = new URLSearchParams(window.location.search);
-  urlParams.set('w', newW);
-  window.history.pushState({}, '', "?" + urlParams.toString());
-  currentWeekKey = newW;
-  document.getElementById("currentWeekDisplay").innerText = "Week of " + formatDateLabel(newW);
-  loadScheduleAndData();
-}
+const scheduleRef     = ref(db, DB_SCHEDULE);
+const availabilityRef = ref(db, DB_AVAIL);
 
-function loadScheduleAndData() {
-  showLoading(true);
-  onValue(ref(db, DB_SCHEDULE), (snapshot) => {
-    currentSchedule = snapshot.val() || {};
-    onValue(ref(db, DB_AVAIL + "/" + currentWeekKey), (snap2) => {
-      currentData = snap2.val() || {};
-      buildGrid();
-      showLoading(false);
-    });
+function startListeners() {
+  onValue(scheduleRef, snap => {
+    scheduleData = snap.val() || { weeks: [] };
+    if (!scheduleData.weeks) scheduleData.weeks = [];
+    if (currentWeekIndex >= scheduleData.weeks.length) currentWeekIndex = 0;
+    renderTabs();
+    renderWeek(currentWeekIndex);
+    badge("● LIVE SHEET", "#16a34a");
+  }, err => {
+    console.error(err);
+    badge("○ SHEET OFFLINE", "#dc2626");
+  });
+
+  onValue(availabilityRef, snap => {
+    availabilityData = snap.val() || {};
+    renderWeek(currentWeekIndex);
+  }, err => console.error(err));
+
+  onValue(ref(db, DB_LOCKS), snap => {
+    activeLocks = snap.val() || {};
+    renderWeek(currentWeekIndex);
   });
 }
 
-function showLoading(show) {
-  document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
+function badge(txt, color) {
+  const el = document.getElementById("connBadge");
+  if (el) { el.textContent = txt; el.style.color = color; }
 }
 
-function buildGrid() {
-  const container = document.getElementById("gridContainer");
-  container.innerHTML = "";
+function normalizeStatus(value) {
+  return String(value || "—").trim().toUpperCase();
+}
 
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dateObjects = [];
-  const start = new Date(currentWeekKey + "T00:00:00");
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    dateObjects.push(d);
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+
+function slug(value) {
+  return String(value || "").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function getKey(weekTitle, rowIndex, dayIndex) {
+  return `${slug(weekTitle)}__r${rowIndex}__d${dayIndex}`;
+}
+
+function getStatus(weekTitle, rowIndex, dayIndex, def) {
+  const key       = getKey(weekTitle, rowIndex, dayIndex);
+  const overrides = availabilityData.overrides || {};
+  return overrides[key] !== undefined ? overrides[key] : def;
+}
+
+function isSoldStatus(st) {
+  const s = normalizeStatus(st);
+  return s === "FILLED" || s === "HALF DAY AM" || s === "HALF DAY PM";
+}
+
+// Badge used in legend + move picker
+function statusBadge(status) {
+  const s = normalizeStatus(status);
+  return `<span class="status-badge ${STATUS_CLASS[s] || "s-TEAM_OFF"}">${STATUS_LABELS[s] || escapeHtml(status)}</span>`;
+}
+
+function makeAuditKey() {
+  return String(Date.now()) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+function renderJobLine(label, job) {
+  if (!job) return "";
+  const hca     = job.hcaName    || "";
+  const project = job.projectName || "";
+  const isCaas  = job.isCaas === true || job.isCaas === "true";
+  if (!hca && !project && !isCaas) return "";
+  return `<div class="job-line">
+    <div class="job-label">${label}</div>
+    ${isCaas  ? `<div class="caas-tag">CaaS</div>` : ""}
+    ${hca     ? `<div><span class="detail-lbl">HCA:</span> ${escapeHtml(hca)}</div>` : ""}
+    ${project ? `<div><span class="detail-lbl">Owner:</span> ${escapeHtml(project)}</div>` : ""}
+  </div>`;
+}
+
+function getCellDetails(key) {
+  const d    = (availabilityData.details && availabilityData.details[key]) || {};
+  if (d.jobs) {
+    return `<div class="cell-details">
+      ${renderJobLine("Full Day", d.jobs.fullDay)}
+      ${renderJobLine("AM",       d.jobs.am)}
+      ${renderJobLine("PM",       d.jobs.pm)}
+    </div>`;
   }
+  const hca     = d.hcaName    || "";
+  const project = d.projectName || "";
+  const isCaas  = d.isCaas === true || d.isCaas === "true";
+  if (!hca && !project && !isCaas) return "";
+  return `<div class="cell-details">
+    ${isCaas  ? `<div class="caas-tag">CaaS</div>` : ""}
+    ${hca     ? `<div><span class="detail-lbl">HCA:</span> ${escapeHtml(hca)}</div>` : ""}
+    ${project ? `<div><span class="detail-lbl">Owner:</span> ${escapeHtml(project)}</div>` : ""}
+  </div>`;
+}
 
-  const wrap = document.createElement("div");
-  wrap.className = "grid-wrap";
+function getFreshLock(key) {
+  const lock = activeLocks[key];
+  if (!lock || !lock.timestamp) return null;
+  return (Date.now() - Number(lock.timestamp)) > 120000 ? null : lock;
+}
 
-  const table = document.createElement("table");
-  const thead = document.createElement("thead");
-  const headerTr = document.createElement("tr");
+function isLockedByOtherUser(key) {
+  const lock = getFreshLock(key);
+  if (!lock || !currentEditor) return false;
+  return lock.editorId !== `${currentEditor.role}:${currentEditor.name}`;
+}
 
-  const thTeam = document.createElement("th");
-  thTeam.className = "team-col";
-  thTeam.innerText = "Crew / Resource";
-  headerTr.appendChild(thTeam);
-
-  days.forEach((day, idx) => {
-    const th = document.createElement("th");
-    const labelDiv = document.createElement("div");
-    labelDiv.className = "th-day-label";
-    labelDiv.innerText = day;
-    const dateDiv = document.createElement("div");
-    dateDiv.className = "th-date-label";
-    dateDiv.innerText = (dateObjects[idx].getMonth() + 1) + "/" + dateObjects[idx].getDate();
-    th.appendChild(labelDiv);
-    th.appendChild(dateDiv);
-    headerTr.appendChild(th);
+async function acquireSlotLock(key) {
+  if (!currentEditor) return true;
+  const lock = getFreshLock(key);
+  if (lock && lock.editorId !== `${currentEditor.role}:${currentEditor.name}`) {
+    alert(`${lock.editorName} is currently editing this slot. Try again in a minute.`);
+    return false;
+  }
+  await set(ref(db, `${DB_LOCKS}/${key}`), {
+    editorId:   `${currentEditor.role}:${currentEditor.name}`,
+    editorName:  currentEditor.name,
+    editorRole:  currentEditor.role,
+    timestamp:   Date.now()
   });
-  thead.appendChild(headerTr);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  const sortedCrews = Object.keys(currentSchedule).sort((a, b) => {
-    const oA = currentSchedule[a].order || 99;
-    const oB = currentSchedule[b].order || 99;
-    return oA - oB;
-  });
-
-  if (sortedCrews.length === 0) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 7;
-    td.style.padding = "40px";
-    td.style.textAlign = "center";
-    td.style.color = "var(--text3)";
-    td.innerText = "No crews configured in system architecture.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-  }
-
-  sortedCrews.forEach(crewKey => {
-    const crew = currentSchedule[crewKey];
-    const tr = document.createElement("tr");
-
-    const tdTeam = document.createElement("td");
-    tdTeam.className = "team-cell";
-    
-    const nameDiv = document.createElement("div");
-    nameDiv.className = "team-name";
-    nameDiv.innerText = crew.name;
-    tdTeam.appendChild(nameDiv);
-
-    if (crew.techs) {
-      const techsDiv = document.createElement("div");
-      techsDiv.className = "team-techs";
-      techsDiv.innerText = crew.techs;
-      tdTeam.appendChild(techsDiv);
-    }
-    tr.appendChild(tdTeam);
-
-    days.forEach(day => {
-      const td = document.createElement("td");
-      td.className = "status-cell";
-      
-      const cellData = (currentData[crewKey] && currentData[crewKey][day]) ? currentData[crewKey][day] : { status: "OPEN" };
-      applyStatusStyle(td, cellData.status);
-
-      const statusBadge = document.createElement("div");
-      statusBadge.className = "status-badge";
-      statusBadge.innerText = cellData.status.replace("_", " ");
-      td.appendChild(statusBadge);
-
-      if (cellData.job_number) {
-        const jobDiv = document.createElement("div");
-        jobDiv.className = "cell-job";
-        jobDiv.innerText = "#" + cellData.job_number;
-        td.appendChild(jobDiv);
-      }
-      if (cellData.hca_name) {
-        const hcaDiv = document.createElement("div");
-        hcaDiv.className = "cell-hca";
-        hcaDiv.innerText = cellData.hca_name;
-        td.appendChild(hcaDiv);
-      }
-      if (cellData.notes) {
-        const notesDiv = document.createElement("div");
-        notesDiv.className = "cell-notes";
-        notesDiv.innerText = cellData.notes;
-        td.appendChild(notesDiv);
-      }
-
-      td.onclick = () => handleCellClick(crewKey, crew.name, day, cellData);
-      tr.appendChild(td);
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  table.appendChild(tbody);
-  wrap.appendChild(table);
-  container.appendChild(wrap);
+  return true;
 }
 
-function applyStatusStyle(element, status) {
-  element.classList.remove("st-open", "st-filled", "st-am", "st-pm", "st-off", "st-hold");
-  if (status === "OPEN") element.classList.add("st-open");
-  else if (status === "FULL_DAY_FILLED") element.classList.add("st-filled");
-  else if (status === "AM_FILLED_PM_OPEN") element.classList.add("st-am");
-  else if (status === "PM_FILLED_AM_OPEN") element.classList.add("st-pm");
-  else if (status === "TEAM_OFF") element.classList.add("st-off");
-  else if (status === "HOLD") element.classList.add("st-hold");
+async function releaseSlotLock(key) {
+  if (!key) return;
+  await set(ref(db, `${DB_LOCKS}/${key}`), null);
 }
 
-function handleLogin() {
-  const pin = document.getElementById("pinInput").value.trim();
-  let name = ADMIN_PINS[pin];
-  let role = "";
-  if (name) {
-    role = "Admin";
-  } else {
-    name = HCA_PINS[pin];
-    if (name) role = "HCA";
-  }
-
-  if (!name) {
-    alert("Invalid system security PIN.");
-    return;
-  }
-
-  activeUser = { pin, name, role };
-  document.getElementById("loginSection").style.display = "none";
-  document.getElementById("userProfileSection").style.display = "flex";
-  document.getElementById("profileName").innerText = name;
-  document.getElementById("profileRole").innerText = role;
-
-  if (role === "Admin") {
-    document.getElementById("profileRole").style.background = "rgba(245,130,32,0.15)";
-    document.getElementById("profileRole").style.color = "var(--cm-orange)";
-    document.body.classList.add("admin-mode");
-  } else {
-    document.getElementById("profileRole").style.background = "rgba(0,90,169,0.15)";
-    document.getElementById("profileRole").style.color = "var(--cm-blue)";
-    document.body.classList.remove("admin-mode");
-  }
+function installTypeToStatus(t) {
+  if (t === "fullDay")      return "FILLED";
+  if (t === "amOnly")       return "HALF DAY AM";
+  if (t === "pmOnly")       return "HALF DAY PM";
+  if (t === "amPm")         return "FILLED";
+  if (t === "open")         return "FULL DAY AVAIL";
+  if (t === "hold")         return "HOLD";
+  if (t === "teamOff")      return "TEAM OFF";
+  if (t === "notAvailable") return "NOT AVAILABLE";
+  return "FULL DAY AVAIL";
 }
 
-function handleLogout() {
-  activeUser = null;
-  document.getElementById("loginSection").style.display = "flex";
-  document.getElementById("userProfileSection").style.display = "none";
-  document.getElementById("pinInput").value = "";
-  document.body.classList.remove("admin-mode");
-  closeDetailsModal();
+function statusToDefaultInstallType(status) {
+  const s = normalizeStatus(status);
+  if (s === "FILLED")         return "fullDay";
+  if (s === "HALF DAY AM")    return "amOnly";
+  if (s === "HALF DAY PM")    return "pmOnly";
+  if (s === "FULL DAY AVAIL") return "open";
+  if (s === "HOLD")           return "hold";
+  if (s === "TEAM OFF")       return "teamOff";
+  if (s === "NOT AVAILABLE")  return "notAvailable";
+  return "fullDay";
 }
 
-let targetCrewKey = "";
-let targetDay = "";
-let targetCellData = {};
+function getWeekParts(week) {
+  const rows     = week.rows || [];
+  const dayNames = rows[1] ? rows[1].slice(2, 8) : ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const dates    = rows[2] ? rows[2].slice(2, 8) : ["","","","","",""];
+  const bodyRows = rows.slice(3);
+  const mainRows = [];
+  const notes    = [];
+  let section       = "CONSTRUCTION SERVICES";
+  let afterOnCall   = false;
 
-function handleCellClick(crewKey, crewName, day, cellData) {
-  if (!activeUser) {
-    alert("Please log in with your security PIN code to view or edit slot details.");
-    return;
-  }
-  targetCrewKey = crewKey;
-  targetDay = day;
-  targetCellData = cellData;
-
-  const path = currentWeekKey + "/" + crewKey + "/" + day;
-  
-  // Clear any existing heartbeats
-  if (lockHeartbeatInterval) clearInterval(lockHeartbeatInterval);
-
-  onValue(ref(db, DB_LOCKS + "/" + path), (snapshot) => {
-    const lock = snapshot.val();
-    if (lock && lock.user_pin !== activeUser.pin && (Date.now() - lock.timestamp < 15000)) {
-      alert(`⚠️ This slot is currently locked by ${lock.user_name}. Please wait for them to finish editing.`);
-    } else {
-      acquireLock(path);
-      openDetailsModal(crewName, day, cellData);
-    }
-  }, { onlyOnce: true });
-}
-
-function acquireLock(path) {
-  currentLock = path;
-  const lockRef = ref(db, DB_LOCKS + "/" + path);
-  const setLock = () => {
-    set(lockRef, {
-      user_pin: activeUser.pin,
-      user_name: activeUser.name,
-      timestamp: Date.now()
-    });
-  };
-  setLock();
-  lockHeartbeatInterval = setInterval(setLock, 7000);
-}
-
-function releaseLock() {
-  if (lockHeartbeatInterval) {
-    clearInterval(lockHeartbeatInterval);
-    lockHeartbeatInterval = null;
-  }
-  if (currentLock) {
-    set(ref(db, DB_LOCKS + "/" + currentLock), null);
-    currentLock = null;
-  }
-}
-
-function openDetailsModal(crewName, day, cellData) {
-  document.getElementById("modalCrewName").innerText = crewName;
-  document.getElementById("modalDayName").innerText = day + " (" + currentWeekKey + ")";
-  
-  const select = document.getElementById("statusSelect");
-  select.value = cellData.status || "OPEN";
-
-  document.getElementById("jobNumInput").value = cellData.job_number || "";
-  document.getElementById("notesInput").value = cellData.notes || "";
-  
-  toggleModalFields();
-  document.getElementById("detailsModal").style.display = "flex";
-}
-
-function closeDetailsModal() {
-  document.getElementById("detailsModal").style.display = "none";
-  releaseLock();
-}
-
-function toggleModalFields() {
-  const status = document.getElementById("statusSelect").value;
-  const detailsGroup = document.getElementById("modalDetailsGroup");
-  if (status === "OPEN" || status === "TEAM_OFF" || status === "HOLD") {
-    detailsGroup.style.display = "none";
-  } else {
-    detailsGroup.style.display = "block";
-  }
-}
-
-function saveDetails() {
-  const newStatus = document.getElementById("statusSelect").value;
-  
-  if (newStatus === "HOLD" && activeUser.role !== "Admin") {
-    document.getElementById("detailsModal").style.display = "none";
-    document.getElementById("holdBlockedModal").style.display = "flex";
-    return;
-  }
-
-  const jobNum = document.getElementById("jobNumInput").value.trim();
-  const notes = document.getElementById("notesInput").value.trim();
-
-  if ((newStatus.includes("FILLED") || newStatus.includes("OPEN_")) && !jobNum) {
-    alert("Job Number is strictly mandatory for scheduled installations.");
-    return;
-  }
-
-  const updatePath = DB_AVAIL + "/" + currentWeekKey + "/" + targetCrewKey + "/" + targetDay;
-  
-  let updateObj = { status: newStatus };
-  if (newStatus !== "OPEN" && newStatus !== "TEAM_OFF" && newStatus !== "HOLD") {
-    updateObj.job_number = jobNum;
-    updateObj.notes = notes;
-    updateObj.hca_name = targetCellData.hca_name || activeUser.name;
-    updateObj.timestamp = Date.now();
-  }
-
-  // Handle auto-clearing properties
-  if (newStatus === "OPEN" || newStatus === "TEAM_OFF" || newStatus === "HOLD") {
-    updateObj.job_number = null;
-    updateObj.notes = null;
-    updateObj.hca_name = null;
-    updateObj.timestamp = null;
-  }
-
-  const oldStatus = targetCellData.status || "OPEN";
-
-  set(ref(db, updatePath), updateObj).then(() => {
-    logAudit(targetCrewKey, targetDay, oldStatus, newStatus, jobNum);
-    
-    // Check if swap button needs execution setup
-    if (activeUser.role === "Admin" && oldStatus !== "OPEN" && oldStatus !== "TEAM_OFF" && oldStatus !== "HOLD") {
-      setupUndoAction(updatePath, targetCellData, oldStatus, newStatus);
-    }
-    
-    closeDetailsModal();
-  }).catch(err => alert("Error committing transaction: " + err.message));
-}
-
-function closeHoldBlockedModal() {
-  document.getElementById("holdBlockedModal").style.display = "none";
-  releaseLock();
-}
-
-let undoTimeout = null;
-function setupUndoAction(path, previousData, oldStatus, newStatus) {
-  const toast = document.getElementById("undoToast");
-  toast.classList.add("show");
-  
-  let remaining = 30;
-  document.getElementById("undoCountdown").innerText = remaining + "s";
-  
-  if (undoTimeout) clearInterval(undoTimeout);
-  
-  undoTimeout = setInterval(() => {
-    remaining--;
-    document.getElementById("undoCountdown").innerText = remaining + "s";
-    if (remaining <= 0) {
-      clearInterval(undoTimeout);
-      toast.classList.remove("show");
-    }
-  }, 1000);
-
-  window.executeUndo = function() {
-    clearInterval(undoTimeout);
-    set(ref(db, path), previousData).then(() => {
-      logAudit(targetCrewKey, targetDay, newStatus, oldStatus, previousData.job_number || "");
-      toast.classList.remove("show");
-    });
-  };
-}
-
-function logAudit(crewKey, day, oldSt, newSt, job) {
-  const auditRef = ref(db, DB_AUDIT + "/" + currentWeekKey);
-  const logKey = Date.now() + "_" + activeUser.name.replace(/\s+/g, '');
-  
-  set(ref(db, DB_AUDIT + "/" + currentWeekKey + "/" + logKey), {
-    timestamp: Date.now(),
-    user_name: activeUser.name,
-    role: activeUser.role,
-    crew_name: currentSchedule[crewKey]?.name || crewKey,
-    day: day,
-    old_status: oldSt,
-    new_status: newSt,
-    job_number: job || ""
-  });
-}
-
-function openAuditModal() {
-  const modal = document.getElementById("auditModal");
-  const body = document.getElementById("auditLogBody");
-  body.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Fetching architecture logs...</td></tr>";
-  modal.style.display = "flex";
-
-  onValue(ref(db, DB_AUDIT + "/" + currentWeekKey), (snapshot) => {
-    body.innerHTML = "";
-    const logs = snapshot.val();
-    if (!logs) {
-      body.innerHTML = "<tr><td colspan='5' style='text-align:center;color:var(--text3);'>No transactions logged for this structural block.</td></tr>";
+  bodyRows.forEach((row, i) => {
+    const absoluteRowIndex = i + 3;
+    const a      = String(row[0] || "").trim();
+    const b      = String(row[1] || "").trim();
+    const joined = row.join(" ").trim();
+    if (!joined) return;
+    if (a.toLowerCase().includes("install crews")) {
+      section = "INSTALL CREWS";
+      mainRows.push({ type: "section", label: "INSTALL CREWS" });
       return;
     }
-
-    const sortedKeys = Object.keys(logs).sort((a, b) => b.split('_')[0] - a.split('_')[0]);
-    sortedKeys.forEach(key => {
-      const log = logs[key];
-      const tr = document.createElement("tr");
-      
-      const tdTime = document.createElement("td");
-      tdTime.innerText = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      tr.appendChild(tdTime);
-
-      const tdUser = document.createElement("td");
-      tdUser.innerHTML = `<strong>${log.user_name}</strong> <span style='font-size:11px;color:var(--text3); padding:2px 4px; border-radius:4px; background:var(--bg);'>${log.role}</span>`;
-      tr.appendChild(tdUser);
-
-      const tdTarget = document.createElement("td");
-      tdTarget.innerText = `${log.crew_name} (${log.day})`;
-      tr.appendChild(tdTarget);
-
-      const tdChange = document.createElement("td");
-      tdChange.innerHTML = `<span style='text-decoration:line-through;color:var(--text3);'>${log.old_status.replace(/_/g,' ')}</span> ➔ <strong>${log.new_status.replace(/_/g,' ')}</strong>`;
-      tr.appendChild(tdChange);
-
-      const tdJob = document.createElement("td");
-      tdJob.innerText = log.job_number ? "#" + log.job_number : "—";
-      tr.appendChild(tdJob);
-
-      body.appendChild(tr);
-    });
-  }, { onlyOnce: true });
-}
-
-function closeAuditModal() {
-  document.getElementById("auditModal").style.display = "none";
-}
-
-function openSwapModal() {
-  if (activeUser?.role !== "Admin") {
-    alert("Global matrix migrations are restricted to system Administrators.");
-    return;
-  }
-  
-  const fromSelect = document.getElementById("swapFromSelect");
-  const toSelect = document.getElementById("swapToSelect");
-  fromSelect.innerHTML = "<option value=''>-- Choose Source Crew --</option>";
-  toSelect.innerHTML = "<option value=''>-- Choose Target Crew --</option>";
-
-  Object.keys(currentSchedule).forEach(key => {
-    const name = currentSchedule[key].name;
-    fromSelect.innerHTML += `<option value="${key}">${name}</option>`;
-    toSelect.innerHTML += `<option value="${key}">${name}</option>`;
+    if (b.toLowerCase() === "construction" || b.toLowerCase() === "services") return;
+    if (a.toLowerCase().includes("on call tech") || a.toLowerCase().includes("on call hca")) {
+      afterOnCall = true;
+      mainRows.push({ type: "team", section: "ON CALL", rowIndex: absoluteRowIndex,
+        team: a, crew: b, statuses: row.slice(2, 8), isOnCall: true });
+      return;
+    }
+    if (afterOnCall) {
+      const noteText = row.filter(Boolean).join(" — ").trim();
+      if (noteText) notes.push(noteText);
+      return;
+    }
+    if (a || b) {
+      mainRows.push({ type: "team", section, rowIndex: absoluteRowIndex,
+        team: a || section, crew: b, statuses: row.slice(2, 8), isOnCall: false });
+    }
   });
 
-  document.getElementById("swapModal").style.display = "flex";
+  if (!mainRows.some(r => r.type === "section" && r.label === "INSTALL CREWS")) {
+    const firstInstallIdx = mainRows.findIndex(r => r.type === "team" && String(r.team).toLowerCase().includes("div"));
+    if (firstInstallIdx >= 0) mainRows.splice(firstInstallIdx, 0, { type: "section", label: "INSTALL CREWS" });
+  }
+  if (!mainRows.length) mainRows.push({ type: "section", label: "NO SCHEDULE DATA" });
+  return { dayNames, dates, mainRows, notes };
 }
 
-function closeSwapModal() {
-  document.getElementById("swapModal").style.display = "none";
+function renderTabs() {
+  const weeks = scheduleData.weeks || [];
+  document.getElementById("weeknav").innerHTML = weeks.map((w, i) => {
+    const c = "week-tab" + (i === currentWeekIndex ? " active" : "") + (i === 0 ? " current" : "");
+    return `<div class="${c}" onclick="switchWeek(${i})">${escapeHtml(w.title || `Week ${i + 1}`)}</div>`;
+  }).join("");
 }
 
-function executeCrewSwap() {
-  const fromCrew = document.getElementById("swapFromSelect").value;
-  const toCrew = document.getElementById("swapToSelect").value;
-
-  if (!fromCrew || !toCrew) {
-    alert("Please assign both valid production vectors.");
+function renderWeek(idx) {
+  const main  = document.getElementById("main");
+  if (!main) return;
+  const weeks = scheduleData.weeks || [];
+  if (!weeks.length) {
+    main.innerHTML = `<div class="empty-state">Waiting for Google Sheet sync…</div>`;
     return;
   }
-  if (fromCrew === toCrew) {
-    alert("Source and destination profiles must remain distinct.");
-    return;
-  }
+  const week = weeks[idx] || weeks[0];
+  const { dayNames, dates, mainRows, notes } = getWeekParts(week);
 
-  const fromData = currentData[fromCrew] || {};
-  const toData = currentData[toCrew] || {};
+  let table = `<div class="grid-wrap"><table><thead><tr>
+    <th class="team-col">Team / Crew</th>
+    ${dayNames.map((d, i) => `<th><div>${escapeHtml(d)}</div><div class="date-small">${escapeHtml(dates[i] || "")}</div></th>`).join("")}
+  </tr></thead><tbody>`;
 
-  const updates = {};
-  updates[DB_AVAIL + "/" + currentWeekKey + "/" + fromCrew] = toData;
-  updates[DB_AVAIL + "/" + currentWeekKey + "/" + toCrew] = fromData;
+  let currentSection = "";
+  mainRows.forEach(item => {
+    if (item.type === "section") {
+      table += `<tr class="section-header"><td colspan="7">${escapeHtml(item.label)}</td></tr>`;
+      currentSection = item.label;
+      return;
+    }
+    if (item.section && item.section !== currentSection && item.section !== "CONSTRUCTION SERVICES") {
+      table += `<tr class="section-header"><td colspan="7">${escapeHtml(item.section)}</td></tr>`;
+      currentSection = item.section;
+    }
+    const rowClass = item.isOnCall ? " class='oncall-row'" : "";
+    table += `<tr${rowClass}>
+      <td class="team-cell">
+        <div class="team-name">${escapeHtml(item.team)}</div>
+        ${item.crew ? `<div class="crew-name">${escapeHtml(item.crew)}</div>` : ""}
+      </td>`;
 
-  update(ref(db), updates).then(() => {
-    const logRef = ref(db, DB_AUDIT + "/" + currentWeekKey);
-    const logKey = Date.now() + "_SWAP";
-    set(ref(db, DB_AUDIT + "/" + currentWeekKey + "/" + logKey), {
-      timestamp: Date.now(),
-      user_name: activeUser.name,
-      role: activeUser.role,
-      crew_name: "GLOBAL SWAP",
-      day: "All Days",
-      old_status: currentSchedule[fromCrew].name,
-      new_status: currentSchedule[toCrew].name,
-      job_number: "MIGRATION"
+    item.statuses.forEach((def, di) => {
+      const key          = getKey(week.title, item.rowIndex, di);
+      const st           = getStatus(week.title, item.rowIndex, di, def);
+      const stNorm       = normalizeStatus(st);
+      const cellCls      = CELL_CLASS[stNorm] || "td-TEAM_OFF";
+      const stLabel      = STATUS_LABELS[stNorm] || escapeHtml(st);
+      const lock         = getFreshLock(key);
+      const lockedByOther = isLockedByOtherUser(key);
+      const lockHtml     = lock
+        ? `<div class="lock-note">${lockedByOther ? "Editing: " : "You: "}${escapeHtml(lock.editorName || "Someone")}</div>`
+        : "";
+      const edCls    = adminMode ? (lockedByOther ? " locked" : " editable") : "";
+      const dataAttrs = adminMode && !lockedByOther
+        ? `data-editable="true" data-key="${escapeHtml(key)}" data-def="${escapeHtml(def)}" data-oncall="${item.isOnCall ? "true" : "false"}"`
+        : "";
+
+      table += `<td class="status-cell ${cellCls}${edCls}" ${dataAttrs}>
+        <div class="sheet-status">${stLabel}</div>
+        ${getCellDetails(key)}${lockHtml}
+      </td>`;
     });
-    closeSwapModal();
-  }).catch(err => alert("Swap failed: " + err.message));
+    table += `</tr>`;
+  });
+
+  table += `</tbody></table></div>`;
+
+  const notesHtml = notes.length
+    ? `<div class="notes-wrap"><div class="notes-card">
+        <div class="notes-title">Notes</div>
+        ${notes.map(n => `<div class="note-item">${escapeHtml(n)}</div>`).join("")}
+      </div></div>`
+    : "";
+
+  const updated = scheduleData.updated ? new Date(scheduleData.updated).toLocaleString() : "—";
+
+  main.innerHTML = `
+    <div class="week-header">
+      <div>
+        <div class="week-title">${escapeHtml(week.title)}</div>
+        <div class="sheet-subtitle">Synced from Google Sheet · Last sync: ${escapeHtml(updated)}</div>
+      </div>
+      <div class="week-meta">
+        ${adminMode ? `<div class="edit-badge">EDIT MODE — ${currentEditor.role}: ${currentEditor.name}</div>` : ""}
+      </div>
+    </div>
+    ${table}
+    ${notesHtml}
+    <div class="legend">
+      <span class="legend-title">Legend</span>
+      ${["FILLED","FULL DAY AVAIL","HALF DAY PM","HALF DAY AM","TEAM OFF","NOT AVAILABLE","NOT SCHEDULED","HOLD","ON CALL"]
+        .map(s => `<span>${statusBadge(s)}</span>`).join("")}
+    </div>`;
 }
 
-function openMassOpenModal() {
-  if (activeUser?.role !== "Admin") {
-    alert("Mass modifications require Administrator authorization.");
+window.switchWeek = idx => {
+  currentWeekIndex = idx;
+  renderTabs();
+  renderWeek(idx);
+};
+
+window.toggleAdmin = () => {
+  if (!adminMode) {
+    const pin = prompt("Enter Admin PIN or HCA PIN:");
+    if (pin === null) return;
+    if (ADMIN_PINS[pin]) {
+      currentEditor = { role: "ADMIN", name: ADMIN_PINS[pin], pin };
+      adminMode = true;
+    } else if (HCA_PINS[pin]) {
+      currentEditor = { role: "HCA", name: HCA_PINS[pin], pin };
+      adminMode = true;
+    } else {
+      alert("Incorrect PIN.");
+      return;
+    }
+  } else {
+    adminMode     = false;
+    currentEditor = null;
+  }
+  const btn = document.getElementById("btnAdmin");
+  btn.classList.toggle("active", adminMode);
+  btn.textContent = adminMode ? `EXIT — ${currentEditor.role}: ${currentEditor.name}` : "ADMIN / HCA EDIT";
+  renderWeek(currentWeekIndex);
+
+  if (adminMode && currentEditor && currentEditor.role === "ADMIN") {
+    document.getElementById("adminWelcomeModal").classList.add("visible");
+  }
+};
+
+window.closeNoSlotsModal = () => {
+  document.getElementById("noSlotsModal").classList.remove("visible");
+  window.closeMovePickerModal();
+};
+window.closeHoldBlocked = () => {
+  document.getElementById("holdBlockedModal").classList.remove("visible");
+};
+window.closeAdminWelcome = () => {
+  document.getElementById("adminWelcomeModal").classList.remove("visible");
+};
+
+document.addEventListener("click", async event => {
+  const cell = event.target.closest(".status-cell[data-editable='true']");
+  if (!cell) return;
+  const key     = cell.dataset.key;
+  const def     = cell.dataset.def || "—";
+  const isOnCall = cell.dataset.oncall === "true";
+  if (isOnCall) {
+    await window.openOnCallEdit(event, key, def);
+  } else {
+    await window.openDrop(event, key, def);
+  }
+});
+
+window.openDrop = async (e, key, def) => {
+  e.stopPropagation();
+  const locked = await acquireSlotLock(key);
+  if (!locked) return;
+  editTarget = { key, def };
+
+  const select = document.getElementById("installTypeSelect");
+  select.value = statusToDefaultInstallType(def);
+
+  const holdOpt = select.querySelector('option[value="hold"]');
+  const isHca   = currentEditor && currentEditor.role === "HCA";
+  if (holdOpt) {
+    holdOpt.disabled    = isHca;
+    holdOpt.textContent = isHca ? "Hold — Admin Only" : "Hold";
+    holdOpt.style.color = isHca ? "#aaa" : "";
+  }
+
+  const overrides  = availabilityData.overrides || {};
+  const currentSt  = overrides[key] !== undefined ? overrides[key] : def;
+  const moveBtn    = document.getElementById("btnMoveJob");
+  if (moveBtn) {
+    const canMove = adminMode && currentEditor && currentEditor.role === "ADMIN"
+      && normalizeStatus(currentSt) !== "TEAM OFF";
+    moveBtn.style.display = canMove ? "inline-block" : "none";
+  }
+
+  document.getElementById("statusModal").classList.add("visible");
+  startCountdown();
+};
+
+window.continueStatusChoice = async () => {
+  if (!editTarget || isSaving) return;
+  const { key, def }  = editTarget;
+  const installType   = document.getElementById("installTypeSelect").value;
+
+  if (installType === "hold" && currentEditor && currentEditor.role === "HCA") {
+    document.getElementById("holdBlockedModal").classList.add("visible");
     return;
   }
-  document.getElementById("massOpenModal").style.display = "flex";
+  const newSt = installTypeToStatus(installType);
+  editTarget  = null;
+  document.getElementById("statusModal").classList.remove("visible");
+
+  if (["open","hold","teamOff","notAvailable"].includes(installType)) {
+    await writeStatus(key, newSt, def, installType, { fullDay: null, am: null, pm: null });
+    await releaseSlotLock(key);
+    renderWeek(currentWeekIndex);
+    return;
+  }
+  pendingStatus = { key, newSt, def, initialSoldType: installType };
+  openDetailsModal(key);
+};
+
+window.closeStatusModal = async () => {
+  const key = editTarget ? editTarget.key : null;
+  editTarget = null;
+  stopCountdown();
+  document.getElementById("statusModal").classList.remove("visible");
+  await releaseSlotLock(key);
+};
+
+window.openOnCallEdit = async (e, key, def) => {
+  e.stopPropagation();
+  const locked = await acquireSlotLock(key);
+  if (!locked) return;
+  const currentValue = (availabilityData.overrides && availabilityData.overrides[key]) || def || "";
+  const newValue     = prompt("Enter On Call name(s):", currentValue === "—" ? "" : currentValue);
+  if (newValue === null) { await releaseSlotLock(key); return; }
+  const cleanValue = newValue.trim() || "—";
+  if (!isSaving) await writeStatus(key, cleanValue, def, "fullDay", {});
+  await releaseSlotLock(key);
+};
+
+function setJobPanelVisibility() {
+  const soldType = document.getElementById("soldTypeSelect").value;
+  document.getElementById("fullDayJobPanel").style.display = soldType === "fullDay"              ? "block" : "none";
+  document.getElementById("amJobPanel").style.display      = (soldType === "amOnly" || soldType === "amPm") ? "block" : "none";
+  document.getElementById("pmJobPanel").style.display      = (soldType === "pmOnly" || soldType === "amPm") ? "block" : "none";
+}
+window.setJobPanelVisibility = setJobPanelVisibility;
+
+function hydrateJobFields(prefix, job) {
+  const safeJob = job || {};
+  document.getElementById(`${prefix}HcaSelect`).value    = safeJob.hcaName    || "";
+  document.getElementById(`${prefix}ProjectInput`).value = safeJob.projectName || "";
+  document.getElementById(`${prefix}CaasSelect`).value   = (safeJob.isCaas === true || safeJob.isCaas === "true") ? "true" : "false";
 }
 
-function closeMassOpenModal() {
-  document.getElementById("massOpenModal").style.display = "none";
+function readJobFields(prefix) {
+  return {
+    hcaName:     document.getElementById(`${prefix}HcaSelect`).value.trim(),
+    projectName: document.getElementById(`${prefix}ProjectInput`).value.trim(),
+    isCaas:      document.getElementById(`${prefix}CaasSelect`).value === "true"
+  };
 }
 
-function executeMassOpen() {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const updates = {};
+function openDetailsModal(key) {
+  const existing = (availabilityData.details && availabilityData.details[key]) || {};
+  const jobs     = existing.jobs || {};
+  let soldType   = (pendingStatus && pendingStatus.initialSoldType) || existing.soldType || "fullDay";
+  if (!existing.soldType && (jobs.am || jobs.pm)) {
+    soldType = jobs.am && jobs.pm ? "amPm" : jobs.am ? "amOnly" : "pmOnly";
+  }
+  document.getElementById("soldTypeSelect").value = soldType;
+  hydrateJobFields("fullDay", jobs.fullDay || existing);
+  hydrateJobFields("am",      jobs.am);
+  hydrateJobFields("pm",      jobs.pm);
+  setJobPanelVisibility();
+  document.getElementById("detailsModal").classList.add("visible");
+}
 
-  Object.keys(currentSchedule).forEach(crewKey => {
-    days.forEach(day => {
-      const currentCell = (currentData[crewKey] && currentData[crewKey][day]) ? currentData[crewKey][day] : { status: "OPEN" };
-      if (currentCell.status === "TEAM_OFF" || currentCell.status === "HOLD") {
-        // Leave them alone
-      } else if (currentCell.status === "OPEN") {
-        // Do nothing
+window.closeDetailsModal = async () => {
+  stopCountdown();
+  const key = pendingStatus ? pendingStatus.key : null;
+  pendingStatus = null;
+  document.getElementById("detailsModal").classList.remove("visible");
+  await releaseSlotLock(key);
+};
+
+window.saveDetailsModal = async () => {
+  if (!pendingStatus || isSaving) return;
+  const soldType = document.getElementById("soldTypeSelect").value;
+  const jobs     = { fullDay: null, am: null, pm: null };
+  if (soldType === "fullDay")                        jobs.fullDay = readJobFields("fullDay");
+  if (soldType === "amOnly" || soldType === "amPm")  jobs.am      = readJobFields("am");
+  if (soldType === "pmOnly" || soldType === "amPm")  jobs.pm      = readJobFields("pm");
+
+  await writeStatus(pendingStatus.key, pendingStatus.newSt, pendingStatus.def, soldType, jobs);
+  stopCountdown();
+  const keyToRelease = pendingStatus.key;
+  pendingStatus = null;
+  document.getElementById("detailsModal").classList.remove("visible");
+  await releaseSlotLock(keyToRelease);
+  renderWeek(currentWeekIndex);
+};
+
+async function writeStatus(key, newSt, def, soldType = "fullDay", jobs = {}) {
+  isSaving = true;
+  document.getElementById("savingBadge").style.display = "flex";
+  try {
+    const previousStatus  = (availabilityData.overrides && availabilityData.overrides[key] !== undefined)
+      ? availabilityData.overrides[key] : def;
+    const previousDetails = (availabilityData.details && availabilityData.details[key]) || null;
+    const now = new Date();
+    const ts  = now.toLocaleString("en-US", { month:"2-digit", day:"2-digit", year:"numeric",
+      hour:"2-digit", minute:"2-digit", hour12:false });
+
+    const updates = {};
+    updates[`overrides/${key}`]           = newSt === def ? null : newSt;
+    updates[`details/${key}/soldType`]    = soldType;
+    updates[`details/${key}/jobs`]        = jobs;
+    updates[`details/${key}/hcaName`]     = null;
+    updates[`details/${key}/projectName`] = null;
+    updates[`details/${key}/isCaas`]      = null;
+    updates[`lastUpdated/${key}`]         = ts;
+
+    await update(ref(db, DB_AVAIL), updates);
+
+    await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
+      timestamp:       new Date().toISOString(),
+      editorName:      currentEditor ? currentEditor.name : "Unknown",
+      editorRole:      currentEditor ? currentEditor.role : "UNKNOWN",
+      editorPin:       currentEditor ? currentEditor.pin  : null,
+      cellKey:         key,
+      previousStatus,
+      newStatus:       newSt,
+      soldType,
+      jobs,
+      previousDetails
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Save failed. Check Firebase config/rules.");
+  } finally {
+    isSaving = false;
+    document.getElementById("savingBadge").style.display = "none";
+  }
+}
+
+// ── MOVE JOB ─────────────────────────────────────────────────────────────────
+window.startMoveJob = async () => {
+  if (!editTarget) return;
+  const { key, def } = editTarget;
+  const overrides      = availabilityData.overrides || {};
+  const currentSt      = overrides[key] !== undefined ? overrides[key] : def;
+  const currentDetails = (availabilityData.details && availabilityData.details[key]) || {};
+  moveSource = { key, def, status: currentSt, details: currentDetails };
+  editTarget = null;
+  document.getElementById("statusModal").classList.remove("visible");
+  openMovePickerModal();
+};
+
+function getMoveSourceSummary() {
+  if (!moveSource) return "";
+  const d    = moveSource.details;
+  const jobs = d.jobs || {};
+  const job  = jobs.fullDay || jobs.am || jobs.pm || d;
+  const hca  = job.hcaName    ? `HCA: ${job.hcaName}` : "";
+  const hw   = job.projectName ? `Homeowner: ${job.projectName}` : "";
+  return [hca, hw].filter(Boolean).join(" — ") || "Job details";
+}
+
+const MOVE_BLOCKED_STATUSES = ["NOT AVAILABLE", "NOT SCHEDULED", "ON CALL"];
+
+function getTargetSummary(key) {
+  const d    = (availabilityData.details && availabilityData.details[key]) || {};
+  const jobs = d.jobs || {};
+  const job  = jobs.fullDay || jobs.am || jobs.pm || d;
+  const hca  = job.hcaName    ? `HCA: ${job.hcaName}` : "";
+  const hw   = job.projectName ? `Homeowner: ${job.projectName}` : "";
+  return [hca, hw].filter(Boolean).join(" — ") || null;
+}
+
+function renderMoveWeekTabs() {
+  const weeks = scheduleData.weeks || [];
+  document.getElementById("moveWeekTabs").innerHTML = weeks.map((w, i) => {
+    const cls = "move-week-tab"
+      + (i === moveTargetWeekIndex ? " active" : "")
+      + (i === currentWeekIndex    ? " current" : "");
+    return `<div class="${cls}" onclick="switchMoveWeek(${i})">${escapeHtml(w.title || `Week ${i+1}`)}</div>`;
+  }).join("");
+}
+
+window.switchMoveWeek = (idx) => {
+  moveTargetWeekIndex = idx;
+  renderMoveWeekTabs();
+  renderMovePickerGrid(idx);
+  const note = document.getElementById("crossWeekNote");
+  if (note) note.style.display = idx !== currentWeekIndex ? "block" : "none";
+};
+
+function renderMovePickerGrid(weekIdx) {
+  const week = scheduleData.weeks[weekIdx];
+  if (!week) return;
+  const { dayNames, dates, mainRows } = getWeekParts(week);
+  const isSameWeek = weekIdx === currentWeekIndex;
+
+  let html = `<div class="move-grid-wrap"><table class="move-table"><thead><tr>
+    <th class="team-col">Team / Crew</th>
+    ${dayNames.map((d, i) => `<th>${escapeHtml(d)}<div class="date-small">${escapeHtml(dates[i] || "")}</div></th>`).join("")}
+  </tr></thead><tbody>`;
+
+  let currentSection = "";
+  let targetCount    = 0;
+
+  mainRows.forEach(item => {
+    if (item.type === "section") {
+      html += `<tr class="section-header"><td colspan="7">${escapeHtml(item.label)}</td></tr>`;
+      currentSection = item.label;
+      return;
+    }
+    if (item.section && item.section !== currentSection && item.section !== "CONSTRUCTION SERVICES") {
+      html += `<tr class="section-header"><td colspan="7">${escapeHtml(item.section)}</td></tr>`;
+      currentSection = item.section;
+    }
+    const rowClass = item.isOnCall ? " class='oncall-row'" : "";
+    html += `<tr${rowClass}><td class="team-cell">
+      <div class="team-name">${escapeHtml(item.team)}</div>
+      ${item.crew ? `<div class="crew-name">${escapeHtml(item.crew)}</div>` : ""}
+    </td>`;
+
+    item.statuses.forEach((defStatus, di) => {
+      const key        = getKey(week.title, item.rowIndex, di);
+      const st         = getStatus(week.title, item.rowIndex, di, defStatus);
+      const sNorm      = normalizeStatus(st);
+      const isSource   = isSameWeek && key === moveSource.key;
+      const isBlocked  = MOVE_BLOCKED_STATUSES.includes(sNorm) || item.isOnCall;
+      const isTargetable = !isSource && !isBlocked;
+      const isSoldTarget = isTargetable && isSoldStatus(st) && isSameWeek;
+
+      if (isSource) {
+        html += `<td class="move-cell move-source">
+          ${statusBadge(st)}
+          <div class="move-cell-label move-label-source">◀ SOURCE</div>
+        </td>`;
+      } else if (isTargetable) {
+        targetCount++;
+        const dropLabel = isSoldTarget ? "⇄ SWAP" : "↓ MOVE HERE";
+        const cellClass = isSoldTarget ? "move-cell move-target move-swap" : "move-cell move-target";
+        html += `<td class="${cellClass}"
+          data-target-key="${escapeHtml(key)}"
+          data-target-def="${escapeHtml(defStatus)}">
+          ${statusBadge(st)}
+          <div class="move-cell-label move-label-target">${dropLabel}</div>
+        </td>`;
       } else {
-        // Already filled, skip
-      }
-      
-      if (!currentData[crewKey] || !currentData[crewKey][day]) {
-        updates[DB_AVAIL + "/" + currentWeekKey + "/" + crewKey + "/" + day] = { status: "OPEN" };
+        html += `<td class="move-cell move-blocked">${statusBadge(st)}</td>`;
       }
     });
+    html += `</tr>`;
   });
 
-  update(ref(db), updates).then(() => {
-    closeMassOpenModal();
-  }).catch(err => alert("Mass migration trace error: " + err.message));
+  html += `</tbody></table></div>`;
+  document.getElementById("movePickerGrid").innerHTML = html;
+  if (targetCount === 0) document.getElementById("noSlotsModal").classList.add("visible");
 }
 
-function openNoSlotsModal() {
-  document.getElementById("noSlotsModal").style.display = "flex";
+function openMovePickerModal() {
+  moveTargetWeekIndex = currentWeekIndex;
+  document.getElementById("moveSummary").textContent = getMoveSourceSummary();
+  document.getElementById("crossWeekNote").style.display = "none";
+  renderMoveWeekTabs();
+  renderMovePickerGrid(currentWeekIndex);
+  document.getElementById("movePickerModal").classList.add("visible");
+  startCountdown();
 }
-function closeNoSlotsModal() {
-  document.getElementById("noSlotsModal").style.display = "none";
+
+document.getElementById("movePickerModal").addEventListener("click", async e => {
+  const cell = e.target.closest(".move-target");
+  if (!cell) return;
+  await executeMoveJob(cell.dataset.targetKey, cell.dataset.targetDef);
+});
+
+window.closeMovePickerModal = async () => {
+  stopCountdown();
+  const key = moveSource ? moveSource.key : null;
+  moveSource = null;
+  document.getElementById("movePickerModal").classList.remove("visible");
+  await releaseSlotLock(key);
+};
+
+async function executeMoveJob(targetKey, targetDef) {
+  if (!moveSource || isSaving) return;
+  const { key: sourceKey, status: sourceStatus, details: sourceDetails } = moveSource;
+  const sourceJobs     = sourceDetails.jobs || {};
+  const sourceSoldType = sourceDetails.soldType || "fullDay";
+  const sourceSummary  = getMoveSourceSummary();
+  const isSameWeek     = moveTargetWeekIndex === currentWeekIndex;
+  const targetOverrides = availabilityData.overrides || {};
+  const targetCurrentSt = targetOverrides[targetKey] !== undefined ? targetOverrides[targetKey] : targetDef;
+  const targetDetails   = (availabilityData.details && availabilityData.details[targetKey]) || {};
+  const targetJobs      = targetDetails.jobs || {};
+  const targetSoldType  = targetDetails.soldType || "fullDay";
+  const targetIsSold    = isSoldStatus(targetCurrentSt);
+  const targetSummary   = getTargetSummary(targetKey);
+  const doSwap          = isSameWeek && targetIsSold;
+
+  let confirmMsg;
+  if (doSwap && targetSummary) {
+    confirmMsg = `Swap these two jobs?\n\nFROM: ${sourceSummary}\nTO:   ${targetSummary}\n\nThey will exchange slots completely.`;
+  } else if (!isSameWeek) {
+    const targetWeekTitle = (scheduleData.weeks[moveTargetWeekIndex] || {}).title || "next week";
+    confirmMsg = `Move this job to ${targetWeekTitle}?\n\n${sourceSummary}\n\nSource slot → Full Day Open\nTarget slot → receives job details`;
+  } else {
+    const targetLabel = STATUS_LABELS[normalizeStatus(targetCurrentSt)] || targetCurrentSt;
+    confirmMsg = `Move this job to the selected slot?\n\n${sourceSummary}\n\nSource → ${targetLabel}\nTarget → receives job details`;
+  }
+
+  if (!confirm(confirmMsg)) return;
+
+  isSaving = true;
+  document.getElementById("savingBadge").style.display = "flex";
+
+  const savedUndoBuffer = {
+    isSameWeek, doSwap, sourceKey, targetKey,
+    originalSourceStatus:  sourceStatus,
+    originalSourceDetails: sourceDetails,
+    originalTargetStatus:  targetCurrentSt,
+    originalTargetDetails: targetDetails
+  };
+
+  try {
+    const updates = {};
+    if (doSwap) {
+      updates[`overrides/${sourceKey}`]           = targetCurrentSt;
+      updates[`details/${sourceKey}/soldType`]    = targetSoldType;
+      updates[`details/${sourceKey}/jobs`]        = targetJobs;
+      updates[`details/${sourceKey}/hcaName`]     = null;
+      updates[`details/${sourceKey}/projectName`] = null;
+      updates[`details/${sourceKey}/isCaas`]      = null;
+      updates[`overrides/${targetKey}`]           = sourceStatus;
+      updates[`details/${targetKey}/soldType`]    = sourceSoldType;
+      updates[`details/${targetKey}/jobs`]        = sourceJobs;
+      updates[`details/${targetKey}/hcaName`]     = null;
+      updates[`details/${targetKey}/projectName`] = null;
+      updates[`details/${targetKey}/isCaas`]      = null;
+    } else {
+      updates[`overrides/${sourceKey}`]           = targetCurrentSt;
+      updates[`details/${sourceKey}/soldType`]    = targetIsSold ? targetSoldType : "open";
+      updates[`details/${sourceKey}/jobs`]        = targetIsSold ? targetJobs : { fullDay: null, am: null, pm: null };
+      updates[`details/${sourceKey}/hcaName`]     = null;
+      updates[`details/${sourceKey}/projectName`] = null;
+      updates[`details/${sourceKey}/isCaas`]      = null;
+      updates[`overrides/${targetKey}`]           = sourceStatus;
+      updates[`details/${targetKey}/soldType`]    = sourceSoldType;
+      updates[`details/${targetKey}/jobs`]        = sourceJobs;
+      updates[`details/${targetKey}/hcaName`]     = null;
+      updates[`details/${targetKey}/projectName`] = null;
+      updates[`details/${targetKey}/isCaas`]      = null;
+    }
+
+    await update(ref(db, DB_AVAIL), updates);
+    await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
+      timestamp: new Date().toISOString(),
+      action: doSwap ? "SWAP" : "MOVE",
+      editorName: currentEditor ? currentEditor.name : "Unknown",
+      editorRole: currentEditor ? currentEditor.role : "UNKNOWN",
+      sourceKey, targetKey, sourceStatus, targetStatus: targetCurrentSt,
+      crossWeek: !isSameWeek, sourceDetails, targetDetails
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Move/swap failed.");
+    isSaving = false;
+    document.getElementById("savingBadge").style.display = "none";
+    return;
+  }
+
+  isSaving = false;
+  document.getElementById("savingBadge").style.display = "none";
+  stopCountdown();
+  const keyToRelease = moveSource.key;
+  moveSource = null;
+  document.getElementById("movePickerModal").classList.remove("visible");
+  await releaseSlotLock(keyToRelease);
+  renderWeek(currentWeekIndex);
+  undoBuffer = savedUndoBuffer;
+  startUndoCountdown();
 }
+
+// ── UNDO ─────────────────────────────────────────────────────────────────────
+function startUndoCountdown() {
+  if (undoInterval) { clearInterval(undoInterval); undoInterval = null; }
+  undoSeconds = 30;
+  updateUndoDisplay();
+  document.getElementById("undoToast").classList.add("visible");
+  undoInterval = setInterval(() => {
+    undoSeconds--;
+    updateUndoDisplay();
+    if (undoSeconds <= 0) {
+      undoBuffer = null;
+      clearInterval(undoInterval);
+      undoInterval = null;
+      document.getElementById("undoToast").classList.remove("visible");
+    }
+  }, 1000);
+}
+
+function stopUndoCountdown() {
+  if (undoInterval) { clearInterval(undoInterval); undoInterval = null; }
+  document.getElementById("undoToast").classList.remove("visible");
+}
+
+function updateUndoDisplay() {
+  const el = document.getElementById("undoCountdown");
+  if (el) el.textContent = `${undoSeconds}s`;
+}
+
+window.executeUndo = async () => {
+  if (!undoBuffer || isSaving) return;
+  const buf = undoBuffer;
+  undoBuffer = null;
+  stopUndoCountdown();
+  isSaving = true;
+  document.getElementById("savingBadge").style.display = "flex";
+  try {
+    const updates = {};
+    const restoreCell = (key, status, details) => {
+      updates[`overrides/${key}`]           = status;
+      updates[`details/${key}/soldType`]    = details.soldType || (isSoldStatus(status) ? "fullDay" : "open");
+      updates[`details/${key}/jobs`]        = details.jobs || (isSoldStatus(status) ? {} : { fullDay: null, am: null, pm: null });
+      updates[`details/${key}/hcaName`]     = null;
+      updates[`details/${key}/projectName`] = null;
+      updates[`details/${key}/isCaas`]      = null;
+    };
+    restoreCell(buf.sourceKey, buf.originalSourceStatus, buf.originalSourceDetails);
+    restoreCell(buf.targetKey, buf.originalTargetStatus, buf.originalTargetDetails);
+    await update(ref(db, DB_AVAIL), updates);
+    await set(ref(db, `${DB_AUDIT}/${makeAuditKey()}`), {
+      timestamp: new Date().toISOString(), action: "UNDO",
+      editorName: currentEditor ? currentEditor.name : "Unknown",
+      editorRole: currentEditor ? currentEditor.role : "UNKNOWN",
+      sourceKey: buf.sourceKey, targetKey: buf.targetKey
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Undo failed.");
+  } finally {
+    isSaving = false;
+    document.getElementById("savingBadge").style.display = "none";
+  }
+  renderWeek(currentWeekIndex);
+};
+
+// ── COUNTDOWN ─────────────────────────────────────────────────────────────────
+let countdownInterval = null;
+let countdownSeconds  = 180;
+
+function startCountdown() {
+  stopCountdown();
+  countdownSeconds = 180;
+  updateCountdownDisplay();
+  document.getElementById("countdownToast").classList.add("visible");
+  countdownInterval = setInterval(() => {
+    countdownSeconds--;
+    updateCountdownDisplay();
+    if (countdownSeconds <= 0) { stopCountdown(); autoCloseActiveModal(); }
+  }, 1000);
+}
+
+function stopCountdown() {
+  if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+  const toast = document.getElementById("countdownToast");
+  toast.classList.remove("visible", "warning", "urgent");
+}
+
+function updateCountdownDisplay() {
+  const mins   = Math.floor(countdownSeconds / 60);
+  const secs   = countdownSeconds % 60;
+  const str    = `${mins}:${secs.toString().padStart(2, "0")}`;
+  const toast  = document.getElementById("countdownToast");
+  const timeEl = document.getElementById("countdownTime");
+  if (timeEl) timeEl.textContent = str;
+  if (countdownSeconds <= 30) { toast.classList.add("urgent"); toast.classList.remove("warning"); }
+  else if (countdownSeconds <= 60) { toast.classList.add("warning"); toast.classList.remove("urgent"); }
+  else { toast.classList.remove("warning", "urgent"); }
+}
+
+async function autoCloseActiveModal() {
+  const timeEl = document.getElementById("countdownTime");
+  if (timeEl) timeEl.textContent = "Timed out";
+  document.getElementById("countdownToast").classList.add("visible", "urgent");
+  setTimeout(() => document.getElementById("countdownToast").classList.remove("visible", "urgent"), 2500);
+  if (document.getElementById("movePickerModal").classList.contains("visible")) await window.closeMovePickerModal();
+  else if (document.getElementById("detailsModal").classList.contains("visible")) await window.closeDetailsModal();
+  else if (document.getElementById("statusModal").classList.contains("visible")) await window.closeStatusModal();
+}
+
+(function init() {
+  const n = new Date();
+  const D = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  document.getElementById("todayPill").textContent =
+    `${D[n.getDay()]} ${M[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()}`;
+})();
 </script>
 
 <style>
 :root {
-  --bg: #f4f7f6;
+  --bg: #f0f4f8;
   --surface: #ffffff;
-  --border: #d1d8d6;
-  --border2: #e2e8e6;
-  --text: #2c3e50;
-  --text2: #576574;
-  --text3: #8395a7;
+  --surface2: #f8fafb;
+  --border: #c8d6e0;
+  --border2: #dde7ed;
+  --text: #1a2b38;
+  --text2: #4a6070;
+  --text3: #7a9aaa;
   --cm-blue: #005aa9;
+  --cm-blue2: #0077c8;
   --cm-orange: #f58220;
   --cm-green: #3aaa35;
-  --danger: #ff6b6b;
+  --danger: #c00000;
+  --grid-border: #bcc8d0;
 }
-
-body.admin-mode {
-  --bg: #fdfaf7;
-}
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; font-size: 14px; min-height: 100vh; }
 
-body {
-  font-family: 'IBM Plex Sans', sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
-  padding-bottom: 60px;
+/* ── TEST BANNER ─────────────────────────────────────────────────────────────── */
+.test-banner {
+  background: repeating-linear-gradient(45deg,rgba(245,130,32,.15),rgba(245,130,32,.15) 10px,rgba(245,130,32,.05) 10px,rgba(245,130,32,.05) 20px);
+  border-bottom: 3px solid var(--cm-orange);
+  color: var(--cm-orange);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; font-weight: 700;
+  text-align: center; padding: 7px 20px;
+  letter-spacing: .07em; text-transform: uppercase;
 }
+.test-banner span { opacity: .7; font-weight: 400; }
 
-/* ── TOP BANNER WARNING SYSTEM ── */
-.sandbox-banner {
-  background: linear-gradient(45deg, var(--cm-orange) 0%, #e67e22 100%);
-  color: #fff;
-  padding: 10px 20px;
+/* ── TOPBAR ──────────────────────────────────────────────────────────────────── */
+.topbar { background: var(--surface); border-bottom: 3px solid var(--cm-blue); display: flex; align-items: center; justify-content: space-between; padding: 9px 18px; position: sticky; top: 0; z-index: 100; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.logo-img { height: 40px; width: auto; }
+.logo-text { font-weight: 800; font-size: 14px; color: var(--cm-blue); letter-spacing: .02em; text-transform: uppercase; }
+.logo-text span { color: var(--cm-orange); }
+.divider-v { width: 1px; height: 26px; background: var(--border); }
+.meta-pill { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.topbar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.btn { font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 600; padding: 6px 11px; border-radius: 5px; border: 1px solid var(--border); cursor: pointer; background: var(--surface2); color: var(--text2); transition: all .15s; white-space: nowrap; }
+.btn:hover { border-color: var(--cm-blue); color: var(--cm-blue); }
+.btn-admin { background: rgba(0,90,169,.08); border-color: rgba(0,90,169,.28); color: var(--cm-blue); }
+.btn-admin.active { background: rgba(245,130,32,.12); border-color: rgba(245,130,32,.40); color: var(--cm-orange); }
+.btn-move { background: rgba(58,170,53,.10); border-color: rgba(58,170,53,.35); color: #168a20; }
+.btn-move:hover { background: rgba(58,170,53,.20); }
+#savingBadge { display: none; align-items: center; gap: 5px; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--cm-blue); }
+.spinner { width: 9px; height: 9px; border: 2px solid rgba(0,90,169,.2); border-top-color: var(--cm-blue); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── WEEK TABS ───────────────────────────────────────────────────────────────── */
+.weeknav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; padding: 0 14px; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.weeknav::-webkit-scrollbar { display: none; }
+.week-tab { font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 9px 13px; border-bottom: 3px solid transparent; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all .15s; user-select: none; }
+.week-tab:hover { color: var(--cm-blue); }
+.week-tab.active { color: var(--cm-blue); border-bottom-color: var(--cm-blue); background: rgba(0,90,169,.04); }
+.week-tab.current { color: var(--cm-green); }
+.week-tab.current.active { border-bottom-color: var(--cm-green); }
+
+/* ── MAIN ────────────────────────────────────────────────────────────────────── */
+.main { padding: 16px 18px 40px; }
+.week-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; gap: 16px; flex-wrap: wrap; }
+.week-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--cm-blue); }
+.sheet-subtitle { font-family: "IBM Plex Mono", monospace; color: var(--text3); font-size: 11px; margin-top: 2px; }
+.week-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.edit-badge { font-family: "IBM Plex Mono", monospace; font-size: 11px; background: rgba(245,130,32,.12); border: 1px solid rgba(245,130,32,.32); color: var(--cm-orange); padding: 3px 9px; border-radius: 999px; }
+
+/* ── GRID — spreadsheet style ────────────────────────────────────────────────── */
+.grid-wrap { overflow-x: auto; border: 1px solid var(--grid-border); border-radius: 6px; background: var(--surface); box-shadow: 0 2px 10px rgba(0,0,0,.07); }
+table { border-collapse: collapse; width: 100%; min-width: 740px; }
+
+thead th {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; font-weight: 700;
+  color: #ffffff;
   text-align: center;
-  font-family: 'IBM Plex Mono', monospace;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  padding: 8px 6px;
+  border-bottom: 2px solid #003f78;
+  background: var(--cm-blue);
+  white-space: nowrap;
+  letter-spacing: .04em;
 }
+thead th.team-col { text-align: left; padding-left: 12px; min-width: 180px; }
+.date-small { margin-top: 1px; color: rgba(255,255,255,.75); font-size: 10px; }
 
-/* ── HEADER NAVIGATION RUNTIME ── */
-.app-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.brand-logo {
-  font-weight: 700;
-  font-size: 18px;
+.section-header td {
+  background: #e8f0f7;
   color: var(--cm-blue);
-  letter-spacing: -0.5px;
-}
-.brand-logo span { color: var(--cm-orange); }
-
-.week-controls {
-  display: flex;
-  align-items: center;
-  background: var(--bg);
-  padding: 4px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-.btn-week {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--text2);
-  transition: all 0.2s;
-}
-.btn-week:hover { background: var(--bg); color: var(--text); }
-.week-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-weight: 600;
-  padding: 0 20px;
-  min-width: 180px;
-  text-align: center;
-  color: var(--text);
-}
-
-/* ── CONTROLS PANEL ── */
-.admin-actions {
-  display: flex;
-  gap: 8px;
-}
-.btn {
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.15s ease-in-out;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-.btn-primary { background: var(--cm-blue); color: #fff; }
-.btn-primary:hover { background: #004b8c; }
-.btn-secondary { background: var(--surface); border-color: var(--border); color: var(--text2); }
-.btn-secondary:hover { background: var(--bg); color: var(--text); }
-.btn-admin { background: #fff1e6; border-color: #ffd8b3; color: var(--cm-orange); display: none; }
-.btn-admin:hover { background: #ffedd6; }
-body.admin-mode .btn-admin { display: inline-flex; }
-
-/* ── SECURITY INTERFACE LAYER ── */
-.security-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg);
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-.pin-input {
-  width: 90px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  font-family: 'IBM Plex Mono', monospace;
-  font-weight: 600;
-  text-align: center;
-  font-size: 14px;
-  letter-spacing: 2px;
-}
-.user-profile {
-  display: none;
-  align-items: center;
-  gap: 12px;
-}
-.profile-meta { text-align: right; }
-.profile-name { font-weight: 600; color: var(--text); }
-.profile-role { font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #eee; }
-.btn-logout { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 12px; font-weight: 500; text-decoration: underline; }
-
-/* ── MAIN RUNTIME MATRIX CONTAINMENT ── */
-.main-content { padding: 24px; max-width: 1600px; margin: 0 auto; }
-
-/* ─── GRID WRAPPER & STICKY NAVIGATION PROPERTIES ─── */
-.grid-wrap {
-  width: 100%;
-  max-height: 75vh;          /* Caps container height to enable vertical table scrolling */
-  overflow-y: auto;          /* Mandatory container property for position: sticky to latch onto */
-  overflow-x: auto;          /* Maintains horizontal responsiveness */
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  position: relative;        /* Establishes positioning context */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-}
-
-/* ─── TABLE GEOMETRY COUPLING ─── */
-.grid-wrap table {
-  width: 100%;
-  border-collapse: separate; /* Required for clean sticky cell border rendering */
-  border-spacing: 0;
-  table-layout: fixed;       /* Force rigid structural compliance on column widths */
-}
-
-/* ─── FIXED COLUMN RATIO DISTRIBUTION ─── */
-.grid-wrap th.team-col {
-  width: 22%;
-  position: sticky;
-  left: 0;
-  z-index: 12;
-  background: #f8fafc;
-}
-
-.grid-wrap th:not(.team-col) {
-  width: 13%;                /* Forces Wednesday to mathematically equal all other days */
-}
-
-/* ─── FLOATING STICKY HEADER INTERFACE ─── */
-.grid-wrap thead tr th {
-  position: sticky;
-  top: 0;                    /* Locks header to the absolute top of .grid-wrap during scrolling */
-  background: #f8fafc;       /* Opaque surface color preventing underlying rows from bleeding through */
-  z-index: 10;               /* Ensures UI interactive controls sit below headers but above status indicators */
-  box-shadow: inset 0 -2px 0 var(--border); /* Clean structural separation baseline */
-  padding: 12px 8px;
-  text-align: center;
-  border-bottom: 2px solid var(--border);
-}
-
-.th-day-label { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 14px; color: var(--text); }
-.th-date-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
-
-/* ── CELLS AND MATRIX GEOMETRY ── */
-.team-cell {
-  position: sticky;
-  left: 0;
-  background: var(--surface);
-  z-index: 5;
-  font-weight: 500;
-  border-right: 2px solid var(--border) !important;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
-}
-.team-name { font-weight: 600; color: var(--text); }
-.team-techs { font-size: 11px; color: var(--text3); margin-top: 2px; }
-
-.status-cell, .team-cell {
-  padding: 12px 10px;
-  word-wrap: break-word;     /* Ensures details wrap cleanly into stacked layouts instead of pushing widths */
-  vertical-align: top;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px; letter-spacing: .09em;
+  padding: 5px 12px;
+  border-top: 1px solid var(--grid-border);
   border-bottom: 1px solid var(--border2);
-  border-right: 1px solid var(--border2);
-  cursor: pointer;
-  min-height: 85px;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.status-cell:hover {
-  transform: scale(1.01);
-  box-shadow: inset 0 0 0 2px var(--cm-blue);
-  z-index: 4;
-}
-
-/* ── STATUS SCHEMATICS ── */
-.st-open { background-color: #effff4; color: #27ae60; }
-.st-open .status-badge { background: #27ae60; color: #fff; }
-
-.st-filled { background-color: #f4f6f9; color: var(--text); border-left: 4px solid var(--cm-blue); }
-.st-filled .status-badge { background: var(--cm-blue); color: #fff; }
-
-.st-am { background-color: #fffdf0; color: #b78a00; border-left: 4px solid #f1c40f; }
-.st-am .status-badge { background: #f1c40f; color: #fff; }
-
-.st-pm { background-color: #fdf5ff; color: #8e44ad; border-left: 4px solid #9b59b6; }
-.st-pm .status-badge { background: #9b59b6; color: #fff; }
-
-.st-off { background-color: #fdf2f2; color: #95a5a6; opacity: 0.6; }
-.st-off .status-badge { background: #7f8c8d; color: #fff; }
-
-.st-hold { background-color: #fff5eb; color: #d35400; border-left: 4px solid var(--cm-orange); font-style: italic; }
-.st-hold .status-badge { background: var(--cm-orange); color: #fff; }
-
-.status-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
+  font-weight: 800;
   text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-bottom: 6px;
-  letter-spacing: 0.3px;
-  font-family: 'IBM Plex Mono', monospace;
 }
-.cell-job { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
-.cell-hca { font-size: 11px; font-weight: 500; opacity: 0.9; text-transform: uppercase; }
-.cell-notes { font-size: 11px; color: var(--text2); margin-top: 4px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ── SYSTEM MODAL OVERLAYS ── */
-.details-modal {
+tbody tr { border-bottom: 1px solid var(--border2); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover td { background-color: rgba(0,90,169,.03) !important; }
+tbody tr:hover .team-cell { background-color: #f5f8fb !important; }
+
+.team-cell {
+  padding: 7px 12px;
+  min-width: 180px;
+  border-right: 2px solid var(--grid-border);
+  background: #f8fafb;
+  vertical-align: middle;
+}
+.team-name { font-weight: 700; font-size: 13px; color: var(--text); }
+.crew-name { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+/* ── STATUS CELLS — full-cell Google Sheets style ────────────────────────────── */
+.status-cell {
+  text-align: center;
+  padding: 6px 4px;
+  min-width: 100px;
+  vertical-align: top;
+  border-right: 1px solid rgba(0,0,0,.10);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  transition: filter .1s;
+}
+.status-cell:last-child { border-right: none; }
+
+/* Google Sheets palette */
+.td-FILLED    { background: #ea9999; }
+.td-FULL_DAY  { background: #b6d7a8; }
+.td-HALF_PM   { background: #f9cb9c; }
+.td-HALF_AM   { background: #ffe599; }
+.td-TEAM_OFF  { background: #d9d9d9; }
+.td-NOT_AVAIL { background: #666666; }
+.td-NOT_SCHED { background: #f3f3f3; }
+.td-HOLD      { background: #ffd966; }
+.td-ON_CALL   { background: #c9daf8; }
+
+.sheet-status {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.3;
+  padding: 1px 0;
+}
+
+/* Text colors per status */
+.td-FILLED    .sheet-status { color: #660000; }
+.td-FULL_DAY  .sheet-status { color: #1c4a0c; }
+.td-HALF_PM   .sheet-status { color: #7f4000; }
+.td-HALF_AM   .sheet-status { color: #7f5800; }
+.td-TEAM_OFF  .sheet-status { color: #555555; }
+.td-NOT_AVAIL .sheet-status { color: #f0f0f0; }
+.td-NOT_SCHED .sheet-status { color: #888888; }
+.td-HOLD      .sheet-status { color: #7f5800; }
+.td-ON_CALL   .sheet-status { color: #1c4587; }
+
+.status-cell.editable { cursor: pointer; }
+.status-cell.editable:hover { filter: brightness(.92); }
+.status-cell.locked { opacity: .6; cursor: not-allowed; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.06) 0, rgba(0,0,0,.06) 4px, transparent 4px, transparent 8px); }
+.lock-note { margin-top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 9px; font-weight: 700; color: var(--cm-orange); }
+
+/* ── CELL DETAILS ─────────────────────────────────────────────────────────────── */
+.cell-details { margin-top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 10px; line-height: 1.4; color: var(--text); text-align: left; }
+.detail-lbl { opacity: .65; }
+.caas-tag { display: inline-block; margin-bottom: 2px; padding: 1px 5px; border-radius: 999px; background: rgba(124,58,237,.15); border: 1px solid rgba(124,58,237,.38); color: #5b21b6; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-size: 9px; }
+.job-line { margin-top: 4px; padding-top: 3px; border-top: 1px dashed rgba(0,0,0,.18); }
+.job-line:first-child { border-top: none; padding-top: 0; }
+.job-label { display: inline-block; margin-bottom: 2px; padding: 1px 5px; border-radius: 999px; background: rgba(0,0,0,.15); color: rgba(0,0,0,.70); font-weight: 900; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+
+/* ── BADGE — used in legend + move picker only ───────────────────────────────── */
+.status-badge { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 4px; letter-spacing: .03em; white-space: nowrap; }
+.s-FILLED    { background: #ea9999; color: #660000; }
+.s-FULL_DAY  { background: #b6d7a8; color: #1c4a0c; }
+.s-HALF_PM   { background: #f9cb9c; color: #7f4000; }
+.s-HALF_AM   { background: #ffe599; color: #7f5800; }
+.s-TEAM_OFF  { background: #d9d9d9; color: #555555; }
+.s-NOT_AVAIL { background: #666666; color: #f0f0f0; }
+.s-NOT_SCHED { background: #f3f3f3; color: #888888; border: 1px solid #ddd; }
+.s-HOLD      { background: #ffd966; color: #7f5800; }
+.s-ON_CALL   { background: #c9daf8; color: #1c4587; }
+.oncall-row td { background: rgba(0,90,169,.04) !important; }
+.oncall-row .team-name { color: var(--cm-blue); }
+
+/* ── NOTES / LEGEND ──────────────────────────────────────────────────────────── */
+.notes-wrap { margin-top: 12px; }
+.notes-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.notes-title { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .1em; color: var(--cm-orange); text-transform: uppercase; margin-bottom: 6px; font-weight: 700; }
+.note-item { font-size: 12px; color: var(--text2); padding: 3px 0; border-bottom: 1px solid var(--border2); line-height: 1.5; }
+.note-item:last-child { border-bottom: none; }
+.legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; align-items: center; }
+.legend-title { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; font-weight: 700; }
+
+/* ── MODALS ──────────────────────────────────────────────────────────────────── */
+.details-modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: flex-start; justify-content: center; z-index: 300; padding: 28px 20px; }
+.details-modal.visible { display: flex; }
+.details-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,.20); width: 100%; max-width: 420px; padding: 18px; max-height: calc(100vh - 56px); overflow-y: auto; }
+.details-title { font-size: 16px; font-weight: 800; margin-bottom: 3px; color: var(--cm-blue); }
+.details-subtitle { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text3); margin-bottom: 14px; }
+.field-label { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text2); letter-spacing: .08em; text-transform: uppercase; margin: 10px 0 5px; }
+.field-control { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 9px; font-family: "IBM Plex Sans", sans-serif; font-size: 14px; min-height: 40px; }
+.field-control:focus { outline: none; border-color: var(--cm-blue); }
+select.field-control { padding-top: 5px; padding-bottom: 5px; }
+.details-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.compact-status-card { max-width: 500px !important; }
+.status-select-large { font-size: 16px !important; min-height: 52px !important; font-weight: 700 !important; border: 2px solid var(--cm-blue) !important; }
+.status-help { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: rgba(0,90,169,.06); color: var(--text2); font-size: 13px; line-height: 1.45; }
+.status-help strong { color: var(--cm-blue); }
+.job-panel { margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: #fbfdff; }
+.job-panel-title { font-size: 14px; font-weight: 800; color: var(--cm-blue); margin-bottom: 6px; }
+.jobs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── MOVE PICKER ─────────────────────────────────────────────────────────────── */
+#movePickerModal .details-card { max-width: min(980px, calc(100vw - 20px)); width: min(980px, calc(100vw - 20px)); }
+.move-source-bar { margin: 10px 0 12px; padding: 9px 12px; border-radius: 7px; background: rgba(245,130,32,.09); border: 1px solid rgba(245,130,32,.32); font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text); }
+.move-source-bar strong { color: var(--cm-orange); }
+.move-instructions { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+.move-instructions .dot-green { color: var(--cm-green); font-weight: 800; }
+.move-instructions .dot-orange { color: var(--cm-orange); font-weight: 800; }
+.move-grid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 4px; }
+.move-table { border-collapse: collapse; width: 100%; min-width: 620px; }
+.move-table thead th { font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700; text-align: center; padding: 7px 6px; border-bottom: 2px solid var(--cm-blue); background: var(--cm-blue); color: #fff; white-space: nowrap; }
+.move-table thead th.team-col { text-align: left; padding-left: 12px; min-width: 170px; }
+.move-table thead .date-small { color: rgba(255,255,255,.7); }
+.move-cell { text-align: center; padding: 7px 5px; border: 1px solid var(--border2); min-width: 100px; vertical-align: middle; }
+.move-source { background: rgba(245,130,32,.10); border: 2px solid rgba(245,130,32,.45) !important; }
+.move-target { cursor: pointer; background: rgba(58,170,53,.10); border: 2px solid rgba(58,170,53,.35) !important; transition: background .12s; }
+.move-target:hover { background: rgba(58,170,53,.25); }
+.move-blocked { opacity: .40; }
+.move-swap { background: rgba(0,90,169,.08) !important; border: 2px solid rgba(0,90,169,.32) !important; }
+.move-swap:hover { background: rgba(0,90,169,.18) !important; }
+.move-swap .move-label-target { color: var(--cm-blue) !important; }
+.move-cell-label { margin-top: 4px; font-family: "IBM Plex Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: .05em; }
+.move-label-source { color: var(--cm-orange); }
+.move-label-target { color: var(--cm-green); }
+
+/* ── MOVE WEEK TABS ──────────────────────────────────────────────────────────── */
+.move-week-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.move-week-tabs::-webkit-scrollbar { display: none; }
+.move-week-tab { font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 6px 11px; border-bottom: 3px solid transparent; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all .15s; user-select: none; }
+.move-week-tab:hover { color: var(--cm-blue); }
+.move-week-tab.active { color: var(--cm-blue); border-bottom-color: var(--cm-blue); }
+.move-week-tab.current { color: var(--cm-green); }
+.move-week-tab.current.active { border-bottom-color: var(--cm-green); }
+.cross-week-note { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: #b75600; background: rgba(245,130,32,.09); border: 1px solid rgba(245,130,32,.28); padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; }
+
+/* ── COUNTDOWN TOAST ─────────────────────────────────────────────────────────── */
+.countdown-toast { position: fixed; bottom: 22px; right: 22px; background: var(--surface); border: 2px solid var(--cm-blue); border-radius: 12px; padding: 11px 16px; display: none; align-items: center; gap: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.18); z-index: 400; font-family: "IBM Plex Mono", monospace; min-width: 180px; }
+.countdown-toast.visible { display: flex; }
+.countdown-toast.warning { border-color: var(--cm-orange); }
+.countdown-toast.urgent  { border-color: var(--danger); }
+.countdown-icon { font-size: 20px; }
+.countdown-msg  { font-size: 10px; color: var(--text2); margin-bottom: 2px; letter-spacing: .03em; }
+.countdown-time { font-size: 20px; font-weight: 800; color: var(--cm-blue); line-height: 1; }
+.countdown-toast.warning .countdown-time { color: var(--cm-orange); }
+.countdown-toast.urgent  .countdown-time { color: var(--danger); animation: pulse-count .5s ease-in-out infinite alternate; }
+@keyframes pulse-count { from { opacity: 1; } to { opacity: .4; } }
+
+/* ── UNDO TOAST ───────────────────────────────────────────────────────────────── */
+.undo-toast { position: fixed; bottom: 22px; left: 22px; background: var(--surface); border: 2px solid var(--cm-green); border-radius: 12px; padding: 11px 14px; display: none; align-items: center; gap: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.18); z-index: 400; font-family: "IBM Plex Mono", monospace; }
+.undo-toast.visible { display: flex; }
+.undo-msg { font-size: 12px; font-weight: 700; color: var(--cm-green); margin-bottom: 2px; }
+.undo-sub { font-size: 10px; color: var(--text3); }
+.btn-undo { background: var(--cm-green); color: white; border: none; font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700; padding: 8px 13px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.btn-undo:hover { background: #2d9429; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────────────────── */
+.empty-state { background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center; color: var(--text3); font-family: "IBM Plex Mono", monospace; }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+.main { width: 100%; max-width: 100vw; }
+.grid-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 820px) { .jobs-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .main { padding-left: 0 !important; padding-right: 0 !important; }
+  .week-header, .notes-wrap, .legend { margin-left: 10px; margin-right: 10px; }
+  .grid-wrap { border-left: none; border-right: none; border-radius: 0; }
+  table { min-width: 720px; }
+  .topbar { flex-wrap: wrap; gap: 8px; }
+  .topbar-left { width: 100%; flex-wrap: wrap; gap: 8px; }
+  .topbar-right { width: 100%; justify-content: flex-end; }
+  .logo-img { height: 32px; }
+  .logo-text { display: none; }
+  .topbar { padding: 8px 12px; }
+  .main { padding: 12px 8px 32px; }
+  .week-title { font-size: 17px; }
+  .divider-v { display: none; }
+}
+
+/* ── DEVICE MODE OPTIMIZATION ─────────────────────────────────────────────── */
+.device-choice {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(44, 62, 80, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 100;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 47, 69, .55);
   display: none;
   align-items: center;
   justify-content: center;
   padding: 20px;
 }
-.details-card {
-  background: var(--surface);
-  border-radius: 12px;
+
+.device-choice.visible { display: flex; }
+
+.device-card {
+  background: white;
+  border-radius: 22px;
+  padding: 22px;
+  max-width: 420px;
   width: 100%;
-  max-width: 460px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 24px 70px rgba(0,0,0,.28);
+  text-align: center;
+}
+
+.device-card h2 {
+  color: var(--cm-blue);
+  margin-bottom: 8px;
+}
+
+.device-card p {
+  color: var(--text2);
+  margin-bottom: 18px;
+}
+
+.device-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.device-buttons button {
+  min-height: 52px;
+  border-radius: 14px;
   border: 1px solid var(--border);
-  overflow: hidden;
-  animation: modalEntry 0.2s ease-out;
+  background: #f8fbfd;
+  color: var(--text);
+  font-weight: 800;
+  font-family: "IBM Plex Sans", sans-serif;
+  cursor: pointer;
 }
-@keyframes modalEntry { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-.modal-header { background: var(--bg); padding: 16px 20px; border-bottom: 1px solid var(--border); }
-.details-title { font-size: 16px; font-weight: 700; color: var(--text); }
-.details-subtitle { font-size: 12px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
-
-.modal-body { padding: 20px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; }
-.form-control { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; color: var(--text); }
-.form-control:focus { outline: none; border-color: var(--cm-blue); }
-
-.details-actions { padding: 12px 20px; background: var(--bg); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
-
-/* ── UNDO TOAST NOTIFICATION ── */
-.undo-toast {
-  position: fixed;
-  bottom: 24px; right: 24px;
-  background: #2c3e50;
-  color: #fff;
-  padding: 14px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  z-index: 90;
-  transform: translateY(150%);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.device-buttons button.primary {
+  background: linear-gradient(135deg, var(--cm-blue), var(--cm-blue2));
+  color: white;
+  border-color: var(--cm-blue);
 }
-.undo-toast.show { transform: translateY(0); }
-.undo-msg { font-weight: 600; font-size: 13px; }
-.undo-sub { font-size: 11px; color: var(--text3); }
-.btn-undo { background: var(--cm-orange); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; }
 
-/* ── ARCHITECTURE LOGS DATAGRID ── */
-.audit-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.audit-table th { background: var(--bg); text-align: left; padding: 8px; font-weight: 600; border-bottom: 1px solid var(--border); }
-.audit-table td { padding: 8px; border-bottom: 1px solid var(--border2); vertical-align: top; }
-
-/* ── LOADING OVERLAY LAYER ── */
-.loading-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.7); backdrop-filter: blur(2px);
-  z-index: 1000; display: flex; align-items: center; justify-content: center;
-  font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--cm-blue);
+body.mode-ipad .main {
+  padding: 16px 12px 40px;
 }
+
+body.mode-ipad .topbar {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+body.mode-ipad .week-tab {
+  padding: 12px 18px;
+  font-size: 13px;
+}
+
+body.mode-ipad table {
+  min-width: 900px;
+}
+
+body.mode-ipad .status-cell {
+  min-width: 128px;
+  padding: 12px 8px;
+}
+
+body.mode-ipad .status-badge {
+  font-size: 12px;
+  padding: 7px 11px;
+}
+
+body.mode-ipad .team-cell {
+  min-width: 215px;
+}
+
+body.mode-ipad .details-card {
+  max-width: min(760px, calc(100vw - 28px));
+}
+
+body.mode-iphone .topbar {
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.mode-iphone .topbar-left,
+body.mode-iphone .topbar-right {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+body.mode-iphone .logo-text {
+  display: block;
+  font-size: 13px;
+}
+
+body.mode-iphone .main {
+  padding: 12px 0 36px;
+}
+
+body.mode-iphone .week-title {
+  font-size: 18px;
+  padding-left: 10px;
+}
+
+body.mode-iphone .sheet-subtitle,
+body.mode-iphone .week-meta {
+  padding-left: 10px;
+}
+
+body.mode-iphone table {
+  min-width: 760px;
+}
+
+body.mode-iphone .grid-wrap {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+
+body.mode-iphone .status-cell {
+  min-width: 118px;
+  padding: 10px 6px;
+}
+
+body.mode-iphone .details-modal {
+  padding: 10px;
+  align-items: flex-start;
+}
+
+body.mode-iphone .details-card {
+  width: calc(100vw - 20px) !important;
+  max-width: calc(100vw - 20px) !important;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+body.mode-iphone .jobs-grid {
+  grid-template-columns: 1fr;
+}
+
+body.mode-iphone .countdown-toast,
+body.mode-iphone .undo-toast {
+  left: 10px;
+  right: 10px;
+  bottom: 12px;
+}
+
 </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay">
-  <div>🔄 SYNCHRONIZING REALTIME MATRIX STORAGE...</div>
+<!-- ── TEST BANNER ─────────────────────────────────────────────────────────── -->
+<div class="test-banner">
+  ⚠ TEST ENVIRONMENT &nbsp;|&nbsp; Writes → cmh_availability_TEST &nbsp;|&nbsp; Live sheet data is read-only &nbsp;|&nbsp;
+  <span>Safe to experiment — nothing touches the live schedule</span>
 </div>
 
-<div class="sandbox-banner">
-  🧪 SANDBOX SIMULATION WORKSPACE — COMPLIANT WITH CM HEATING TRAINING PROTOCOLS
+
+<div class="test-banner">
+  
+  <span></span>
 </div>
 
-<header class="app-header">
-  <div class="brand-block">
-    <div class="brand-logo">CM Heating <span>Availability Matrix</span></div>
-    <div class="week-controls">
-      <button class="btn-week" onclick="changeWeek(-1)">◀ Prev Week</button>
-      <div class="week-label" id="currentWeekDisplay">Loading engine...</div>
-      <button class="btn-week" onclick="changeWeek(1)">Next Week ▶</button>
+<div class="topbar">
+  <div class="topbar-left">
+    <img class="logo-img" src="cm-logo.png" alt="CM Heating" />
+    <div class="logo-text">Install <span>Availability</span></div>
+    <div class="divider-v"></div>
+    <div class="meta-pill" id="todayPill">—</div>
+    <div class="meta-pill" id="connBadge">○ CONNECTING…</div>
+  </div>
+  <div class="topbar-right">
+    <div id="savingBadge"><div class="spinner"></div>&nbsp;Saving…</div>
+    <button class="btn" onclick="window.location.href='index.html'">← HCA Tools</button>
+    <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN / HCA EDIT</button>
+    <button class="btn" onclick="window.location.href='audit.html'">AUDIT LOGS</button>
+  </div>
+</div>
+
+<div class="weeknav" id="weeknav"></div>
+<div class="main" id="main"><div class="empty-state">Connecting to Firebase schedule…</div></div>
+
+<!-- STATUS MODAL -->
+<div class="details-modal" id="statusModal">
+  <div class="details-card compact-status-card">
+    <div class="details-title">Choose Install Status</div>
+    <div class="details-subtitle">Match what you'd enter in the Google Sheet.</div>
+    <div class="field-label">Install Availability</div>
+    <select class="field-control status-select-large" id="installTypeSelect">
+      <option value="fullDay">Full Day Install — FILLED</option>
+      <option value="amOnly">Morning Install Only — HALF DAY AM</option>
+      <option value="pmOnly">Afternoon Install Only — HALF DAY PM</option>
+      <option value="amPm">AM + PM Installs — FILLED</option>
+      <option value="open">Full Day Open — FULL DAY AVAIL</option>
+      <option value="hold">Hold</option>
+      <option value="teamOff">Team Off — TEAM OFF</option>
+      <option value="notAvailable">Not Available — NOT AVAILABLE</option>
+    </select>
+    <div class="status-help">
+      <div><strong>HALF DAY AM</strong> — morning slot sold, afternoon still open.</div>
+      <div><strong>HALF DAY PM</strong> — afternoon slot sold, morning still open.</div>
+      <div><strong>AM + PM</strong> — two separate sold jobs, fully booked.</div>
+    </div>
+    <div class="details-actions">
+      <button class="btn" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-move" id="btnMoveJob" style="display:none" onclick="startMoveJob()">⇄ Move to Another Crew</button>
+      <button class="btn btn-admin active" onclick="continueStatusChoice()">Continue →</button>
     </div>
   </div>
+</div>
 
-  <div class="admin-actions">
-    <button class="btn btn-secondary" onclick="openAuditModal()">📋 Audit Logs</button>
-    <button class="btn btn-admin" onclick="openSwapModal()">🔄 Swap Crews</button>
-    <button class="btn btn-admin" onclick="openMassOpenModal()">⚡ Mass Populate Open</button>
-  </div>
-
-  <div class="security-card">
-    <div class="html-login-wrap" id="loginSection">
-      <input type="password" class="pin-input" id="pinInput" placeholder="PIN" maxlength="4" onkeydown="if(event.key==='Enter') handleLogin()" />
-      <button class="btn btn-primary" style="padding:6px 12px;" onclick="handleLogin()">Login</button>
-    </div>
-    <div class="user-profile" id="userProfileSection">
-      <div class="profile-meta">
-        <div class="profile-name" id="profileName">—</div>
-        <button class="btn-logout" onclick="handleLogout()">Disconnect Session</button>
-      </div>
-      <div class="profile-role" id="profileRole">HCA</div>
-    </div>
-  </div>
-</header>
-
-<main class="main-content" id="gridContainer">
-  </main>
-
+<!-- DETAILS MODAL -->
 <div class="details-modal" id="detailsModal">
-  <div class="details-card">
-    <div class="modal-header">
-      <div class="details-title" id="modalCrewName">Crew Name</div>
-      <div class="details-subtitle" id="modalDayName">Monday</div>
+  <div class="details-card" style="max-width: min(980px, calc(100vw - 20px)); width: min(980px, calc(100vw - 20px));">
+    <div class="details-title">Sold Project Details</div>
+    <div class="details-subtitle">Enter HCA and homeowner for each sold slot.</div>
+    <div class="field-label">Sold Schedule Type</div>
+    <select class="field-control" id="soldTypeSelect" onchange="setJobPanelVisibility()">
+      <option value="fullDay">Full Day Install</option>
+      <option value="amOnly">Morning Install Only</option>
+      <option value="pmOnly">Afternoon Install Only</option>
+      <option value="amPm">AM + PM Installs</option>
+    </select>
+    <div class="job-panel" id="fullDayJobPanel">
+      <div class="job-panel-title">Full Day Project</div>
+      <div class="field-label">HCA</div>
+      <select class="field-control" id="fullDayHcaSelect">
+        <option value="">— Select HCA —</option>
+        <option>Amber</option><option>Chester</option><option>Davis</option><option>Jay</option>
+        <option>Joe</option><option>Joseph</option><option>Kyle</option><option>Samir</option><option>Trevor</option>
+      </select>
+      <div class="field-label">Homeowner Name</div>
+      <input class="field-control" id="fullDayProjectInput" placeholder="Enter homeowner name" />
+      <div class="field-label">CaaS / Comfort as a Service?</div>
+      <select class="field-control" id="fullDayCaasSelect">
+        <option value="false">No — COD / Standard</option>
+        <option value="true">Yes — CaaS</option>
+      </select>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Operational Status Assignment</label>
-        <select class="form-control" id="statusSelect" onchange="toggleModalFields()">
-          <option value="OPEN">🟢 OPEN (Available for Full or Half Day)</option>
-          <option value="FULL_DAY_FILLED">🔵 FULL DAY INSTALL — FILLED</option>
-          <option value="AM_FILLED_PM_OPEN">🟡 AM FILLED / PM OPEN</option>
-          <option value="PM_FILLED_AM_OPEN">🟣 PM FILLED / AM OPEN</option>
-          <option value="TEAM_OFF">🔴 TEAM OFF (Unscheduled / Sick / Holiday)</option>
-          <option value="HOLD">🟠 HOLD (Restricted Admin Lockout)</option>
+    <div class="jobs-grid">
+      <div class="job-panel" id="amJobPanel">
+        <div class="job-panel-title">Morning Install</div>
+        <div class="field-label">HCA</div>
+        <select class="field-control" id="amHcaSelect">
+          <option value="">— Select HCA —</option>
+          <option>Amber</option><option>Chester</option><option>Davis</option><option>Jay</option>
+          <option>Joe</option><option>Joseph</option><option>Kyle</option><option>Samir</option><option>Trevor</option>
+        </select>
+        <div class="field-label">Homeowner Name</div>
+        <input class="field-control" id="amProjectInput" placeholder="Enter homeowner name" />
+        <div class="field-label">CaaS?</div>
+        <select class="field-control" id="amCaasSelect">
+          <option value="false">No — COD / Standard</option>
+          <option value="true">Yes — CaaS</option>
         </select>
       </div>
-      <div id="modalDetailsGroup">
-        <div class="form-group">
-          <label>Job Tracking Number <span style="color:var(--danger)">*</span></label>
-          <input type="text" class="form-control" id="jobNumInput" placeholder="e.g. 883192A" />
-        </div>
-        <div class="form-group">
-          <label>Strategic Dispatch Notes / Scope</label>
-          <textarea class="form-control" id="notesInput" rows="3" placeholder="Add equipment metrics, job sizes, or location limits..."></textarea>
-        </div>
+      <div class="job-panel" id="pmJobPanel">
+        <div class="job-panel-title">Afternoon Install</div>
+        <div class="field-label">HCA</div>
+        <select class="field-control" id="pmHcaSelect">
+          <option value="">— Select HCA —</option>
+          <option>Amber</option><option>Chester</option><option>Davis</option><option>Jay</option>
+          <option>Joe</option><option>Joseph</option><option>Kyle</option><option>Samir</option><option>Trevor</option>
+        </select>
+        <div class="field-label">Homeowner Name</div>
+        <input class="field-control" id="pmProjectInput" placeholder="Enter homeowner name" />
+        <div class="field-label">CaaS?</div>
+        <select class="field-control" id="pmCaasSelect">
+          <option value="false">No — COD / Standard</option>
+          <option value="true">Yes — CaaS</option>
+        </select>
+      </div>
+      <div class="details-actions" style="grid-column: 1 / -1;">
+        <button class="btn" onclick="closeDetailsModal()">Cancel</button>
+        <button class="btn btn-admin active" onclick="saveDetailsModal()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE PICKER MODAL -->
+<div class="details-modal" id="movePickerModal">
+  <div class="details-card">
+    <div class="details-title">⇄ Move Job — Pick a Target Crew</div>
+    <div class="move-source-bar"><strong>Moving:</strong> <span id="moveSummary">—</span></div>
+    <div class="move-instructions">
+      <span class="dot-green">■</span> Green = open/off slot (move here) &nbsp;·&nbsp;
+      <span style="color:var(--cm-blue);font-weight:800;">■</span> Blue = sold slot (swap) &nbsp;·&nbsp;
+      <span class="dot-orange">■</span> Orange = source &nbsp;·&nbsp; Faded = blocked
+    </div>
+    <div class="move-week-tabs" id="moveWeekTabs"></div>
+    <div class="cross-week-note" id="crossWeekNote" style="display:none">⚠ Cross-week move — source slot becomes FULL DAY AVAIL. No swap.</div>
+    <div id="movePickerGrid"></div>
+    <div class="details-actions" style="margin-top: 12px;">
+      <button class="btn" onclick="closeMovePickerModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN WELCOME MODAL -->
+<div class="details-modal" id="adminWelcomeModal">
+  <div class="details-card compact-status-card" style="max-width:460px;">
+    <div class="details-title">👋 Welcome, Admin</div>
+    <div class="details-subtitle">Quick reference for edit mode.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div style="padding:10px 12px;border-radius:8px;background:rgba(58,170,53,.08);border:1px solid rgba(58,170,53,.25);">
+        <div style="font-weight:800;color:#168a20;margin-bottom:2px;font-size:13px;">⇄ Move / Swap Jobs</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;">Click any sold or open cell → use <strong>Move to Another Crew</strong> to reassign to a different crew or day. Click a blue (sold) cell to swap two jobs.</div>
+      </div>
+      <div style="padding:10px 12px;border-radius:8px;background:rgba(0,90,169,.06);border:1px solid rgba(0,90,169,.18);">
+        <div style="font-weight:800;color:var(--cm-blue);margin-bottom:2px;font-size:13px;">✏ Edit Any Cell</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;">Click any cell to change status, assign HCA, enter homeowner name, or mark TEAM OFF / HOLD / FULL DAY AVAIL.</div>
+      </div>
+      <div style="padding:10px 12px;border-radius:8px;background:rgba(245,130,32,.06);border:1px solid rgba(245,130,32,.20);">
+        <div style="font-weight:800;color:var(--cm-orange);margin-bottom:2px;font-size:13px;">↩ Undo Window</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;">After any move or swap, a 30-second undo window appears in the bottom-left corner. All changes are logged in Audit Logs.</div>
       </div>
     </div>
     <div class="details-actions">
-      <button class="btn btn-secondary" onclick="closeDetailsModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveDetails()">Save Changes</button>
+      <button class="btn btn-admin active" onclick="closeAdminWelcome()">Got it — Let's Go</button>
     </div>
   </div>
 </div>
 
-<div class="details-modal" id="auditModal">
-  <div class="details-card" style="max-width:800px; width:90%;">
-    <div class="modal-header">
-      <div class="details-title">System Audit Log Trace</div>
-      <div class="details-subtitle">Realtime transaction records matching active partition</div>
-    </div>
-    <div class="modal-body" style="max-height:400px; overflow-y:auto; padding:0;">
-      <table class="audit-table">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Operator</th>
-            <th>Resource Target</th>
-            <th>Transition State</th>
-            <th>Job Identifier</th>
-          </tr>
-        </thead>
-        <tbody id="auditLogBody">
-          </tbody>
-      </table>
-    </div>
-    <div class="details-actions">
-      <button class="btn btn-primary" onclick="closeAuditModal()">Close Trace View</button>
-    </div>
+<!-- COUNTDOWN TOAST -->
+<div class="countdown-toast" id="countdownToast">
+  <div class="countdown-icon">⏱</div>
+  <div>
+    <div class="countdown-msg">Finish your selection</div>
+    <div class="countdown-time" id="countdownTime">3:00</div>
   </div>
 </div>
 
-<div class="details-modal" id="swapModal">
-  <div class="details-card" style="max-width:400px;">
-    <div class="modal-header">
-      <div class="details-title">🔄 Execute Global Data Migration Swapping</div>
-      <div class="details-subtitle">Swaps all calendar values between two crews for this week index</div>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Source Vector (Crew A)</label>
-        <select class="form-control" id="swapFromSelect"></select>
-      </div>
-      <div class="form-group">
-        <label>Destination Vector (Crew B)</label>
-        <select class="form-control" id="swapToSelect"></select>
-      </div>
-      <p style="font-size:11px;color:var(--text3);line-height:1.4;">Warning: Executing this function completely inverses the operational positions of both selected crews across all tracking fields instantly.</p>
-    </div>
-    <div class="details-actions">
-      <button class="btn btn-secondary" onclick="closeSwapModal()">Cancel</button>
-      <button class="btn btn-admin" style="display:inline-flex;" onclick="executeCrewSwap()">Confirm Swap</button>
-    </div>
-  </div>
-</div>
-
-<div class="details-modal" id="massOpenModal">
-  <div class="details-card" style="max-width:400px;">
-    <div class="modal-header">
-      <div class="details-title">⚡ Mass Populate Architecture</div>
-      <div class="details-subtitle">Initialize raw state records</div>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5;">This updates empty blocks to default <strong>OPEN</strong> slots for the week. It will skip crews currently defined with "Team Off" or "Hold" rows.</p>
-    </div>
-    <div class="details-actions">
-      <button class="btn btn-secondary" onclick="closeMassOpenModal()">Cancel Matrix Build</button>
-      <button class="btn btn-admin" style="display:inline-flex;" onclick="executeMassOpen()">Initialize Matrix</button>
-    </div>
-  </div>
-</div>
-
+<!-- NO SLOTS MODAL -->
 <div class="details-modal" id="noSlotsModal">
-  <div class="details-card" style="max-width:400px;">
-    <div class="modal-header">
-      <div class="details-title">❌ Migration Path Exception Blocked</div>
-    </div>
-    <div class="modal-body" style="font-size:13px;color:var(--text2);line-height:1.6;">
+  <div class="details-card compact-status-card" style="max-width:400px;">
+    <div class="details-title">⚠ No Available Slots</div>
+    <div class="details-subtitle">Board is fully booked.</div>
+    <div style="padding:12px;border-radius:8px;background:rgba(192,0,0,.06);border:1px solid rgba(192,0,0,.18);margin-bottom:14px;font-size:13px;color:var(--text2);line-height:1.6;">
       No open, team off, or swappable slots this week. Try switching to a different week, or manually open a slot first.
     </div>
     <div class="details-actions">
@@ -1121,6 +1670,7 @@ body.admin-mode .btn-admin { display: inline-flex; }
   </div>
 </div>
 
+<!-- UNDO TOAST -->
 <div class="undo-toast" id="undoToast">
   <div>
     <div class="undo-msg">✓ Move complete</div>
@@ -1129,19 +1679,78 @@ body.admin-mode .btn-admin { display: inline-flex; }
   <button class="btn-undo" onclick="executeUndo()">↩ Undo</button>
 </div>
 
+<!-- HOLD BLOCKED MODAL -->
 <div class="details-modal" id="holdBlockedModal">
   <div class="details-card compact-status-card" style="max-width:400px;">
     <div class="details-title">🔒 Admin Approval Required</div>
     <div class="details-subtitle">HOLD is restricted to Admins only.</div>
     <div style="padding:12px;border-radius:8px;background:rgba(245,130,32,.08);border:1px solid rgba(245,130,32,.25);margin-bottom:14px;font-size:13px;color:var(--text2);line-height:1.7;">
       Only an <strong style="color:var(--cm-blue);">Admin</strong> can place a slot on <strong>Hold</strong>.<br>
-      Get approval from <strong style="color:var(--cm-orange);">Geoff</strong> or another administrator to manually lock down this line.
+      Get approval from <strong style="color:var(--cm-orange);">Amy</strong> or <strong style="color:var(--cm-orange);">Geoff</strong> before requesting this status.
     </div>
     <div class="details-actions">
-      <button class="btn btn-secondary" onclick="closeHoldBlockedModal()">Close</button>
+      <button class="btn btn-admin active" onclick="closeHoldBlocked()">Got it</button>
     </div>
   </div>
 </div>
+
+
+<!-- ── DEVICE CHOICE MODAL ─────────────────────────────────────────────────── -->
+<div class="device-choice" id="deviceChoice">
+  <div class="device-card">
+    <h2>Choose Your View</h2>
+    <p>This helps optimize the schedule layout for your screen.</p>
+    <div class="device-buttons">
+      <button class="primary" onclick="setDeviceMode('ipad')">iPad / Tablet View</button>
+      <button onclick="setDeviceMode('iphone')">iPhone / Phone View</button>
+      <button onclick="setDeviceMode('desktop')">Desktop View</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+(function deviceModeInit(){
+  const saved = localStorage.getItem("hcaDeviceMode");
+  const ua = navigator.userAgent || "";
+  const isIPad = /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isIPhone = /iPhone|iPod/.test(ua);
+  const isSmall = window.innerWidth < 700;
+
+  function apply(mode) {
+    document.body.classList.remove("mode-ipad", "mode-iphone", "mode-desktop");
+    document.body.classList.add("mode-" + mode);
+  }
+
+  window.setDeviceMode = function(mode) {
+    localStorage.setItem("hcaDeviceMode", mode);
+    apply(mode);
+    const modal = document.getElementById("deviceChoice");
+    if (modal) modal.classList.remove("visible");
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    if (saved) {
+      apply(saved);
+      return;
+    }
+
+    if (isIPad) {
+      apply("ipad");
+      return;
+    }
+
+    if (isIPhone || isSmall) {
+      apply("iphone");
+      const modal = document.getElementById("deviceChoice");
+      if (modal) modal.classList.add("visible");
+      return;
+    }
+
+    apply("desktop");
+  });
+})();
+</script>
 
 </body>
 </html>
