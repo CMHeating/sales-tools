@@ -377,14 +377,7 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
       <div class="bignum" id="cmsrp">—</div>
       <div class="subl">retail price (MSRP)</div>
       <div style="margin-top:10px">
-        <div class="drow"><span class="dm">Material cost</span><span id="cmat">—</span></div>
-        <div class="drow"><span class="dm">Labor cost</span><span id="clab">—</span></div>
-        <div class="drow"><span class="dm">Permit</span><span id="cpmt">—</span></div>
-        <div class="drow"><span class="dm">Total job cost</span><span id="ctot">—</span></div>
-        <div class="drow"><span class="dm">Gross margin (after spiff)</span><span id="cgm" class="pos">—</span></div>
-        <div class="drow"><span class="dm">HCA spiff</span><span id="cspiff" class="warn">—</span></div>
       </div>
-      <div class="note">Filters, IAQ, maintenance à la carte after COD sale. Electrical permit $129.99 additional (not in cost calc).</div>
     </div>
   </div>
 
@@ -552,12 +545,8 @@ function render(){
   document.getElementById("rtot").textContent=F(tot96)+" (96 pmts) · "+F(tot180)+" (yr 15)";
   document.getElementById("rval").textContent="+"+F(rval)+" vs buy-only over 15 yrs";
   document.getElementById("cmsrp").textContent=F(msrp);
-  document.getElementById("cmat").textContent=F(mat);
-  document.getElementById("clab").textContent=F(CP.lab);
-  document.getElementById("cpmt").textContent=F(pmt)+(pmt===100?" (furnace)":" (mech.)");
-  document.getElementById("ctot").textContent=F(jobcost);
-  document.getElementById("cgm").textContent=gm.toFixed(1)+"%";
-  document.getElementById("cspiff").textContent=CP.flatSpiff?"$250 flat":F(spiff)+" (12%)";
+  // Internal COD calculations hidden in homeowner-facing mode.
+
   updateQuoteSummary();
 }
 
