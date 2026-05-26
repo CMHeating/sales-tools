@@ -1306,6 +1306,208 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   .week-title { font-size: 17px; }
   .divider-v { display: none; }
 }
+
+/* ── DEVICE MODE OPTIMIZATION ─────────────────────────────────────────────── */
+.device-choice {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 47, 69, .55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.device-choice.visible { display: flex; }
+
+.device-card {
+  background: white;
+  border-radius: 22px;
+  padding: 22px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 70px rgba(0,0,0,.28);
+  text-align: center;
+}
+
+.device-card h2 {
+  color: var(--cm-blue);
+  margin-bottom: 8px;
+}
+
+.device-card p {
+  color: var(--text2);
+  margin-bottom: 18px;
+}
+
+.device-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.device-buttons button {
+  min-height: 52px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #f8fbfd;
+  color: var(--text);
+  font-weight: 800;
+  font-family: "IBM Plex Sans", sans-serif;
+  cursor: pointer;
+}
+
+.device-buttons button.primary {
+  background: linear-gradient(135deg, var(--cm-blue), var(--cm-blue2));
+  color: white;
+  border-color: var(--cm-blue);
+}
+
+body.mode-ipad .main {
+  padding: 16px 12px 40px;
+}
+
+body.mode-ipad .topbar {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+body.mode-ipad .week-tab {
+  padding: 12px 18px;
+  font-size: 13px;
+}
+
+body.mode-ipad table {
+  min-width: 900px;
+}
+
+body.mode-ipad .status-cell {
+  min-width: 128px;
+  padding: 12px 8px;
+}
+
+body.mode-ipad .status-badge {
+  font-size: 12px;
+  padding: 7px 11px;
+}
+
+body.mode-ipad .team-cell {
+  min-width: 215px;
+}
+
+body.mode-ipad .details-card {
+  max-width: min(760px, calc(100vw - 28px));
+}
+
+body.mode-iphone .topbar {
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.mode-iphone .topbar-left,
+body.mode-iphone .topbar-right {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+body.mode-iphone .logo-text {
+  display: block;
+  font-size: 13px;
+}
+
+body.mode-iphone .main {
+  padding: 12px 0 36px;
+}
+
+body.mode-iphone .week-title {
+  font-size: 18px;
+  padding-left: 10px;
+}
+
+body.mode-iphone .sheet-subtitle,
+body.mode-iphone .week-meta {
+  padding-left: 10px;
+}
+
+body.mode-iphone table {
+  min-width: 760px;
+}
+
+body.mode-iphone .grid-wrap {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+
+body.mode-iphone .status-cell {
+  min-width: 118px;
+  padding: 10px 6px;
+}
+
+body.mode-iphone .details-modal {
+  padding: 10px;
+  align-items: flex-start;
+}
+
+body.mode-iphone .details-card {
+  width: calc(100vw - 20px) !important;
+  max-width: calc(100vw - 20px) !important;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+body.mode-iphone .jobs-grid {
+  grid-template-columns: 1fr;
+}
+
+body.mode-iphone .countdown-toast,
+body.mode-iphone .undo-toast {
+  left: 10px;
+  right: 10px;
+  bottom: 12px;
+}
+
+
+/* ── UNIFORM DAY COLUMN WIDTH FIX ─────────────────────────────────────────── */
+
+.schedule-grid,
+.schedule-grid table {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+.schedule-grid th,
+.schedule-grid td,
+thead th,
+tbody td.status-cell {
+  width: 12.5% !important;
+  min-width: 12.5% !important;
+  max-width: 12.5% !important;
+}
+
+.team-cell,
+.team-header {
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: 220px !important;
+}
+
+thead th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weekday-label,
+.date-small {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
 </style>
 </head>
 <body>
@@ -1522,6 +1724,64 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     </div>
   </div>
 </div>
+
+
+<!-- ── DEVICE CHOICE MODAL ─────────────────────────────────────────────────── -->
+<div class="device-choice" id="deviceChoice">
+  <div class="device-card">
+    <h2>Choose Your View</h2>
+    <p>This helps optimize the schedule layout for your screen.</p>
+    <div class="device-buttons">
+      <button class="primary" onclick="setDeviceMode('ipad')">iPad / Tablet View</button>
+      <button onclick="setDeviceMode('iphone')">iPhone / Phone View</button>
+      <button onclick="setDeviceMode('desktop')">Desktop View</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+(function deviceModeInit(){
+  const saved = localStorage.getItem("hcaDeviceMode");
+  const ua = navigator.userAgent || "";
+  const isIPad = /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isIPhone = /iPhone|iPod/.test(ua);
+  const isSmall = window.innerWidth < 700;
+
+  function apply(mode) {
+    document.body.classList.remove("mode-ipad", "mode-iphone", "mode-desktop");
+    document.body.classList.add("mode-" + mode);
+  }
+
+  window.setDeviceMode = function(mode) {
+    localStorage.setItem("hcaDeviceMode", mode);
+    apply(mode);
+    const modal = document.getElementById("deviceChoice");
+    if (modal) modal.classList.remove("visible");
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    if (saved) {
+      apply(saved);
+      return;
+    }
+
+    if (isIPad) {
+      apply("ipad");
+      return;
+    }
+
+    if (isIPhone || isSmall) {
+      apply("iphone");
+      const modal = document.getElementById("deviceChoice");
+      if (modal) modal.classList.add("visible");
+      return;
+    }
+
+    apply("desktop");
+  });
+})();
+</script>
 
 </body>
 </html>
