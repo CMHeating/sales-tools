@@ -1,245 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CM Heating — Install Availability Training Guide</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Install Availability Training</title>
 <style>
-:root {
-  --bg: #f0f4f8;
-  --surface: #ffffff;
-  --border: #c8d6e0;
-  --border2: #dde7ed;
-  --text: #1a2b38;
-  --text2: #4a6070;
-  --text3: #7a9aaa;
-  --cm-blue: #005aa9;
-  --cm-orange: #f58220;
-  --cm-green: #3aaa35;
-  --danger: #c00000;
+:root{
+  --blue:#005aa9;
+  --orange:#f58220;
+  --green:#3aaa35;
+  --ink:#10324a;
+  --muted:#5f7482;
+  --line:#d9e5ec;
+  --soft:#f3f8fb;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; font-size: 15px; line-height: 1.6; }
-
-/* ── TOP BAR ─────────────────────────────────────────────────────────────────── */
-.topbar {
-  background: var(--cm-blue);
-  color: #fff;
-  padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:linear-gradient(180deg,#f7fbfd,#edf4f8);
+  min-height:100vh;
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
 }
-.topbar-brand { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
-.topbar-brand span { color: var(--cm-orange); }
-.topbar-badge { font-family: "IBM Plex Mono", monospace; font-size: 12px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: 500; }
-
-/* ── LAYOUT CONTAINER ────────────────────────────────────────────────────────── */
-.layout { display: flex; max-width: 1400px; margin: 0 auto; padding: 24px; gap: 24px; }
-
-/* ── NAVIGATION SIDEBAR ───────────────────────────────────────────────────────── */
-.sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-.card-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-
-.nav-list { list-style: none; }
-.nav-item { margin-bottom: 4px; }
-.nav-link { display: block; padding: 8px 12px; border-radius: 6px; color: var(--text); text-decoration: none; font-weight: 500; transition: all 0.15s; }
-.nav-link:hover { background: var(--bg); color: var(--cm-blue); }
-.nav-link.active { background: #e0ecf8; color: var(--cm-blue); font-weight: 600; }
-
-/* ── CONTENT AREA ────────────────────────────────────────────────────────────── */
-.content { flex-grow: 1; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
-h1 { font-size: 28px; font-weight: 800; color: var(--cm-blue); letter-spacing: -0.5px; }
-p.lead { font-size: 17px; color: var(--text2); margin-top: -8px; }
-
-h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 12px; border-bottom: 2px solid var(--border2); padding-bottom: 6px; }
-
-/* CALLOUT BLOCKS */
-.callout { padding: 16px; border-radius: 8px; border-left: 4px solid #fff; display: flex; gap: 14px; align-items: flex-start; line-height: 1.5; }
-.callout-icon { font-size: 20px; line-height: 1; }
-.callout.info { background: #e6f4ff; border-color: #1890ff; color: #003a8c; }
-.callout.warn { background: #fff7e6; border-color: #ffa940; color: #873800; }
-.callout.tip { background: #f6ffed; border-color: #52c41a; color: #237804; }
-
-/* SCENARIOS */
-.scenario { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative; overflow: hidden; }
-.scenario::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--border); }
-.scenario-label { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 600; text-transform: uppercase; background: var(--bg); padding: 2px 8px; border-radius: 4px; color: var(--text2); margin-bottom: 8px; }
-.scenario-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
-.scenario-steps { padding-left: 20px; color: var(--text2); }
-.scenario-steps li { margin-bottom: 8px; }
-
-code { font-family: "IBM Plex Mono", monospace; font-size: 13px; background: var(--bg); padding: 2px 6px; border-radius: 4px; color: var(--danger); font-weight: 500; }
+.card{
+  width:100%;
+  max-width:520px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:26px;
+  box-shadow:0 20px 60px rgba(15,47,69,.14);
+}
+.logo{
+  font-weight:900;
+  color:var(--blue);
+  font-size:15px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  margin-bottom:14px;
+}
+.logo span{color:var(--orange)}
+h1{
+  font-size:28px;
+  line-height:1.1;
+  margin-bottom:10px;
+}
+p{
+  color:var(--muted);
+  line-height:1.55;
+  margin-bottom:18px;
+}
+label{
+  display:block;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+select{
+  width:100%;
+  min-height:52px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px 12px;
+  font-size:16px;
+  background:#fff;
+  margin-bottom:16px;
+}
+.pinbox{
+  display:none;
+  background:var(--soft);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:18px;
+  margin:16px 0;
+}
+.pinbox.show{display:block}
+.pin-label{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  font-weight:900;
+}
+.pin{
+  font-size:38px;
+  font-weight:950;
+  letter-spacing:.18em;
+  color:var(--blue);
+  margin-top:6px;
+}
+.note{
+  font-size:13px;
+  color:var(--muted);
+  background:#fff;
+  border-left:4px solid var(--orange);
+  padding:10px 12px;
+  border-radius:10px;
+  margin-top:12px;
+}
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:20px;
+}
+button,a.btn{
+  flex:1;
+  min-width:180px;
+  min-height:48px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  padding:12px 16px;
+  font-weight:900;
+  cursor:pointer;
+  text-align:center;
+  text-decoration:none;
+  color:var(--ink);
+  background:#fff;
+}
+a.primary{
+  background:var(--blue);
+  color:#fff;
+  border-color:var(--blue);
+}
+.small{
+  margin-top:16px;
+  font-size:12px;
+  color:#7c919e;
+}
 </style>
 </head>
 <body>
+  <main class="card">
+    <div class="logo">CM Heating <span>Training</span></div>
+    <h1>Install Availability Admin Training</h1>
+    <p>Select your name to view only your PIN. Use this for training and install board access. Do not share or forward your PIN.</p>
 
-<div class="topbar">
-  <div class="topbar-brand">CM Heating <span>Internal Documentation</span></div>
-  <div class="topbar-badge">SYSTEM VERSION 2.0 (TEST CONTEXT)</div>
-</div>
+    <label for="person">Select your name</label>
+    <select id="person" onchange="showPin()">
+      <option value="">— Select —</option>
+      <option value="5613">Geoff</option>
+      <option value="0762">Amy</option>
+      <option value="1877">Laura</option>
+      <option value="0082">Jazryn</option>
+      <option value="6474">Sabrina</option>
+      <option value="9549">Lily</option>
+      <option value="3313">Jen</option>
+      <option value="2492">Brittny</option>
+    </select>
 
-<div class="layout">
-  
-  <div class="sidebar">
-    <div class="card">
-      <div class="card-title">🗺 Documents</div>
-      <ul class="nav-list">
-        <li class="nav-item"><a class="nav-link active" href="#overview">Training Guide Index</a></li>
-        <li class="nav-item"><a class="nav-link" href="#architecture">Realtime Core Rules</a></li>
-        <li class="nav-item"><a class="nav-link" href="#scenarios">HCA Hands-on Modules</a></li>
-      </ul>
-    </div>
-    
-    <div class="card">
-      <div class="card-title">🧪 Workspace Link</div>
-      <p style="font-size:13px; color:var(--text2); margin-bottom:12px;">Launch the isolated sandbox scheduler application:</p>
-      <a href="install-availability-test.html" target="_blank" class="nav-link" style="background:var(--cm-orange); color:#fff; text-align:center; font-weight:700;">Open Test Board ↗</a>
-    </div>
-  </div>
+    <section class="pinbox" id="pinbox">
+      <div class="pin-label">Your PIN</div>
+      <div class="pin" id="pin">----</div>
+      <div class="note">This page shows only the selected user’s PIN. The install board itself will mask PIN handling and audit logs should not expose PINs.</div>
+    </section>
 
-  <div class="content">
-    
-    <div>
-      <h1>Install Availability System</h1>
-      <p class="lead">Standard Operating Procedure & Training Matrix for Admin and HCA Teams</p>
+    <div class="actions">
+      <a class="btn primary" href="https://install-availability-tracker.web.app/">Open Install Board</a>
+      <a class="btn" href="https://cmheating.github.io/caas-calculator/index.html">HCA Toolkit</a>
     </div>
 
-    <div id="personalizedWelcome" class="callout info" style="display: none; margin-bottom: 4px;">
-      <div class="callout-icon">👤</div>
-      <div>
-        <strong>Welcome, <span id="userGreetingName">Team Member</span>!</strong><br>
-        Your assigned secure sandbox simulation code is verified. Use PIN 
-        <code class="pin-code" id="userPersonalPin" style="background:#fff; border:1px solid #1890ff; padding:2px 6px; border-radius:4px; font-weight:700; font-size:14px; margin-left:4px;">----</code> 
-        to execute today's test environment training scenarios.
-      </div>
-    </div>
-
-    <div id="missingPinWarning" class="callout warn" style="margin-bottom: 4px;">
-      <div class="callout-icon">⚠️</div>
-      <div>
-        <strong>Secure Gateway Lockout Applied</strong><br>
-        PIN identity parameters are completely hidden from plain text view to prevent unauthorized access. Please access this system guide using the unique configuration link provided in your individual deployment email to automatically display your credentials.
-      </div>
-    </div>
-
-    <div class="callout info">
-      <div class="callout-icon">ℹ️</div>
-      <div><strong>Purpose of this System:</strong> This centralized dashboard eliminates text messages, phone calls, and spreadsheets by showing every installation crew's current availability in real-time. HCAs can book immediately without cross-checking, and Admins maintain master logistics instantly.</div>
-    </div>
-
-    <h2 id="architecture">Realtime Architectural Rules</h2>
-    <p style="color:var(--text2);">The system handles transactions concurrently to guarantee that schedule lines never experience race condition overwrites:</p>
-    
-    <div class="scenario">
-      <div class="scenario-title" style="margin-bottom:6px;">1. Realtime Row Synchronization</div>
-      <p style="color:var(--text2); font-size:14px;">The layout utilizes persistent active websocket event listeners. When an Admin shifts a resource slot or an HCA saves a new installation, the changes update instantly across every computer monitor currently viewing the board without refreshing.</p>
-    </div>
-
-    <div class="scenario">
-      <div class="scenario-title" style="margin-bottom:6px;">2. Concurrent Lock Mitigation</div>
-      <p style="color:var(--text2); font-size:14px;">The absolute fraction an HCA clicks into an individual calendar cell, the system registers a lock token in the cloud. If a second user clicks the same slot, they are greeted with an active alert stating the block is currently occupied. Locks automatically dissolve if the form is abandoned or closed.</p>
-    </div>
-
-    <h2 id="scenarios">HCA Training Scenarios (Practice Matrix)</h2>
-    <p style="color:var(--text2);">Open the test board file using the button in the sidebar and run through these modules step-by-step to build operational muscle-memory:</p>
-
-    <div class="scenario">
-      <div class="scenario-label">Scenario A — Admin</div>
-      <div class="scenario-title">Initializing the Week's Board Geometry</div>
-      <ul class="scenario-steps">
-        <li>Log into the test scheduler using an authorized Admin PIN.</li>
-        <li>Click the <strong>"⚡ Mass Populate Open"</strong> button in the top navigation panel.</li>
-        <li>The engine populates the current active matrix lines with default <code>OPEN</code> states, bypassing holiday or custom off-duty tracks.</li>
-      </ul>
-    </div>
-
-    <div class="scenario">
-      <div class="scenario-label">Scenario B — Admin</div>
-      <div class="scenario-title">Handling an Emergency Logistics Realignment (Swap)</div>
-      <ul class="scenario-steps">
-        <li>Click the orange <strong>"🔄 Swap Crews"</strong> tool action.</li>
-        <li>Select the primary constrained crew line as the source vector and a flexible crew as the target vector.</li>
-        <li>Confirm execution. The engine completely mirrors both profiles instantly while logging the data swap footprint to the audit trail.</li>
-      </ul>
-    </div>
-
-    <div class="scenario">
-      <div class="scenario-label">Scenario C — Admin</div>
-      <div class="scenario-title">Locking a Row for Special Projects (Hold)</div>
-      <ul class="scenario-steps">
-        <li>Click an open cell on any preferred line ➔ Choose the status status <code>HOLD</code>.</li>
-        <li>Click Save. The cell locks into an orange Admin blockout state. HCAs cannot click or manipulate this block.</li>
-      </ul>
-    </div>
-
-    <div class="scenario">
-      <div class="scenario-label">Scenario D — HCA</div>
-      <div class="scenario-title">Attempting an Unauthorized Admin Interaction</div>
-      <ul class="scenario-steps">
-        <li>Log out of Admin status, and authenticate using an authorized HCA PIN.</li>
-        <li>Click on a row designated with an active orange <code>HOLD</code> badge.</li>
-        <li>The system blocks your execution context, showing a notice requiring supervisor approval.</li>
-      </ul>
-    </div>
-
-    <div class="scenario">
-      <div class="scenario-label">Scenario E — HCA</div>
-      <div class="scenario-title">Marking a Newly Closed Deal as Sold</div>
-      <ul class="scenario-steps">
-        <li>Scan the workspace columns for a clean green <code>OPEN</code> cell matching your timeframe.</li>
-        <li>Click the open space ➔ Shift the dropdown assignment to <code>FULL DAY INSTALL — FILLED</code>.</li>
-        <li>Enter your mandatory tracking Job Number and any custom notes relative to equipment lines. Click Save.</li>
-      </ul>
-    </div>
-
-    <div class="scenario">
-      <div class="scenario-label">Scenario F — Admin</div>
-      <div class="scenario-title">Verifying Row Footprints and Changesets via Audits</div>
-      <ul class="scenario-steps">
-        <li>Click the <strong>"📋 Audit Logs"</strong> engine parameter inside the top navigation bar.</li>
-        <li>Review the transactional audit grid to track operator identity tags, timestamps, old/new states, and specific job reference markers.</li>
-      </ul>
-    </div>
-
-    <div class="callout tip" style="margin-top:20px;">
-      <div class="callout-icon">🧪</div>
-      <div><strong>Complete Isolation Notice:</strong> The orange sandbox warning system verified at the top of the grid ensures that edits modify <code>cmh_availability_TEST</code> branches exclusively. Live structural databases are protected.</div>
-    </div>
-  </div>
-
-</div>
-</div>
+    <div class="small">Training page for rollout only. Remove or hide after admins are onboarded.</div>
+  </main>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const ADMIN_LOOKUP = {
-    "5613": "Geoff", "0762": "Amy", "1877": "Laura", "0082": "Jazryn",
-    "6474": "Sabrina", "9549": "Lily", "3313": "Jen", "2492": "Brittny"
-  };
-  const HCA_LOOKUP = {
-    "2393": "Amber", "1876": "Chester", "6633": "Davis", "0085": "Jay",
-    "5669": "Joe", "7634": "Joseph", "1143": "Kyle", "4578": "Samir", "3493": "Trevor"
-  };
+function showPin(){
+  const value = document.getElementById("person").value;
+  const pinbox = document.getElementById("pinbox");
+  const pin = document.getElementById("pin");
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const userPin   = urlParams.get('pin');
-
-  if (userPin) {
-    const matchedName = ADMIN_LOOKUP[userPin] || HCA_LOOKUP[userPin];
-    
-    if (matchedName) {
-      document.getElementById("missingPinWarning").style.display = "none";
-      document.getElementById("userGreetingName").textContent = matchedName;
-      document.getElementById("userPersonalPin").textContent  = userPin;
-      document.getElementById("personalizedWelcome").style.display = "flex";
-    }
+  if(!value){
+    pinbox.classList.remove("show");
+    pin.textContent = "----";
+    return;
   }
-});
-</script>
 
+  pin.textContent = value;
+  pinbox.classList.add("show");
+}
+</script>
 </body>
 </html>
