@@ -25,673 +25,221 @@ body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", 
 /* ── TOP BAR ─────────────────────────────────────────────────────────────────── */
 .topbar {
   background: var(--cm-blue);
-  color: white;
+  color: #fff;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 28px;
-  border-bottom: 4px solid var(--cm-orange);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-.topbar-brand { font-weight: 800; font-size: 16px; letter-spacing: .02em; text-transform: uppercase; }
+.topbar-brand { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
 .topbar-brand span { color: var(--cm-orange); }
-.topbar-subtitle { font-family: "IBM Plex Mono", monospace; font-size: 11px; opacity: .75; margin-top: 2px; letter-spacing: .06em; text-transform: uppercase; }
-.topbar-badge { font-family: "IBM Plex Mono", monospace; font-size: 11px; background: rgba(245,130,32,.25); border: 1px solid rgba(245,130,32,.45); color: #ffc87a; padding: 4px 10px; border-radius: 999px; }
+.topbar-badge { font-family: "IBM Plex Mono", monospace; font-size: 12px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; font-weight: 500; }
 
-/* ── LAYOUT ──────────────────────────────────────────────────────────────────── */
-.layout { display: flex; max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; gap: 28px; }
-.sidebar { width: 220px; flex-shrink: 0; }
-.sidebar-nav { position: sticky; top: 80px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 0; }
-.nav-title { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text3); letter-spacing: .1em; text-transform: uppercase; padding: 0 16px 10px; font-weight: 700; border-bottom: 1px solid var(--border2); margin-bottom: 6px; }
-.nav-link { display: block; padding: 7px 16px; font-size: 13px; color: var(--text2); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
-.nav-link:hover { color: var(--cm-blue); background: rgba(0,90,169,.04); border-left-color: var(--cm-blue); }
-.nav-link.active { color: var(--cm-blue); font-weight: 700; border-left-color: var(--cm-orange); background: rgba(0,90,169,.04); }
-.nav-num { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text3); margin-right: 6px; }
-.content { flex: 1; min-width: 0; }
+/* ── LAYOUT CONTAINER ────────────────────────────────────────────────────────── */
+.layout { display: flex; max-width: 1400px; margin: 0 auto; padding: 24px; gap: 24px; }
 
-/* ── SECTIONS ────────────────────────────────────────────────────────────────── */
-.section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 20px; scroll-margin-top: 80px; }
-.section-num { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--cm-orange); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
-.section-title { font-size: 20px; font-weight: 800; color: var(--cm-blue); margin-bottom: 12px; letter-spacing: -.02em; }
-.section p { color: var(--text2); margin-bottom: 10px; font-size: 14px; line-height: 1.65; }
-.section p:last-child { margin-bottom: 0; }
+/* ── NAVIGATION SIDEBAR ───────────────────────────────────────────────────────── */
+.sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.card-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
-/* ── STEPS ───────────────────────────────────────────────────────────────────── */
-.steps { list-style: none; margin: 14px 0; }
-.steps li {
-  display: flex;
-  gap: 14px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border2);
-  align-items: flex-start;
-  font-size: 14px;
-  color: var(--text2);
-  line-height: 1.55;
-}
-.steps li:last-child { border-bottom: none; }
-.step-num {
-  flex-shrink: 0;
-  width: 26px; height: 26px;
-  background: var(--cm-blue);
-  color: white;
-  border-radius: 50%;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  margin-top: 1px;
-}
-.steps li strong { color: var(--text); }
+.nav-list { list-style: none; }
+.nav-item { margin-bottom: 4px; }
+.nav-link { display: block; padding: 8px 12px; border-radius: 6px; color: var(--text); text-decoration: none; font-weight: 500; transition: all 0.15s; }
+.nav-link:hover { background: var(--bg); color: var(--cm-blue); }
+.nav-link.active { background: #e0ecf8; color: var(--cm-blue); font-weight: 600; }
 
-/* ── STATUS PALETTE ──────────────────────────────────────────────────────────── */
-.status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin: 14px 0; }
-.status-swatch {
-  border-radius: 7px;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,.10);
-  font-family: "IBM Plex Mono", monospace;
-}
-.swatch-color { padding: 10px 14px; font-size: 12px; font-weight: 700; letter-spacing: .03em; }
-.swatch-desc { padding: 7px 14px; font-size: 11px; color: var(--text2); background: var(--surface); border-top: 1px solid rgba(0,0,0,.08); line-height: 1.4; }
+/* ── CONTENT AREA ────────────────────────────────────────────────────────────── */
+.content { flex-grow: 1; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+h1 { font-size: 28px; font-weight: 800; color: var(--cm-blue); letter-spacing: -0.5px; }
+p.lead { font-size: 17px; color: var(--text2); margin-top: -8px; }
 
-/* Exact Google Sheets palette */
-.sw-filled    { background: #ea9999; color: #660000; }
-.sw-full      { background: #b6d7a8; color: #1c4a0c; }
-.sw-half-pm   { background: #f9cb9c; color: #7f4000; }
-.sw-half-am   { background: #ffe599; color: #7f5800; }
-.sw-team-off  { background: #d9d9d9; color: #555555; }
-.sw-not-avail { background: #666666; color: #f0f0f0; }
-.sw-not-sched { background: #f3f3f3; color: #888888; border-bottom: 1px solid #ddd; }
-.sw-hold      { background: #ffd966; color: #7f5800; }
-.sw-on-call   { background: #c9daf8; color: #1c4587; }
+h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 12px; border-bottom: 2px solid var(--border2); padding-bottom: 6px; }
 
-/* ── CALLOUTS ────────────────────────────────────────────────────────────────── */
-.callout {
-  display: flex; gap: 12px; align-items: flex-start;
-  padding: 12px 16px;
-  border-radius: 9px;
-  margin: 14px 0;
-  font-size: 13px;
-  line-height: 1.55;
-}
-.callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-.callout.tip    { background: rgba(58,170,53,.08); border: 1px solid rgba(58,170,53,.25); color: #1c4a0c; }
-.callout.warn   { background: rgba(245,130,32,.09); border: 1px solid rgba(245,130,32,.28); color: #7f4000; }
-.callout.info   { background: rgba(0,90,169,.07);   border: 1px solid rgba(0,90,169,.22);  color: var(--cm-blue); }
-.callout.danger { background: rgba(192,0,0,.07);    border: 1px solid rgba(192,0,0,.22);   color: #900; }
-.callout strong { font-weight: 700; }
+/* CALLOUT BLOCKS */
+.callout { padding: 16px; border-radius: 8px; border-left: 4px solid #fff; display: flex; gap: 14px; align-items: flex-start; line-height: 1.5; }
+.callout-icon { font-size: 20px; line-height: 1; }
+.callout.info { background: #e6f4ff; border-color: #1890ff; color: #003a8c; }
+.callout.warn { background: #fff7e6; border-color: #ffa940; color: #873800; }
+.callout.tip { background: #f6ffed; border-color: #52c41a; color: #237804; }
 
-/* ── PIN TABLE ───────────────────────────────────────────────────────────────── */
-.pin-tables { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
-.pin-table-wrap h4 { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; font-weight: 700; }
-.pin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.pin-table th { background: var(--cm-blue); color: white; font-family: "IBM Plex Mono", monospace; font-size: 11px; padding: 7px 12px; text-align: left; letter-spacing: .04em; }
-.pin-table td { padding: 7px 12px; border-bottom: 1px solid var(--border2); color: var(--text); }
-.pin-table tr:last-child td { border-bottom: none; }
-.pin-table tr:nth-child(even) td { background: #f8fafb; }
-.pin-code { font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 14px; color: var(--cm-blue); letter-spacing: .08em; }
-.admin-row td { font-weight: 600; }
+/* SCENARIOS */
+.scenario { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative; overflow: hidden; }
+.scenario::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--border); }
+.scenario-label { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 600; text-transform: uppercase; background: var(--bg); padding: 2px 8px; border-radius: 4px; color: var(--text2); margin-bottom: 8px; }
+.scenario-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.scenario-steps { padding-left: 20px; color: var(--text2); }
+.scenario-steps li { margin-bottom: 8px; }
 
-/* ── FEATURE CARDS ───────────────────────────────────────────────────────────── */
-.feature-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 14px 0; }
-.feature-card { padding: 14px 16px; border-radius: 9px; border: 1px solid var(--border2); }
-.feature-card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
-.feature-card-body { font-size: 12px; color: var(--text2); line-height: 1.5; }
-.fc-green  { background: rgba(58,170,53,.07); border-color: rgba(58,170,53,.22); }
-.fc-green  .feature-card-title { color: #168a20; }
-.fc-blue   { background: rgba(0,90,169,.06); border-color: rgba(0,90,169,.18); }
-.fc-blue   .feature-card-title { color: var(--cm-blue); }
-.fc-orange { background: rgba(245,130,32,.07); border-color: rgba(245,130,32,.22); }
-.fc-orange .feature-card-title { color: #b75600; }
-.fc-purple { background: rgba(109,40,217,.06); border-color: rgba(109,40,217,.18); }
-.fc-purple .feature-card-title { color: #5b21b6; }
-
-/* ── SCENARIO BLOCKS ─────────────────────────────────────────────────────────── */
-.scenario { background: #f8fbff; border: 1px solid var(--border2); border-left: 4px solid var(--cm-blue); border-radius: 0 9px 9px 0; padding: 14px 18px; margin: 12px 0; }
-.scenario-label { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--cm-orange); font-weight: 700; margin-bottom: 4px; }
-.scenario-title { font-size: 14px; font-weight: 700; color: var(--cm-blue); margin-bottom: 8px; }
-.scenario-steps { list-style: none; }
-.scenario-steps li { font-size: 13px; color: var(--text2); padding: 3px 0; line-height: 1.5; }
-.scenario-steps li::before { content: "›  "; color: var(--cm-orange); font-weight: 800; }
-
-/* ── UI LABELS ───────────────────────────────────────────────────────────────── */
-.ui-label { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; vertical-align: middle; }
-.ui-btn-admin { background: rgba(0,90,169,.10); border: 1px solid rgba(0,90,169,.28); color: var(--cm-blue); }
-.ui-btn-active { background: rgba(245,130,32,.12); border: 1px solid rgba(245,130,32,.35); color: #b75600; }
-.ui-btn-green { background: rgba(58,170,53,.12); border: 1px solid rgba(58,170,53,.35); color: #168a20; }
-.ui-btn-gray { background: #f0f4f8; border: 1px solid var(--border); color: var(--text2); }
-
-/* ── TOAST PREVIEW ───────────────────────────────────────────────────────────── */
-.toast-preview { display: flex; gap: 14px; align-items: flex-start; margin: 12px 0; flex-wrap: wrap; }
-.toast-box {
-  display: flex; align-items: center; gap: 12px;
-  background: white;
-  padding: 10px 14px;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0,0,0,.12);
-}
-.toast-box.toast-green  { border: 2px solid var(--cm-green); }
-.toast-box.toast-blue   { border: 2px solid var(--cm-blue); }
-.toast-box.toast-orange { border: 2px solid var(--cm-orange); }
-.toast-box.toast-red    { border: 2px solid var(--danger); }
-.toast-title { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
-.toast-sub { font-size: 11px; color: var(--text3); font-family: "IBM Plex Mono", monospace; }
-.toast-green  .toast-title { color: var(--cm-green); }
-.toast-blue   .toast-title { color: var(--cm-blue); }
-.toast-orange .toast-title { color: var(--cm-orange); }
-.toast-red    .toast-title { color: var(--danger); }
-.toast-btn-inline { background: var(--cm-green); color: white; border: none; font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 700; padding: 7px 11px; border-radius: 5px; cursor: default; }
-
-/* ── MOVE DIAGRAM ────────────────────────────────────────────────────────────── */
-.move-diagram { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
-.move-box { padding: 8px 14px; border-radius: 7px; font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 700; text-align: center; min-width: 110px; }
-.move-box.source { background: rgba(245,130,32,.12); border: 2px solid rgba(245,130,32,.45); color: #b75600; }
-.move-box.target-open { background: rgba(58,170,53,.12); border: 2px solid rgba(58,170,53,.35); color: #168a20; }
-.move-box.target-sold { background: rgba(0,90,169,.10); border: 2px solid rgba(0,90,169,.32); color: var(--cm-blue); }
-.move-box-sub { font-size: 10px; font-weight: 400; margin-top: 2px; opacity: .75; }
-.move-arrow { font-size: 20px; color: var(--text3); }
-
-/* ── DIVIDER ─────────────────────────────────────────────────────────────────── */
-.divider { height: 1px; background: var(--border2); margin: 16px 0; }
-
-/* ── RESPONSIVE ──────────────────────────────────────────────────────────────── */
-@media (max-width: 800px) {
-  .layout { flex-direction: column; padding: 16px 12px 40px; }
-  .sidebar { width: 100%; }
-  .sidebar-nav { position: static; }
-  .pin-tables { grid-template-columns: 1fr; }
-  .topbar { padding: 12px 16px; }
-}
-@media (max-width: 500px) {
-  .section { padding: 18px 16px; }
-  .feature-cards { grid-template-columns: 1fr; }
-}
+code { font-family: "IBM Plex Mono", monospace; font-size: 13px; background: var(--bg); padding: 2px 6px; border-radius: 4px; color: var(--danger); font-weight: 500; }
 </style>
 </head>
 <body>
 
-<!-- ── TOP BAR ───────────────────────────────────────────────────────────────── -->
 <div class="topbar">
-  <div>
-    <div class="topbar-brand">CM <span>Heating</span> — Install Availability</div>
-    <div class="topbar-subtitle">Admin + HCA Training Guide</div>
-  </div>
-  <div class="topbar-badge">⚠ Practice in TEST environment first</div>
+  <div class="topbar-brand">CM Heating <span>Internal Documentation</span></div>
+  <div class="topbar-badge">SYSTEM VERSION 2.0 (TEST CONTEXT)</div>
 </div>
 
 <div class="layout">
-
-<!-- ── SIDEBAR ─────────────────────────────────────────────────────────────────── -->
-<div class="sidebar">
-  <div class="sidebar-nav">
-    <div class="nav-title">Contents</div>
-    <a class="nav-link" href="#overview"><span class="nav-num">01</span>Overview</a>
-    <a class="nav-link" href="#login"><span class="nav-num">02</span>Logging In</a>
-    <a class="nav-link" href="#reading"><span class="nav-num">03</span>Reading the Board</a>
-    <a class="nav-link" href="#editing"><span class="nav-num">04</span>Changing a Cell</a>
-    <a class="nav-link" href="#sold"><span class="nav-num">05</span>Marking Sold</a>
-    <a class="nav-link" href="#move"><span class="nav-num">06</span>Moving a Job</a>
-    <a class="nav-link" href="#swap"><span class="nav-num">07</span>Swapping Jobs</a>
-    <a class="nav-link" href="#undo"><span class="nav-num">08</span>Undo Feature</a>
-    <a class="nav-link" href="#admin-only"><span class="nav-num">09</span>Admin-Only: Hold</a>
-    <a class="nav-link" href="#timeout"><span class="nav-num">10</span>Timeout & Locks</a>
-    <a class="nav-link" href="#audit"><span class="nav-num">11</span>Audit Log</a>
-    <a class="nav-link" href="#scenarios"><span class="nav-num">12</span>Common Scenarios</a>
-  </div>
-</div>
-
-<!-- ── CONTENT ─────────────────────────────────────────────────────────────────── -->
-<div class="content">
-
-  <!-- 01 OVERVIEW -->
-  <div class="section" id="overview">
-    <div class="section-num">01 — Overview</div>
-    <div class="section-title">What Is This Tool?</div>
-    <p>The Install Availability web page is a real-time view of the install schedule — the same data you already see in the Google Sheet, but in a browser-based format that allows live editing, job moves, and auditing without anyone needing to touch the spreadsheet directly.</p>
-    <div class="feature-cards">
-      <div class="feature-card fc-blue">
-        <div class="feature-card-title">📊 Same Data as the Sheet</div>
-        <div class="feature-card-body">Pulls directly from the same Google Sheet everyone is used to. Colors and status names match exactly.</div>
-      </div>
-      <div class="feature-card fc-green">
-        <div class="feature-card-title">✏ Live Editing</div>
-        <div class="feature-card-body">Admins and HCAs can update status, add homeowner details, and track CaaS jobs in real time.</div>
-      </div>
-      <div class="feature-card fc-orange">
-        <div class="feature-card-title">⇄ Move &amp; Swap</div>
-        <div class="feature-card-body">Admins can reassign a job to a different crew or swap two jobs between crews in seconds.</div>
-      </div>
-      <div class="feature-card fc-purple">
-        <div class="feature-card-title">📋 Full Audit Log</div>
-        <div class="feature-card-body">Every change is logged — who made it, when, what changed. Nothing disappears silently.</div>
-      </div>
+  
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-title">🗺 Documents</div>
+      <ul class="nav-list">
+        <li class="nav-item"><a class="nav-link active" href="#overview">Training Guide Index</a></li>
+        <li class="nav-item"><a class="nav-link" href="#architecture">Realtime Core Rules</a></li>
+        <li class="nav-item"><a class="nav-link" href="#scenarios">HCA Hands-on Modules</a></li>
+      </ul>
     </div>
-    <div class="callout info">
-      <div class="callout-icon">ℹ</div>
-      <div>The <strong>TEST environment</strong> is a safe sandbox. Writes go to <code>cmh_availability_TEST</code> — not the live schedule. Use it to practice until you're comfortable.</div>
+    
+    <div class="card">
+      <div class="card-title">🧪 Workspace Link</div>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:12px;">Launch the isolated sandbox scheduler application:</p>
+      <a href="install-availability-test.html" target="_blank" class="nav-link" style="background:var(--cm-orange); color:#fff; text-align:center; font-weight:700;">Open Test Board ↗</a>
     </div>
   </div>
 
-  <!-- 02 LOGIN -->
-  <div class="section" id="login">
-    <div class="section-num">02 — Logging In</div>
-    <div class="section-title">Admin &amp; HCA PINs</div>
-    <p>Click the <span class="ui-label ui-btn-admin">ADMIN / HCA EDIT</span> button in the top-right corner. You'll be prompted for your PIN. Admins have more permissions than HCAs — see the differences below.</p>
+  <div class="content">
+    
+    <div>
+      <h1>Install Availability System</h1>
+      <p class="lead">Standard Operating Procedure & Training Matrix for Admin and HCA Teams</p>
+    </div>
 
-    <div class="pin-tables">
-      <div class="pin-table-wrap">
-        <h4>🔐 Admin PINs</h4>
-        <table class="pin-table">
-          <thead><tr><th>Name</th><th>PIN</th></tr></thead>
-          <tbody>
-            <tr class="admin-row"><td>Geoff</td><td><span class="pin-code">5613</span></td></tr>
-            <tr class="admin-row"><td>Amy</td><td><span class="pin-code">0762</span></td></tr>
-            <tr class="admin-row"><td>Laura</td><td><span class="pin-code">1877</span></td></tr>
-            <tr class="admin-row"><td>Jazryn</td><td><span class="pin-code">0082</span></td></tr>
-            <tr class="admin-row"><td>Sabrina</td><td><span class="pin-code">6474</span></td></tr>
-            <tr class="admin-row"><td>Lily</td><td><span class="pin-code">9549</span></td></tr>
-            <tr class="admin-row"><td>Jen</td><td><span class="pin-code">3313</span></td></tr>
-            <tr class="admin-row"><td>Brittny</td><td><span class="pin-code">2492</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pin-table-wrap">
-        <h4>👤 HCA PINs</h4>
-        <table class="pin-table">
-          <thead><tr><th>Name</th><th>PIN</th></tr></thead>
-          <tbody>
-            <tr><td>Amber</td><td><span class="pin-code">2393</span></td></tr>
-            <tr><td>Chester</td><td><span class="pin-code">1876</span></td></tr>
-            <tr><td>Davis</td><td><span class="pin-code">6633</span></td></tr>
-            <tr><td>Jay</td><td><span class="pin-code">0085</span></td></tr>
-            <tr><td>Joe</td><td><span class="pin-code">5669</span></td></tr>
-            <tr><td>Joseph</td><td><span class="pin-code">7634</span></td></tr>
-            <tr><td>Kyle</td><td><span class="pin-code">1143</span></td></tr>
-            <tr><td>Samir</td><td><span class="pin-code">4578</span></td></tr>
-            <tr><td>Trevor</td><td><span class="pin-code">3493</span></td></tr>
-          </tbody>
-        </table>
+    <div id="personalizedWelcome" class="callout info" style="display: none; margin-bottom: 4px;">
+      <div class="callout-icon">👤</div>
+      <div>
+        <strong>Welcome, <span id="userGreetingName">Team Member</span>!</strong><br>
+        Your assigned secure sandbox simulation code is verified. Use PIN 
+        <code class="pin-code" id="userPersonalPin" style="background:#fff; border:1px solid #1890ff; padding:2px 6px; border-radius:4px; font-weight:700; font-size:14px; margin-left:4px;">----</code> 
+        to execute today's test environment training scenarios.
       </div>
     </div>
 
-    <div class="divider"></div>
-    <p style="font-size:13px;"><strong>What's different between Admin and HCA?</strong></p>
-    <div class="feature-cards" style="margin-top:8px;">
-      <div class="feature-card fc-blue">
-        <div class="feature-card-title">Admin — Full Access</div>
-        <div class="feature-card-body">Edit any cell · Mark HOLD · Move/swap jobs between crews · Cross-week job moves · All HCA actions</div>
-      </div>
-      <div class="feature-card" style="background:#f8fafb;border-color:var(--border2);">
-        <div class="feature-card-title" style="color:var(--text);">HCA — Limited Access</div>
-        <div class="feature-card-body">Edit cells · Mark status · Enter HCA + homeowner details · Cannot place HOLD or move jobs</div>
-      </div>
-    </div>
-
-    <div class="callout tip">
-      <div class="callout-icon">✅</div>
-      <div>After logging in, your name appears in the button: <span class="ui-label ui-btn-active">EXIT — ADMIN: Geoff</span>. Click it again to log out.</div>
-    </div>
-  </div>
-
-  <!-- 03 READING -->
-  <div class="section" id="reading">
-    <div class="section-num">03 — Reading the Board</div>
-    <div class="section-title">Status Colors</div>
-    <p>The color scheme matches the Google Sheet exactly. If you're used to reading the sheet, this will feel identical.</p>
-
-    <div class="status-grid">
-      <div class="status-swatch">
-        <div class="swatch-color sw-filled">FILLED</div>
-        <div class="swatch-desc">Crew is fully booked. No availability.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-full">FULL DAY AVAIL</div>
-        <div class="swatch-desc">Crew is completely open all day.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-half-pm">HALF DAY PM</div>
-        <div class="swatch-desc">Afternoon sold. Morning still open.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-half-am">HALF DAY AM</div>
-        <div class="swatch-desc">Morning sold. Afternoon still open.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-team-off">TEAM OFF</div>
-        <div class="swatch-desc">Crew is not working this day.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-not-avail">NOT AVAILABLE</div>
-        <div class="swatch-desc">Slot cannot be used (no crew, etc.).</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-not-sched">NOT SCHEDULED</div>
-        <div class="swatch-desc">Crew exists but not yet scheduled.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-hold">HOLD</div>
-        <div class="swatch-desc">Admin-reserved slot. Not yet confirmed sold.</div>
-      </div>
-      <div class="status-swatch">
-        <div class="swatch-color sw-on-call">ON CALL</div>
-        <div class="swatch-desc">On-call technician row.</div>
+    <div id="missingPinWarning" class="callout warn" style="margin-bottom: 4px;">
+      <div class="callout-icon">⚠️</div>
+      <div>
+        <strong>Secure Gateway Lockout Applied</strong><br>
+        PIN identity parameters are completely hidden from plain text view to prevent unauthorized access. Please access this system guide using the unique configuration link provided in your individual deployment email to automatically display your credentials.
       </div>
     </div>
 
     <div class="callout info">
-      <div class="callout-icon">📋</div>
-      <div>When a cell is <strong>sold</strong>, it also shows details underneath the status: HCA name, homeowner name, and a <strong style="color:#5b21b6;">CaaS</strong> tag if applicable.</div>
+      <div class="callout-icon">ℹ️</div>
+      <div><strong>Purpose of this System:</strong> This centralized dashboard eliminates text messages, phone calls, and spreadsheets by showing every installation crew's current availability in real-time. HCAs can book immediately without cross-checking, and Admins maintain master logistics instantly.</div>
     </div>
 
-    <div class="callout tip">
-      <div class="callout-icon">✅</div>
-      <div><strong>Looking for open slots?</strong> Scan for <span style="display:inline-block;background:#b6d7a8;color:#1c4a0c;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">FULL DAY AVAIL</span> or <span style="display:inline-block;background:#f9cb9c;color:#7f4000;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">HALF DAY PM</span> / <span style="display:inline-block;background:#ffe599;color:#7f5800;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">HALF DAY AM</span>.</div>
-    </div>
-  </div>
-
-  <!-- 04 EDITING -->
-  <div class="section" id="editing">
-    <div class="section-num">04 — Changing a Cell</div>
-    <div class="section-title">How to Edit a Status</div>
-    <p>Any cell can be changed once you're logged in. Cells glow darker when you hover over them in edit mode.</p>
-    <ol class="steps">
-      <li><span class="step-num">1</span><div><strong>Log in first.</strong> Click <span class="ui-label ui-btn-admin">ADMIN / HCA EDIT</span> and enter your PIN. Cells won't be clickable until you do.</div></li>
-      <li><span class="step-num">2</span><div><strong>Click any cell.</strong> In edit mode, cells are clickable. You'll see them darken slightly on hover.</div></li>
-      <li><span class="step-num">3</span><div><strong>Choose a status</strong> from the dropdown. The options match the Google Sheet labels exactly.</div></li>
-      <li><span class="step-num">4</span><div>For non-sold statuses (FULL DAY AVAIL, TEAM OFF, HOLD, NOT AVAILABLE) — click <span class="ui-label ui-btn-active">Continue →</span> and you're done. The cell updates instantly.</div></li>
-      <li><span class="step-num">5</span><div>For sold statuses (FILLED, HALF DAY AM, HALF DAY PM) — you'll proceed to the <strong>Details screen</strong> to enter HCA and homeowner info. See Section 05.</div></li>
-    </ol>
-    <div class="callout warn">
-      <div class="callout-icon">⚠</div>
-      <div><strong>3-minute timer:</strong> Once you click a cell, a countdown starts. If you don't finish in 3 minutes, the modal closes automatically and the lock is released. Don't leave it open and walk away.</div>
-    </div>
-  </div>
-
-  <!-- 05 SOLD -->
-  <div class="section" id="sold">
-    <div class="section-num">05 — Marking Sold</div>
-    <div class="section-title">Entering Job Details</div>
-    <p>When you mark a slot as sold, a second screen opens to capture the job details. This is where you connect the install to an HCA and homeowner.</p>
-    <ol class="steps">
-      <li><span class="step-num">1</span><div>Choose the sold type:<br>
-        <strong>Full Day Install</strong> — one job all day → 1 set of fields<br>
-        <strong>Morning Install Only</strong> — AM job only → AM fields<br>
-        <strong>Afternoon Install Only</strong> — PM job only → PM fields<br>
-        <strong>AM + PM Installs</strong> — two separate jobs → both sets of fields
-      </div></li>
-      <li><span class="step-num">2</span><div><strong>Select the HCA</strong> from the dropdown. These match your current HCA roster.</div></li>
-      <li><span class="step-num">3</span><div><strong>Enter the homeowner name.</strong> Free-text field — type first or last name, whatever you'd recognize.</div></li>
-      <li><span class="step-num">4</span><div><strong>CaaS toggle:</strong> If the job is Comfort as a Service, switch to Yes. It'll show a purple CaaS tag on the board.</div></li>
-      <li><span class="step-num">5</span><div>Click <span class="ui-label ui-btn-active">Save</span>. The cell updates immediately with the status color, HCA name, and homeowner.</div></li>
-    </ol>
-    <div class="callout tip">
-      <div class="callout-icon">✅</div>
-      <div>If you just need to change the status without entering details, you can still cancel the details screen — the status won't save until you click Save.</div>
-    </div>
-  </div>
-
-  <!-- 06 MOVE -->
-  <div class="section" id="move">
-    <div class="section-num">06 — Moving a Job</div>
-    <div class="section-title">Reassigning to a Different Crew</div>
-    <p>Admins can move a sold job from one crew to another — same week or a different week. This is useful when a crew is unavailable and you need to reassign an install.</p>
-
-    <div class="move-diagram">
-      <div class="move-box source">DIV 1 Team 1<div class="move-box-sub">Tuesday — FILLED</div></div>
-      <div class="move-arrow">→</div>
-      <div class="move-box target-open">DIV 3 Team 1<div class="move-box-sub">Tuesday — FULL DAY AVAIL</div></div>
+    <h2 id="architecture">Realtime Architectural Rules</h2>
+    <p style="color:var(--text2);">The system handles transactions concurrently to guarantee that schedule lines never experience race condition overwrites:</p>
+    
+    <div class="scenario">
+      <div class="scenario-title" style="margin-bottom:6px;">1. Realtime Row Synchronization</div>
+      <p style="color:var(--text2); font-size:14px;">The layout utilizes persistent active websocket event listeners. When an Admin shifts a resource slot or an HCA saves a new installation, the changes update instantly across every computer monitor currently viewing the board without refreshing.</p>
     </div>
 
-    <ol class="steps">
-      <li><span class="step-num">1</span><div><strong>Log in as Admin.</strong> Only Admins can move jobs. HCA logins won't see the Move button.</div></li>
-      <li><span class="step-num">2</span><div><strong>Click the sold cell</strong> you want to move (the source job).</div></li>
-      <li><span class="step-num">3</span><div>In the status popup, click <span class="ui-label ui-btn-green">⇄ Move to Another Crew</span>. The Move Picker opens.</div></li>
-      <li><span class="step-num">4</span><div><strong>Read the color coding</strong> in the picker grid:<br>
-        🟧 Orange cell = the job you're moving (source)<br>
-        🟩 Green cell = open slot you can move the job to<br>
-        🟦 Blue cell = sold slot on the same week (swap available)<br>
-        Faded = blocked, can't move there
-      </div></li>
-      <li><span class="step-num">5</span><div><strong>Click a green cell</strong> to move the job there. A confirmation dialog shows what will happen.</div></li>
-      <li><span class="step-num">6</span><div>Confirm. The job moves instantly. The source slot becomes <span style="display:inline-block;background:#b6d7a8;color:#1c4a0c;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;">FULL DAY AVAIL</span>.</div></li>
-    </ol>
-
-    <div class="callout info">
-      <div class="callout-icon">📅</div>
-      <div><strong>Cross-week moves:</strong> Use the week tabs inside the Move Picker to switch weeks. When moving cross-week, no swap is possible — the job just relocates. Source becomes FULL DAY AVAIL.</div>
+    <div class="scenario">
+      <div class="scenario-title" style="margin-bottom:6px;">2. Concurrent Lock Mitigation</div>
+      <p style="color:var(--text2); font-size:14px;">The absolute fraction an HCA clicks into an individual calendar cell, the system registers a lock token in the cloud. If a second user clicks the same slot, they are greeted with an active alert stating the block is currently occupied. Locks automatically dissolve if the form is abandoned or closed.</p>
     </div>
 
-    <div class="callout warn">
-      <div class="callout-icon">⚠</div>
-      <div><strong>Blocked slots</strong> (NOT AVAILABLE, NOT SCHEDULED, ON CALL rows) cannot receive a moved job. They show faded in the picker.</div>
-    </div>
-  </div>
-
-  <!-- 07 SWAP -->
-  <div class="section" id="swap">
-    <div class="section-num">07 — Swapping Jobs</div>
-    <div class="section-title">Exchanging Two Sold Jobs (Same Week)</div>
-    <p>When two crews both have sold jobs and you need to swap them, the tool handles the full exchange automatically — both job details trade slots completely.</p>
-
-    <div class="move-diagram">
-      <div class="move-box source">DIV 1 Team 1<div class="move-box-sub">Smith — FILLED</div></div>
-      <div class="move-arrow">⇄</div>
-      <div class="move-box target-sold">DIV 2 Team 2<div class="move-box-sub">Johnson — FILLED</div></div>
-    </div>
-
-    <ol class="steps">
-      <li><span class="step-num">1</span><div><strong>Click the first sold cell</strong> (the source job you want to move).</div></li>
-      <li><span class="step-num">2</span><div>Click <span class="ui-label ui-btn-green">⇄ Move to Another Crew</span>. The Move Picker opens.</div></li>
-      <li><span class="step-num">3</span><div><strong>Click a blue cell</strong> (another sold slot on the same week). Blue cells are swap targets.</div></li>
-      <li><span class="step-num">4</span><div>A confirmation dialog shows <strong>both job names</strong> and confirms they will exchange slots.</div></li>
-      <li><span class="step-num">5</span><div>Confirm. Both jobs swap completely — HCA, homeowner, and CaaS flag all trade places.</div></li>
-    </ol>
-
-    <div class="callout tip">
-      <div class="callout-icon">✅</div>
-      <div><strong>Swaps are only available within the same week.</strong> Cross-week moves are one-directional only — the source slot becomes open when the job goes to a different week.</div>
-    </div>
-  </div>
-
-  <!-- 08 UNDO -->
-  <div class="section" id="undo">
-    <div class="section-num">08 — Undo Feature</div>
-    <div class="section-title">30-Second Reversal Window</div>
-    <p>After any move or swap, a green toast appears in the bottom-left corner. You have 30 seconds to reverse the action completely.</p>
-
-    <div class="toast-preview">
-      <div class="toast-box toast-green">
-        <div>
-          <div class="toast-title">✓ Move complete</div>
-          <div class="toast-sub">Reversible for <strong>28s</strong></div>
-        </div>
-        <button class="toast-btn-inline">↩ Undo</button>
-      </div>
-    </div>
-
-    <ol class="steps">
-      <li><span class="step-num">1</span><div>After a move or swap, the green <strong>Undo toast</strong> appears bottom-left with a live countdown.</div></li>
-      <li><span class="step-num">2</span><div>Click <strong>↩ Undo</strong> within 30 seconds to fully reverse the action.</div></li>
-      <li><span class="step-num">3</span><div>After 30 seconds, the window expires. The action is permanent — but still in the Audit Log.</div></li>
-    </ol>
-
-    <div class="callout info">
-      <div class="callout-icon">📋</div>
-      <div>Even after the undo window closes, every action is logged. If something went wrong, check the <strong>Audit Log</strong> to see exactly what happened and who did it.</div>
-    </div>
-  </div>
-
-  <!-- 09 HOLD -->
-  <div class="section" id="admin-only">
-    <div class="section-num">09 — Admin-Only</div>
-    <div class="section-title">HOLD Status</div>
-    <p><span style="display:inline-block;background:#ffd966;color:#7f5800;font-family:IBM Plex Mono,monospace;font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px;">HOLD</span> means a slot is tentatively reserved but not yet sold. Only Admins can set this status.</p>
-
-    <div class="feature-cards">
-      <div class="feature-card fc-orange">
-        <div class="feature-card-title">When to use HOLD</div>
-        <div class="feature-card-body">Customer is interested, consultation is pending, or a job is likely to close but not yet signed. Keeps the slot off the board without marking it sold.</div>
-      </div>
-      <div class="feature-card" style="background:rgba(192,0,0,.05);border-color:rgba(192,0,0,.18);">
-        <div class="feature-card-title" style="color:#900;">HCA Restriction</div>
-        <div class="feature-card-body">If an HCA login tries to select HOLD, a blocking message appears. They must get approval from Amy or Geoff first.</div>
-      </div>
-    </div>
-
-    <div class="callout warn">
-      <div class="callout-icon">⚠</div>
-      <div><strong>HOLD is visible to everyone</strong> reading the board. Use it only when you have a real, near-close prospect on that date. Don't hold a slot speculatively.</div>
-    </div>
-  </div>
-
-  <!-- 10 TIMEOUT -->
-  <div class="section" id="timeout">
-    <div class="section-num">10 — Timeout &amp; Locks</div>
-    <div class="section-title">The 3-Minute Timer &amp; Slot Locking</div>
-    <p>To prevent two people from editing the same cell at the same time, the tool uses a <strong>slot lock</strong>. When you click a cell, it locks for you. Others will see a striped pattern on that cell and can't edit it.</p>
-
-    <div class="toast-preview">
-      <div class="toast-box toast-blue">
-        <div class="countdown-icon-preview">⏱</div>
-        <div>
-          <div class="toast-title">Finish your selection</div>
-          <div class="toast-sub"><strong>2:47</strong> remaining</div>
-        </div>
-      </div>
-      <div class="toast-box toast-orange">
-        <div>
-          <div class="toast-title" style="color:var(--cm-orange);">Finish your selection</div>
-          <div class="toast-sub"><strong style="color:var(--cm-orange);">0:45</strong> — running out of time</div>
-        </div>
-      </div>
-      <div class="toast-box toast-red">
-        <div>
-          <div class="toast-title">Finish your selection</div>
-          <div class="toast-sub"><strong style="color:var(--danger);">0:12</strong> — almost expired!</div>
-        </div>
-      </div>
-    </div>
-
-    <ol class="steps">
-      <li><span class="step-num">1</span><div>When you click a cell, a <strong>3-minute countdown timer</strong> appears in the bottom-right corner.</div></li>
-      <li><span class="step-num">2</span><div>The timer turns <strong style="color:var(--cm-orange);">orange</strong> at 60 seconds and <strong style="color:var(--danger);">red</strong> at 30 seconds.</div></li>
-      <li><span class="step-num">3</span><div>If time runs out, the modal closes automatically and the <strong>lock is released</strong> so others can edit that cell.</div></li>
-      <li><span class="step-num">4</span><div>Always <strong>Cancel</strong> if you change your mind — this releases the lock immediately rather than waiting for the timeout.</div></li>
-    </ol>
-
-    <div class="callout danger">
-      <div class="callout-icon">🚫</div>
-      <div><strong>Don't click a cell and walk away.</strong> That slot will be locked for 2 minutes, blocking others from editing it until the timeout clears.</div>
-    </div>
-  </div>
-
-  <!-- 11 AUDIT -->
-  <div class="section" id="audit">
-    <div class="section-num">11 — Audit Log</div>
-    <div class="section-title">Who Changed What and When</div>
-    <p>Every single change — status updates, job moves, swaps, and undos — is recorded with a timestamp, editor name, and before/after state. Nothing is ever silently deleted.</p>
-
-    <ol class="steps">
-      <li><span class="step-num">1</span><div>Click <span class="ui-label ui-btn-gray">AUDIT LOGS</span> in the top-right corner of the availability page.</div></li>
-      <li><span class="step-num">2</span><div>Each entry shows: <strong>who</strong> made the change, <strong>when</strong>, the <strong>cell key</strong> (which crew + day), the <strong>previous status</strong>, and the <strong>new status</strong>.</div></li>
-      <li><span class="step-num">3</span><div>Moves and swaps also show the source and target keys, plus whether it was a cross-week move.</div></li>
-    </ol>
-
-    <div class="callout tip">
-      <div class="callout-icon">✅</div>
-      <div>If you see an unexpected status on the board, check the Audit Log first. It will tell you exactly who changed it and when — no guessing, no finger-pointing.</div>
-    </div>
-  </div>
-
-  <!-- 12 SCENARIOS -->
-  <div class="section" id="scenarios">
-    <div class="section-num">12 — Common Scenarios</div>
-    <div class="section-title">Step-by-Step Walkthroughs</div>
+    <h2 id="scenarios">HCA Training Scenarios (Practice Matrix)</h2>
+    <p style="color:var(--text2);">Open the test board file using the button in the sidebar and run through these modules step-by-step to build operational muscle-memory:</p>
 
     <div class="scenario">
       <div class="scenario-label">Scenario A — Admin</div>
-      <div class="scenario-title">A crew just sold a full-day install. Mark it filled.</div>
+      <div class="scenario-title">Initializing the Week's Board Geometry</div>
       <ul class="scenario-steps">
-        <li>Log in with your Admin PIN</li>
-        <li>Navigate to the correct week tab</li>
-        <li>Click the cell for that crew + day</li>
-        <li>Select "Full Day Install — FILLED" from the dropdown</li>
-        <li>Click Continue →</li>
-        <li>Select the HCA, enter homeowner name, set CaaS if applicable</li>
-        <li>Click Save — cell turns red with job details</li>
+        <li>Log into the test scheduler using an authorized Admin PIN.</li>
+        <li>Click the <strong>"⚡ Mass Populate Open"</strong> button in the top navigation panel.</li>
+        <li>The engine populates the current active matrix lines with default <code>OPEN</code> states, bypassing holiday or custom off-duty tracks.</li>
       </ul>
     </div>
 
     <div class="scenario">
       <div class="scenario-label">Scenario B — Admin</div>
-      <div class="scenario-title">Crew had an AM job, now a PM job just sold too.</div>
+      <div class="scenario-title">Handling an Emergency Logistics Realignment (Swap)</div>
       <ul class="scenario-steps">
-        <li>Click the cell currently showing HALF DAY AM</li>
-        <li>Select "AM + PM Installs — FILLED"</li>
-        <li>Click Continue →</li>
-        <li>The Morning panel is pre-filled — verify it's correct</li>
-        <li>Fill in the Afternoon Install fields</li>
-        <li>Click Save — cell updates to FILLED with both jobs shown</li>
+        <li>Click the orange <strong>"🔄 Swap Crews"</strong> tool action.</li>
+        <li>Select the primary constrained crew line as the source vector and a flexible crew as the target vector.</li>
+        <li>Confirm execution. The engine completely mirrors both profiles instantly while logging the data swap footprint to the audit trail.</li>
       </ul>
     </div>
 
     <div class="scenario">
       <div class="scenario-label">Scenario C — Admin</div>
-      <div class="scenario-title">A job needs to move from DIV 1 to DIV 3 — same week.</div>
+      <div class="scenario-title">Locking a Row for Special Projects (Hold)</div>
       <ul class="scenario-steps">
-        <li>Click the FILLED cell for DIV 1</li>
-        <li>Click "⇄ Move to Another Crew" (green button)</li>
-        <li>In the Move Picker, find a green cell on DIV 3 for the same day</li>
-        <li>Click it — confirm the dialog</li>
-        <li>DIV 1 becomes FULL DAY AVAIL · DIV 3 becomes FILLED with the job</li>
-        <li>Use the 30-second undo if you picked the wrong crew</li>
+        <li>Click an open cell on any preferred line ➔ Choose the status status <code>HOLD</code>.</li>
+        <li>Click Save. The cell locks into an orange Admin blockout state. HCAs cannot click or manipulate this block.</li>
       </ul>
     </div>
 
     <div class="scenario">
-      <div class="scenario-label">Scenario D — Admin</div>
-      <div class="scenario-title">Two crews need to swap their Friday jobs.</div>
+      <div class="scenario-label">Scenario D — HCA</div>
+      <div class="scenario-title">Attempting an Unauthorized Admin Interaction</div>
       <ul class="scenario-steps">
-        <li>Click the FILLED cell for the first crew's Friday</li>
-        <li>Click "⇄ Move to Another Crew"</li>
-        <li>In the Move Picker, click the blue FILLED cell for the other crew's Friday</li>
-        <li>The confirmation dialog will show both homeowner names and confirm the swap</li>
-        <li>Confirm — both slots exchange all details instantly</li>
+        <li>Log out of Admin status, and authenticate using an authorized HCA PIN.</li>
+        <li>Click on a row designated with an active orange <code>HOLD</code> badge.</li>
+        <li>The system blocks your execution context, showing a notice requiring supervisor approval.</li>
       </ul>
     </div>
 
     <div class="scenario">
       <div class="scenario-label">Scenario E — HCA</div>
-      <div class="scenario-title">Looking for open install slots this week.</div>
+      <div class="scenario-title">Marking a Newly Closed Deal as Sold</div>
       <ul class="scenario-steps">
-        <li>Open the page — no login needed to read the board</li>
-        <li>Scan for green (FULL DAY AVAIL) or orange/yellow half-day cells</li>
-        <li>Log in with your HCA PIN to mark a slot as sold after you close a deal</li>
-        <li>Click the open cell → choose "Full Day Install — FILLED" → Continue → enter details → Save</li>
+        <li>Scan the workspace columns for a clean green <code>OPEN</code> cell matching your timeframe.</li>
+        <li>Click the open space ➔ Shift the dropdown assignment to <code>FULL DAY INSTALL — FILLED</code>.</li>
+        <li>Enter your mandatory tracking Job Number and any custom notes relative to equipment lines. Click Save.</li>
       </ul>
     </div>
 
     <div class="scenario">
       <div class="scenario-label">Scenario F — Admin</div>
-      <div class="scenario-title">Something looks wrong on the board — who changed it?</div>
+      <div class="scenario-title">Verifying Row Footprints and Changesets via Audits</div>
       <ul class="scenario-steps">
-        <li>Click "AUDIT LOGS" in the top-right corner</li>
-        <li>Find the entry for that crew + day</li>
-        <li>The log shows: editor name, timestamp, previous status, new status</li>
-        <li>Follow up with that person directly</li>
+        <li>Click the <strong>"📋 Audit Logs"</strong> engine parameter inside the top navigation bar.</li>
+        <li>Review the transactional audit grid to track operator identity tags, timestamps, old/new states, and specific job reference markers.</li>
       </ul>
     </div>
 
     <div class="callout tip" style="margin-top:20px;">
       <div class="callout-icon">🧪</div>
-      <div><strong>Always practice in the TEST environment first.</strong> The orange banner at the top of the page confirms you're in the sandbox. Writes go to <code>cmh_availability_TEST</code> — nothing touches the live schedule.</div>
+      <div><strong>Complete Isolation Notice:</strong> The orange sandbox warning system verified at the top of the grid ensures that edits modify <code>cmh_availability_TEST</code> branches exclusively. Live structural databases are protected.</div>
     </div>
   </div>
 
-</div><!-- /content -->
-</div><!-- /layout -->
+</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const ADMIN_LOOKUP = {
+    "5613": "Geoff", "0762": "Amy", "1877": "Laura", "0082": "Jazryn",
+    "6474": "Sabrina", "9549": "Lily", "3313": "Jen", "2492": "Brittny"
+  };
+  const HCA_LOOKUP = {
+    "2393": "Amber", "1876": "Chester", "6633": "Davis", "0085": "Jay",
+    "5669": "Joe", "7634": "Joseph", "1143": "Kyle", "4578": "Samir", "3493": "Trevor"
+  };
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const userPin   = urlParams.get('pin');
+
+  if (userPin) {
+    const matchedName = ADMIN_LOOKUP[userPin] || HCA_LOOKUP[userPin];
+    
+    if (matchedName) {
+      document.getElementById("missingPinWarning").style.display = "none";
+      document.getElementById("userGreetingName").textContent = matchedName;
+      document.getElementById("userPersonalPin").textContent  = userPin;
+      document.getElementById("personalizedWelcome").style.display = "flex";
+    }
+  }
+});
+</script>
 
 </body>
 </html>
