@@ -1531,6 +1531,47 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   }
 }
 
+
+/* ── iPAD FLOATING ACTION BAR ─────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1366px) {
+  body.mode-ipad .ipad-floatbar {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    z-index: 999;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.96);
+    border: 1px solid var(--border);
+    box-shadow: 0 12px 34px rgba(15,47,69,.20);
+    backdrop-filter: blur(14px);
+  }
+
+  body.mode-ipad .ipad-floatbar button {
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #f8fbfd;
+    color: var(--cm-blue);
+    font-weight: 900;
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  body.mode-ipad .ipad-floatbar button.primary {
+    background: var(--cm-blue);
+    color: #fff;
+    border-color: var(--cm-blue);
+  }
+}
+
+.ipad-floatbar { display: none; }
+
 </style>
 </head>
 <body>
@@ -1764,6 +1805,14 @@ document.addEventListener("DOMContentLoaded", function(){
 
 });
 </script>
+
+
+<!-- ── iPAD FLOATING ACTION BAR ───────────────────────────────────────────── -->
+<div class="ipad-floatbar">
+  <button onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button>
+  <button class="primary" onclick="document.querySelector('.weeknav')?.scrollIntoView({behavior:'smooth',block:'start'})">Weeks</button>
+  <button onclick="document.querySelector('.legend')?.scrollIntoView({behavior:'smooth',block:'center'})">Legend</button>
+</div>
 
 </body>
 </html>
