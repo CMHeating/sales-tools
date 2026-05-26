@@ -462,7 +462,7 @@ window.switchWeek = idx => {
 
 window.toggleAdmin = () => {
   if (!adminMode) {
-    const pin = prompt("Enter Admin PIN or HCA PIN:");
+    const pin = prompt("Enter your PIN:");
     if (pin === null) return;
     if (ADMIN_PINS[pin]) {
       currentEditor = { role: "ADMIN", name: ADMIN_PINS[pin], pin };
@@ -674,7 +674,7 @@ async function writeStatus(key, newSt, def, soldType = "fullDay", jobs = {}) {
       timestamp:       new Date().toISOString(),
       editorName:      currentEditor ? currentEditor.name : "Unknown",
       editorRole:      currentEditor ? currentEditor.role : "UNKNOWN",
-      editorPin:       currentEditor ? currentEditor.pin  : null,
+      editorPinMasked: currentEditor ? "****" : null,
       cellKey:         key,
       previousStatus,
       newStatus:       newSt,
