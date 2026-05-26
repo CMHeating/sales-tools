@@ -1306,6 +1306,124 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   .week-title { font-size: 17px; }
   .divider-v { display: none; }
 }
+
+/* ── iPAD OPTIMIZATION LAYER ─────────────────────────────────────────────── */
+
+@media (min-width: 768px) and (max-width: 1366px) {
+
+  html, body {
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  body.mode-ipad .main,
+  body.mode-tablet .main {
+    padding: 12px 10px 42px;
+  }
+
+  body.mode-ipad .grid-wrap,
+  body.mode-tablet .grid-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 18px;
+  }
+
+  body.mode-ipad table,
+  body.mode-tablet table {
+    min-width: 1220px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  body.mode-ipad thead th,
+  body.mode-tablet thead th {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background: #f8fbfd;
+    backdrop-filter: blur(10px);
+  }
+
+  body.mode-ipad .team-header,
+  body.mode-ipad .team-cell,
+  body.mode-tablet .team-header,
+  body.mode-tablet .team-cell {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: white;
+    box-shadow: 3px 0 10px rgba(0,0,0,.05);
+  }
+
+  body.mode-ipad .team-header,
+  body.mode-tablet .team-header {
+    z-index: 30;
+  }
+
+  body.mode-ipad .status-cell,
+  body.mode-tablet .status-cell {
+    min-height: 76px;
+    padding: 10px 8px;
+  }
+
+  body.mode-ipad .status-badge,
+  body.mode-tablet .status-badge {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 12px;
+  }
+
+  body.mode-ipad button,
+  body.mode-ipad .btn,
+  body.mode-tablet button,
+  body.mode-tablet .btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 12px;
+  }
+
+  body.mode-ipad .details-card,
+  body.mode-tablet .details-card {
+    width: min(860px, calc(100vw - 34px));
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    border-radius: 22px;
+  }
+
+  body.mode-ipad .jobs-grid,
+  body.mode-tablet .jobs-grid {
+    gap: 12px;
+  }
+
+  body.mode-ipad input,
+  body.mode-ipad select,
+  body.mode-ipad textarea,
+  body.mode-tablet input,
+  body.mode-tablet select,
+  body.mode-tablet textarea {
+    font-size: 16px !important;
+  }
+
+  body.mode-ipad .week-tab,
+  body.mode-tablet .week-tab {
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 12px;
+  }
+
+  body.mode-ipad .topbar,
+  body.mode-tablet .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1522,6 +1640,23 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     </div>
   </div>
 </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  const ua = navigator.userAgent || "";
+  const isiPad =
+    /iPad/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isiPad) {
+    document.body.classList.add("mode-ipad");
+    console.log("iPad mode enabled");
+  }
+
+});
+</script>
 
 </body>
 </html>
