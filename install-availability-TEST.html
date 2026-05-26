@@ -1470,6 +1470,44 @@ body.mode-iphone .undo-toast {
   bottom: 12px;
 }
 
+
+/* ── UNIFORM DAY COLUMN WIDTH FIX ─────────────────────────────────────────── */
+
+.schedule-grid,
+.schedule-grid table {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+.schedule-grid th,
+.schedule-grid td,
+thead th,
+tbody td.status-cell {
+  width: 12.5% !important;
+  min-width: 12.5% !important;
+  max-width: 12.5% !important;
+}
+
+.team-cell,
+.team-header {
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: 220px !important;
+}
+
+thead th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weekday-label,
+.date-small {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
 </style>
 </head>
 <body>
