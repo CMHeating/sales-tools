@@ -1424,6 +1424,51 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   }
 }
 
+
+/* ── iPAD FLOATING HEADER FIX ─────────────────────────────────────────────── */
+
+@media (min-width: 768px) and (max-width: 1366px) {
+  body.mode-ipad .grid-wrap {
+    max-height: calc(100vh - 210px);
+    overflow: auto;
+    position: relative;
+  }
+
+  body.mode-ipad table thead {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+  }
+
+  body.mode-ipad table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 85;
+    background: linear-gradient(180deg, #0868b8, #005aa9) !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,.18);
+  }
+
+  body.mode-ipad table thead th:first-child {
+    left: 0;
+    z-index: 95;
+  }
+
+  body.mode-ipad tbody td.team-cell {
+    position: sticky;
+    left: 0;
+    z-index: 50;
+    background: #ffffff !important;
+    box-shadow: 4px 0 10px rgba(15,47,69,.10);
+  }
+
+  body.mode-ipad .section-header td {
+    position: sticky;
+    top: 43px;
+    z-index: 70;
+  }
+}
+
 </style>
 </head>
 <body>
