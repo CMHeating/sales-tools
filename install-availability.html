@@ -63,8 +63,8 @@ signInAnonymously(auth)
 const STATUS_LABELS = {
   "FILLED":         "FILLED",
   "FULL DAY AVAIL": "FULL DAY AVAIL",
-  "HALF DAY PM":    "HALF DAY PM",
-  "HALF DAY AM":    "HALF DAY AM",
+  "HALF DAY PM":    "HALF DAY MORNING AVAILABLE",
+  "HALF DAY AM":    "HALF DAY AFTERNOON AVAILABLE",
   "TEAM OFF":       "TEAM OFF",
   "NOT AVAILABLE":  "NOT AVAILABLE",
   "NOT SCHEDULED":  "NOT SCHEDULED",
@@ -1586,7 +1586,7 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   </div>
   <div class="topbar-right">
     <div id="savingBadge"><div class="spinner"></div>&nbsp;Saving…</div>
-    <button class="btn" onclick="window.location.href='index.html'">← HCA Tools</button>
+    <button class="btn" onclick="window.location.href='https://cmheating.github.io/caas-calculator/index.html'">← HCA Tools</button>
     <button class="btn btn-admin" id="btnAdmin" onclick="toggleAdmin()">ADMIN / HCA EDIT</button>
     <button class="btn" onclick="window.location.href='audit.html'">AUDIT LOGS</button>
   </div>
@@ -1603,8 +1603,8 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     <div class="field-label">Install Availability</div>
     <select class="field-control status-select-large" id="installTypeSelect">
       <option value="fullDay">Full Day Install — FILLED</option>
-      <option value="amOnly">Morning Install Only — HALF DAY AM</option>
-      <option value="pmOnly">Afternoon Install Only — HALF DAY PM</option>
+      <option value="amOnly">Morning Install Taken — Half Day Afternoon Available</option>
+      <option value="pmOnly">Afternoon Install Taken — Half Day Morning Available</option>
       <option value="amPm">AM + PM Installs — FILLED</option>
       <option value="open">Full Day Open — FULL DAY AVAIL</option>
       <option value="hold">Hold</option>
@@ -1612,8 +1612,8 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
       <option value="notAvailable">Not Available — NOT AVAILABLE</option>
     </select>
     <div class="status-help">
-      <div><strong>HALF DAY AM</strong> — morning slot sold, afternoon still open.</div>
-      <div><strong>HALF DAY PM</strong> — afternoon slot sold, morning still open.</div>
+      <div><strong>Half Day Afternoon Available</strong> — morning install is taken.</div>
+      <div><strong>Half Day Morning Available</strong> — afternoon install is taken.</div>
       <div><strong>AM + PM</strong> — two separate sold jobs, fully booked.</div>
     </div>
     <div class="details-actions">
