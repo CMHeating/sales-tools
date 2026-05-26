@@ -184,6 +184,21 @@ function isSoldStatus(st) {
 // Badge used in legend + move picker
 function statusBadge(status) {
   const s = normalizeStatus(status);
+
+  if (s === "HALF DAY AM") {
+    return `<div class="split-status">
+      <span class="half-sold">AM SOLD</span>
+      <span class="half-open">PM OPEN</span>
+    </div>`;
+  }
+
+  if (s === "HALF DAY PM") {
+    return `<div class="split-status">
+      <span class="half-open">AM OPEN</span>
+      <span class="half-sold">PM SOLD</span>
+    </div>`;
+  }
+
   return `<span class="status-badge ${STATUS_CLASS[s] || "s-TEAM_OFF"}">${STATUS_LABELS[s] || escapeHtml(status)}</span>`;
 }
 
@@ -1508,6 +1523,41 @@ thead th {
   text-align: center;
 }
 
+
+/* ── SPLIT HALF-DAY STATUS DISPLAY ───────────────────────────────────────── */
+.split-status {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.split-status span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.half-sold {
+  background: #ffe3e3;
+  color: #9f1d1d;
+  border: 1px solid #f5b5b5;
+}
+
+.half-open {
+  background: #dff5d9;
+  color: #176b1c;
+  border: 1px solid #b9e7b2;
+}
 </style>
 </head>
 <body>
