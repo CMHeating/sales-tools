@@ -603,6 +603,7 @@ function updateQuoteSummary(){
   set("qpkg",pkg);
   set("qrent",F(pay)+"/mo");
   set("qcod",F(msrp));
+  set("codRetail",F(msrp));
   set("qresid",F(resid));
   const ql=document.getElementById("quoteLine");
   if(ql)ql.textContent=`${pkg} · ${F(pay)}/mo rental · ${F(msrp)} COD`;
