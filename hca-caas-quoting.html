@@ -374,8 +374,7 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
     </div>
     <div class="price-panel cod">
       <div class="stitle">COD — Cash / Retail</div>
-      <div class="big" id="qcod">—</div>
-      <div class="bignum" id="cmsrp">—</div>
+      <div class="bignum" id="codRetail">—</div>
       <div class="subl">Retail Price (MSRP)</div>
       <div style="margin-top:10px">
       </div>
@@ -547,8 +546,7 @@ function render(){
   document.getElementById("rres").textContent=F(resid)+" buyout at yr 8";
   document.getElementById("rtot").textContent=F(tot96)+" (96 pmts) · "+F(tot180)+" (yr 15)";
   document.getElementById("rval").textContent="+"+F(rval)+" vs buy-only over 15 yrs";
-  document.getElementById("cmsrp").textContent=F(msrp);
-  document.getElementById("qcod").textContent=F(msrp);
+  document.getElementById("codRetail").textContent=F(msrp);
   // Internal COD calculations hidden in homeowner-facing mode.
 
   updateQuoteSummary();
