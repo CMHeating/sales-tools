@@ -590,7 +590,7 @@ function fallbackCopy(txt){
 }
 function updateQuoteSummary(){
   if(!CP||!CS||!CP.sz[CS]){
-    ["qpkg","qrent","qcod","qresid"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent="—";});
+    ["qpkg","qrent","qcod","codRetail","cmsrp","qresid"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent="—";});
     return;
   }
   const b=document.getElementById("bsel").value;
