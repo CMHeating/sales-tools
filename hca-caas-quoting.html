@@ -223,6 +223,25 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
   font-size:15px;color:#667085;text-align:center;padding:2rem;
   background:#fff;border:1px dashed #d0d5dd;border-radius:20px;
 }
+.manager-panel{
+  background:#0f172a;
+  color:#fff;
+  border-radius:18px;
+  padding:14px 16px;
+  margin:16px 0;
+  box-shadow:0 12px 30px rgba(15,23,42,.18);
+}
+.manager-panel summary{
+  cursor:pointer;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.manager-panel .stat{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+}
+.manager-panel .stat span{color:rgba(255,255,255,.72)}
+.manager-panel .stat b{color:#fff}
 .version{font-size:12px;color:#98a2b3;margin-top:1rem;text-align:right}
 .quote-summary{
   display:grid;
@@ -381,6 +400,27 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
   </div>
 
   <div class="divl"></div>
+
+  <details class="manager-panel" id="managerPanel">
+    <summary>Manager View — Margin / Commission</summary>
+    <div class="r3" style="margin-top:12px">
+      <div class="stat"><span>Material</span><b id="mMat">—</b></div>
+      <div class="stat"><span>Labor</span><b id="mLab">—</b></div>
+      <div class="stat"><span>Rental Pmt Input</span><b id="mPmt">—</b></div>
+    </div>
+    <div class="r3">
+      <div class="stat"><span>Job Cost</span><b id="mJob">—</b></div>
+      <div class="stat"><span>Spiff / Commission</span><b id="mSpiff">—</b></div>
+      <div class="stat"><span>Total Cost</span><b id="mTotal">—</b></div>
+    </div>
+    <div class="r3">
+      <div class="stat"><span>Gross Profit</span><b id="mProfit">—</b></div>
+      <div class="stat"><span>Gross Margin</span><b id="mGM">—</b></div>
+      <div class="stat"><span>COD Retail</span><b id="mMSRP">—</b></div>
+    </div>
+  </details>
+
+  <div class="divl"></div>
   <div class="stitle">Early Buyout Calculator</div>
   <div class="r3" style="align-items:end">
     <div><label>Month # (1–180)</label><input type="number" id="bmo" value="24" min="1" max="180"></div>
@@ -536,6 +576,17 @@ function render(){
   const jobcost=mat+CP.lab+pmt;
   const totalcost=jobcost+spiff;
   const gm=(msrp-totalcost)/msrp*100;
+  const grossProfit=msrp-totalcost;
+  const setMgr=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  setMgr("mMat",F(mat));
+  setMgr("mLab",F(CP.lab));
+  setMgr("mPmt",F(pmt));
+  setMgr("mJob",F(jobcost));
+  setMgr("mSpiff",F(spiff));
+  setMgr("mTotal",F(totalcost));
+  setMgr("mProfit",F(grossProfit));
+  setMgr("mGM",gm.toFixed(1)+"%");
+  setMgr("mMSRP",F(msrp));
   const pay=Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM); // buyout at end of 96-mo term = MSRP×(180-96)/180
   const tot96=pay*96;
