@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invest the Difference | CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--navy:#1a3560;--navy-dk:#0f2240;--amber:#c97d10;--green:#166a3e;--green-lt:#e8f5ee;--red:#a82c22;--bg:#f2ede4;--white:#ffffff;--border:#ddd6cc;--text:#1c1c28;--muted:#6b6b7b;--radius:10px;--shadow:0 1px 8px rgba(0,0,0,0.07)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+
+/* ── HEADER ── */
+.hdr{background:var(--navy);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.badge{background:var(--amber);color:#fff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px}
+.hdr h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;line-height:1.2}
+.hdr p{font-size:12px;color:rgba(255,255,255,.5);margin-top:2px}
+.btn-back{padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.btn-back:hover{background:rgba(255,255,255,.1)}
+.btn-print{padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn-print:hover{background:rgba(255,255,255,.1)}
+
+/* ── LAYOUT ── */
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+/* ── INTRO BANNER ── */
+.intro-banner{background:var(--navy);border-radius:var(--radius);padding:18px 22px;margin-bottom:22px;display:flex;align-items:flex-start;gap:14px}
+.intro-icon{font-size:28px;flex-shrink:0}
+.intro-banner h2{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:4px}
+.intro-banner p{font-size:13px;color:rgba(255,255,255,.6);line-height:1.55}
+
+/* ── INPUT GRID ── */
+.input-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.input-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.input-card h3{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid var(--border)}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.lbl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
+.tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#e8e3dc;border-radius:50%;font-size:9px;color:var(--muted);cursor:help;position:relative;flex-shrink:0}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--navy-dk);color:#fff;font-size:11px;font-weight:500;line-height:1.4;padding:5px 9px;border-radius:5px;white-space:normal;max-width:220px;z-index:99;pointer-events:none}
+.iw{position:relative}
+.iw.d input{padding-left:22px}
+.iw.d::before{content:'$';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
+.iw.p input{padding-right:26px}
+.iw.p::after{content:'%';position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
+input[type=number],select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:var(--text);background:#faf8f5;transition:border-color .15s;-moz-appearance:textfield;appearance:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--navy);background:#fff}
+
+/* Rate presets */
+.rate-presets{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.rpbtn{padding:3px 9px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
+.rpbtn.active,.rpbtn:hover{border-color:var(--green);background:var(--green);color:#fff}
+.rpbtn-inf.active,.rpbtn-inf:hover{border-color:var(--amber);background:var(--amber);color:#fff}
+
+/* ── PERIOD SELECTOR ── */
+.ctrl-row{display:flex;align-items:center;gap:12px;margin-bottom:26px;flex-wrap:wrap}
+.period-wrap{display:flex;align-items:center;gap:9px;background:var(--white);border-radius:8px;padding:8px 13px;box-shadow:var(--shadow)}
+.period-wrap span{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.pbtns{display:flex;gap:3px}
+.pbtn{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
+.pbtn.active,.pbtn:hover{border-color:var(--navy);background:var(--navy);color:#fff}
+.btn-calc{flex:1;min-width:160px;padding:11px 24px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-calc:hover{background:var(--navy-dk)}
+
+/* ── RESULTS ── */
+#results{display:none}
+#results.show{display:block;animation:up .3s ease}
+@keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.met{background:var(--white);border-radius:8px;padding:14px 15px;box-shadow:var(--shadow);text-align:center}
+.met-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.met-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--text);line-height:1.1}
+.met-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.met.green .met-val{color:var(--green)}
+.met.navy  .met-val{color:var(--navy)}
+.met.amber .met-val{color:var(--amber)}
+.met.red   .met-val{color:var(--red)}
+
+/* ── BIG COMPARISON ── */
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.comp-card{border-radius:12px;padding:20px 22px}
+.comp-card.invest-side{background:var(--navy);color:#fff}
+.comp-card.buy-side{background:#f7f3ed;border:1.5px solid var(--border)}
+.comp-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:8px}
+.comp-card.invest-side .comp-label{color:rgba(255,255,255,.6)}
+.comp-card.buy-side .comp-label{color:var(--muted)}
+.comp-amount{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;line-height:1;margin-bottom:6px}
+.comp-card.invest-side .comp-amount{color:#fff}
+.comp-card.buy-side .comp-amount{color:var(--text)}
+.comp-desc{font-size:13px;opacity:.75;line-height:1.5}
+.comp-card.invest-side .comp-desc{color:rgba(255,255,255,.7)}
+.comp-card.buy-side .comp-desc{color:var(--muted)}
+.comp-sub{margin-top:12px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:5px;display:inline-block}
+.comp-card.invest-side .comp-sub{background:rgba(255,255,255,.12);color:#fff}
+.comp-card.buy-side .comp-sub{background:#ece8e1;color:var(--muted)}
+
+/* ── CHART ── */
+.chart-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:14px}
+.chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:10px}
+.chart-top h3{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.ctabs{display:flex;gap:3px}
+.ctab{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
+.ctab.active,.ctab:hover{border-color:var(--navy);background:var(--navy);color:#fff}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--muted)}
+.ldot{width:10px;height:10px;border-radius:2px}
+.chart-wrap{position:relative;height:280px}
+
+/* ── INFLATION TABLE ── */
+.inf-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:20px}
+.inf-card h3{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;margin-bottom:4px}
+.inf-card .inf-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.inf-table{width:100%;border-collapse:collapse;font-size:13px}
+.inf-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:0 10px 7px;border-bottom:1.5px solid var(--border)}
+.inf-table th:not(:first-child){text-align:right}
+.inf-table td{padding:8px 10px;border-bottom:1px solid #f0ece5;color:var(--text)}
+.inf-table td:not(:first-child){text-align:right}
+.inf-table tr:last-child td{border-bottom:none}
+.inf-table .highlight{font-weight:700;color:var(--amber)}
+.inf-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+/* ── VERDICT ── */
+.verdict{border-radius:10px;padding:18px 22px;margin-bottom:20px;display:flex;gap:15px;align-items:flex-start}
+.verdict.green-v{background:var(--green);color:#fff}
+.vicon{font-size:26px;flex-shrink:0;margin-top:2px}
+.vhed{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:6px}
+.vbody{font-size:13px;opacity:.9;line-height:1.65}
+
+@media(max-width:800px){
+  .input-grid{grid-template-columns:1fr 1fr}
+  .metrics{grid-template-columns:1fr 1fr}
+  .comparison{grid-template-columns:1fr}
+}
+@media(max-width:500px){
+  .input-grid{grid-template-columns:1fr}
+  .metrics{grid-template-columns:1fr 1fr}
+  .hdr{flex-direction:column;align-items:flex-start}
+}
+@media print{
+  .btn-back,.btn-print,.ctrl-row{display:none!important}
+  #results{display:block!important}
+  .hdr,.intro-banner,.verdict,.comp-card.invest-side{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <span class="badge">CM Heating</span>
+    <div>
+      <h1>Invest the Difference</h1>
+      <p>Compound Interest &amp; Inflation Calculator · HCA Edition</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a class="btn-back" href="index.html">← Dashboard</a>
+    <button class="btn-print" onclick="window.print()" title="On iPad: Share → Save to Files to save as PDF">&#128438; Print / Save PDF</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="intro-banner">
+    <div class="intro-icon">💡</div>
+    <div>
+      <h2>What if you invested instead of buying?</h2>
+      <p>Enter the lump sum the customer would invest instead of buying, set the return rate and inflation, and see what that money grows to over time — compared to what they'd spend on a system purchase including tax.</p>
+    </div>
+  </div>
+
+  <div class="eyebrow">Enter the scenario</div>
+
+  <div class="input-grid">
+
+    <!-- INVESTMENT INPUTS -->
+    <div class="input-card">
+      <h3>💰 Money to Invest</h3>
+      <div class="field">
+        <div class="lbl">HVAC System Cost <span class="tip" data-tip="Enter the system cost — this becomes the lump sum invested instead of spent on the system.">?</span></div>
+        <div class="iw d"><input type="number" id="lumpSum" value="0" min="0" step="100" oninput="mirrorHVAC('lump')"></div>
+      </div>
+      <div class="field">
+        <div class="iw d"><input type="number" id="buyCost" value="0" min="0" step="100" oninput="mirrorHVAC('buy')" style="display:none"></div>
+        <div id="buy-cost-with-tax" style="font-size:12px;font-weight:600;color:var(--amber);margin-top:5px;padding:5px 8px;background:#fdf5e8;border-radius:5px;display:none">
+          HVAC System Cost (including tax): <span id="buy-cost-tax-total">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RETURN RATE -->
+    <div class="input-card">
+      <h3>📈 Investment Return</h3>
+      <div class="field">
+        <div class="lbl">Annual return rate <span class="tip" data-tip="S&P 500 avg: ~10% (nominal), ~7% (inflation-adjusted). HYSA: ~4.5–5%. Conservative: 4–5%.">?</span></div>
+        <div class="rate-presets" id="return-presets">
+          <button class="rpbtn" onclick="setRate('returnRate',4,this,'return-presets')">4% HYSA</button>
+          <button class="rpbtn" onclick="setRate('returnRate',8,this,'return-presets')">8% S&amp;P adj.</button>
+          <button class="rpbtn active" onclick="setRate('returnRate',10,this,'return-presets')">10% S&amp;P nom.</button>
+        </div>
+        <div class="iw p"><input type="number" id="returnRate" value="10" min="0" max="30" step="0.1" oninput="clearPreset('return-presets');autoCalc()"></div>
+      </div>
+      <div class="field" style="margin-top:8px">
+        <div class="lbl">Compounding <span class="tip" data-tip="How often interest is calculated and added to the balance.">?</span></div>
+        <select id="compound" onchange="autoCalc()">
+          <option value="12">Monthly</option>
+          <option value="4">Quarterly</option>
+          <option value="1" selected>Annually</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- INFLATION -->
+    <div class="input-card">
+      <h3>📉 Inflation Rate</h3>
+      <div class="field">
+        <div class="lbl">Annual inflation <span class="tip" data-tip="US avg since 1990: ~2.5–3%. Fed target: 2%. Recent high: 4–8%. Used to show the real purchasing power of money over time.">?</span></div>
+        <div class="rate-presets" id="inf-presets">
+          <button class="rpbtn rpbtn-inf" onclick="setRate('inflationRate',2,this,'inf-presets')">2% Fed target</button>
+          <button class="rpbtn rpbtn-inf active" onclick="setRate('inflationRate',3,this,'inf-presets')">3% Historical</button>
+          <button class="rpbtn rpbtn-inf" onclick="setRate('inflationRate',4,this,'inf-presets')">4% Elevated</button>
+        </div>
+        <div class="iw p"><input type="number" id="inflationRate" value="3" min="0" max="20" step="0.1" oninput="clearPreset('inf-presets');autoCalc()"></div>
+      </div>
+      <div class="field" style="margin-top:14px;background:#faf8f5;border-radius:7px;padding:10px 12px;border:1px solid var(--border)">
+        <p style="font-size:12px;color:var(--muted);line-height:1.55">
+          <strong style="color:var(--text);display:block;margin-bottom:3px">What inflation means here</strong>
+          At 3% inflation, $12,500 today costs the equivalent of $18,300 in 15 years. The customer is locking in today's purchase price — but also locking capital into a depreciating asset.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ctrl-row">
+    <div class="period-wrap">
+      <span>Analysis period:</span>
+      <div class="pbtns">
+        <button class="pbtn" onclick="setPeriod(10,this)">10 yr</button>
+        <button class="pbtn active" onclick="setPeriod(15,this)">15 yr</button>
+        <button class="pbtn" onclick="setPeriod(20,this)">20 yr</button>
+      </div>
+    </div>
+    <button class="btn-calc" onclick="calc()">Calculate &rarr;</button>
+  </div>
+
+  <div id="results">
+
+    <div class="metrics">
+      <div class="met green">
+        <div class="met-lbl">Investment value</div>
+        <div class="met-val" id="m-total">—</div>
+        <div class="met-sub" id="m-total-sub">after 15 yr</div>
+      </div>
+      <div class="met navy">
+        <div class="met-lbl">Interest earned</div>
+        <div class="met-val" id="m-interest">—</div>
+        <div class="met-sub" id="m-interest-sub">pure growth</div>
+      </div>
+      <div class="met amber">
+        <div class="met-lbl">Total contributed</div>
+        <div class="met-val" id="m-contributed">—</div>
+        <div class="met-sub" id="m-contributed-sub">what you put in</div>
+      </div>
+      <div class="met">
+        <div class="met-lbl">Real value (today's $)</div>
+        <div class="met-val" id="m-real">—</div>
+        <div class="met-sub" id="m-real-sub">inflation-adjusted</div>
+      </div>
+    </div>
+
+    <div class="comparison">
+      <div class="comp-card invest-side">
+        <div class="comp-label">If they invest the savings</div>
+        <div class="comp-amount" id="c-invest">—</div>
+        <div class="comp-desc" id="c-invest-desc">Investment portfolio value after the analysis period, including compound growth.</div>
+        <div class="comp-sub" id="c-invest-sub">+$0 in interest</div>
+      </div>
+      <div class="comp-card buy-side">
+        <div class="comp-label">If they buy the system</div>
+        <div class="comp-amount" id="c-buy">—</div>
+        <div class="comp-desc" id="c-buy-desc">Total spent on equipment, financing, maintenance, repairs, and filters.</div>
+        <div class="comp-sub" id="c-buy-sub">system depreciates to $0</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-top">
+        <h3>Investment Growth Over Time</h3>
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchTab('nominal',this)">Nominal value</button>
+          <button class="ctab" onclick="switchTab('real',this)">Inflation-adjusted</button>
+          <button class="ctab" onclick="switchTab('both',this)">Both</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span><span class="ldot" style="background:#166a3e"></span>Investment (nominal)</span>
+        <span><span class="ldot" style="background:#1a3560;border-radius:0"></span>Investment (real $)</span>
+        <span><span class="ldot" style="background:#c97d10;border-radius:0"></span>Contributions only</span>
+        <span><span class="ldot" style="background:#a82c22;border-radius:50%;width:8px;height:8px"></span>Buy cost</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart" role="img" aria-label="Line chart showing investment growth vs buy cost over time. Values in the inflation table below.">Investment growth data is shown in the table below.</canvas>
+      </div>
+    </div>
+
+    <div class="inf-card">
+      <h3>Inflation Impact</h3>
+      <div class="inf-sub">What today's money is worth over time — and what the system purchase really costs in real dollars.</div>
+      <table class="inf-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Investment (nominal)</th>
+            <th>Investment (real $)</th>
+            <th>Initial invested</th>
+            <th>Purchasing power of $1 today</th>
+          </tr>
+        </thead>
+        <tbody id="inf-tbody"></tbody>
+      </table>
+      <p class="inf-note" id="inf-note">At 3% inflation, the purchasing power of $1 today is worth $0.74 in 15 years. A $12,500 system purchased today would require $19,435 in future dollars to buy the equivalent.</p>
+    </div>
+
+    <div class="verdict green-v" id="verdict">
+      <div class="vicon">📈</div>
+      <div>
+        <div class="vhed" id="v-hed">Your money works harder when invested</div>
+        <div class="vbody" id="v-body"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+var period = 15;
+var chartTab = 'nominal';
+var chartInst = null;
+var chartData = {};
+
+function $d(n){ return '$'+Math.round(Math.abs(n)).toLocaleString(); }
+function gv(id){ return parseFloat(document.getElementById(id).value)||0; }
+function gi(id){ return parseInt(document.getElementById(id).value)||0; }
+
+function setRate(inputId, val, btn, groupId){
+  document.getElementById(inputId).value = val;
+  document.querySelectorAll('#'+groupId+' .rpbtn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  // Auto-set compounding to match real-world behavior
+  if (val === 4) {
+    document.getElementById('compound').value = '12'; // HYSA = monthly
+  } else {
+    document.getElementById('compound').value = '1';  // S&P = annually
+  }
+  autoCalc();
+}
+
+function clearPreset(groupId){
+  document.querySelectorAll('#'+groupId+' .rpbtn').forEach(function(b){ b.classList.remove('active'); });
+}
+
+function setPeriod(yr, btn){
+  period = yr;
+  document.querySelectorAll('.pbtn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  autoCalc();
+}
+
+function switchTab(t, btn){
+  chartTab = t;
+  document.querySelectorAll('.ctab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderChart();
+}
+
+function mirrorHVAC(source) {
+  var val = parseFloat(document.getElementById('lumpSum').value) || 0;
+  document.getElementById('buyCost').value = val;
+  autoCalc();
+}
+
+function autoCalc(){
+  if(document.getElementById('results').classList.contains('show')) calc();
+}
+
+function calc(){
+  var buyCostRaw = gv('lumpSum'); // pre-tax entry
+  var buyCost    = buyCostRaw * 1.10; // tax-inclusive — used for BOTH investment and comparison
+  var lump       = buyCost; // invest the full tax-inclusive amount
+  var rateAnn  = gv('returnRate') / 100;
+  var infAnn   = gv('inflationRate') / 100;
+  var n        = gi('compound') || 12;
+  var months   = period * 12;
+
+  // Show tax callout
+  var taxEl = document.getElementById('buy-cost-with-tax');
+  var taxTotalEl = document.getElementById('buy-cost-tax-total');
+  if (buyCostRaw > 0) {
+    taxEl.style.display = 'block';
+    taxTotalEl.textContent = $d(buyCost) + ' (+' + $d(buyCostRaw * 0.10) + ' tax)';
+  } else {
+    taxEl.style.display = 'none';
+  }
+
+  // Compound interest — lump sum only (no monthly contributions)
+  var rPerPeriod = rateAnn / n;
+  var numPeriods = n * period;
+
+  var totalValue    = lump * Math.pow(1 + rPerPeriod, numPeriods);
+  var totalContrib  = lump;
+  var totalInterest = totalValue - totalContrib;
+  var inflFactor    = Math.pow(1 + infAnn, period);
+  var realValue     = totalValue / inflFactor;
+
+  // Build year-by-year data
+  var nominalArr = [lump];
+  var realArr    = [lump];
+  var contribArr = [lump];
+  var buyLine    = [];
+  var labels     = ['Now'];
+
+  for (var yr = 1; yr <= period; yr++) {
+    var np = n * yr;
+    var nom = lump * Math.pow(1 + rPerPeriod, np);
+    var inf = Math.pow(1 + infAnn, yr);
+    nominalArr.push(nom);
+    realArr.push(nom / inf);
+    contribArr.push(lump);
+    buyLine.push(buyCost);
+    labels.push('Yr '+yr);
+  }
+  buyLine.unshift(0);
+
+  chartData = { nominal:nominalArr, real:realArr, contrib:contribArr, buy:buyLine, labels:labels };
+
+  // Update metrics
+  document.getElementById('m-total').textContent     = $d(totalValue);
+  document.getElementById('m-total-sub').textContent  = 'after '+period+' yr';
+  document.getElementById('m-interest').textContent   = $d(totalInterest);
+  document.getElementById('m-interest-sub').textContent = 'pure compound growth';
+  document.getElementById('m-contributed').textContent  = $d(totalContrib);
+  document.getElementById('m-contributed-sub').textContent = 'initial investment';
+  document.getElementById('m-real').textContent       = $d(realValue);
+  document.getElementById('m-real-sub').textContent   = 'in today\'s dollars';
+
+  // Comparison
+  document.getElementById('c-invest').textContent       = $d(totalValue);
+  document.getElementById('c-invest-desc').textContent  = 'Portfolio value after '+period+' years at '+gv('returnRate')+'% annual return — including $'+Math.round(totalInterest).toLocaleString()+' in compound growth.';
+  document.getElementById('c-invest-sub').textContent   = '+'+$d(totalInterest)+' in interest earned';
+  document.getElementById('c-buy').textContent          = $d(buyCost);
+  document.getElementById('c-buy-desc').textContent     = 'Total cost of buying including 10% tax — '+$d(buyCostRaw)+' + '+$d(buyCostRaw*0.10)+' tax. System depreciates to near $0 by end of life.';
+  document.getElementById('c-buy-sub').textContent      = 'system depreciates to ~$0';
+
+  // Inflation table
+  var tbody = document.getElementById('inf-tbody');
+  tbody.innerHTML = '';
+  var checkpoints = [1, 3, 5, 7, 10, 15, 20].filter(function(y){ return y <= period; });
+  if (checkpoints.indexOf(period) === -1) checkpoints.push(period);
+  checkpoints.forEach(function(yr){
+    var inf = Math.pow(1 + infAnn, yr);
+    var pwrOf1 = (1 / inf).toFixed(3);
+    var nomVal = nominalArr[yr] || 0;
+    var realVal = realArr[yr] || 0;
+    var contrib = contribArr[yr] || 0;
+    var isLast = yr === period;
+    tbody.innerHTML += '<tr'+(isLast?' style="font-weight:700"':'')+'>'+
+      '<td>Year '+yr+'</td>'+
+      '<td class="'+(isLast?'highlight':'')+'">'+ $d(nomVal) +'</td>'+
+      '<td>'+ $d(realVal) +'</td>'+
+      '<td>'+ $d(contrib) +'</td>'+
+      '<td>$'+pwrOf1+'</td>'+
+      '</tr>';
+  });
+
+  // Inflation note
+  var endInf = Math.pow(1 + infAnn, period);
+  var buyFutureEq = buyCost * endInf;
+  document.getElementById('inf-note').textContent =
+    'At '+(gv('inflationRate'))+'% inflation, the purchasing power of $1 today is worth $'+(1/endInf).toFixed(2)+' in '+period+' years. ' +
+    'The '+$d(buyCost)+' spent buying the system is equivalent to '+$d(buyFutureEq)+' in future dollars — ' +
+    'while your '+$d(totalValue)+' investment portfolio would have '+$d(totalValue - buyCost)+' more than what you spent.';
+
+  // Verdict
+  var diff = totalValue - buyCost;
+  document.getElementById('v-hed').textContent = 'Investing puts '+$d(totalValue)+' in their pocket vs '+$d(buyCost)+' spent buying';
+  document.getElementById('v-body').textContent =
+    'By investing '+$d(lump)+' at '+gv('returnRate')+'% annual return instead of putting it into a depreciating system, ' +
+    'the customer ends up with '+$d(totalValue)+' after '+period+' years — ' +
+    '$'+Math.round(totalInterest).toLocaleString()+' of that is pure compound interest. ' +
+    'Compare that to spending '+$d(buyCost)+' on a system (including 10% tax) that depreciates to zero. ' +
+    'In real purchasing power terms (adjusted for '+gv('inflationRate')+'% inflation), ' +
+    'that portfolio is worth '+$d(realValue)+' in today\'s dollars.';
+  renderChart();
+  document.getElementById('results').classList.add('show');
+}
+
+function renderChart(){
+  if (!chartData.labels) return;
+  var ctx = document.getElementById('chart').getContext('2d');
+  if (chartInst) chartInst.destroy();
+
+  var datasets = [];
+
+  if (chartTab === 'nominal' || chartTab === 'both') {
+    datasets.push({
+      label: 'Investment (nominal)',
+      data: chartData.nominal,
+      borderColor: '#166a3e',
+      backgroundColor: 'rgba(22,106,62,0.08)',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: chartTab === 'nominal',
+      tension: 0.3
+    });
+  }
+
+  if (chartTab === 'real' || chartTab === 'both') {
+    datasets.push({
+      label: 'Investment (real $)',
+      data: chartData.real,
+      borderColor: '#1a3560',
+      backgroundColor: 'rgba(26,53,96,0.06)',
+      borderWidth: 2,
+      borderDash: [4,3],
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: false,
+      tension: 0.3
+    });
+  }
+
+  datasets.push({
+    label: 'Contributions only',
+    data: chartData.contrib,
+    borderColor: '#c97d10',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderDash: [3,3],
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    fill: false,
+    tension: 0.2
+  });
+
+  datasets.push({
+    label: 'Buy cost',
+    data: chartData.buy,
+    borderColor: '#a82c22',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderDash: [6,4],
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    fill: false,
+    tension: 0
+  });
+
+  chartInst = new Chart(ctx, {
+    type: 'line',
+    data: { labels: chartData.labels, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(c){ return ' '+c.dataset.label+': $'+Math.round(c.parsed.y).toLocaleString(); }
+          }
+        }
+      },
+      scales: {
+        x: { grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{family:'Outfit',size:11}, color:'#6b6b7b', maxRotation:0 } },
+        y: { grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{family:'Outfit',size:11}, color:'#6b6b7b', callback:function(v){ return v>=1000?'$'+Math.round(v/1000)+'k':'$'+v; } } }
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  // Pre-fill from URL params if coming from CaaS vs Buy
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('lumpSum')) {
+    var ls = parseFloat(params.get('lumpSum'));
+    if (ls > 0) {
+      document.getElementById('lumpSum').value = ls;
+      // Show a context banner
+      var banner = document.createElement('div');
+      banner.style.cssText = 'background:#eef1f8;border:1.5px solid #1a3560;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#1a3560;font-weight:600';
+      banner.textContent = '💰 Pre-filled from CaaS vs Buy — showing what $' + ls.toLocaleString() + ' grows to if invested instead of spent on the system.';
+      document.querySelector('.wrap').insertBefore(banner, document.querySelector('.intro-banner'));
+    }
+  }
+});
+</script>
+</body>
+</html>
