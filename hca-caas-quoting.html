@@ -401,7 +401,7 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
 
   <div class="divl"></div>
 
-  <div class="manager-panel" id="managerPanel">
+  <div class="manager-panel" id="managerPanel" style="display:none">
     <div style="font-weight:900;font-size:18px;margin-bottom:12px">Manager View — Margin / Commission</div>
     <div class="r3" style="margin-top:12px">
       <div class="stat"><span>Material</span><b id="mMat">—</b></div>
@@ -685,6 +685,9 @@ document.getElementById("tsel").addEventListener("change",fillSizes);
 document.getElementById("ssel").addEventListener("change",render);
 document.getElementById("jd").textContent=JD["ACGF"];
 fill();
+const managerMode = new URLSearchParams(window.location.search).get("manager") === "1";
+const managerPanel = document.getElementById("managerPanel");
+if (managerPanel) managerPanel.style.display = managerMode ? "block" : "none";
 </script>
 </body>
 </html>
