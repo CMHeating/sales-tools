@@ -697,6 +697,21 @@ fill();
 const managerMode = new URLSearchParams(window.location.search).get("manager") === "1";
 const managerPanel = document.getElementById("managerPanel");
 if (managerPanel) managerPanel.style.display = managerMode ? "block" : "none";
+function unlockManager(){
+  const pin = prompt("Enter manager PIN");
+  if(pin === "2505"){
+    const panel = document.getElementById("managerPanel");
+    if(panel){
+      panel.style.display = "block";
+      if(panel.tagName && panel.tagName.toLowerCase()==="details") panel.open = true;
+      panel.scrollIntoView({behavior:"smooth", block:"center"});
+    }
+    const btn = document.getElementById("managerAccessBtn");
+    if(btn) btn.textContent = "Manager View Unlocked";
+  } else if(pin !== null) {
+    alert("Incorrect PIN");
+  }
+}
 </script>
 </body>
 </html>
