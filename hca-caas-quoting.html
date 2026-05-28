@@ -550,7 +550,12 @@ function fill(){
 }
 function fillTiers(){
   const b=document.getElementById("bsel").value;
-  document.getElementById("tsel").innerHTML=tiers(b).map(t=>`<option value="${t}">${t[0]+t.slice(1).toLowerCase()}</option>`).join("");
+  const ts=tiers(b);
+  const sel=document.getElementById("tsel");
+  sel.innerHTML=ts.map(t=>`<option value="${t}">${t[0]+t.slice(1).toLowerCase()}</option>`).join("");
+  if(ts.includes("GOOD")) sel.value="GOOD";
+  else if(ts.includes("BETTER")) sel.value="BETTER";
+  else if(ts.includes("BEST")) sel.value="BEST";
   fillSizes();
 }
 function fillSizes(){
