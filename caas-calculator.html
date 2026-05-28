@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaaS vs. Buy | CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--navy:#1a3560;--navy-dk:#0f2240;--amber:#c97d10;--bg:#f2ede4;--white:#ffffff;--border:#ddd6cc;--text:#1c1c28;--muted:#6b6b7b;--ok:#166a3e;--bad:#a82c22;--radius:10px;--shadow:0 1px 8px rgba(0,0,0,0.07)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+
+.hdr{background:var(--navy);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.badge{background:var(--amber);color:#fff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px}
+.hdr h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;line-height:1.2}
+.hdr p{font-size:12px;color:rgba(255,255,255,.5);margin-top:2px}
+.btn-print{padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-print:hover{background:rgba(255,255,255,.1)}
+.btn-back{padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.btn-back:hover{background:rgba(255,255,255,.1)}
+
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+/* ── TIER PRESETS ── */
+.presets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:22px}
+.preset{border:1.5px solid var(--border);background:var(--white);border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;font-family:'Outfit',sans-serif;transition:all .15s}
+.preset:hover{border-color:var(--navy)}
+.preset.active{border-color:var(--navy);background:var(--navy)}
+.preset .pname{font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.preset .pcaption{font-size:11px;color:var(--muted);line-height:1.3}
+.preset.active .pname{color:#fff}
+.preset.active .pcaption{color:rgba(255,255,255,.55)}
+.preset.t-value  { border-top: 3px solid #6b8cba; }
+.preset.t-good   { border-top: 3px solid #1a7a4a; }
+.preset.t-better { border-top: 3px solid #c97d10; }
+.preset.t-best   { border-top: 3px solid #8b3fc8; }
+.preset.t-custom { border-top: 3px solid #6b6b7b; }
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-head{padding:13px 18px}
+.card.buy .card-head{background:var(--navy)}
+.card.caas .card-head{background:var(--amber)}
+.card-head h2{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#fff}
+.card-head p{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
+.card-body{padding:17px}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.lbl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
+.tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#e8e3dc;border-radius:50%;font-size:9px;color:var(--muted);cursor:help;position:relative;flex-shrink:0}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--navy-dk);color:#fff;font-size:11px;font-weight:500;line-height:1.4;padding:5px 9px;border-radius:5px;white-space:normal;max-width:200px;z-index:99;pointer-events:none}
+.iw{position:relative}
+.iw.d input{padding-left:22px}
+.iw.d::before{content:'$';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
+.iw.p input{padding-right:26px}
+.iw.p::after{content:'%';position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
+input[type=number],select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:var(--text);background:#faf8f5;transition:border-color .15s;-moz-appearance:textfield;appearance:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--navy);background:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.div{height:1px;background:#ece8e1;margin:13px 0}
+.sub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:9px}
+.checks{display:flex;flex-direction:column;gap:9px}
+.chk{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+.chk input[type=checkbox]{width:16px;height:16px;margin-top:2px;accent-color:var(--amber);flex-shrink:0;cursor:pointer}
+.chk .ct{font-size:13px;font-weight:500;color:var(--text);line-height:1.35}
+.chk .cs{font-size:11px;color:var(--muted);display:block;margin-top:1px}
+
+.path-btn{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted);text-align:center}
+.path-btn:hover{border-color:var(--navy)}
+.path-btn.active{border-color:var(--navy);background:var(--navy);color:#fff}
+
+/* Decision tree */
+.path-tree{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0}
+.path-option{border:1.5px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:all .15s;background:#faf8f5}
+.path-option:hover{border-color:var(--navy)}
+.path-option.active{border-color:var(--navy);background:#eef1f8}
+.path-opt-head{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.path-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:all .15s}
+.path-option.active .path-dot{border-color:var(--navy);background:var(--navy)}
+.path-opt-title{font-size:13px;font-weight:700;color:var(--text)}
+.path-opt-desc{font-size:11px;color:var(--muted);line-height:1.4;margin-left:21px}
+.path-residual{margin-top:10px;margin-left:21px}
+
+/* ── CONTROLS ── */
+.ctrl-row{display:flex;align-items:center;gap:12px;margin-bottom:26px;flex-wrap:wrap}
+.period-wrap{display:flex;align-items:center;gap:9px;background:var(--white);border-radius:8px;padding:8px 13px;box-shadow:var(--shadow)}
+.period-wrap span{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.pbtns{display:flex;gap:3px}
+.pbtn{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
+.pbtn.active,.pbtn:hover{border-color:var(--navy);background:var(--navy);color:#fff}
+.btn-calc{flex:1;min-width:160px;padding:11px 24px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-calc:hover{background:var(--navy-dk)}
+.btn-reset{padding:11px 16px;border:1.5px solid var(--border);background:var(--white);color:var(--muted);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-reset:hover{border-color:var(--bad);color:var(--bad)}
+
+/* ── RESULTS ── */
+#results{display:none}
+#results.show{display:block;animation:up .3s ease}
+@keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.met{background:var(--white);border-radius:8px;padding:13px 15px;box-shadow:var(--shadow);text-align:center}
+.met-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.met-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--text);line-height:1.1}
+.met-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.met.navy .met-val{color:var(--navy)}
+.met.ok   .met-val{color:var(--ok)}
+.met.bad  .met-val{color:var(--bad)}
+.met.amb  .met-val{color:var(--amber)}
+.chart-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:14px}
+.chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:10px}
+.chart-top h3{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.ctabs{display:flex;gap:3px}
+.ctab{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
+.ctab.active,.ctab:hover{border-color:var(--navy);background:var(--navy);color:#fff}
+.legend{display:flex;gap:14px;margin-bottom:10px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--muted)}
+.ldot{width:10px;height:10px;border-radius:2px}
+.chart-wrap{position:relative;height:260px}
+.verdict{border-radius:10px;padding:18px 22px;margin-bottom:14px;display:flex;gap:15px;align-items:flex-start}
+.verdict.bw{background:var(--navy);color:#fff}
+.verdict.cw{background:var(--amber);color:#fff}
+.verdict.tie{background:#3a3a4a;color:#fff}
+.vicon{font-size:26px;flex-shrink:0;margin-top:2px}
+.vhed{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:6px}
+.vbody{font-size:13px;opacity:.9;line-height:1.65}
+.bdown-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:20px}
+.bdown-card h3{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;margin-bottom:13px}
+.btable{width:100%;border-collapse:collapse;font-size:13px}
+.btable th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:0 10px 7px 10px;border-bottom:1.5px solid var(--border)}
+.btable th:not(:first-child){text-align:right}
+.btable td{padding:6px 10px;border-bottom:1px solid #f0ece5;color:var(--text)}
+.btable td:not(:first-child){text-align:right}
+.btable tr.total td{font-weight:700;border-bottom:none;padding-top:9px;border-top:1.5px solid var(--border)}
+.btable tr.true-total td{font-weight:700;border-bottom:none;padding-top:9px;border-top:2px solid var(--navy);background:#eef1f8}
+
+/* ── TIER BADGE on results ── */
+.tier-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:16px}
+
+/* ── RATE PRESETS ── */
+.rate-presets{display:flex;gap:5px;margin-bottom:7px}
+.rpbtn{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
+.rpbtn.active,.rpbtn:hover{border-color:var(--navy);background:var(--navy);color:#fff}
+
+@media(max-width:720px){
+  .form-grid,.two{grid-template-columns:1fr}
+  .metrics{grid-template-columns:1fr 1fr}
+  .hdr{flex-direction:column;align-items:flex-start}
+  .presets{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .presets{grid-template-columns:1fr}
+}
+@media print{
+  .btn-print,.btn-back,.presets,.ctrl-row{display:none!important}
+  #results{display:block!important}
+  .hdr,.card.buy .card-head,.card.caas .card-head,.verdict{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <span class="badge">CM Heating</span>
+    <div>
+      <h1>CaaS vs. Buy Analyzer</h1>
+      <p>Comfort as a Service · Financial Comparison · HCA Edition</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a class="btn-back" href="index.html">← Dashboard</a>
+    <a class="btn-back" href="hca-field-guide.html" target="_blank">📚 HCA Field Guide</a>
+    <button class="btn-print" onclick="window.print()" title="On iPad: Share → Save to Files to save as PDF">&#128438; Print / Save PDF</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="eyebrow">Select brand + comfort tier · enter your quote price on Custom</div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-body">
+      <div class="field">
+        <div class="lbl">Brand / equipment family</div>
+        <select id="brandSelect" onchange="selectBrand(this.value)" style="width:100%">
+          <option value="ameristar">Ameristar</option>
+          <option value="goodman">Goodman</option>
+          <option value="daikin">Daikin</option>
+          <option value="american_standard">American Standard</option>
+          <option value="midea">Midea EVOX</option>
+          <option value="mitsubishi">Mitsubishi</option>
+        </select>
+        <div id="brandTierNote" style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="presets">
+
+    <div class="preset t-value" id="p-value" onclick="selectPreset('value',this)">
+      <div class="pname">Value</div>
+      <div class="pcaption">Payment-first option</div>
+    </div>
+
+    <div class="preset t-good active" id="p-good" onclick="selectPreset('good',this)">
+      <div class="pname">Good</div>
+      <div class="pcaption">Balanced comfort/value</div>
+    </div>
+
+    <div class="preset t-better" id="p-better" onclick="selectPreset('better',this)">
+      <div class="pname">Better</div>
+      <div class="pcaption">Higher comfort/efficiency</div>
+    </div>
+
+    <div class="preset t-best" id="p-best" onclick="selectPreset('best',this)">
+      <div class="pname">Best</div>
+      <div class="pcaption">Flagship comfort system</div>
+    </div>
+
+    <div class="preset t-custom" id="p-custom" onclick="selectPreset('custom',this)">
+      <div class="pname">Custom</div>
+      <div class="pcaption">Enter your quote price</div>
+    </div>
+
+  </div>
+
+  <div class="form-grid">
+
+    <!-- BUY -->
+    <div class="card buy">
+      <div class="card-head">
+        <h2>If They Buy</h2>
+        <p>Purchase + financing + all ownership costs</p>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="lbl">System price (before tax) <span class="tip" data-tip="Total installed cost — equipment, labor, and permits. 10% sales tax added automatically.">?</span></div>
+          <div class="iw d"><input type="number" id="buyPrice" value="8500" min="0" step="100" oninput="autoCalc()"></div>
+          <div id="buy-price-tax-callout" style="font-size:12px;font-weight:600;color:var(--amber);margin-top:5px;padding:5px 8px;background:#fdf5e8;border-radius:5px;display:none">
+            With 10% tax: <span id="buy-price-tax-total">—</span>
+          </div>
+        </div>
+
+        <div class="div"></div>
+        <div class="sub">How would they pay?</div>
+
+        <div class="path-tree">
+          <div class="path-option active" id="buy-opt-finance" onclick="setBuyPath('finance')">
+            <div class="path-opt-head">
+              <div class="path-dot"></div>
+              <div class="path-opt-title">Finance it</div>
+            </div>
+            <div class="path-opt-desc">Monthly payments — interest adds to total cost</div>
+            <div id="finance-inputs" style="margin-top:10px;margin-left:21px">
+              <div class="lbl" style="margin-bottom:4px">Interest rate <span class="tip" data-tip="Annual financing rate. Typical: 9.99%–14.99%">?</span></div>
+              <div class="iw p" style="margin-bottom:8px"><input type="number" id="apr" value="9.99" min="0" max="30" step="0.01" oninput="autoCalc()" onclick="event.stopPropagation()"></div>
+              <div class="lbl" style="margin-bottom:4px">Loan term</div>
+              <select id="loanTerm" onchange="autoCalc()" onclick="event.stopPropagation()" style="width:100%">
+                <option value="60">5 years (60 mo)</option>
+                <option value="84">7 years (84 mo)</option>
+                <option value="120" selected>10 years (120 mo)</option>
+                <option value="180">15 years (180 mo)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="path-option" id="buy-opt-cash" onclick="setBuyPath('cash')">
+            <div class="path-opt-head">
+              <div class="path-dot"></div>
+              <div class="path-opt-title">Write a check</div>
+            </div>
+            <div class="path-opt-desc">Full price paid upfront — no interest, no monthly payment</div>
+            <div id="invest-link" style="display:none;margin-top:10px;margin-left:21px">
+              <a id="invest-href" href="investment-calculator.html" target="_blank"
+                style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#1a3560;text-decoration:none;padding:6px 10px;background:#eef1f8;border-radius:6px;border:1.5px solid #1a3560"
+                onclick="event.stopPropagation()">
+                📈 See what this grows to if invested →
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="div"></div>
+        <div class="sub">Annual ownership costs</div>
+        <div class="two">
+          <div class="field">
+            <div class="lbl">Maintenance plan <span class="tip" data-tip="Annual service contract / tune-up. Heat &amp; Cool covers both furnace and AC.">?</span></div>
+            <select class="field-select" id="maintPlanSelect" onchange="setMaintPlan(this.value)" style="width:100%;padding:9px 10px;border:1.5px solid #ddd;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;background:#fff;color:#1a3560;margin-bottom:6px">
+              <option value="251.88">Club + Whole System (Heat &amp; Cool) — $251.88/yr</option>
+              <option value="155.88">Club + Furnace or AC/HP — $155.88/yr</option>
+              <option value="custom">Custom</option>
+            </select>
+            <div class="iw d"><input type="number" id="annualMaint" value="251.88" min="0" step="0.01" oninput="autoCalc()"></div>
+          </div>
+          <div class="field">
+            <div class="lbl">Filters / yr <span class="tip" data-tip="Annual filter replacement cost. ~$50/yr">?</span></div>
+            <div class="iw d"><input type="number" id="annualFilters" value="180" min="0" step="10" oninput="autoCalc()"></div>
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <div class="lbl">Repair budget yr 1–10 <span class="tip" data-tip="Labor costs within warranty period. Typically $250/yr.">?</span></div>
+            <div class="iw d"><input type="number" id="annualRepairs" value="250" min="0" step="10" oninput="autoCalc()"></div>
+            <div class="lbl" style="margin-top:8px">Repair budget yr 11–15 <span class="tip" data-tip="Out-of-warranty costs increase significantly after year 10. Typically $400+/yr.">?</span></div>
+            <div class="iw d"><input type="number" id="annualRepairsPost" value="400" min="0" step="10" oninput="autoCalc()"></div>
+          </div>
+          <div class="field">
+            <div class="lbl">IAQ / UV bulbs / yr <span class="tip" data-tip="$500 bulb every 3 years = ~$167/yr">?</span></div>
+            <div class="iw d"><input type="number" id="annualIAQ" value="167" min="0" step="10" oninput="autoCalc()"></div>
+          </div>
+        </div>
+        <div class="div"></div>
+        <div class="sub">Cost inflation</div>
+        <div class="field">
+          <div class="lbl">Annual cost inflation <span class="tip" data-tip="Maintenance, repairs, filters, and IAQ costs rise with inflation each year. CaaS monthly payment stays fixed — a key advantage over time.">?</span></div>
+          <div class="rate-presets" id="inf-presets">
+            <button class="rpbtn" onclick="setInfPreset(2,this)">2% Fed</button>
+            <button class="rpbtn active" onclick="setInfPreset(3,this)">3% Hist.</button>
+            <button class="rpbtn" onclick="setInfPreset(4,this)">4% High</button>
+          </div>
+          <div class="iw p"><input type="number" id="inflationRate" value="3" min="0" max="15" step="0.5" oninput="clearInfPreset();autoCalc()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CaaS -->
+    <div class="card caas">
+      <div class="card-head">
+        <h2>Comfort as a Service</h2>
+        <p>All-inclusive monthly subscription</p>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="lbl">Monthly payment <span class="tip" data-tip="Customer's flat monthly CaaS payment — no tax applied.">?</span></div>
+          <div class="iw d"><input type="number" id="caasMonthly" value="99" min="0" step="5" oninput="autoCalc()"></div>
+        </div>
+        <div class="field">
+          <div class="lbl">Contract term <span class="tip" data-tip="How many months they pay the full monthly rate">?</span></div>
+          <select id="caasTermMonths" onchange="autoCalc()">
+            <option value="60">5 yr (60 mo)</option>
+            <option value="84">7 yr (84 mo)</option>
+            <option value="96" selected>8 yr (96 mo)</option>
+            <option value="120">10 yr (120 mo)</option>
+          </select>
+        </div>
+
+        <div class="div"></div>
+        <div class="sub">At end of contract — customer chooses</div>
+
+        <div class="path-tree">
+          <div class="path-option active" id="path-opt-continue" onclick="setPath('continue')">
+            <div class="path-opt-head">
+              <div class="path-dot"></div>
+              <div class="path-opt-title">Continue to year 15</div>
+            </div>
+            <div class="path-opt-desc">Same monthly payment continues through month 180, then contract ends</div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px">
+          <span id="payoff-toggle" onclick="togglePayoff()" style="font-size:11px;color:#888;cursor:pointer;font-family:'Outfit',sans-serif;text-decoration:underline;text-underline-offset:3px">▸ Pay off residual at contract end (uncommon)</span>
+          <div id="payoff-panel" style="display:none;margin-top:10px;padding:10px 12px;background:#f5f5f5;border-radius:8px;border:1px solid #ddd">
+            <div class="lbl" style="margin-bottom:4px">Residual amount <span class="tip" data-tip="Lump sum from contract to pay off and own the equipment. Upload a completed contract to calculate.">?</span></div>
+            <div class="iw d"><input type="number" id="caasResidual" value="0" min="0" step="100" oninput="autoCalc()"></div>
+            <div style="font-size:11px;color:#888;margin-top:6px">Upload a completed contract to calculate the residual amount.</div>
+          </div>
+        </div>
+
+        <div class="div"></div>
+        <div class="sub">What's included in CaaS?</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:11px">Maintenance, filters, and IAQ are always included. Uncheck anything else not covered.</p>
+        <div class="checks">
+          <label class="chk" style="opacity:0.6;pointer-events:none">
+            <input type="checkbox" id="cMaint" checked disabled>
+            <span class="ct">Maintenance &amp; tune-ups included<span class="cs">Always included in CaaS payment</span></span>
+          </label>
+          <label class="chk" style="opacity:0.6;pointer-events:none">
+            <input type="checkbox" id="cFilters" checked disabled>
+            <span class="ct">Filter replacements included<span class="cs">Always included in CaaS payment</span></span>
+          </label>
+          <label class="chk" style="opacity:0.6;pointer-events:none">
+            <input type="checkbox" id="cIAQ" checked disabled>
+            <span class="ct">IAQ / UV bulbs included<span class="cs">Always included in CaaS payment</span></span>
+          </label>
+          <label class="chk">
+            <input type="checkbox" id="cRepairs" checked onchange="autoCalc()">
+            <span class="ct">Repairs &amp; service calls included<span class="cs">No surprise repair bills — ever</span></span>
+          </label>
+          <div style="margin-top:10px;padding:10px 12px;background:rgba(201,125,16,0.08);border-left:3px solid var(--amber);border-radius:6px;font-size:12px;color:#4a4a5a;line-height:1.6">
+            🔄 <strong>Ready for a new system?</strong> Simply sign a new contract and enjoy the convenience of a 15-year warranty, peace-of-mind cost of ownership built in, and inflation-free payments moving forward.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ctrl-row">
+    <div class="period-wrap">
+      <span>Analysis period:</span>
+      <div class="pbtns">
+        <button class="pbtn" onclick="setPeriod(10,this)">10 yr</button>
+        <button class="pbtn active" onclick="setPeriod(15,this)">15 yr</button>
+        <button class="pbtn" onclick="setPeriod(20,this)">20 yr</button>
+      </div>
+    </div>
+    <button class="btn-reset" onclick="clearResults()" title="Clear results">&#10005; Clear</button>
+    <button class="btn-calc" onclick="calc()">Calculate &amp; Compare &rarr;</button>
+  </div>
+
+  <div id="results">
+    <div class="tier-badge" id="tier-badge">&#9679; Good · $8,500</div>
+    <div class="metrics">
+      <div class="met navy">
+        <div class="met-lbl">System cost invested</div>
+        <div class="met-val" id="m-invested">—</div>
+        <div class="met-sub" id="m-invested-sub">grows to at yr 15</div>
+      </div>
+      <div class="met" style="border-left:3px solid #3aaa35">
+        <div class="met-lbl" style="color:#168a20">Interest earned</div>
+        <div class="met-val" id="m-interest" style="color:#168a20">—</div>
+        <div class="met-sub" id="m-interest-sub">over 15 years</div>
+      </div>
+      <div class="met" id="m-sav-card" style="border-left:3px solid #c97d10">
+        <div class="met-lbl" id="m-sav-lbl">Net advantage</div>
+        <div class="met-val" id="m-sav-val" style="color:#c97d10">—</div>
+        <div class="met-sub" id="m-sav-sub">CaaS + invest vs buying</div>
+      </div>
+    </div>
+
+    <div class="bdown-card" id="caas-invest-card" style="display:none;border-left:4px solid #3aaa35;background:linear-gradient(135deg,#f0faf4,#fff)">
+      <h3>✅ CaaS + Invest vs. Writing a Check</h3>
+      <p style="font-size:12px;color:#6b6b7b;margin-bottom:14px">What if instead of writing a check, you did CaaS and invested that money?</p>
+      <div id="caas-invest-body"></div>
+    </div>
+
+    <div class="bdown-card" id="replacement-cost-card" style="display:none;border-left:4px solid #3aaa35">
+      <h3>🔄 Year <span id="rc-yr">15</span> System Replacement Cost</h3>
+      <p style="font-size:12px;color:#6b6b7b;margin-bottom:14px">What will it cost to replace this system when the CaaS contract ends?</p>
+      <div id="replacement-cost-body"></div>
+    </div>
+
+    <div class="chart-card" id="chart-card">
+      <div class="chart-top">
+        <h3>Cost Comparison Over Time</h3>
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchTab('cum',this)">Cumulative total</button>
+          <button class="ctab" onclick="switchTab('mo',this)">Monthly cost</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span><span class="ldot" style="background:#1a3560"></span>Buy (all-in)</span>
+        <span><span class="ldot" style="background:#c97d10;border-radius:0;height:3px"></span>CaaS (all-in)</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart" role="img" aria-label="Line chart comparing cumulative cost of buying vs CaaS over the selected period. See breakdown table below for values.">Cost comparison values are in the breakdown table below.</canvas>
+      </div>
+    </div>
+
+    <div class="verdict" id="v-card">
+      <div class="vicon" id="v-icon">📊</div>
+      <div>
+        <div class="vhed" id="v-hed">Calculating...</div>
+        <div class="vbody" id="v-body"></div>
+      </div>
+    </div>
+
+    <div class="bdown-card">
+      <h3>Cost Breakdown Summary</h3>
+      <table class="btable">
+        <thead><tr><th>Cost component</th><th>Buy</th><th>CaaS</th></tr></thead>
+        <tbody id="btbody"></tbody>
+      </table>
+    </div>
+
+    <div class="bdown-card" id="invest-angle-card" style="display:none;border-left:4px solid #c97d10">
+      <h3>💰 The Investment Angle</h3>
+      <p style="font-size:12px;color:#6b6b7b;margin-bottom:10px">What if the money spent on buying was invested instead?</p>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="inv-rate-presets">
+        <button class="rpbtn active" onclick="setInvRate(4,'monthly',this)" title="HYSA interest taxed as ordinary income each year">4% HYSA</button>
+        <button class="rpbtn" onclick="setInvRate(8,'annual',this)" title="10% nominal minus ~2-3% inflation = real purchasing power return">8% S&amp;P real</button>
+        <button class="rpbtn" onclick="setInvRate(10,'annual',this)" title="Historical S&P 500 average — does not account for inflation">10% S&amp;P nominal</button>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:14px;line-height:1.5">
+        <strong>10% nominal</strong> = historical S&amp;P avg before inflation &nbsp;·&nbsp; <strong>8% real</strong> = inflation-adjusted purchasing power &nbsp;·&nbsp; <strong>Tax note:</strong> long-term capital gains ~15% applies at liquidation; HYSA interest taxed as ordinary income annually
+      </div>
+      <div id="invest-angle-body"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var period = 15;
+var tab = 'cum';
+var chartInst = null;
+var activePreset = 'good';
+var caasPath = 'continue';
+var buyPath  = 'finance';
+var S = { buyC:[], caasC:[], buyM:[], caasM:[], labels:[] };
+
+function togglePayoff() {
+  var panel  = document.getElementById('payoff-panel');
+  var toggle = document.getElementById('payoff-toggle');
+  var open   = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  toggle.textContent  = open ? '▾ Pay off residual at contract end (uncommon)' : '▸ Pay off residual at contract end (uncommon)';
+  if (open) {
+    caasPath = 'payoff';
+  } else {
+    caasPath = 'continue';
+    document.getElementById('caasResidual').value = 0;
+    clearResults();
+  }
+}
+
+function setPath(path) {
+  caasPath = path;
+  document.getElementById('path-opt-payoff') && document.getElementById('path-opt-payoff').classList.toggle('active', path === 'payoff');
+  document.getElementById('path-opt-continue').classList.toggle('active', path === 'continue');
+  if (path === 'continue') {
+    document.getElementById('caasResidual').value = 0;
+  }
+  clearResults();
+}
+
+function setBuyPath(path) {
+  buyPath = path;
+  document.getElementById('buy-opt-finance').classList.toggle('active', path === 'finance');
+  document.getElementById('buy-opt-cash').classList.toggle('active', path === 'cash');
+  document.getElementById('finance-inputs').style.display = path === 'finance' ? 'block' : 'none';
+  var investLink = document.getElementById('invest-link');
+  investLink.style.display = path === 'cash' ? 'block' : 'none';
+  if (path === 'cash') {
+    var price = document.getElementById('buyPrice').value || 0;
+    document.getElementById('invest-href').href = 'investment-calculator.html?lumpSum=' + price;
+  }
+  if (path === 'finance') {
+    document.getElementById('apr').value = 9.99;
+  }
+  clearResults();
+}
+
+function clearResults() {
+  var r = document.getElementById('results');
+  r.classList.remove('show');
+  r.style.opacity = '0';
+  setTimeout(function(){ r.style.opacity = ''; }, 150);
+}
+
+var activeBrand = 'ameristar';
+
+var BRAND_LABELS = {
+  ameristar: 'Ameristar',
+  goodman: 'Goodman',
+  daikin: 'Daikin',
+  american_standard: 'American Standard',
+  midea: 'Midea EVOX',
+  mitsubishi: 'Mitsubishi'
+};
+
+var BRAND_TIER_DEFAULTS = {
+  ameristar: {
+    value:  { price:6500,  caasMonthly:79,  note:'Ameristar Value · entry payment-focused system' },
+    good:   { price:8000,  caasMonthly:99,  note:'Ameristar Good · practical upgrade package' },
+    better: { price:10500, caasMonthly:129, note:'Ameristar Better · stronger comfort package' },
+    best:   { price:12500, caasMonthly:149, note:'Ameristar Best · highest Ameristar positioning' }
+  },
+  goodman: {
+    value:  { price:7000,  caasMonthly:89,  note:'Goodman Value · entry replacement system' },
+    good:   { price:9000,  caasMonthly:109, note:'Goodman Good · balanced system' },
+    better: { price:11500, caasMonthly:139, note:'Goodman Better · upgraded comfort system' },
+    best:   { price:14000, caasMonthly:169, note:'Goodman Best · top Goodman package' }
+  },
+  daikin: {
+    value:  { price:8500,  caasMonthly:99,  note:'Daikin Value · entry Daikin package' },
+    good:   { price:11000, caasMonthly:129, note:'Daikin Good · balanced Daikin comfort' },
+    better: { price:14500, caasMonthly:169, note:'Daikin Better · inverter/comfort focused' },
+    best:   { price:18000, caasMonthly:209, note:'Daikin Best · premium Daikin comfort system' }
+  },
+  american_standard: {
+    value:  { price:9000,  caasMonthly:109, note:'American Standard Value · Silver entry package' },
+    good:   { price:12000, caasMonthly:149, note:'American Standard Good · Silver/Gold comfort package' },
+    better: { price:15500, caasMonthly:189, note:'American Standard Better · Gold/variable comfort package' },
+    best:   { price:19500, caasMonthly:239, note:'American Standard Best · Platinum premium comfort package' }
+  },
+  midea: {
+    value:  { price:14500, caasMonthly:169, note:'Midea Value · inverter-driven comfort package' },
+    good:   { price:17500, caasMonthly:209, note:'Midea Good · EVOX enhanced comfort inverter package' },
+    better: { price:20500, caasMonthly:249, note:'Midea Better · premium EVOX low-ambient inverter package' },
+    best:   { price:24000, caasMonthly:299, note:'Midea Best · flagship variable-capacity comfort system' }
+  },
+  mitsubishi: {
+    value:  { price:12500, caasMonthly:149, note:'Mitsubishi Value · entry Mitsubishi package' },
+    good:   { price:15500, caasMonthly:189, note:'Mitsubishi Good · M-Series comfort package' },
+    better: { price:19500, caasMonthly:239, note:'Mitsubishi Better · Hyper-Heat comfort package' },
+    best:   { price:24000, caasMonthly:299, note:'Mitsubishi Best · flagship premium comfort package' }
+  }
+};
+
+var TIER_DEFAULTS = {
+  value:  { apr:9.99, loanTerm:84,  annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
+  good:   { apr:9.99, loanTerm:84,  annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
+  better: { apr:9.99, loanTerm:120, annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
+  best:   { apr:9.99, loanTerm:120, annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
+};
+
+var TIER_LABELS = { value:'Value', good:'Good', better:'Better', best:'Best', custom:'Custom' };
+
+function selectBrand(brand) {
+  activeBrand = brand;
+  updateBrandTierNote();
+  selectPreset(activePreset, document.getElementById('p-' + activePreset));
+}
+
+function updateBrandTierNote() {
+  var noteEl = document.getElementById('brandTierNote');
+  if (!noteEl) return;
+  if (activePreset === 'custom') {
+    noteEl.textContent = BRAND_LABELS[activeBrand] + ' · Custom quote';
+    return;
+  }
+  var b = BRAND_TIER_DEFAULTS[activeBrand];
+  var tier = b && b[activePreset];
+  noteEl.textContent = tier ? tier.note : '';
+}
+
+function selectPreset(name, btn) {
+  document.querySelectorAll('.preset').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  activePreset = name;
+
+  if (name === 'custom') {
+    document.getElementById('buyPrice').value = '';
+    updateBrandTierNote();
+    autoCalc(); return;
+  }
+
+  var brandTier = BRAND_TIER_DEFAULTS[activeBrand][name];
+  var price = brandTier.price || 0;
+  var d = TIER_DEFAULTS[name];
+
+  document.getElementById('buyPrice').value      = price;
+  document.getElementById('apr').value           = d.apr;
+  document.getElementById('loanTerm').value      = d.loanTerm;
+  document.getElementById('annualMaint').value   = d.annualMaint;
+  var sel = document.getElementById('maintPlanSelect');
+  sel.value = [251.88, 155.88].includes(Number(d.annualMaint)) ? String(d.annualMaint) : 'custom';
+  document.getElementById('annualFilters').value = d.annualFilters;
+  document.getElementById('annualRepairs').value = d.annualRepairs;
+  document.getElementById('annualRepairsPost').value = d.annualRepairsPost;
+  document.getElementById('caasMonthly').value   = brandTier.caasMonthly;
+  document.getElementById('caasTermMonths').value= d.caasTermMonths;
+
+  updateBrandTierNote();
+  autoCalc();
+}
+
+function setPeriod(yr, btn) {
+  period = yr;
+  document.querySelectorAll('.pbtn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  autoCalc();
+}
+
+function switchTab(t, btn) {
+  tab = t;
+  document.querySelectorAll('.ctab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderChart(S.labels, t==='cum' ? S.buyC : S.buyM, t==='cum' ? S.caasC : S.caasM);
+}
+
+var invRate = 0.04;
+var invCompound = 'monthly';
+
+function fvLump(principal, years) {
+  if (invCompound === 'monthly') {
+    return principal * Math.pow(1 + invRate/12, years*12);
+  }
+  return principal * Math.pow(1 + invRate, years);
+}
+
+function fvMonthly(mo, nMonths) {
+  var r = invCompound === 'monthly' ? invRate/12 : Math.pow(1+invRate, 1/12)-1;
+  return mo * ((Math.pow(1+r, nMonths)-1)/r);
+}
+
+function setInvRate(rate, compound, btn) {
+  invRate = rate / 100;
+  invCompound = compound;
+  document.querySelectorAll('#inv-rate-presets .rpbtn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  autoCalc();
+}
+
+function setMaintPlan(val) {
+  if (val !== 'custom') {
+    document.getElementById('annualMaint').value = val;
+    autoCalc();
+  }
+}
+
+function setInfPreset(val, btn) {
+  document.getElementById('inflationRate').value = val;
+  document.querySelectorAll('#inf-presets .rpbtn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  autoCalc();
+}
+function clearInfPreset() {
+  document.querySelectorAll('#inf-presets .rpbtn').forEach(function(b){ b.classList.remove('active'); });
+}
+
+function autoCalc() {
+  if (document.getElementById('results').classList.contains('show')) calc();
+}
+
+function $d(n) { return '$' + Math.round(Math.abs(n)).toLocaleString(); }
+function $mo(n) { return '$' + Math.round(Math.abs(n)).toLocaleString() + '/mo'; }
+function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function gi(id) { return parseInt(document.getElementById(id).value) || 0; }
+function gc(id) { return document.getElementById(id).checked; }
+
+function calc() {
+  var bp  = gv('buyPrice');
+  var bpTax = bp * 1.10;
+
+  var buyTaxEl = document.getElementById('buy-price-tax-callout');
+  var buyTaxTotal = document.getElementById('buy-price-tax-total');
+  if (bp > 0) {
+    buyTaxEl.style.display = 'block';
+    buyTaxTotal.textContent = $d(bpTax) + ' (+' + $d(bp * 0.10) + ' tax)';
+  } else {
+    buyTaxEl.style.display = 'none';
+  }
+
+  var apr = buyPath === 'cash' ? 0 : gv('apr') / 100 / 12;
+  var lt  = buyPath === 'cash' ? 0 : (gi('loanTerm') || 120);
+  var mnt = gv('annualMaint');
+  var flt = gv('annualFilters');
+  var rep     = gv('annualRepairs');
+  var repPost = gv('annualRepairsPost');
+  var iaq = gv('annualIAQ');
+  var cmoRaw = gv('caasMonthly');
+  var cmo = cmoRaw;
+  var ctm = gi('caasTermMonths') || 96;
+
+  var residual = gv('caasResidual');
+  var cMaint   = gc('cMaint');
+  var cFilters = gc('cFilters');
+  var cRepairs = gc('cRepairs');
+  var cIAQ     = gc('cIAQ');
+
+  if (buyPath === 'cash' && bp > 0) {
+    document.getElementById('invest-href').href = 'investment-calculator.html?lumpSum=' + Math.round(bp);
+  }
+
+  var months = period * 12;
+  var principal = bpTax;
+  var lp = 0;
+  if (buyPath === 'finance' && apr > 0 && principal > 0) {
+    lp = principal * apr * Math.pow(1+apr,lt) / (Math.pow(1+apr,lt)-1);
+  } else if (buyPath === 'finance' && principal > 0) {
+    lp = principal / lt;
+  }
+
+  var infRate = gv('inflationRate') / 100;
+
+  // ── Year 15 replacement cost (always anchored to year 15, using current inflation rate) ──
+  var futureCostYr15 = bpTax * Math.pow(1 + infRate, 15);
+
+  var mMnt = mnt/12, mFlt = flt/12, mRep = rep/12, mRepPost = repPost/12, mIAQ = iaq/12;
+
+  // ── BUY ──
+  var buyC = [buyPath === 'cash' ? bpTax : 0], buyM = [buyPath === 'cash' ? bpTax : 0];
+  for (var m = 1; m <= months; m++) {
+    var inf = Math.pow(1 + infRate, Math.floor((m-1)/12));
+    var mRepNow = m <= 120 ? mRep : mRepPost;
+    var bm = (buyPath === 'finance' && m <= lt ? lp : 0) + (mMnt + mFlt + mRepNow + mIAQ) * inf;
+    bm = Math.max(0, bm);
+    buyM.push(bm);
+    buyC.push(buyC[m-1] + bm);
+  }
+
+  var flatOngoing = 0, inflatedOngoing = 0;
+  for (var m = 1; m <= months; m++) {
+    var mRepNow = m <= 120 ? mRep : mRepPost;
+    flatOngoing     += (mMnt + mFlt + mRepNow + mIAQ);
+    inflatedOngoing += (mMnt + mFlt + mRepNow + mIAQ) * Math.pow(1 + infRate, Math.floor((m-1)/12));
+  }
+  var inflationPremium = inflatedOngoing - flatOngoing;
+
+  // ── CaaS ──
+  var caasC = [0], caasM = [0];
+  var contractEnd = caasPath === 'continue' ? 180 : ctm;
+
+  for (var m = 1; m <= months; m++) {
+    var inf = Math.pow(1 + infRate, Math.floor((m-1)/12));
+    var mRepNow = m <= 120 ? mRep : mRepPost;
+    var cm = 0;
+    if (m <= contractEnd) {
+      cm = cmo;
+      if (!cRepairs) cm += mRepNow * inf;
+      cm = Math.max(0, cm);
+    } else {
+      cm = (mMnt + mFlt + mRepNow + mIAQ) * inf;
+      cm = Math.max(0, cm);
+    }
+    caasM.push(cm);
+    caasC.push(caasC[m-1] + cm);
+  }
+
+  if (caasPath === 'payoff' && residual > 0 && ctm <= months) {
+    for (var i = ctm; i <= months; i++) {
+      caasC[i] += residual;
+    }
+    caasM[ctm] += residual;
+  }
+
+  var labels = [];
+  for (var i = 0; i <= months; i++) labels.push(i%12===0 ? 'Yr '+(i/12) : '');
+
+  S = { buyC:buyC, caasC:caasC, buyM:buyM, caasM:caasM, labels:labels };
+  renderChart(labels, tab==='cum' ? buyC : buyM, tab==='cum' ? caasC : caasM);
+
+  var buyTotal  = buyC[months];
+  var caasTotal = caasC[months];
+
+  document.getElementById('chart-card').style.display = caasTotal < buyTotal ? 'block' : 'none';
+  var savings   = caasTotal - buyTotal;
+  var caasAvg   = caasTotal / months;
+  var yr = period;
+  var rateShort = invCompound === 'monthly' ? '4% HYSA' : (invRate===0.08 ? '8% S&P real' : '10% S&P nom.');
+
+  var investedFV     = fvLump(bpTax, yr);
+  var interestEarned = investedFV - bpTax;
+  var netAdvantage   = investedFV - caasTotal;
+
+  document.getElementById('m-invested').textContent     = $d(Math.round(investedFV));
+  document.getElementById('m-invested-sub').textContent = $d(Math.round(bpTax)) + ' at ' + rateShort;
+  document.getElementById('m-interest').textContent     = '+' + $d(Math.round(interestEarned));
+  document.getElementById('m-interest-sub').textContent = 'investing system cost · ' + rateShort;
+
+  var savEl  = document.getElementById('m-sav-val');
+  var savSub = document.getElementById('m-sav-sub');
+  var savLbl = document.getElementById('m-sav-lbl');
+  if (netAdvantage >= 0) {
+    savEl.textContent  = '+' + $d(Math.round(netAdvantage));
+    savEl.style.color  = '#168a20';
+    savLbl.textContent = 'Net advantage';
+    savSub.textContent = 'CaaS + invest vs writing a check';
+  } else {
+    savEl.textContent  = $d(Math.round(Math.abs(netAdvantage)));
+    savEl.style.color  = '#c97d10';
+    savLbl.textContent = 'CaaS net cost';
+    savSub.textContent = 'after ' + rateShort + ' interest earned';
+  }
+
+  var tierLabel = TIER_LABELS[activePreset] || 'Custom';
+  var badgeEl = document.getElementById('tier-badge');
+  badgeEl.textContent = '● ' + BRAND_LABELS[activeBrand] + ' · ' + tierLabel + (activePreset !== 'custom' ? ' · $' + Math.round(bp).toLocaleString() : ' · Custom quote');
+
+  var vc = document.getElementById('v-card');
+  var vi = document.getElementById('v-icon');
+  var vh = document.getElementById('v-hed');
+  var vb = document.getElementById('v-body');
+
+  if (savings < -100) {
+    vc.className='verdict cw'; vi.textContent='✅';
+    vh.textContent = 'CaaS wins — saves ' + $d(-savings) + ' AND earns ' + $d(Math.round(interestEarned)) + ' in interest';
+    vb.textContent = 'CaaS is the clear choice — it costs less over ' + yr + ' years AND investing the system cost at ' + rateShort + ' earns ' + $d(Math.round(interestEarned)) + ' in interest. That\'s a net advantage of +' + $d(Math.round(netAdvantage)) + ' vs writing a check. Predictable payments, no surprise bills, no depreciating asset.';
+  } else if (netAdvantage > 0) {
+    vc.className='verdict cw'; vi.textContent='💡';
+    vh.textContent = 'CaaS + invest wins by ' + $d(Math.round(netAdvantage)) + ' over ' + yr + ' years';
+    vb.textContent = 'Buying appears to save ' + $d(Math.abs(savings)) + ' on cost alone — but investing the system cost at ' + rateShort + ' earns ' + $d(Math.round(interestEarned)) + ' in interest, making CaaS + invest the smarter financial decision by ' + $d(Math.round(netAdvantage)) + '. Keep your capital working for you instead of sinking it into a depreciating system.';
+  } else {
+    vc.className='verdict cw'; vi.textContent='✅';
+    vh.textContent = 'CaaS — peace of mind, predictable payments, inflation-proof';
+    vb.textContent = 'Investing the system cost at ' + rateShort + ' covers ' + Math.round((interestEarned/caasTotal)*100) + '% of your entire CaaS membership. Add in the fixed monthly payment, no repair surprises, no out-of-warranty risk, and a new system waiting when you\'re ready — CaaS is the smarter long-term choice.';
+  }
+
+  var loanPmts  = buyPath === 'finance' ? Math.min(lt,months)*lp : 0;
+  var intPaid   = buyPath === 'finance' ? Math.max(0, loanPmts-principal) : 0;
+  var cContractPmts = Math.min(contractEnd,months)*cmo;
+  var pathLabel = caasPath==='payoff'
+    ? (residual>0 ? 'Pay off '+$d(residual)+' at mo.'+ctm : 'Pay off at mo.'+ctm)
+    : 'Continue to mo.180';
+  var postMonths = caasPath === 'continue' ? 0 : Math.max(0, months - ctm);
+  var contractYrs = Math.round(Math.min(ctm, months) / 12 * 10) / 10;
+
+  function caasIncludedLabel(annualCost) {
+    if (postMonths <= 0) return '✓ included';
+    var postCost = (annualCost / 12) * postMonths;
+    return '✓ incl. thru yr ' + contractYrs + ', then ' + $d(Math.round(postCost));
+  }
+
+  // ── Investment opportunity rows ──
+  var invRows = [];
+  if (buyPath === 'cash') {
+    var lumpInv = bpTax;
+    var fvInv = fvLump(lumpInv, yr);
+    invRows.push(['💰 Invest lump sum at ' + (invRate*100).toFixed(0) + '%', $d(Math.round(lumpInv)) + ' → ' + $d(Math.round(fvInv)), '—']);
+    invRows.push(['Net position (invest vs CaaS)', $d(Math.round(fvInv)), $d(caasTotal)]);
+  } else {
+    var lumpInv = bpTax;
+    var fvLumpInv = fvLump(lumpInv, yr);
+    var netInv = fvLumpInv - intPaid;
+    invRows.push(['💰 Invest system cost at ' + (invRate*100).toFixed(0) + '%', $d(Math.round(lumpInv)) + ' → ' + $d(Math.round(fvLumpInv)), '—']);
+    invRows.push(['Less: loan interest paid', '-' + $d(Math.round(intPaid)), '—']);
+    invRows.push(['Net investment value', $d(Math.round(netInv)), $d(caasTotal)]);
+    var diff = lp - cmo;
+    if (diff > 0) {
+      var fvGapEnd = fvMonthly(diff, lt);
+      var fvGap15 = fvLump(fvGapEnd, (months - lt) / 12);
+      invRows.push(['💰 Monthly gap invested (' + $mo(diff) + ' × ' + Math.round(lt/12) + 'yr)', $d(Math.round(diff*lt)) + ' → ' + $d(Math.round(fvGap15)), '—']);
+    }
+  }
+
+  // ── Main cost breakdown rows ──
+  var rows = [
+    ['Equipment (before tax)',          buyPath==='cash' ? $d(bp)+' (cash)' : $d(bp),  $d(cContractPmts)],
+    ['Sales tax (10%)',                  buyPath==='cash' ? $d(Math.round(bp*0.10)) : $d(Math.round(bp*0.10))+' (financed)', '✓ in monthly'],
+    ['Financing interest',              buyPath==='cash' ? '—' : $d(intPaid),           '—'],
+    ['Residual / end of contract',     '—',           caasPath==='payoff' ? $d(residual) : pathLabel],
+    ['Maintenance ('+yr+' yr)',        $d(mnt*yr),    caasIncludedLabel(mnt)],
+    ['Filters ('+yr+' yr)',            $d(flt*yr),    caasIncludedLabel(flt)],
+    ['Repairs yr 1–10',               $d(rep*10),    cRepairs ? '✓ included' : $d(rep*10)],
+    ['Repairs yr 11–'+yr+' (out of warranty)',  $d(repPost*(yr-10)),  cRepairs ? '✓ included' : $d(repPost*(yr-10))],
+    ['IAQ / UV bulbs ('+yr+' yr)',     $d(iaq*yr),    caasIncludedLabel(iaq)],
+    ['Cost inflation ('+infRate*100+'%/yr)',  '+' + $d(Math.round(inflationPremium)) + ' on maint, repairs, filters, IAQ', 'Fixed monthly — inflation-proof'],
+    ['TOTAL ('+yr+'-yr cost of ownership)',   $d(buyTotal),  $d(caasTotal)]
+  ];
+
+  // ── Replacement cost at year 15 (always at yr 15 regardless of analysis period) ──
+  var replacementRows = '';
+  if (bp > 0) {
+    var pctIncrease = Math.round(((futureCostYr15 - bpTax) / bpTax) * 100);
+    replacementRows =
+      '<tr><td colspan="3" style="padding:12px 10px 5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);border-top:2px solid var(--border);background:#f0f4ff">📅 System Replacement · Year 15 (at ' + (infRate*100).toFixed(0) + '% inflation/yr)</td></tr>' +
+      '<tr style="background:#f5f8ff">' +
+        '<td style="font-size:13px">Next system · today\'s ' + $d(Math.round(bpTax)) + ' grows to this by yr 15</td>' +
+        '<td style="text-align:right;font-weight:700;color:#c97d10;font-size:14px">' + $d(Math.round(futureCostYr15)) + '</td>' +
+        '<td style="text-align:right;color:#168a20;font-weight:600">🔄 New contract — no lump sum</td>' +
+      '</tr>' +
+      '<tr class="true-total">' +
+        '<td><strong>True 15-yr cost of ownership</strong> <span style="font-size:11px;font-weight:500;color:var(--muted)">(incl. replacement)</span></td>' +
+        '<td style="text-align:right;color:#c97d10;font-size:15px"><strong>' + $d(Math.round(buyTotal + futureCostYr15)) + '</strong></td>' +
+        '<td style="text-align:right;color:#1a3560;font-size:15px"><strong>' + $d(caasTotal) + '</strong></td>' +
+      '</tr>';
+  }
+
+  document.getElementById('btbody').innerHTML =
+    rows.map(function(r,i){
+      return '<tr'+(i===rows.length-1?' class="total"':'')+'>'+
+        '<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';
+    }).join('') +
+    replacementRows +
+    '<tr><td colspan="3" style="padding:10px 10px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#c97d10;border-top:2px solid #f0ece5">Investment Opportunity (' + (invRate*100).toFixed(0) + '% ' + (invCompound==='monthly'?'HYSA':'S&P') + ')</td></tr>' +
+    invRows.map(function(r){
+      return '<tr style="background:#fffbf5">'+
+        '<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';
+    }).join('');
+
+  document.getElementById('results').classList.add('show');
+
+  // ── CaaS + Invest vs Write a Check ──
+  var caasInvestCard = document.getElementById('caas-invest-card');
+  var caasInvestBody = document.getElementById('caas-invest-body');
+
+  if (bp > 0 && cmoRaw > 0) {
+    var lumpSum        = bpTax;
+    var investedFV     = fvLump(lumpSum, yr);
+    var interestEarned = investedFV - lumpSum;
+    var netAdvantage   = investedFV - caasTotal;
+    var rateShort      = invCompound === 'monthly' ? '4% HYSA' : (invRate===0.08 ? '8% S&P real' : '10% S&P nom.');
+    var coversPct      = Math.round((interestEarned / caasTotal) * 100);
+
+    var buySavings   = Math.max(0, savings * -1);
+    var trueAdvantage = interestEarned - buySavings;
+
+    var bottomLine = '';
+    var bottomColor = '';
+
+    if (trueAdvantage > 0) {
+      bottomLine  = '🎯 <strong>True advantage: CaaS + invest wins by +' + $d(Math.round(trueAdvantage)) + '</strong>' +
+        (buySavings > 0
+          ? ' — interest earned (' + $d(Math.round(interestEarned)) + ') outweighs buying cheaper (' + $d(Math.round(buySavings)) + ')'
+          : ' — interest earned on top of CaaS already costing less') +
+        '. You keep your capital and never own a depreciating system.';
+      bottomColor = 'rgba(58,170,53,0.1)';
+    } else {
+      bottomLine  = '🏠 In this scenario, buying is the better financial choice by <strong>' + $d(Math.round(Math.abs(trueAdvantage))) + '</strong> — buy savings (' + $d(Math.round(buySavings)) + ') exceed the interest earned (' + $d(Math.round(interestEarned)) + '). CaaS still offers peace of mind, fixed payments, and no repair risk.';
+      bottomColor = 'rgba(201,125,16,0.08)';
+    }
+
+    caasInvestBody.innerHTML =
+      '<div style="display:flex;flex-direction:column;gap:10px">' +
+
+        '<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f5f8fb;border-radius:10px">' +
+          '<div style="font-size:24px;flex-shrink:0">1️⃣</div>' +
+          '<div style="font-size:13px;color:#4a4a5a;line-height:1.5">Instead of writing a check for <strong>' + $d(Math.round(lumpSum)) + '</strong>, invest it at <strong>' + rateShort + '</strong></div>' +
+        '</div>' +
+
+        '<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f0faf4;border-radius:10px;border:1px solid rgba(58,170,53,0.2)">' +
+          '<div style="font-size:24px;flex-shrink:0">2️⃣</div>' +
+          '<div>' +
+            '<div style="font-size:13px;color:#4a4a5a">Over ' + yr + ' years your <strong>' + $d(Math.round(lumpSum)) + '</strong> grows to <strong style="color:#168a20;font-size:16px">' + $d(Math.round(investedFV)) + '</strong></div>' +
+            '<div style="font-size:12px;color:#888;margin-top:2px">Interest earned: <strong style="color:#168a20">+' + $d(Math.round(interestEarned)) + '</strong> — covers <strong style="color:#168a20">' + coversPct + '%</strong> of your CaaS membership</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="padding:13px 15px;border-radius:10px;font-size:13px;color:#1a3560;line-height:1.6;background:' + bottomColor + ';border-left:4px solid #3aaa35">' +
+          bottomLine +
+        '</div>' +
+
+      '</div>';
+
+    caasInvestCard.style.display = 'block';
+  } else {
+    caasInvestCard.style.display = 'none';
+  }
+
+  // ── Investment Angle ──
+  var investCard = document.getElementById('invest-angle-card');
+  var investBody = document.getElementById('invest-angle-body');
+  var annRate = invRate;
+  var rateLabel = invCompound === 'monthly'
+    ? (annRate*100).toFixed(0) + '% HYSA (monthly compounding, taxed as ordinary income)'
+    : annRate === 0.08
+      ? '8% S&amp;P real return (inflation-adjusted)'
+      : '10% S&amp;P nominal (historical avg, pre-inflation)';
+
+  var html = '';
+
+  if (buyPath === 'cash') {
+    var lump = bp * 1.10;
+    var fv = fvLump(lump, yr);
+    html += '<div style="margin-bottom:14px;padding:12px;background:#fdf5e8;border-radius:8px">' +
+      '<div style="font-size:12px;font-weight:700;color:#c97d10;margin-bottom:6px">📦 Cash Purchase Scenario</div>' +
+      '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
+      'Instead of writing a <strong>' + $d(lump) + '</strong> check, invested at ' + rateLabel + ' grows to:<br>' +
+      '<span style="font-size:20px;font-weight:800;color:#1a3560">' + $d(Math.round(fv)) + '</span> after ' + yr + ' years<br>' +
+      '<span style="font-size:11px;color:#888">Interest earned: ' + $d(Math.round(fv - lump)) + ' &nbsp;|&nbsp; Total CaaS cost: ' + $d(caasTotal) + '</span>' +
+      '</div></div>';
+  }
+
+  if (buyPath === 'finance') {
+    var diff = lp - cmo;
+    var lump = bp * 1.10;
+    var ltYrs = Math.round(lt / 12 * 10) / 10;
+
+    var fvLumpAt15 = fvLump(lump, yr);
+    var netAfterInterest = fvLumpAt15 - intPaid;
+    html += '<div style="margin-bottom:12px;padding:12px;background:#f0f4ff;border-radius:8px">' +
+      '<div style="font-size:12px;font-weight:700;color:#1a3560;margin-bottom:6px">🏦 Invest the Full System Cost</div>' +
+      '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
+      'Invest <strong>' + $d(Math.round(lump)) + '</strong> (tax-inclusive) at ' + rateLabel + ', make loan payments normally.<br>' +
+      '<strong>' + $d(Math.round(fvLumpAt15)) + '</strong> investment value at year ' + yr + '<br>' +
+      '<span style="color:#c97d10">minus <strong>' + $d(Math.round(intPaid)) + '</strong> total loan interest paid</span><br>' +
+      '<span style="font-size:15px;font-weight:800;color:#1a3560">= Net ' + $d(Math.round(netAfterInterest)) + ' after ' + yr + ' years</span><br>' +
+      '<span style="font-size:11px;color:#888">CaaS total cost: ' + $d(caasTotal) + ' &nbsp;|&nbsp; Loan term: ' + ltYrs + ' yrs</span>' +
+      '</div></div>';
+
+    if (diff > 0) {
+      var fvAtLoanEnd = fvMonthly(diff, lt);
+      var remainingMonths = months - lt;
+      var fvAt15 = fvLump(fvAtLoanEnd, remainingMonths / 12);
+      html += '<div style="padding:12px;background:#f5f8ff;border-radius:8px">' +
+        '<div style="font-size:12px;font-weight:700;color:#1a3560;margin-bottom:6px">📈 Invest the Monthly Difference</div>' +
+        '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
+        'Loan <strong>' + $mo(lp) + '</strong> vs CaaS <strong>' + $mo(cmoRaw) + '</strong> — gap: <strong>' + $mo(diff) + '</strong><br>' +
+        'Invest that gap for the <strong>' + ltYrs + '-yr loan term</strong> at ' + rateLabel + ' → <strong>' + $d(Math.round(fvAtLoanEnd)) + '</strong><br>' +
+        'Left invested through year ' + yr + ':<br>' +
+        '<span style="font-size:15px;font-weight:800;color:#1a3560">' + $d(Math.round(fvAt15)) + '</span><br>' +
+        '<span style="font-size:11px;color:#888">Total contributed: ' + $d(Math.round(diff * lt)) + ' &nbsp;|&nbsp; Growth: ' + $d(Math.round(fvAt15 - diff * lt)) + '</span>' +
+        '</div></div>';
+    } else if (diff < 0) {
+      var monthlySavings = Math.abs(diff);
+      var fvSavingsAtLoanEnd = fvMonthly(monthlySavings, lt);
+      var remainingMonths2 = months - lt;
+      var fvSavingsAt15 = fvLump(fvSavingsAtLoanEnd, remainingMonths2 / 12);
+      html += '<div style="padding:12px;background:#edfaf0;border-radius:8px;border-left:3px solid #3aaa35">' +
+        '<div style="font-size:12px;font-weight:700;color:#168a20;margin-bottom:6px">✅ Buying Saves More Monthly — Invest the Difference</div>' +
+        '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
+        'CaaS <strong>' + $mo(cmoRaw) + '</strong> costs more than the loan <strong>' + $mo(lp) + '</strong> — buying saves <strong>' + $mo(monthlySavings) + '</strong>.<br>' +
+        'Invest those savings for the <strong>' + ltYrs + '-yr loan term</strong> at ' + rateLabel + ' → <strong>' + $d(Math.round(fvSavingsAtLoanEnd)) + '</strong><br>' +
+        'Left invested through year ' + yr + ':<br>' +
+        '<span style="font-size:15px;font-weight:800;color:#168a20">' + $d(Math.round(fvSavingsAt15)) + '</span><br>' +
+        '<span style="font-size:11px;color:#888">Total contributed: ' + $d(Math.round(monthlySavings * lt)) + ' &nbsp;|&nbsp; Growth: ' + $d(Math.round(fvSavingsAt15 - monthlySavings * lt)) + ' &nbsp;|&nbsp; Plus system ownership at year ' + ltYrs + '</span>' +
+        '</div></div>';
+    }
+  }
+
+  investCard.style.display = html ? 'block' : 'none';
+  investBody.innerHTML = html;
+
+  // ── Year 15 Replacement Cost Card ──
+  var rcCard = document.getElementById('replacement-cost-card');
+  var rcBody = document.getElementById('replacement-cost-body');
+  document.getElementById('rc-yr').textContent = yr;
+
+  if (bp > 0) {
+    var todayCost   = bpTax;
+    var increase    = futureCostYr15 - todayCost;
+    var pctIncrease = Math.round((increase / todayCost) * 100);
+
+    rcBody.innerHTML =
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">' +
+
+        '<div style="flex:1;min-width:160px;padding:12px;background:#f5f8fb;border-radius:8px;text-align:center">' +
+          '<div style="font-size:11px;color:#888;margin-bottom:4px">Today\'s installed cost</div>' +
+          '<div style="font-size:22px;font-weight:800;color:#1a3560">' + $d(Math.round(todayCost)) + '</div>' +
+          '<div style="font-size:11px;color:#888">incl. 10% tax</div>' +
+        '</div>' +
+
+        '<div style="display:flex;align-items:center;font-size:20px;color:#c97d10;padding:0 4px">→</div>' +
+
+        '<div style="flex:1;min-width:160px;padding:12px;background:#fff8f0;border-radius:8px;text-align:center;border:1px solid rgba(201,125,16,0.2)">' +
+          '<div style="font-size:11px;color:#888;margin-bottom:4px">Replacement cost at year 15</div>' +
+          '<div style="font-size:22px;font-weight:800;color:#c97d10">' + $d(Math.round(futureCostYr15)) + '</div>' +
+          '<div style="font-size:11px;color:#888">at ' + (infRate*100).toFixed(0) + '% inflation/yr · incl. 10% tax</div>' +
+        '</div>' +
+
+      '</div>' +
+
+      '<div style="padding:10px 12px;background:#f0f7f0;border-radius:8px;border-left:3px solid #3aaa35;font-size:12px;color:#4a4a5a;line-height:1.6;margin-bottom:10px">' +
+        '📈 That\'s <strong>+' + $d(Math.round(increase)) + ' (' + pctIncrease + '% more)</strong> to replace this system out-of-pocket at year 15.' +
+      '</div>' +
+
+      '<div style="padding:10px 12px;background:rgba(201,125,16,0.08);border-radius:8px;border-left:3px solid var(--amber);font-size:12px;color:#4a4a5a;line-height:1.6">' +
+        '🔄 <strong>Ready for a new system?</strong> At year 15, replacing this system will cost an estimated <strong>' + $d(Math.round(futureCostYr15)) + '</strong> out-of-pocket. Simply sign a new CaaS contract instead — 15-year warranty, peace-of-mind cost of ownership built in, and inflation-free payments moving forward.' +
+      '</div>';
+
+    rcCard.style.display = 'block';
+  } else {
+    rcCard.style.display = 'none';
+  }
+}
+
+function renderChart(labels, buyData, caasData) {
+  var ctx = document.getElementById('chart').getContext('2d');
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label:'Buy (all-in)', data:buyData, borderColor:'#1a3560', backgroundColor:'rgba(26,53,96,0.06)', borderWidth:2.5, pointRadius:0, pointHoverRadius:5, fill:tab==='cum', tension:0.2 },
+        { label:'CaaS (all-in)', data:caasData, borderColor:'#c97d10', backgroundColor:'rgba(201,125,16,0.06)', borderWidth:2.5, borderDash:[5,3], pointRadius:0, pointHoverRadius:5, fill:tab==='cum', tension:0.2 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:function(c){ return ' '+c.dataset.label+': $'+Math.round(c.parsed.y).toLocaleString(); } } }
+      },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{family:'Outfit',size:11}, color:'#6b6b7b', maxRotation:0 } },
+        y:{ grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{family:'Outfit',size:11}, color:'#6b6b7b', callback:function(v){ return v>=1000?'$'+Math.round(v/1000)+'k':'$'+v; } } }
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  selectPreset('good', document.getElementById('p-good'));
+});
+</script>
+</body>
+</html>
