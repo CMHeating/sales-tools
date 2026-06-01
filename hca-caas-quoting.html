@@ -454,7 +454,7 @@ const JD={
 
 const P=[
 // GF — furnace BTU, permit $100
-{id:"AStar-V-GF",t:"GF",brand:"Ameristar",tier:"VALUE",lbl:"A801X · 80% AFUE · Single stage",su:"BTU",pmt:100,lab:896.52,iaq:"1\" filter",thermo:"T-6",sz:{"40k":{mat:1210.84,msrp:8249},"60k":{mat:1263.84,msrp:8249},"80k":{mat:1284.84,msrp:8499},"100k":{mat:1322.84,msrp:8499},"120k":{mat:1341.84,msrp:8499}}},
+{id:"AStar-V-GF",t:"GF",brand:"Ameristar",tier:"VALUE",lbl:"A801X · 80% AFUE · Single stage",su:"BTU",pmt:100,lab:896.52,iaq:"1\" filter",thermo:"T-6",sz:{"40k":{mat:1210.84,msrp:8249},"60k":{mat:1263.84,msrp:6999,monthly:84.99},"80k":{mat:1284.84,msrp:8499},"100k":{mat:1322.84,msrp:8499},"120k":{mat:1341.84,msrp:8499}}},
 {id:"GM-V-GF",t:"GF",brand:"Goodman",tier:"VALUE",lbl:"Value · 80% AFUE",su:"BTU",pmt:100,lab:896.52,iaq:"1\" filter",thermo:"T-6",sz:{"60k":{mat:1138.94,msrp:8249},"80k":{mat:1164.94,msrp:8249},"100k":{mat:1282.94,msrp:8749},"120k":{mat:1402.94,msrp:8999}}},
 {id:"AM-S8X1-GF",t:"GF",brand:"American Standard",tier:"GOOD",lbl:"S8X1 · 80% AFUE · Single stage",su:"BTU",pmt:100,lab:1075.32,iaq:"4\" media",thermo:"VisionPro 8000",sz:{"40k":{mat:1694.24,msrp:9499},"60k":{mat:1737.24,msrp:9499},"80k":{mat:1762.24,msrp:9749},"100k":{mat:1807.24,msrp:9749},"120k":{mat:1829.24,msrp:9999}}},
 {id:"AM-S8X2-GF",t:"GF",brand:"American Standard",tier:"BETTER",lbl:"S8X2 · 80% AFUE · Two stage",su:"BTU",pmt:100,lab:1075.32,iaq:"4\" media + Dynamic UV",thermo:"VisionPro 8000",sz:{"40k":{mat:2238.04,msrp:10999},"60k":{mat:2279.04,msrp:11249},"80k":{mat:2299.04,msrp:11249},"100k":{mat:2339.04,msrp:11499},"120k":{mat:2362.04,msrp:11499}}},
@@ -581,7 +581,7 @@ function render(){
   if(CP.iaq)info+=`<span class="tag">${CP.iaq}</span>`;
   if(CP.thermo)info+=`<span class="tag">${CP.thermo}</span>`;
   document.getElementById("pinfo").innerHTML=info;
-  const {mat,msrp}=CP.sz[CS];
+  const {mat,msrp,monthly}=CP.sz[CS];
   const pmt=CP.pmt!==undefined?CP.pmt:169.95;
   const spiff=CP.flatSpiff?250:0.12*msrp;
   const jobcost=mat+CP.lab+pmt;
@@ -598,12 +598,12 @@ function render(){
   setMgr("mProfit",F(grossProfit));
   setMgr("mGM",gm.toFixed(1)+"%");
   setMgr("mMSRP",F(msrp));
-  const pay=Math.round(msrp*PR);
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM); // buyout at end of 96-mo term = MSRP×(180-96)/180
   const tot96=pay*96;
   const tot180=pay*180;
   const rval=tot180-msrp;
-  document.getElementById("rpay").textContent=F(pay)+"/mo";
+  document.getElementById("rpay").textContent=(pay%1?("$"+pay.toFixed(2)):F(pay))+"/mo";
   document.getElementById("rres").textContent=F(resid)+" buyout at yr 8";
   document.getElementById("rtot").textContent=F(tot96)+" (96 pmts) · "+F(tot180)+" (yr 15)";
   const rvalEl=document.getElementById("rval"); if(rvalEl)rvalEl.textContent="+"+F(rval)+" vs buy-only over 15 yrs";
@@ -617,14 +617,14 @@ function currentQuoteText(){
   if(!CP||!CS||!CP.sz[CS]) return "No package selected.";
   const b=document.getElementById("bsel").value;
   const ti=document.getElementById("tsel").value;
-  const {mat,msrp}=CP.sz[CS];
-  const pay=Math.round(msrp*PR);
+  const {mat,msrp,monthly}=CP.sz[CS];
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM);
   return [
     "Comfort as a Service Quote",
     "Package: "+b+" "+ti+" "+CJ+" "+CS,
     "Description: "+CP.lbl,
-    "Rental: "+F(pay)+"/mo for 96 payments",
+    "Rental: "+(pay%1?("$"+pay.toFixed(2)):F(pay))+"/mo for 96 payments",
     "Residual buyout at month 96: "+F(resid),
     "COD retail price: "+F(msrp),
     "Included: maintenance, filters/IAQ as packaged, repairs, and membership benefits per contract.",
@@ -657,13 +657,13 @@ function updateQuoteSummary(){
   }
   const b=document.getElementById("bsel").value;
   const ti=document.getElementById("tsel").value;
-  const {msrp}=CP.sz[CS];
-  const pay=Math.round(msrp*PR);
+  const {msrp,monthly}=CP.sz[CS];
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM);
   const pkg=`${b} ${ti} ${CJ} ${CS}`;
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   set("qpkg",pkg);
-  set("qrent",F(pay)+"/mo");
+  set("qrent",(pay%1?("$"+pay.toFixed(2)):F(pay))+"/mo");
   set("qcod",F(msrp));
   set("codRetail",F(msrp));
   set("qresid",F(resid));
@@ -674,8 +674,8 @@ function updateQuoteSummary(){
 function doBuyout(){
   if(!CP||!CS)return;
   const mo=Math.max(1,Math.min(180,parseInt(document.getElementById("bmo").value)||1));
-  const {msrp}=CP.sz[CS];
-  const pay=Math.round(msrp*PR);
+  const {msrp,monthly}=CP.sz[CS];
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const buyout=Math.round(msrp*(RESID_DENOM-mo)/RESID_DENOM);
   const paid=pay*Math.min(mo,96);
   document.getElementById("bres").textContent=F(buyout);
