@@ -440,11 +440,6 @@ const F=v=>"$"+Math.round(v).toLocaleString();
 // Payment ratio from executed CM Heating contract: $21,499 MSRP → $259.99/mo (96 payments)
 // Residual = MSRP × (180−N)/180 — straight-line over 180 months. At month 96: ×(84/180) = 46.67%
 const PR=259.99/21499;
-
-// CaaS monthly pricing should land on marketing-friendly .99 pricing.
-// Example: $6,999 retail → $84.99/mo.
-const caasMonthly = msrp => Math.ceil(msrp * PR) - 0.01;
-const moneyMonthly = v => "$" + Number(v).toFixed(2);
 const RESID_DENOM=180;
 const TORD={VALUE:0,GOOD:1,BETTER:2,BEST:3};
 const JD={
@@ -603,12 +598,12 @@ function render(){
   setMgr("mProfit",F(grossProfit));
   setMgr("mGM",gm.toFixed(1)+"%");
   setMgr("mMSRP",F(msrp));
-  const pay=monthly!==undefined?monthly:caasMonthly(msrp);
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM); // buyout at end of 96-mo term = MSRP×(180-96)/180
   const tot96=pay*96;
   const tot180=pay*180;
   const rval=tot180-msrp;
-  document.getElementById("rpay").textContent=moneyMonthly(pay)+"/mo";
+  document.getElementById("rpay").textContent=(pay%1?("$"+pay.toFixed(2)):F(pay))+"/mo";
   document.getElementById("rres").textContent=F(resid)+" buyout at yr 8";
   document.getElementById("rtot").textContent=F(tot96)+" (96 pmts) · "+F(tot180)+" (yr 15)";
   const rvalEl=document.getElementById("rval"); if(rvalEl)rvalEl.textContent="+"+F(rval)+" vs buy-only over 15 yrs";
@@ -623,13 +618,13 @@ function currentQuoteText(){
   const b=document.getElementById("bsel").value;
   const ti=document.getElementById("tsel").value;
   const {mat,msrp,monthly}=CP.sz[CS];
-  const pay=monthly!==undefined?monthly:caasMonthly(msrp);
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM);
   return [
     "Comfort as a Service Quote",
     "Package: "+b+" "+ti+" "+CJ+" "+CS,
     "Description: "+CP.lbl,
-    "Rental: "+moneyMonthly(pay)+"/mo for 96 payments",
+    "Rental: "+(pay%1?("$"+pay.toFixed(2)):F(pay))+"/mo for 96 payments",
     "Residual buyout at month 96: "+F(resid),
     "COD retail price: "+F(msrp),
     "Included: maintenance, filters/IAQ as packaged, repairs, and membership benefits per contract.",
@@ -663,12 +658,12 @@ function updateQuoteSummary(){
   const b=document.getElementById("bsel").value;
   const ti=document.getElementById("tsel").value;
   const {msrp,monthly}=CP.sz[CS];
-  const pay=monthly!==undefined?monthly:caasMonthly(msrp);
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const resid=Math.round(msrp*84/RESID_DENOM);
   const pkg=`${b} ${ti} ${CJ} ${CS}`;
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   set("qpkg",pkg);
-  set("qrent",moneyMonthly(pay)+"/mo");
+  set("qrent",(pay%1?("$"+pay.toFixed(2)):F(pay))+"/mo");
   set("qcod",F(msrp));
   set("codRetail",F(msrp));
   set("qresid",F(resid));
@@ -680,7 +675,7 @@ function doBuyout(){
   if(!CP||!CS)return;
   const mo=Math.max(1,Math.min(180,parseInt(document.getElementById("bmo").value)||1));
   const {msrp,monthly}=CP.sz[CS];
-  const pay=monthly!==undefined?monthly:caasMonthly(msrp);
+  const pay=monthly!==undefined?monthly:Math.round(msrp*PR);
   const buyout=Math.round(msrp*(RESID_DENOM-mo)/RESID_DENOM);
   const paid=pay*Math.min(mo,96);
   document.getElementById("bres").textContent=F(buyout);
