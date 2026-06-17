@@ -3,1175 +3,1430 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CaaS vs. Buy | CM Heating</title>
+<title>Comfort Club vs. Buy + Invest | CM Heating · PNW Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-:root{--navy:#1a3560;--navy-dk:#0f2240;--amber:#c97d10;--bg:#f2ede4;--white:#ffffff;--border:#ddd6cc;--text:#1c1c28;--muted:#6b6b7b;--ok:#166a3e;--bad:#a82c22;--radius:10px;--shadow:0 1px 8px rgba(0,0,0,0.07)}
+:root{
+  --navy:#002244;
+  --navy-dk:#001224;
+  --amber:#69BE28;
+  --amber-soft:#f1ffe8;
+  --bg:#f3f6f7;
+  --white:#ffffff;
+  --border:#c8d1d4;
+  --text:#102033;
+  --muted:#5f6b72;
+  --ok:#166a3e;
+  --bad:#a82c22;
+  --soft-blue:#e8f2fa;
+  --soft-green:#eefaf3;
+  --radius:14px;
+  --shadow:0 8px 24px rgba(0,34,68,0.10);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
-
-.hdr{background:var(--navy);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.hdr-left{display:flex;align-items:center;gap:14px}
-.badge{background:var(--amber);color:#fff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px}
-.hdr h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;line-height:1.2}
-.hdr p{font-size:12px;color:rgba(255,255,255,.5);margin-top:2px}
-.btn-print{padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:background .15s;white-space:nowrap}
-.btn-print:hover{background:rgba(255,255,255,.1)}
-.btn-back{padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
-.btn-back:hover{background:rgba(255,255,255,.1)}
-
-.wrap{max-width:1100px;margin:0 auto;padding:22px 16px}
-.eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-
-/* ── TIER PRESETS ── */
-.presets{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:22px}
-.preset{border:1.5px solid var(--border);background:var(--white);border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;font-family:'Outfit',sans-serif;transition:all .15s}
-.preset:hover{border-color:var(--navy)}
-.preset.active{border-color:var(--navy);background:var(--navy)}
-.preset .pname{font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+button,input,select{font-family:'Outfit',sans-serif}
+.hdr{background:linear-gradient(135deg,var(--navy-dk),var(--navy));color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-bottom:4px solid var(--amber)}
+.hdr-left{display:flex;align-items:center;gap:14px;min-width:260px}
+.badge{background:var(--amber);color:#fff;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:6px;white-space:nowrap}
+.hdr h1{font-family:'Playfair Display',serif;font-size:25px;font-weight:700;color:#fff;line-height:1.1}
+.hdr p{font-size:13px;color:rgba(255,255,255,.68);margin-top:3px}
+.hdr-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-top{padding:8px 14px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-size:13px;font-weight:700;border-radius:8px;cursor:pointer;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-top:hover{background:rgba(255,255,255,.12)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+.hero{background:var(--white);border:1px solid #e4e0d7;border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:18px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.9fr);gap:18px;align-items:center}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.hero h2{font-family:'Playfair Display',serif;font-size:30px;color:var(--navy);line-height:1.15;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:15px;max-width:720px}
+.hero-callout{background:linear-gradient(135deg,#fdf5e8,#fff);border:1.5px solid #efd5aa;border-radius:12px;padding:15px}
+.hero-callout h3{font-size:15px;color:var(--navy);margin-bottom:7px}
+.hero-callout p{font-size:13px;color:#5a4a37}
+.pill-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.pill{background:#fff;border:1px solid #e4e0d7;border-radius:12px;padding:13px;box-shadow:0 3px 12px rgba(26,53,96,.05)}
+.pill b{display:block;color:var(--navy);font-size:13px;margin-bottom:3px}
+.pill span{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.config-card{background:var(--white);border:1px solid #e4e0d7;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:18px}
+.config-top{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1fr);gap:14px;align-items:end}
+.lbl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.075em;color:var(--navy);margin-bottom:6px}
+.lbl.muted{color:var(--muted)}
+.tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;background:#e8e3dc;border-radius:50%;font-size:10px;color:var(--muted);cursor:help;position:relative;flex-shrink:0}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--navy-dk);color:#fff;font-size:11px;font-weight:500;line-height:1.4;padding:7px 9px;border-radius:6px;white-space:normal;width:240px;z-index:99;pointer-events:none;text-transform:none;letter-spacing:0}
+input[type=number],select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;color:var(--text);background:#fff;transition:border-color .15s;appearance:none}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--navy)}
+input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
+.iw{position:relative}
+.iw.d input{padding-left:26px}
+.iw.d::before{content:'$';position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;font-weight:700;pointer-events:none;z-index:1}
+.iw.p input{padding-right:28px}
+.iw.p::after{content:'%';position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;font-weight:700;pointer-events:none}
+.presets{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:12px}
+.preset{border:2px solid var(--border);background:var(--white);border-radius:12px;padding:13px 12px;cursor:pointer;text-align:left;transition:all .18s;box-shadow:0 2px 9px rgba(26,53,96,.04)}
+.preset:hover{border-color:var(--navy);transform:translateY(-1px)}
+.preset.active{border-color:var(--navy);background:var(--navy);box-shadow:0 8px 22px rgba(26,53,96,.15)}
+.preset .pname{font-size:14px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
 .preset .pcaption{font-size:11px;color:var(--muted);line-height:1.3}
 .preset.active .pname{color:#fff}
-.preset.active .pcaption{color:rgba(255,255,255,.55)}
-.preset.t-value  { border-top: 3px solid #6b8cba; }
-.preset.t-good   { border-top: 3px solid #1a7a4a; }
-.preset.t-better { border-top: 3px solid #c97d10; }
-.preset.t-best   { border-top: 3px solid #8b3fc8; }
-.preset.t-custom { border-top: 3px solid #6b6b7b; }
-
-/* ── FORM ── */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
-.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-.card-head{padding:13px 18px}
-.card.buy .card-head{background:var(--navy)}
-.card.caas .card-head{background:var(--amber)}
-.card-head h2{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#fff}
-.card-head p{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
-.card-body{padding:17px}
-.field{margin-bottom:12px}
-.field:last-child{margin-bottom:0}
-.lbl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
-.tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#e8e3dc;border-radius:50%;font-size:9px;color:var(--muted);cursor:help;position:relative;flex-shrink:0}
-.tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--navy-dk);color:#fff;font-size:11px;font-weight:500;line-height:1.4;padding:5px 9px;border-radius:5px;white-space:normal;max-width:200px;z-index:99;pointer-events:none}
-.iw{position:relative}
-.iw.d input{padding-left:22px}
-.iw.d::before{content:'$';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
-.iw.p input{padding-right:26px}
-.iw.p::after{content:'%';position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;font-weight:600;pointer-events:none}
-input[type=number],select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:var(--text);background:#faf8f5;transition:border-color .15s;-moz-appearance:textfield;appearance:none}
-input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
-input[type=number]:focus,select:focus{outline:none;border-color:var(--navy);background:#fff}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.div{height:1px;background:#ece8e1;margin:13px 0}
-.sub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:9px}
-.checks{display:flex;flex-direction:column;gap:9px}
-.chk{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
-.chk input[type=checkbox]{width:16px;height:16px;margin-top:2px;accent-color:var(--amber);flex-shrink:0;cursor:pointer}
-.chk .ct{font-size:13px;font-weight:500;color:var(--text);line-height:1.35}
-.chk .cs{font-size:11px;color:var(--muted);display:block;margin-top:1px}
-
-.path-btn{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted);text-align:center}
-.path-btn:hover{border-color:var(--navy)}
-.path-btn.active{border-color:var(--navy);background:var(--navy);color:#fff}
-
-/* Decision tree */
-.path-tree{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0}
-.path-option{border:1.5px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:all .15s;background:#faf8f5}
+.preset.active .pcaption{color:rgba(255,255,255,.72)}
+.preset.t-value{border-top:5px solid #6b8cba}
+.preset.t-good{border-top:5px solid #1a7a4a}
+.preset.t-better{border-top:5px solid #c97d10}
+.preset.t-best{border-top:5px solid #8b3fc8}
+.preset.t-custom{border-top:5px solid #6b6b7b}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;border:1px solid #e4e0d7;display:flex;flex-direction:column}
+.card-head{padding:18px 20px;text-align:center;border-bottom:1px solid rgba(0,0,0,.06)}
+.card.caas .card-head{background:linear-gradient(135deg,#7ad137,var(--amber));color:#002244}
+.card.buy .card-head{background:linear-gradient(135deg,#244375,var(--navy))}
+.card-head h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1.1}
+.card.caas .card-head h2{color:#002244}
+.card-head p{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px}
+.card.caas .card-head p{color:rgba(0,34,68,.72)}
+.card-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:14px}
+.field{background:#fcfbfa;padding:14px;border-radius:10px;border:1px solid #e8e4dc}
+.field.gold{background:#fffcf5;border-color:#f1e0c3}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.div{height:1px;background:#ece8e1;margin:2px 0}
+.sub{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.path-tree{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.path-option{border:1.5px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;background:#fff;text-align:left}
 .path-option:hover{border-color:var(--navy)}
-.path-option.active{border-color:var(--navy);background:#eef1f8}
-.path-opt-head{display:flex;align-items:center;gap:7px;margin-bottom:4px}
-.path-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:all .15s}
-.path-option.active .path-dot{border-color:var(--navy);background:var(--navy)}
-.path-opt-title{font-size:13px;font-weight:700;color:var(--text)}
-.path-opt-desc{font-size:11px;color:var(--muted);line-height:1.4;margin-left:21px}
-.path-residual{margin-top:10px;margin-left:21px}
-
-/* ── CONTROLS ── */
-.ctrl-row{display:flex;align-items:center;gap:12px;margin-bottom:26px;flex-wrap:wrap}
-.period-wrap{display:flex;align-items:center;gap:9px;background:var(--white);border-radius:8px;padding:8px 13px;box-shadow:var(--shadow)}
-.period-wrap span{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
-.pbtns{display:flex;gap:3px}
-.pbtn{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
-.pbtn.active,.pbtn:hover{border-color:var(--navy);background:var(--navy);color:#fff}
-.btn-calc{flex:1;min-width:160px;padding:11px 24px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
-.btn-calc:hover{background:var(--navy-dk)}
-.btn-reset{padding:11px 16px;border:1.5px solid var(--border);background:var(--white);color:var(--muted);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn-reset:hover{border-color:var(--bad);color:var(--bad)}
-
-/* ── RESULTS ── */
-#results{display:none}
-#results.show{display:block;animation:up .3s ease}
-@keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
-.met{background:var(--white);border-radius:8px;padding:13px 15px;box-shadow:var(--shadow);text-align:center}
-.met-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
-.met-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--text);line-height:1.1}
-.met-sub{font-size:11px;color:var(--muted);margin-top:3px}
-.met.navy .met-val{color:var(--navy)}
-.met.ok   .met-val{color:var(--ok)}
-.met.bad  .met-val{color:var(--bad)}
-.met.amb  .met-val{color:var(--amber)}
-.chart-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:14px}
-.chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:10px}
-.chart-top h3{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
-.ctabs{display:flex;gap:3px}
-.ctab{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
-.ctab.active,.ctab:hover{border-color:var(--navy);background:var(--navy);color:#fff}
-.legend{display:flex;gap:14px;margin-bottom:10px}
-.legend span{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--muted)}
-.ldot{width:10px;height:10px;border-radius:2px}
-.chart-wrap{position:relative;height:260px}
-.verdict{border-radius:10px;padding:18px 22px;margin-bottom:14px;display:flex;gap:15px;align-items:flex-start}
-.verdict.bw{background:var(--navy);color:#fff}
-.verdict.cw{background:var(--amber);color:#fff}
-.verdict.tie{background:#3a3a4a;color:#fff}
-.vicon{font-size:26px;flex-shrink:0;margin-top:2px}
-.vhed{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:6px}
-.vbody{font-size:13px;opacity:.9;line-height:1.65}
-.bdown-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;margin-bottom:20px}
-.bdown-card h3{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;margin-bottom:13px}
-.btable{width:100%;border-collapse:collapse;font-size:13px}
-.btable th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:0 10px 7px 10px;border-bottom:1.5px solid var(--border)}
-.btable th:not(:first-child){text-align:right}
-.btable td{padding:6px 10px;border-bottom:1px solid #f0ece5;color:var(--text)}
-.btable td:not(:first-child){text-align:right}
-.btable tr.total td{font-weight:700;border-bottom:none;padding-top:9px;border-top:1.5px solid var(--border)}
-.btable tr.true-total td{font-weight:700;border-bottom:none;padding-top:9px;border-top:2px solid var(--navy);background:#eef1f8}
-
-/* ── TIER BADGE on results ── */
-.tier-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:16px}
-
-/* ── RATE PRESETS ── */
-.rate-presets{display:flex;gap:5px;margin-bottom:7px}
-.rpbtn{padding:4px 10px;border:1.5px solid var(--border);border-radius:5px;background:transparent;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted)}
+.path-option.active{border-color:var(--navy);background:#eef4fc;box-shadow:inset 0 0 0 1px var(--navy)}
+.path-opt-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:2px}
+.path-opt-desc{font-size:11px;color:var(--muted);line-height:1.35}
+.checks{display:flex;flex-direction:column;gap:10px}
+.chk{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#f3fbf6;border-radius:9px;border:1px solid #d1eedc}
+.chk .icon{color:#1a7a4a;font-weight:800;font-size:16px;line-height:1}
+.chk .ct{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+.chk .cs{font-size:11px;color:var(--muted);display:block;font-weight:500;margin-top:2px}
+.note{font-size:11px;color:#6d665e;line-height:1.45;background:#f7f5f0;border:1px dashed var(--border);border-radius:9px;padding:10px}
+.warn{font-size:12px;color:#7b4f00;line-height:1.45;background:#fff8ea;border:1px solid #efd5aa;border-radius:9px;padding:10px}
+.accordion{background:#e8e3da;border-radius:var(--radius);margin-bottom:18px;overflow:hidden;border:1.5px dashed var(--border)}
+.accordion-trigger{width:100%;background:none;border:none;padding:14px 18px;text-align:left;font-size:14px;font-weight:800;color:#4a4a55;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.accordion-content{padding:0 18px 18px;display:none;grid-template-columns:repeat(3,1fr);gap:12px;border-top:1px solid #ddd6cc}
+.rate-presets{display:flex;gap:5px;margin-bottom:7px;flex-wrap:wrap}
+.rpbtn{padding:4px 9px;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted)}
 .rpbtn.active,.rpbtn:hover{border-color:var(--navy);background:var(--navy);color:#fff}
+.mini-calc-btn{margin-top:8px;width:100%;padding:10px 12px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-size:13px;font-weight:800;cursor:pointer}
+.mini-calc-btn:hover{background:var(--navy);color:#fff}
+.noscript-warning{max-width:1180px;margin:14px auto 0;padding:12px 16px;background:#fff8ea;border:1.5px solid #efd5aa;border-radius:12px;color:#7b4f00;font-weight:700;line-height:1.45}
 
-@media(max-width:720px){
-  .form-grid,.two{grid-template-columns:1fr}
-  .metrics{grid-template-columns:1fr 1fr}
-  .hdr{flex-direction:column;align-items:flex-start}
-  .presets{grid-template-columns:1fr 1fr}
-}
-@media(max-width:480px){
-  .presets{grid-template-columns:1fr}
-}
-@media print{
-  .btn-print,.btn-back,.presets,.ctrl-row{display:none!important}
-  #results{display:block!important}
-  .hdr,.card.buy .card-head,.card.caas .card-head,.verdict{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-}
+.ctrl-row{display:flex;justify-content:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.btn-calc{width:100%;max-width:420px;padding:15px 28px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 5px 14px rgba(26,53,96,.22)}
+.btn-calc:hover{background:var(--navy-dk);transform:translateY(-1px)}
+.btn-reset{padding:15px 18px;border:1.5px solid var(--border);background:#fff;color:var(--muted);border-radius:10px;font-size:14px;font-weight:800;cursor:pointer}
+.btn-reset:hover{border-color:var(--bad);color:var(--bad)}
+#results{display:none}
+#results.show{display:block;animation:up .28s ease}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.tier-badge{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:800;margin-bottom:14px}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.comp-box{background:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);border:1px solid #e4e0d7;position:relative}
+.comp-box.popular{border:2.5px solid var(--amber)}
+.popular-badge{position:absolute;top:-12px;right:18px;background:var(--amber);color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.08em}
+.comp-header{font-size:12px;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:6px;letter-spacing:.06em}
+.comp-price{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--navy);line-height:1.1;margin-bottom:10px}
+.comp-price span{font-size:15px;font-family:'Outfit',sans-serif;font-weight:600;color:var(--muted)}
+.comp-box.popular .comp-price{color:var(--amber)}
+.comp-list{display:flex;flex-direction:column;gap:8px;border-top:1px solid #f0ede5;padding-top:11px}
+.comp-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.35}
+.comp-item .dot{width:7px;height:7px;border-radius:50%;margin-top:6px;background:var(--muted);flex-shrink:0}
+.comp-item.plus .dot{background:#166a3e}
+.comp-item.minus .dot{background:#a82c22}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.met{background:#fff;border-radius:12px;padding:14px;box-shadow:var(--shadow);border:1px solid #e4e0d7;text-align:center}
+.met-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.met-val{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--navy);line-height:1.1}
+.met-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
+.verdict{border-radius:var(--radius);padding:20px;margin-bottom:18px;display:flex;gap:15px;align-items:flex-start;box-shadow:var(--shadow);background:linear-gradient(135deg,#1e7044,#145432);color:#fff}
+.verdict.gold{background:linear-gradient(135deg,#d88a16,var(--amber))}
+.vicon{font-size:31px;flex-shrink:0;margin-top:1px}
+.vhed{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:5px}
+.vbody{font-size:14px;opacity:.95;line-height:1.6}
+.chart-card,.bdown-card,.guard-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px;border:1px solid #e4e0d7}
+.chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.chart-top h3,.bdown-card h3,.guard-card h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--navy)}
+.chart-wrap{position:relative;height:300px}
+.btable{width:100%;border-collapse:collapse;font-size:13px}
+.btable th{text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:0 10px 8px;border-bottom:1.5px solid var(--border)}
+.btable th:not(:first-child),.btable td:not(:first-child){text-align:right}
+.btable td{padding:8px 10px;border-bottom:1px solid #f0ece5;color:var(--text);vertical-align:top}
+.btable tr.total td{font-weight:800;border-top:2px solid var(--navy);background:#eef4fc;color:var(--navy)}
+.guard-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.guard-box{border-radius:10px;padding:13px;border:1px solid #e4e0d7;background:#fcfbfa}
+.guard-box b{display:block;color:var(--navy);font-size:13px;margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em}
+.guard-box ul{padding-left:18px;color:var(--muted);font-size:12px;line-height:1.55}
+.invest-link-box{margin-top:10px;padding:10px 12px;background:#eef4fc;border:1.5px solid var(--navy);border-radius:9px;font-size:12px;line-height:1.4}
+.invest-link-box a{color:var(--navy);font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.invest-link-box a:hover{text-decoration:underline;text-underline-offset:3px}
+.invest-action-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:-4px 0 18px}
+.btn-invest{padding:12px 16px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;box-shadow:0 4px 13px rgba(26,53,96,.08);text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+.btn-invest:hover{background:var(--navy);color:#fff;transform:translateY(-1px)}
+.invest-panel{display:none;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px;border:1px solid #e4e0d7}
+.invest-panel.show{display:block;animation:up .28s ease}
+.invest-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.invest-panel h3{font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);line-height:1.2;margin-bottom:5px}
+.invest-panel p{font-size:13px;color:var(--muted);line-height:1.5}
+.invest-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.invest-metric{background:#fcfbfa;border:1px solid #e8e4dc;border-radius:11px;padding:13px;text-align:center}
+.invest-metric b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.invest-metric strong{font-family:'Playfair Display',serif;font-size:23px;color:var(--navy);line-height:1.1}
+.invest-metric span{display:block;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
+.invest-note{font-size:12px;color:#6d665e;line-height:1.5;background:#f7f5f0;border:1px dashed var(--border);border-radius:9px;padding:10px}
+
+.invest-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);margin:14px 0 8px;padding-top:12px;border-top:1px solid #ece8e1}
+.invest-section-title:first-of-type{margin-top:0;padding-top:0;border-top:none}
+.payment-delta-note{font-size:12px;color:#5f5a54;line-height:1.5;background:#eef4fc;border:1px solid #d4e1f5;border-radius:9px;padding:10px;margin-top:10px}
+
+.payoff-callout{background:linear-gradient(135deg,var(--amber-soft),#fff);border:1.5px solid #d0eab2;border-radius:12px;padding:13px;margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.payoff-callout b{display:block;color:var(--navy);font-size:13px;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
+.payoff-callout span{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.payoff-callout strong{font-family:'Playfair Display',serif;font-size:24px;color:var(--navy);line-height:1;text-align:right;white-space:nowrap}
+.payoff-callout small{display:block;text-align:right;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+.convenience-snapshot{background:linear-gradient(135deg,#ffffff,var(--soft-blue));border:1.5px solid #bcd1e0;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:16px;align-items:stretch}
+.convenience-snapshot h3{font-family:'Playfair Display',serif;font-size:22px;color:var(--navy);line-height:1.15;margin-bottom:6px}
+.convenience-snapshot p{font-size:13px;color:var(--muted);line-height:1.55}
+.conv-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.conv-item{background:#fff;border:1px solid #e2e8ea;border-radius:10px;padding:10px;font-size:12px;line-height:1.35;color:var(--text)}
+.conv-item b{display:block;color:var(--navy);font-size:12px;margin-bottom:2px}
+.conv-math{background:var(--navy);color:#fff;border-radius:12px;padding:15px;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.conv-math .lbl2{font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:rgba(255,255,255,.65)}
+.conv-math strong{font-family:'Playfair Display',serif;font-size:34px;line-height:1;color:#fff;display:block;margin-top:4px}
+.conv-math span{font-size:12px;color:rgba(255,255,255,.78);line-height:1.4}
+.conv-formula{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:9px;font-size:12px;color:#fff;line-height:1.45}
+.conv-disclaimer{font-size:11px;color:rgba(255,255,255,.76);border-top:1px solid rgba(255,255,255,.18);padding-top:9px}
+@media(max-width:900px){.convenience-snapshot{grid-template-columns:1fr}.conv-list{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.conv-list{grid-template-columns:1fr}.conv-math strong{font-size:30px}}
+
+.coach-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px;border:1px solid #e2e8ea;position:relative;overflow:hidden}
+.coach-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--amber)}
+.coach-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding-left:4px}
+.coach-top h3{font-family:'Playfair Display',serif;font-size:21px;color:var(--navy);line-height:1.15;margin-bottom:4px}
+.coach-top p{font-size:13px;color:var(--muted);max-width:660px}
+.view-toggle{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.view-btn{padding:8px 11px;border:1.5px solid var(--border);background:#fff;color:var(--navy);border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap}
+.view-btn:hover,.view-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.view-btn.print{border-style:dashed;color:var(--muted)}
+.coach-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-bottom:12px}
+.coach-box{background:#f8fafb;border:1px solid #e2e8ea;border-radius:12px;padding:13px}
+.coach-box b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);margin-bottom:6px}
+.coach-box p{font-size:13px;color:var(--text);line-height:1.55}
+.objection-row{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 12px}
+.obj-btn{border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:12px;font-weight:800;border-radius:9px;padding:8px 10px;cursor:pointer;transition:all .15s}
+.obj-btn:hover,.obj-btn.active{background:var(--amber-soft);border-color:var(--amber);color:var(--navy)}
+.answer-box{background:var(--soft-blue);border:1px solid #d4e1f5;border-radius:12px;padding:13px;font-size:13px;line-height:1.55;color:var(--text);margin-bottom:12px}
+.advisor-refresher{padding:0;overflow:hidden}
+.refresher-toggle{width:100%;border:none;background:linear-gradient(135deg,#ffffff,var(--soft-blue));color:var(--navy);padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;text-align:left;font-family:'Outfit',sans-serif}
+.refresher-toggle:hover{background:linear-gradient(135deg,#ffffff,var(--amber-soft))}
+.refresher-title{display:flex;flex-direction:column;gap:2px}
+.refresher-title b{font-family:'Playfair Display',serif;font-size:19px;color:var(--navy);line-height:1.1}
+.refresher-title span{font-size:12px;color:var(--muted);font-weight:700;line-height:1.35}
+.refresher-arrow{font-size:13px;font-weight:900;color:var(--navy);white-space:nowrap}
+.advisor-refresher.collapsed .advisor-body{display:none}
+.advisor-refresher .advisor-body{padding:18px}
+.refresher-quiet-note{font-size:11px;color:var(--muted);line-height:1.4;margin-top:4px}
+
+.copy-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.copy-status{font-size:12px;color:var(--ok);font-weight:800}
+.note-textarea{width:100%;min-height:122px;resize:vertical;border:1.5px solid var(--border);border-radius:12px;padding:12px;background:#fcfbfa;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;line-height:1.45}
+.simple-mode .math-deep{display:none!important}
+.math-mode .math-deep{display:block}
+.math-mode .invest-action-row.math-deep{display:flex}
+.customer-print .internal-only{display:none!important}
+.customer-print .guard-card{display:none!important}
+.customer-print .coach-card{break-inside:avoid}
+.internal-print .internal-only{display:block!important}
+@media(max-width:900px){.coach-grid{grid-template-columns:1fr}.view-toggle{justify-content:flex-start}}
+@media print{.advisor-refresher{display:none!important}.view-toggle,.objection-row,.copy-row,.btn-invest{display:none!important}.note-textarea{border:none;background:#fff;padding:0;min-height:auto}.coach-card{box-shadow:none;break-inside:avoid}.simple-mode .math-deep{display:none!important}.customer-print .math-deep{display:none!important}.customer-print .invest-panel{display:none!important}}
+
+@media(max-width:900px){.invest-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.invest-grid{grid-template-columns:1fr}.invest-panel-head{display:block}.invest-panel-head .btn-invest{margin-top:10px}}
+@media(max-width:900px){.hero,.form-grid,.comparison-grid{grid-template-columns:1fr}.pill-row,.metrics{grid-template-columns:1fr 1fr}.accordion-content{grid-template-columns:1fr 1fr}.config-top{grid-template-columns:1fr}}
+@media(max-width:560px){.presets,.pill-row,.metrics,.two,.path-tree,.accordion-content,.guard-grid{grid-template-columns:1fr}.hdr{align-items:flex-start}.chart-wrap{height:250px}.comp-price{font-size:31px}}
+@media print{.btn-top,.presets,.ctrl-row,.accordion{display:none!important}.hdr,.card-head,.verdict{-webkit-print-color-adjust:exact;print-color-adjust:exact}#results{display:block!important}.wrap{padding:14px}.card,.chart-card,.bdown-card,.guard-card,.comp-box{box-shadow:none;break-inside:avoid}}
 </style>
 </head>
-<body>
-
+<body class="simple-mode">
 <header class="hdr">
   <div class="hdr-left">
     <span class="badge">CM Heating</span>
     <div>
-      <h1>CaaS vs. Buy Analyzer</h1>
-      <p>Comfort as a Service · Financial Comparison · HCA Edition</p>
+      <h1>Comfort Club vs. Buy + Invest</h1>
+      <p>Comfort as a Service · 15-year rental contract · PNW edition</p>
     </div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <a class="btn-back" href="index.html">← Dashboard</a>
-    <a class="btn-back" href="hca-field-guide.html" target="_blank">📚 HCA Field Guide</a>
-    <button class="btn-print" onclick="window.print()" title="On iPad: Share → Save to Files to save as PDF">&#128438; Print / Save PDF</button>
+  <div class="hdr-actions">
+    <button class="btn-top" onclick="window.print()">🖨 Print / Save PDF</button>
   </div>
 </header>
 
+<noscript>
+  <div class="noscript-warning">
+    This calculator needs JavaScript to update residuals and comparisons. Open it in Safari/Chrome or from the GitHub Pages web link, not an iOS document preview.
+  </div>
+</noscript>
+
 <div class="wrap">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">PNW Edition · Lead with Comfort Club · compare against ownership</div>
+      <h2>Keep cash flexible while CM Heating remains responsible for the covered system.</h2>
+      <p>Compare Comfort Club against buying or financing. This page illustrates cash preservation, covered service value, and the straight-line residual formula used for transparent payoff estimates.</p>
+    </div>
+    <div class="hero-callout">
+      <h3>Comfort Club positioning</h3>
+      <p><strong>Recommended option:</strong> Comfort Club first. Buying and financing are alternatives for homeowners who prefer ownership and are comfortable carrying future repair and maintenance risk.</p>
+      
+    </div>
+  </section>
 
-  <div class="eyebrow">Select brand + comfort tier · enter your quote price on Custom</div>
+  <div class="pill-row">
+    <div class="pill"><b>CM owns system</b><span>Rental contract structure; customer gets covered comfort, not just equipment.</span></div>
+    <div class="pill"><b>Covered service</b><span>Maintenance, covered repairs, filters, IAQ bulbs, and emergency service.</span></div>
+    <div class="pill"><b>Cash flexibility</b><span>Preserve cash for savings, other repairs, investments, or higher-interest debt.</span></div>
+    <div class="pill"><b>Anytime payoff clarity</b><span>Residual estimate is transparent: MSRP × (180 − selected month) ÷ 180; contract remains final.</span></div>
+  </div>
 
-  <div class="card" style="margin-bottom:14px">
-    <div class="card-body">
-      <div class="field">
+  <section class="convenience-snapshot" id="convenienceSnapshot">
+    <div>
+      <div class="eyebrow">Convenience path · flexible payoff · managed outcome</div>
+      <h3>Comfort Club gives the homeowner control without making them carry the service burden.</h3>
+      <p>The homeowner can keep cash flexible, let CM Heating remain responsible for the covered system, and still request a payoff estimate at any time. The residual is transparent because it steps down monthly using the same straight-line formula.</p>
+      <div class="conv-list">
+        <div class="conv-item"><b>Predictable payment</b>One monthly Comfort Club amount for the covered system.</div>
+        <div class="conv-item"><b>Covered service handled</b>Maintenance, covered repairs, filters/media, and IAQ/UV bulbs included under the agreement.</div>
+        <div class="conv-item"><b>Cash stays flexible</b>Homeowner avoids tying up cash in the equipment purchase.</div>
+        <div class="conv-item"><b>Payoff clarity</b>Customer may request a payoff estimate at any point; final payoff follows ServiceTitan and the signed contract.</div>
+      </div>
+    </div>
+    <div class="conv-math">
+      <div>
+        <div class="lbl2">Selected-month residual estimate</div>
+        <strong id="convenienceResidual">$10,033</strong>
+        <span id="convenienceMonth">Month 96 estimate · based on current package MSRP</span>
+      </div>
+      <div class="conv-formula" id="convenienceFormula">MSRP × (180 − selected month) ÷ 180</div>
+      <div class="conv-disclaimer">Payoff estimate available at any time; ServiceTitan and the signed contract control the final amount.</div>
+    </div>
+  </section>
+
+  <section class="config-card">
+    <div class="config-top">
+      <div>
         <div class="lbl">Brand / equipment family</div>
-        <select id="brandSelect" onchange="selectBrand(this.value)" style="width:100%">
+        <select id="brandSelect" onchange="selectBrand(this.value)">
           <option value="ameristar">Ameristar</option>
           <option value="goodman">Goodman</option>
           <option value="daikin">Daikin</option>
-          <option value="american_standard">American Standard</option>
+          <option value="american_standard" selected>American Standard</option>
           <option value="midea">Midea EVOX</option>
           <option value="mitsubishi">Mitsubishi</option>
         </select>
-        <div id="brandTierNote" style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5"></div>
+      </div>
+      <div>
+        <div class="lbl muted">Package note</div>
+        <div id="brandTierNote" class="note">—</div>
       </div>
     </div>
-  </div>
 
-  <div class="presets">
-
-    <div class="preset t-value" id="p-value" onclick="selectPreset('value',this)">
-      <div class="pname">Value</div>
-      <div class="pcaption">Payment-first option</div>
+    <div class="presets">
+      <button class="preset t-value" id="p-value" onclick="selectPreset('value',this)">
+        <div class="pname">Value</div><div class="pcaption">Payment-first scenario</div>
+      </button>
+      <button class="preset t-good" id="p-good" onclick="selectPreset('good',this)">
+        <div class="pname">Good</div><div class="pcaption">Balanced comfort/value</div>
+      </button>
+      <button class="preset t-better" id="p-better" onclick="selectPreset('better',this)">
+        <div class="pname">Better</div><div class="pcaption">Higher comfort/efficiency</div>
+      </button>
+      <button class="preset t-best active" id="p-best" onclick="selectPreset('best',this)">
+        <div class="pname">Best</div><div class="pcaption">Flagship comfort example</div>
+      </button>
+      <button class="preset t-custom" id="p-custom" onclick="selectPreset('custom',this)">
+        <div class="pname">Custom</div><div class="pcaption">Enter exact quote values</div>
+      </button>
     </div>
-
-    <div class="preset t-good active" id="p-good" onclick="selectPreset('good',this)">
-      <div class="pname">Good</div>
-      <div class="pcaption">Balanced comfort/value</div>
-    </div>
-
-    <div class="preset t-better" id="p-better" onclick="selectPreset('better',this)">
-      <div class="pname">Better</div>
-      <div class="pcaption">Higher comfort/efficiency</div>
-    </div>
-
-    <div class="preset t-best" id="p-best" onclick="selectPreset('best',this)">
-      <div class="pname">Best</div>
-      <div class="pcaption">Flagship comfort system</div>
-    </div>
-
-    <div class="preset t-custom" id="p-custom" onclick="selectPreset('custom',this)">
-      <div class="pname">Custom</div>
-      <div class="pcaption">Enter your quote price</div>
-    </div>
-
-  </div>
+  </section>
 
   <div class="form-grid">
-
-    <!-- BUY -->
-    <div class="card buy">
+    <section class="card caas">
       <div class="card-head">
-        <h2>If They Buy</h2>
-        <p>Purchase + financing + all ownership costs</p>
+        <h2>Recommended: CM Heating Comfort Club</h2>
+        <p>15-year CaaS rental contract · taxes included in monthly payment</p>
+      </div>
+      <div class="card-body">
+        <div class="two">
+          <div class="field gold">
+            <div class="lbl" style="color:var(--amber)">Package MSRP / contract value <span class="tip" data-tip="Use the current customer-facing package amount. This drives the residual estimate.">?</span></div>
+            <div class="iw d"><input type="number" id="packagePrice" value="21499" min="0" step="100" oninput="markCustom();autoCalc()"></div>
+          </div>
+          <div class="field gold">
+            <div class="lbl" style="color:var(--amber)">Comfort Club payment <span class="tip" data-tip="Monthly Comfort Club payment. Taxes are included. ServiceTitan and the signed contract remain final authority.">?</span></div>
+            <div class="iw d"><input type="number" id="caasMonthly" value="259.99" min="0" step="0.01" oninput="markCustom();autoCalc()"></div>
+          </div>
+        </div>
+
+        <div class="two">
+          <div class="field">
+            <div class="lbl">Option / payoff month <span class="tip" data-tip="Type the exact month for the residual estimate. Standard customer option point is year 8 / month 96; any month from 1 through 180 can be entered.">?</span></div>
+            <input type="number" id="optionMonth" value="96" min="1" max="180" step="1" inputmode="numeric" pattern="[0-9]*" oninput="handleOptionMonthInput(false)" onchange="handleOptionMonthInput(true)" onkeyup="handleOptionMonthInput(false)" onblur="handleOptionMonthInput(true)" aria-label="Option payoff month">
+            <button type="button" class="mini-calc-btn" onclick="syncResidualFromOptionMonth(true)">Update residual</button>
+            <div class="note" style="margin-top:8px">Type any month from 1–180. Month 96 is the standard year-8 option example. The residual estimate updates automatically and steps down monthly on a straight-line basis.</div>
+          </div>
+          <div class="field">
+            <div class="lbl">Estimated residual <span class="tip" data-tip="Auto-calculated using the program formula: MSRP × (180 − selected month) ÷ 180. Final payoff is governed by the signed ServiceTitan contract.">?</span></div>
+            <div class="iw d"><input type="number" id="residual" value="10033" readonly></div>
+            <div id="residualFormula" class="note" style="margin-top:8px">$21,499 × (180 − 96) ÷ 180 = <strong>$10,032.87</strong></div>
+            <div class="payoff-callout">
+              <div>
+                <b>Payoff flexibility</b>
+                <span>Customer can request a payoff estimate at any point. The tool shows the selected-month residual estimate using the straight-line formula; ServiceTitan and the signed contract remain final.</span>
+              </div>
+              <div>
+                <strong id="payoffCalloutResidual">$10,033</strong>
+                <small id="payoffCalloutMonth">Month 96 estimate</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub">Customer option modeled</div>
+          <div class="path-tree">
+            <div class="path-option active" id="caas-opt-continue" onclick="setCaasPath('continue')">
+              <div class="path-opt-title">Continue Comfort Club</div>
+              <div class="path-opt-desc">Monthly payments continue through year 15. After year 15, customer may continue paying; CM recommends upgrade review.</div>
+            </div>
+            <div class="path-option" id="caas-opt-payoff" onclick="setCaasPath('payoff')">
+              <div class="path-opt-title">Pay off any time</div>
+              <div class="path-opt-desc">Customer can request a payoff estimate at any point. The selected-month residual is easy to calculate; post-payoff ownership/service exposure is modeled separately.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub">Included with Comfort Club</div>
+          <div class="checks">
+            <div class="chk"><span class="icon">✓</span><div class="ct">All scheduled maintenance<span class="cs">At least annual maintenance for filters / IAQ bulbs.</span></div></div>
+            <div class="chk"><span class="icon">✓</span><div class="ct">Covered repairs and emergency service<span class="cs">No diagnostic, trip, deductible, or after-hours fee for covered service.</span></div></div>
+            <div class="chk"><span class="icon">✓</span><div class="ct">Filters and IAQ bulbs included<span class="cs">Handled as part of the Comfort Club agreement.</span></div></div>
+            <div class="chk"><span class="icon">✓</span><div class="ct">CM Heating remains responsible<span class="cs">For the covered system during the 15-year term, normal exclusions apply.</span></div></div>
+          </div>
+        </div>
+
+        <div class="warn"><strong>Contract facts:</strong> CM Heating owns the equipment; structure is a CaaS rental contract; Experian minimum 640; transferable or handled through property/UCC process per contract; ServiceTitan / signed contract remains final authority.</div>
+      </div>
+    </section>
+
+    <section class="card buy">
+      <div class="card-head">
+        <h2>If They Buy Instead</h2>
+        <p>Ownership path · cash or finance · homeowner keeps future risk</p>
       </div>
       <div class="card-body">
         <div class="field">
-          <div class="lbl">System price (before tax) <span class="tip" data-tip="Total installed cost — equipment, labor, and permits. 10% sales tax added automatically.">?</span></div>
-          <div class="iw d"><input type="number" id="buyPrice" value="8500" min="0" step="100" oninput="autoCalc()"></div>
-          <div id="buy-price-tax-callout" style="font-size:12px;font-weight:600;color:var(--amber);margin-top:5px;padding:5px 8px;background:#fdf5e8;border-radius:5px;display:none">
-            With 10% tax: <span id="buy-price-tax-total">—</span>
-          </div>
-        </div>
-
-        <div class="div"></div>
-        <div class="sub">How would they pay?</div>
-
-        <div class="path-tree">
-          <div class="path-option active" id="buy-opt-finance" onclick="setBuyPath('finance')">
-            <div class="path-opt-head">
-              <div class="path-dot"></div>
-              <div class="path-opt-title">Finance it</div>
-            </div>
-            <div class="path-opt-desc">Monthly payments — interest adds to total cost</div>
-            <div id="finance-inputs" style="margin-top:10px;margin-left:21px">
-              <div class="lbl" style="margin-bottom:4px">Interest rate <span class="tip" data-tip="Annual financing rate. Typical: 9.99%–14.99%">?</span></div>
-              <div class="iw p" style="margin-bottom:8px"><input type="number" id="apr" value="9.99" min="0" max="30" step="0.01" oninput="autoCalc()" onclick="event.stopPropagation()"></div>
-              <div class="lbl" style="margin-bottom:4px">Loan term</div>
-              <select id="loanTerm" onchange="autoCalc()" onclick="event.stopPropagation()" style="width:100%">
-                <option value="60">5 years (60 mo)</option>
-                <option value="84">7 years (84 mo)</option>
-                <option value="120" selected>10 years (120 mo)</option>
-                <option value="180">15 years (180 mo)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="path-option" id="buy-opt-cash" onclick="setBuyPath('cash')">
-            <div class="path-opt-head">
-              <div class="path-dot"></div>
-              <div class="path-opt-title">Write a check</div>
-            </div>
-            <div class="path-opt-desc">Full price paid upfront — no interest, no monthly payment</div>
-            <div id="invest-link" style="display:none;margin-top:10px;margin-left:21px">
-              <a id="invest-href" href="investment-calculator.html" target="_blank"
-                style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#1a3560;text-decoration:none;padding:6px 10px;background:#eef1f8;border-radius:6px;border:1.5px solid #1a3560"
-                onclick="event.stopPropagation()">
-                📈 See what this grows to if invested →
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div class="div"></div>
-        <div class="sub">Annual ownership costs</div>
-        <div class="two">
-          <div class="field">
-            <div class="lbl">Maintenance plan <span class="tip" data-tip="Annual service contract / tune-up. Heat &amp; Cool covers both furnace and AC.">?</span></div>
-            <select class="field-select" id="maintPlanSelect" onchange="setMaintPlan(this.value)" style="width:100%;padding:9px 10px;border:1.5px solid #ddd;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;background:#fff;color:#1a3560;margin-bottom:6px">
-              <option value="251.88">Club + Whole System (Heat &amp; Cool) — $251.88/yr</option>
-              <option value="155.88">Club + Furnace or AC/HP — $155.88/yr</option>
-              <option value="custom">Custom</option>
+          <div class="lbl">Buy / COD system price <span class="tip" data-tip="Usually mirrors the same package MSRP. Select whether this number is pre-tax or already customer-facing tax-included.">?</span></div>
+          <div class="iw d"><input type="number" id="buyPrice" value="21499" min="0" step="100" oninput="markCustom();autoCalc()"></div>
+          <div class="two" style="margin-top:10px">
+            <select id="taxMode" onchange="autoCalc()">
+              <option value="pretax" selected>Entered price is pre-tax</option>
+              <option value="included">Entered price already includes tax</option>
             </select>
-            <div class="iw d"><input type="number" id="annualMaint" value="251.88" min="0" step="0.01" oninput="autoCalc()"></div>
+            <div class="iw p"><input type="number" id="taxRate" value="10" min="0" max="20" step="0.1" oninput="autoCalc()"></div>
+          </div>
+          <div id="buyTaxCallout" class="note" style="margin-top:8px">—</div>
+        </div>
+
+        <div>
+          <div class="sub">Ownership payment path</div>
+          <div class="path-tree">
+            <div class="path-option active" id="buy-opt-finance" onclick="setBuyPath('finance')">
+              <div class="path-opt-title">Traditional finance</div>
+              <div class="path-opt-desc">Monthly loan payment plus service costs. Homeowner owns equipment and risk.</div>
+            </div>
+            <div class="path-option" id="buy-opt-cash" onclick="setBuyPath('cash')">
+              <div class="path-opt-title">Write a check</div>
+              <div class="path-opt-desc">Full upfront purchase. Homeowner preserves no cash from system purchase.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two" id="financeFields">
+          <div class="field">
+            <div class="lbl">Loan APR</div>
+            <div class="iw p"><input type="number" id="apr" value="9.99" min="0" max="35" step="0.01" oninput="autoCalc()"></div>
           </div>
           <div class="field">
-            <div class="lbl">Filters / yr <span class="tip" data-tip="Annual filter replacement cost. ~$50/yr">?</span></div>
-            <div class="iw d"><input type="number" id="annualFilters" value="180" min="0" step="10" oninput="autoCalc()"></div>
+            <div class="lbl">Loan term</div>
+            <select id="loanTerm" onchange="autoCalc()">
+              <option value="60">5 years / 60 mo.</option>
+              <option value="84">7 years / 84 mo.</option>
+              <option value="120" selected>10 years / 120 mo.</option>
+              <option value="180">15 years / 180 mo.</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="div"></div>
+        <div class="sub">Ownership costs homeowner should plan for</div>
+        <div class="two">
+          <div class="field">
+            <div class="lbl">Labor reserve yrs 1–10 / yr <span class="tip" data-tip="Recommended homeowner labor/service reserve if they buy instead: $150 per year during the first 10 years. Filters and IAQ/UV bulbs are modeled separately below.">?</span></div>
+            <div class="iw d"><input type="number" id="annualReservePre" value="150" min="0" step="5" oninput="autoCalc()"></div>
+            <div class="note" style="margin-top:8px">Default: save $150/yr during years 1–10 for labor/service reserve.</div>
+          </div>
+          <div class="field">
+            <div class="lbl">Labor reserve yrs 11–15 / yr <span class="tip" data-tip="Recommended homeowner labor/service reserve if they buy instead after the first 10 years: $250 per year as service and post-warranty exposure increases. Filters and IAQ/UV bulbs are modeled separately below.">?</span></div>
+            <div class="iw d"><input type="number" id="annualReservePost" value="250" min="0" step="5" oninput="autoCalc()"></div>
+            <div class="note" style="margin-top:8px">Default: save $250/yr during years 11–15 for labor/service reserve.</div>
           </div>
         </div>
         <div class="two">
           <div class="field">
-            <div class="lbl">Repair budget yr 1–10 <span class="tip" data-tip="Labor costs within warranty period. Typically $250/yr.">?</span></div>
-            <div class="iw d"><input type="number" id="annualRepairs" value="250" min="0" step="10" oninput="autoCalc()"></div>
-            <div class="lbl" style="margin-top:8px">Repair budget yr 11–15 <span class="tip" data-tip="Out-of-warranty costs increase significantly after year 10. Typically $400+/yr.">?</span></div>
-            <div class="iw d"><input type="number" id="annualRepairsPost" value="400" min="0" step="10" oninput="autoCalc()"></div>
+            <div class="lbl">Filters / yr <span class="tip" data-tip="Estimated annual filter/media cost if the homeowner buys the system. Comfort Club includes eligible filters under the agreement.">?</span></div>
+            <div class="iw d"><input type="number" id="annualFilterCost" value="180" min="0" step="5" oninput="autoCalc()"></div>
+            <div class="note" style="margin-top:8px">Modeled separately from the service reserve.</div>
           </div>
           <div class="field">
-            <div class="lbl">IAQ / UV bulbs / yr <span class="tip" data-tip="$500 bulb every 3 years = ~$167/yr">?</span></div>
-            <div class="iw d"><input type="number" id="annualIAQ" value="167" min="0" step="10" oninput="autoCalc()"></div>
+            <div class="lbl">IAQ / UV bulbs / yr <span class="tip" data-tip="Estimated annual IAQ/UV bulb or specialty media cost if the homeowner buys the system. Comfort Club includes eligible IAQ/UV bulbs under the agreement.">?</span></div>
+            <div class="iw d"><input type="number" id="annualBulbCost" value="167" min="0" step="5" oninput="autoCalc()"></div>
+            <div class="note" style="margin-top:8px">Modeled separately from the service reserve.</div>
           </div>
         </div>
-        <div class="div"></div>
-        <div class="sub">Cost inflation</div>
-        <div class="field">
-          <div class="lbl">Annual cost inflation <span class="tip" data-tip="Maintenance, repairs, filters, and IAQ costs rise with inflation each year. CaaS monthly payment stays fixed — a key advantage over time.">?</span></div>
-          <div class="rate-presets" id="inf-presets">
-            <button class="rpbtn" onclick="setInfPreset(2,this)">2% Fed</button>
-            <button class="rpbtn active" onclick="setInfPreset(3,this)">3% Hist.</button>
-            <button class="rpbtn" onclick="setInfPreset(4,this)">4% High</button>
+        <div class="two">
+          <div class="field">
+            <div class="lbl">Service-cost inflation</div>
+            <div class="iw p"><input type="number" id="inflationRate" value="3" min="0" max="15" step="0.5" oninput="autoCalc()"></div>
           </div>
-          <div class="iw p"><input type="number" id="inflationRate" value="3" min="0" max="15" step="0.5" oninput="clearInfPreset();autoCalc()"></div>
+          <div class="field">
+            <div class="lbl">Ownership cost note</div>
+            <div class="note">The labor/service reserve is a planning allowance, not a guaranteed repair bill. Filters and IAQ/UV bulbs remain separate ownership costs when buying, while Comfort Club includes eligible filters and IAQ/UV bulbs under the agreement.</div>
+          </div>
         </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="accordion">
+    <button class="accordion-trigger" onclick="toggleAccordion()">
+      <span>🔧 Advanced assumptions: cash flexibility, investment illustration, and post-payoff exposure</span>
+      <span id="accArrow">▸ Expand</span>
+    </button>
+    <div class="accordion-content" id="advancedContent">
+      <div class="field">
+        <div class="lbl">Illustrative return rate <span class="tip" data-tip="For cash-flexibility illustration only. This is not investment advice and returns are not guaranteed.">?</span></div>
+        <div class="rate-presets">
+          <button class="rpbtn active" onclick="setReturnRate(4,this)">4% HYSA</button>
+          <button class="rpbtn" onclick="setReturnRate(8,this)">8% S&amp;P adj.</button>
+          <button class="rpbtn" onclick="setReturnRate(10,this)">10% S&amp;P nom.</button>
+        </div>
+        <div class="iw p"><input type="number" id="returnRate" value="4" min="0" max="15" step="0.25" oninput="clearReturnPresets();autoCalc()"></div>
+        <div class="note" style="margin-top:8px">Use this only as a cash-flexibility illustration. It is not a projection, guarantee, or financial recommendation.</div>
+      </div>
+      <div class="field">
+        <div class="lbl">Analysis horizon</div>
+        <select id="analysisYears" onchange="autoCalc()">
+          <option value="8">8 years / option point</option>
+          <option value="10">10 years</option>
+          <option value="15" selected>15 years / contract term</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="lbl">Post-payoff service exposure</div>
+        <select id="postPayoffExposure" onchange="autoCalc()">
+          <option value="include" selected>Include ownership costs after payoff</option>
+          <option value="exclude">Do not add post-payoff costs</option>
+        </select>
       </div>
     </div>
-
-    <!-- CaaS -->
-    <div class="card caas">
-      <div class="card-head">
-        <h2>Comfort as a Service</h2>
-        <p>All-inclusive monthly subscription</p>
-      </div>
-      <div class="card-body">
-        <div class="field">
-          <div class="lbl">Monthly payment <span class="tip" data-tip="Customer's flat monthly CaaS payment — no tax applied.">?</span></div>
-          <div class="iw d"><input type="number" id="caasMonthly" value="99" min="0" step="5" oninput="autoCalc()"></div>
-        </div>
-        <div class="field">
-          <div class="lbl">Contract term <span class="tip" data-tip="How many months they pay the full monthly rate">?</span></div>
-          <select id="caasTermMonths" onchange="autoCalc()">
-            <option value="60">5 yr (60 mo)</option>
-            <option value="84">7 yr (84 mo)</option>
-            <option value="96" selected>8 yr (96 mo)</option>
-            <option value="120">10 yr (120 mo)</option>
-          </select>
-        </div>
-
-        <div class="div"></div>
-        <div class="sub">At end of contract — customer chooses</div>
-
-        <div class="path-tree">
-          <div class="path-option active" id="path-opt-continue" onclick="setPath('continue')">
-            <div class="path-opt-head">
-              <div class="path-dot"></div>
-              <div class="path-opt-title">Continue to year 15</div>
-            </div>
-            <div class="path-opt-desc">Same monthly payment continues through month 180, then contract ends</div>
-          </div>
-        </div>
-
-        <div style="margin-top:8px">
-          <span id="payoff-toggle" onclick="togglePayoff()" style="font-size:11px;color:#888;cursor:pointer;font-family:'Outfit',sans-serif;text-decoration:underline;text-underline-offset:3px">▸ Pay off residual at contract end (uncommon)</span>
-          <div id="payoff-panel" style="display:none;margin-top:10px;padding:10px 12px;background:#f5f5f5;border-radius:8px;border:1px solid #ddd">
-            <div class="lbl" style="margin-bottom:4px">Residual amount <span class="tip" data-tip="Lump sum from contract to pay off and own the equipment. Upload a completed contract to calculate.">?</span></div>
-            <div class="iw d"><input type="number" id="caasResidual" value="0" min="0" step="100" oninput="autoCalc()"></div>
-            <div style="font-size:11px;color:#888;margin-top:6px">Upload a completed contract to calculate the residual amount.</div>
-          </div>
-        </div>
-
-        <div class="div"></div>
-        <div class="sub">What's included in CaaS?</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:11px">Maintenance, filters, and IAQ are always included. Uncheck anything else not covered.</p>
-        <div class="checks">
-          <label class="chk" style="opacity:0.6;pointer-events:none">
-            <input type="checkbox" id="cMaint" checked disabled>
-            <span class="ct">Maintenance &amp; tune-ups included<span class="cs">Always included in CaaS payment</span></span>
-          </label>
-          <label class="chk" style="opacity:0.6;pointer-events:none">
-            <input type="checkbox" id="cFilters" checked disabled>
-            <span class="ct">Filter replacements included<span class="cs">Always included in CaaS payment</span></span>
-          </label>
-          <label class="chk" style="opacity:0.6;pointer-events:none">
-            <input type="checkbox" id="cIAQ" checked disabled>
-            <span class="ct">IAQ / UV bulbs included<span class="cs">Always included in CaaS payment</span></span>
-          </label>
-          <label class="chk">
-            <input type="checkbox" id="cRepairs" checked onchange="autoCalc()">
-            <span class="ct">Repairs &amp; service calls included<span class="cs">No surprise repair bills — ever</span></span>
-          </label>
-          <div style="margin-top:10px;padding:10px 12px;background:rgba(201,125,16,0.08);border-left:3px solid var(--amber);border-radius:6px;font-size:12px;color:#4a4a5a;line-height:1.6">
-            🔄 <strong>Ready for a new system?</strong> Simply sign a new contract and enjoy the convenience of a 15-year warranty, peace-of-mind cost of ownership built in, and inflation-free payments moving forward.
-          </div>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <div class="ctrl-row">
-    <div class="period-wrap">
-      <span>Analysis period:</span>
-      <div class="pbtns">
-        <button class="pbtn" onclick="setPeriod(10,this)">10 yr</button>
-        <button class="pbtn active" onclick="setPeriod(15,this)">15 yr</button>
-        <button class="pbtn" onclick="setPeriod(20,this)">20 yr</button>
-      </div>
-    </div>
-    <button class="btn-reset" onclick="clearResults()" title="Clear results">&#10005; Clear</button>
-    <button class="btn-calc" onclick="calc()">Calculate &amp; Compare &rarr;</button>
+    <button class="btn-calc" onclick="calc()">Compare Comfort Club vs. Buy →</button>
+    <button class="btn-reset" onclick="resetDefaults()">Reset example</button>
   </div>
 
-  <div id="results">
-    <div class="tier-badge" id="tier-badge">&#9679; Good · $8,500</div>
-    <div class="metrics">
-      <div class="met navy">
-        <div class="met-lbl">System cost invested</div>
-        <div class="met-val" id="m-invested">—</div>
-        <div class="met-sub" id="m-invested-sub">grows to at yr 15</div>
-      </div>
-      <div class="met" style="border-left:3px solid #3aaa35">
-        <div class="met-lbl" style="color:#168a20">Interest earned</div>
-        <div class="met-val" id="m-interest" style="color:#168a20">—</div>
-        <div class="met-sub" id="m-interest-sub">over 15 years</div>
-      </div>
-      <div class="met" id="m-sav-card" style="border-left:3px solid #c97d10">
-        <div class="met-lbl" id="m-sav-lbl">Net advantage</div>
-        <div class="met-val" id="m-sav-val" style="color:#c97d10">—</div>
-        <div class="met-sub" id="m-sav-sub">CaaS + invest vs buying</div>
-      </div>
-    </div>
+  <section id="results">
+    <div style="text-align:center"><span class="tier-badge" id="tierBadge">American Standard · Best · $21,499 / $259.99</span></div>
 
-    <div class="bdown-card" id="caas-invest-card" style="display:none;border-left:4px solid #3aaa35;background:linear-gradient(135deg,#f0faf4,#fff)">
-      <h3>✅ CaaS + Invest vs. Writing a Check</h3>
-      <p style="font-size:12px;color:#6b6b7b;margin-bottom:14px">What if instead of writing a check, you did CaaS and invested that money?</p>
-      <div id="caas-invest-body"></div>
-    </div>
-
-    <div class="bdown-card" id="replacement-cost-card" style="display:none;border-left:4px solid #3aaa35">
-      <h3>🔄 Year <span id="rc-yr">15</span> System Replacement Cost</h3>
-      <p style="font-size:12px;color:#6b6b7b;margin-bottom:14px">What will it cost to replace this system when the CaaS contract ends?</p>
-      <div id="replacement-cost-body"></div>
-    </div>
-
-    <div class="chart-card" id="chart-card">
-      <div class="chart-top">
-        <h3>Cost Comparison Over Time</h3>
-        <div class="ctabs">
-          <button class="ctab active" onclick="switchTab('cum',this)">Cumulative total</button>
-          <button class="ctab" onclick="switchTab('mo',this)">Monthly cost</button>
+    <div class="coach-card advisor-refresher collapsed" id="coachCard">
+      <button type="button" class="refresher-toggle" onclick="toggleAdvisorRefresher()" aria-expanded="false" id="advisorRefresherToggle">
+        <span class="refresher-title">
+          <b>Conversation refresher</b>
+          <span>Optional wording help for common customer questions. Hidden by default for a cleaner homeowner-facing screen.</span>
+        </span>
+        <span class="refresher-arrow" id="advisorRefresherArrow">▸ Open</span>
+      </button>
+      <div class="advisor-body" id="advisorRefresherBody">
+      <div class="coach-top">
+        <div>
+          <h3>Comfort Club conversation guide</h3>
+          <p>Use this section only when you need a quick refresher: Comfort Club is the convenience path; buying is the ownership path.</p><div class="refresher-quiet-note">Keep the customer-facing page simple. Open this only when you need help answering a specific question.</div>
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn active" id="viewSimpleBtn" onclick="setViewMode('simple')">Simple view</button>
+          <button class="view-btn" id="viewMathBtn" onclick="setViewMode('math')">Math view</button>
+          
         </div>
       </div>
-      <div class="legend">
-        <span><span class="ldot" style="background:#1a3560"></span>Buy (all-in)</span>
-        <span><span class="ldot" style="background:#c97d10;border-radius:0;height:3px"></span>CaaS (all-in)</span>
+
+      <div class="coach-grid">
+        <div class="coach-box">
+          <b>Simple explanation</b>
+          <p id="hcaTalkTrack">Run the comparison to generate a clear explanation.</p>
+        </div>
+        <div class="coach-box">
+          <b>Decision summary</b>
+          <p id="hcaNextStep">Comfort Club is the convenience path. Buying is the ownership path.</p>
+        </div>
       </div>
-      <div class="chart-wrap">
-        <canvas id="chart" role="img" aria-label="Line chart comparing cumulative cost of buying vs CaaS over the selected period. See breakdown table below for values.">Cost comparison values are in the breakdown table below.</canvas>
+
+      <div class="sub">Common customer questions</div>
+      <div class="objection-row">
+        <button class="obj-btn" onclick="showObjection('own',this)">I want to own it</button>
+        <button class="obj-btn" onclick="showObjection('move',this)">What if I move?</button>
+        <button class="obj-btn" onclick="showObjection('year8',this)">What happens at year 8?</button>
+        <button class="obj-btn" onclick="showObjection('payoff',this)">Can I pay it off?</button>
+        <button class="obj-btn" onclick="showObjection('cash',this)">Can I pay cash?</button>
+        <button class="obj-btn" onclick="showObjection('finance',this)">Is this financing?</button>
+        <button class="obj-btn" onclick="showObjection('included',this)">What is included?</button>
+        <button class="obj-btn" onclick="showObjection('invest',this)">What if I invest?</button>
+        <button class="obj-btn" onclick="showObjection('year15',this)">After 15 years?</button>
+      </div>
+      <div class="answer-box" id="objectionAnswer">Choose a question to see a clear explanation.</div>
       </div>
     </div>
 
-    <div class="verdict" id="v-card">
-      <div class="vicon" id="v-icon">📊</div>
+    <div class="comparison-grid">
+      <div class="comp-box popular">
+        <div class="popular-badge">Recommended first</div>
+        <div class="comp-header">Comfort Club</div>
+        <div class="comp-price" id="caasDisplay">$259.99 <span>/mo</span></div>
+        <div class="comp-list">
+          <div class="comp-item plus"><span class="dot"></span> CM Heating owns and remains responsible for covered system during term.</div>
+          <div class="comp-item plus"><span class="dot"></span> Maintenance, covered repairs, eligible filters, IAQ/UV bulbs, and emergency service included under the agreement.</div>
+          <div class="comp-item plus"><span class="dot"></span> Preserves cash flexibility and lets the customer request a transparent payoff estimate any time.</div>
+        </div>
+      </div>
+      <div class="comp-box">
+        <div class="comp-header">Traditional buy path</div>
+        <div class="comp-price" id="buyDisplay">$0 <span>/mo</span></div>
+        <div class="comp-list">
+          <div class="comp-item minus"><span class="dot"></span> Homeowner owns equipment and future service/repair exposure.</div>
+          <div class="comp-item minus"><span class="dot"></span> Service reserve, filters, IAQ/UV bulbs, and post-warranty exposure remain separate ownership costs.</div>
+          <div class="comp-item minus"><span class="dot"></span> Cash purchase ties up funds that could remain flexible.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="met"><div class="met-lbl">Residual estimate</div><div class="met-val" id="mResidual">$0</div><div class="met-sub" id="mResidualSub">mo. 96</div></div>
+      <div class="met"><div class="met-lbl">Cash preserved</div><div class="met-val" id="mCash">$0</div><div class="met-sub">if avoiding cash purchase</div></div>
+      <div class="met"><div class="met-lbl">Illustrative growth</div><div class="met-val" id="mGrowth">$0</div><div class="met-sub" id="mGrowthSub">4% illustration</div></div>
+      <div class="met"><div class="met-lbl" id="mDeltaLbl">Cost difference</div><div class="met-val" id="mDelta">$0</div><div class="met-sub" id="mDeltaSub">over selected horizon</div></div>
+    </div>
+
+    <div class="invest-action-row math-deep">
+      <button class="btn-invest" id="investmentToggle" onclick="toggleInvestmentPanel()">📈 Show invested-cash view</button>
+    </div>
+
+    <div class="invest-panel math-deep" id="investmentPanel">
+      <div class="invest-panel-head">
+        <div>
+          <h3>Optional invested-cash illustration</h3>
+          <p>This answers the customer question: “What if I keep the cash available instead of tying it up in the HVAC purchase?” Use it only as a comparison aid, not as financial advice.</p>
+        </div>
+      </div>
+      <div class="invest-section-title">Cash preservation illustration</div>
+      <div class="invest-grid">
+        <div class="invest-metric"><b>Cash preserved</b><strong id="investPrincipal">$0</strong><span>Modeled buy amount</span></div>
+        <div class="invest-metric"><b>Illustrative rate</b><strong id="investRate">4.0%</strong><span id="investRateSub">HYSA-style example</span></div>
+        <div class="invest-metric"><b>Future value</b><strong id="investFuture">$0</strong><span id="investFutureSub">after selected horizon</span></div>
+        <div class="invest-metric"><b>Possible growth</b><strong id="investGrowth">$0</strong><span>Not guaranteed</span></div>
+      </div>
+      <div class="invest-note" id="investNarrative">—</div>
+
+      <div class="invest-section-title">Payment-difference illustration</div>
+      <div class="invest-grid">
+        <div class="invest-metric"><b>Monthly payment delta</b><strong id="payDeltaMonthly">$0</strong><span id="payDeltaMonthlySub">Loan payment minus Comfort Club</span></div>
+        <div class="invest-metric"><b>Months contributed</b><strong id="payDeltaMonths">0</strong><span>Limited to the loan-payment period</span></div>
+        <div class="invest-metric" style="background:#fffcf5; border-color:#efd5aa"><b>Future value</b><strong id="payDeltaFuture" style="color:var(--amber)">$0</strong><span id="payDeltaFutureSub">At selected illustrative rate</span></div>
+        <div class="invest-metric" style="background:#eefaf3; border-color:#d1eedc"><b>Growth portion</b><strong id="payDeltaGrowth" style="color:var(--ok)">$0</strong><span>Above saved monthly deltas</span></div>
+      </div>
+      <div class="payment-delta-note" id="paymentDeltaNarrative">—</div>
+    </div>
+
+    <div class="verdict" id="verdictCard">
+      <div class="vicon" id="verdictIcon">🛡️</div>
       <div>
-        <div class="vhed" id="v-hed">Calculating...</div>
-        <div class="vbody" id="v-body"></div>
+        <div class="vhed" id="verdictHead">Comfort Club keeps the risk with CM Heating</div>
+        <div class="vbody" id="verdictBody">—</div>
       </div>
     </div>
 
-    <div class="bdown-card">
-      <h3>Cost Breakdown Summary</h3>
+    <div class="chart-card math-deep">
+      <div class="chart-top"><h3>Total modeled cash outlay trend</h3><span class="note" style="padding:6px 9px">Illustrative only · contract controls</span></div>
+      <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    </div>
+
+    <div class="bdown-card math-deep">
+      <h3>Cost and value breakdown</h3>
       <table class="btable">
-        <thead><tr><th>Cost component</th><th>Buy</th><th>CaaS</th></tr></thead>
-        <tbody id="btbody"></tbody>
+        <thead><tr><th>Element</th><th>Buy / own</th><th>Comfort Club</th></tr></thead>
+        <tbody id="breakdownBody"></tbody>
       </table>
     </div>
-
-    <div class="bdown-card" id="invest-angle-card" style="display:none;border-left:4px solid #c97d10">
-      <h3>💰 The Investment Angle</h3>
-      <p style="font-size:12px;color:#6b6b7b;margin-bottom:10px">What if the money spent on buying was invested instead?</p>
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="inv-rate-presets">
-        <button class="rpbtn active" onclick="setInvRate(4,'monthly',this)" title="HYSA interest taxed as ordinary income each year">4% HYSA</button>
-        <button class="rpbtn" onclick="setInvRate(8,'annual',this)" title="10% nominal minus ~2-3% inflation = real purchasing power return">8% S&amp;P real</button>
-        <button class="rpbtn" onclick="setInvRate(10,'annual',this)" title="Historical S&P 500 average — does not account for inflation">10% S&amp;P nominal</button>
-      </div>
-      <div style="font-size:11px;color:#888;margin-bottom:14px;line-height:1.5">
-        <strong>10% nominal</strong> = historical S&amp;P avg before inflation &nbsp;·&nbsp; <strong>8% real</strong> = inflation-adjusted purchasing power &nbsp;·&nbsp; <strong>Tax note:</strong> long-term capital gains ~15% applies at liquidation; HYSA interest taxed as ordinary income annually
-      </div>
-      <div id="invest-angle-body"></div>
-    </div>
-  </div>
-
+  </section>
 </div>
 
 <script>
-var period = 15;
-var tab = 'cum';
 var chartInst = null;
-var activePreset = 'good';
+var activeBrand = 'american_standard';
+var activePreset = 'best';
+var buyPath = 'finance';
 var caasPath = 'continue';
-var buyPath  = 'finance';
-var S = { buyC:[], caasC:[], buyM:[], caasM:[], labels:[] };
-
-function togglePayoff() {
-  var panel  = document.getElementById('payoff-panel');
-  var toggle = document.getElementById('payoff-toggle');
-  var open   = panel.style.display === 'none';
-  panel.style.display = open ? 'block' : 'none';
-  toggle.textContent  = open ? '▾ Pay off residual at contract end (uncommon)' : '▸ Pay off residual at contract end (uncommon)';
-  if (open) {
-    caasPath = 'payoff';
-  } else {
-    caasPath = 'continue';
-    document.getElementById('caasResidual').value = 0;
-    clearResults();
-  }
-}
-
-function setPath(path) {
-  caasPath = path;
-  document.getElementById('path-opt-payoff') && document.getElementById('path-opt-payoff').classList.toggle('active', path === 'payoff');
-  document.getElementById('path-opt-continue').classList.toggle('active', path === 'continue');
-  if (path === 'continue') {
-    document.getElementById('caasResidual').value = 0;
-  }
-  clearResults();
-}
-
-function setBuyPath(path) {
-  buyPath = path;
-  document.getElementById('buy-opt-finance').classList.toggle('active', path === 'finance');
-  document.getElementById('buy-opt-cash').classList.toggle('active', path === 'cash');
-  document.getElementById('finance-inputs').style.display = path === 'finance' ? 'block' : 'none';
-  var investLink = document.getElementById('invest-link');
-  investLink.style.display = path === 'cash' ? 'block' : 'none';
-  if (path === 'cash') {
-    var price = document.getElementById('buyPrice').value || 0;
-    document.getElementById('invest-href').href = 'investment-calculator.html?lumpSum=' + price;
-  }
-  if (path === 'finance') {
-    document.getElementById('apr').value = 9.99;
-  }
-  clearResults();
-}
-
-function clearResults() {
-  var r = document.getElementById('results');
-  r.classList.remove('show');
-  r.style.opacity = '0';
-  setTimeout(function(){ r.style.opacity = ''; }, 150);
-}
-
-var activeBrand = 'ameristar';
+var CONTRACT_MONTHS = 180;
+var PAYMENT_RATIO = 259.99 / 21499;
 
 var BRAND_LABELS = {
-  ameristar: 'Ameristar',
-  goodman: 'Goodman',
-  daikin: 'Daikin',
-  american_standard: 'American Standard',
-  midea: 'Midea EVOX',
-  mitsubishi: 'Mitsubishi'
+  ameristar:'Ameristar',
+  goodman:'Goodman',
+  daikin:'Daikin',
+  american_standard:'American Standard',
+  midea:'Midea EVOX',
+  mitsubishi:'Mitsubishi'
 };
 
-var BRAND_TIER_DEFAULTS = {
+var SCENARIOS = {
   ameristar: {
-    value:  { price:6500,  caasMonthly:79,  note:'Ameristar Value · entry payment-focused system' },
-    good:   { price:8000,  caasMonthly:99,  note:'Ameristar Good · practical upgrade package' },
-    better: { price:10500, caasMonthly:129, note:'Ameristar Better · stronger comfort package' },
-    best:   { price:12500, caasMonthly:149, note:'Ameristar Best · highest Ameristar positioning' }
+    value:{price:6999, monthly:84.99, note:'Ameristar Value · example furnace anchor from package platform'},
+    good:{price:14999, monthly:autoMonthly(14999), note:'Ameristar Good · illustrative AC/comfort scenario'},
+    better:{price:16999, monthly:autoMonthly(16999), note:'Ameristar Better · illustrative higher-comfort scenario'},
+    best:{price:19749, monthly:autoMonthly(19749), note:'Ameristar Best · illustrative full-system scenario'}
   },
   goodman: {
-    value:  { price:7000,  caasMonthly:89,  note:'Goodman Value · entry replacement system' },
-    good:   { price:9000,  caasMonthly:109, note:'Goodman Good · balanced system' },
-    better: { price:11500, caasMonthly:139, note:'Goodman Better · upgraded comfort system' },
-    best:   { price:14000, caasMonthly:169, note:'Goodman Best · top Goodman package' }
+    value:{price:8249, monthly:autoMonthly(8249), note:'Goodman Value · example package-platform anchor'},
+    good:{price:19999, monthly:autoMonthly(19999), note:'Goodman Good · full-system scenario'},
+    better:{price:23999, monthly:autoMonthly(23999), note:'Goodman Better · full-system scenario'},
+    best:{price:26999, monthly:autoMonthly(26999), note:'Goodman Best · premium full-system scenario'}
   },
   daikin: {
-    value:  { price:8500,  caasMonthly:99,  note:'Daikin Value · entry Daikin package' },
-    good:   { price:11000, caasMonthly:129, note:'Daikin Good · balanced Daikin comfort' },
-    better: { price:14500, caasMonthly:169, note:'Daikin Better · inverter/comfort focused' },
-    best:   { price:18000, caasMonthly:209, note:'Daikin Best · premium Daikin comfort system' }
+    value:{price:13249, monthly:autoMonthly(13249), note:'Daikin Value · ductless scenario'},
+    good:{price:17499, monthly:autoMonthly(17499), note:'Daikin Good · ductless / premium core scenario'},
+    better:{price:25749, monthly:autoMonthly(25749), note:'Daikin Better · multi-zone scenario'},
+    best:{price:27999, monthly:autoMonthly(27999), note:'Daikin Best · high-capacity comfort scenario'}
   },
   american_standard: {
-    value:  { price:9000,  caasMonthly:109, note:'American Standard Value · Silver entry package' },
-    good:   { price:12000, caasMonthly:149, note:'American Standard Good · Silver/Gold comfort package' },
-    better: { price:15500, caasMonthly:189, note:'American Standard Better · Gold/variable comfort package' },
-    best:   { price:19500, caasMonthly:239, note:'American Standard Best · Platinum premium comfort package' }
+    value:{price:9499, monthly:autoMonthly(9499), note:'American Standard Value · furnace anchor scenario'},
+    good:{price:20499, monthly:autoMonthly(20499), note:'American Standard Good · full-system scenario'},
+    better:{price:23999, monthly:autoMonthly(23999), note:'American Standard Better · full-system scenario'},
+    best:{price:21499, monthly:259.99, note:'American Standard Best · verified example: $21,499 / $259.99'}
   },
   midea: {
-    value:  { price:14500, caasMonthly:169, note:'Midea Value · inverter-driven comfort package' },
-    good:   { price:17500, caasMonthly:209, note:'Midea Good · EVOX enhanced comfort inverter package' },
-    better: { price:20500, caasMonthly:249, note:'Midea Better · premium EVOX low-ambient inverter package' },
-    best:   { price:24000, caasMonthly:299, note:'Midea Best · flagship variable-capacity comfort system' }
+    value:{price:19499, monthly:autoMonthly(19499), note:'Midea EVOX Value · inverter comfort scenario'},
+    good:{price:22249, monthly:autoMonthly(22249), note:'Midea EVOX Good · inverter comfort scenario'},
+    better:{price:23999, monthly:autoMonthly(23999), note:'Midea EVOX Better · inverter comfort scenario'},
+    best:{price:27499, monthly:autoMonthly(27499), note:'Midea EVOX Best · premium inverter scenario'}
   },
   mitsubishi: {
-    value:  { price:12500, caasMonthly:149, note:'Mitsubishi Value · entry Mitsubishi package' },
-    good:   { price:15500, caasMonthly:189, note:'Mitsubishi Good · M-Series comfort package' },
-    better: { price:19500, caasMonthly:239, note:'Mitsubishi Better · Hyper-Heat comfort package' },
-    best:   { price:24000, caasMonthly:299, note:'Mitsubishi Best · flagship premium comfort package' }
+    value:{price:12749, monthly:autoMonthly(12749), note:'Mitsubishi Value · ductless scenario'},
+    good:{price:18999, monthly:autoMonthly(18999), note:'Mitsubishi Good · zone comfort scenario'},
+    better:{price:22749, monthly:autoMonthly(22749), note:'Mitsubishi Better · multi-zone scenario'},
+    best:{price:41999, monthly:autoMonthly(41999), note:'Mitsubishi Best · five-zone premium scenario'}
   }
 };
 
-var TIER_DEFAULTS = {
-  value:  { apr:9.99, loanTerm:84,  annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
-  good:   { apr:9.99, loanTerm:84,  annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
-  better: { apr:9.99, loanTerm:120, annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
-  best:   { apr:9.99, loanTerm:120, annualMaint:251.88, annualFilters:180, annualRepairs:250, annualRepairsPost:400, caasTermMonths:96 },
-};
+function autoMonthly(price){
+  return Math.max(0, Math.ceil(price * PAYMENT_RATIO) - 0.01);
+}
+function gv(id){return parseFloat(document.getElementById(id).value) || 0;}
+function gi(id){return parseInt(document.getElementById(id).value, 10) || 0;}
+function setVal(id,val){document.getElementById(id).value = val;}
+function money(v){return '$' + Math.round(Math.abs(v)).toLocaleString();}
+function money2(v){return '$' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function signedMoney(v){return (v < 0 ? '-' : '') + money(v);}
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
 
-var TIER_LABELS = { value:'Value', good:'Good', better:'Better', best:'Best', custom:'Custom' };
+function getOptionMonth(writeBack){
+  var el = document.getElementById('optionMonth');
+  if(!el) return 96;
+  var raw = String(el.value || '').trim();
+  if(raw === '') return null;
+  var parsed = parseInt(raw, 10);
+  if(!Number.isFinite(parsed)) return null;
+  var month = clamp(parsed, 1, CONTRACT_MONTHS);
+  if(writeBack === true && String(parsed) !== String(month)) el.value = month;
+  return month;
+}
 
-function selectBrand(brand) {
+function clampOptionMonth(){
+  var el = document.getElementById('optionMonth');
+  if(!el) return;
+  var month = getOptionMonth(true);
+  if(month === null){
+    el.value = 96;
+  }
+  autoCalc();
+}
+
+function calculateResidual(msrp, month){
+  var m = clamp(parseInt(month,10) || 1, 1, CONTRACT_MONTHS);
+  return msrp * (CONTRACT_MONTHS - m) / CONTRACT_MONTHS;
+}
+
+function updateResidual(forceClamp){
+  var price = gv('packagePrice');
+  var month = getOptionMonth(forceClamp === true);
+  if(month === null){
+    setVal('residual', '');
+    document.getElementById('residualFormula').innerHTML = 'Enter a month from 1–180 to calculate the residual estimate.';
+    var payoffResidualBlank = document.getElementById('payoffCalloutResidual');
+    var payoffMonthBlank = document.getElementById('payoffCalloutMonth');
+    var convResidualBlank = document.getElementById('convenienceResidual');
+    var convMonthBlank = document.getElementById('convenienceMonth');
+    var convFormulaBlank = document.getElementById('convenienceFormula');
+    if(payoffResidualBlank) payoffResidualBlank.textContent = '—';
+    if(payoffMonthBlank) payoffMonthBlank.textContent = 'Enter month';
+    if(convResidualBlank) convResidualBlank.textContent = '—';
+    if(convMonthBlank) convMonthBlank.textContent = 'Enter a payoff month to calculate the estimate';
+    if(convFormulaBlank) convFormulaBlank.textContent = 'Formula: MSRP × (180 − selected month) ÷ 180';
+    return 0;
+  }
+  var residual = calculateResidual(price, month);
+  setVal('residual', Math.round(residual));
+  var formulaText = money(price) + ' × (' + CONTRACT_MONTHS + ' − ' + month + ') ÷ ' + CONTRACT_MONTHS + ' = <strong>' + money2(residual) + '</strong>';
+  document.getElementById('residualFormula').innerHTML = formulaText;
+
+  var payoffResidual = document.getElementById('payoffCalloutResidual');
+  var payoffMonth = document.getElementById('payoffCalloutMonth');
+  var convResidual = document.getElementById('convenienceResidual');
+  var convMonth = document.getElementById('convenienceMonth');
+  var convFormula = document.getElementById('convenienceFormula');
+  if(payoffResidual) payoffResidual.textContent = money2(residual);
+  if(payoffMonth) payoffMonth.textContent = 'Month ' + month + ' estimate';
+  if(convResidual) convResidual.textContent = money2(residual);
+  if(convMonth) convMonth.textContent = 'Month ' + month + ' estimate · based on ' + money2(price) + ' package MSRP';
+  if(convFormula) convFormula.textContent = 'Formula: ' + money(price) + ' × (180 − ' + month + ') ÷ 180 = ' + money2(residual);
+  return residual;
+}
+
+function selectBrand(brand){
   activeBrand = brand;
-  updateBrandTierNote();
   selectPreset(activePreset, document.getElementById('p-' + activePreset));
 }
 
-function updateBrandTierNote() {
-  var noteEl = document.getElementById('brandTierNote');
-  if (!noteEl) return;
-  if (activePreset === 'custom') {
-    noteEl.textContent = BRAND_LABELS[activeBrand] + ' · Custom quote';
+function selectPreset(name, btn){
+  activePreset = name;
+  document.querySelectorAll('.preset').forEach(function(el){el.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+
+  if(name === 'custom'){
+    document.getElementById('brandTierNote').textContent = BRAND_LABELS[activeBrand] + ' · Custom mode. Enter the exact package price and payment from the current proposal.';
+    autoCalc();
     return;
   }
-  var b = BRAND_TIER_DEFAULTS[activeBrand];
-  var tier = b && b[activePreset];
-  noteEl.textContent = tier ? tier.note : '';
-}
 
-function selectPreset(name, btn) {
-  document.querySelectorAll('.preset').forEach(function(b){ b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  activePreset = name;
-
-  if (name === 'custom') {
-    document.getElementById('buyPrice').value = '';
-    updateBrandTierNote();
-    autoCalc(); return;
-  }
-
-  var brandTier = BRAND_TIER_DEFAULTS[activeBrand][name];
-  var price = brandTier.price || 0;
-  var d = TIER_DEFAULTS[name];
-
-  document.getElementById('buyPrice').value      = price;
-  document.getElementById('apr').value           = d.apr;
-  document.getElementById('loanTerm').value      = d.loanTerm;
-  document.getElementById('annualMaint').value   = d.annualMaint;
-  var sel = document.getElementById('maintPlanSelect');
-  sel.value = [251.88, 155.88].includes(Number(d.annualMaint)) ? String(d.annualMaint) : 'custom';
-  document.getElementById('annualFilters').value = d.annualFilters;
-  document.getElementById('annualRepairs').value = d.annualRepairs;
-  document.getElementById('annualRepairsPost').value = d.annualRepairsPost;
-  document.getElementById('caasMonthly').value   = brandTier.caasMonthly;
-  document.getElementById('caasTermMonths').value= d.caasTermMonths;
-
-  updateBrandTierNote();
+  var s = SCENARIOS[activeBrand][name];
+  setVal('packagePrice', s.price);
+  setVal('buyPrice', s.price);
+  setVal('caasMonthly', Number(s.monthly).toFixed(2));
+  document.getElementById('brandTierNote').innerHTML = '<strong>' + s.note + '</strong><br>Use Custom for exact proposal values; ServiceTitan and signed contract remain final authority.';
   autoCalc();
 }
 
-function setPeriod(yr, btn) {
-  period = yr;
-  document.querySelectorAll('.pbtn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+function markCustom(){
+  if(activePreset === 'custom') return;
+  activePreset = 'custom';
+  document.querySelectorAll('.preset').forEach(function(el){el.classList.remove('active');});
+  var c = document.getElementById('p-custom');
+  if(c) c.classList.add('active');
+  document.getElementById('brandTierNote').textContent = BRAND_LABELS[activeBrand] + ' · Custom values entered. Verify against the current proposal before customer use.';
+}
+
+function getInvestmentRateLabel(rate){
+  if(Math.abs(rate - 4) < 0.01) return '4% HYSA-style example';
+  if(Math.abs(rate - 8) < 0.01) return '8% S&amp;P adjusted-style example';
+  if(Math.abs(rate - 10) < 0.01) return '10% S&amp;P nominal-style example';
+  return rate.toFixed(1) + '% custom illustration';
+}
+
+function buildInvestmentUrl(amount){
+  var safeAmount = Math.max(0, Math.round(amount || 0));
+  return 'investment-calculator.html?lumpSum=' + encodeURIComponent(safeAmount);
+}
+
+function syncInvestmentLinks(amount){
+  var url = buildInvestmentUrl(amount);
+  ['investmentFullLink','investmentPanelLink','investInlineHref'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.href = url;
+  });
+}
+
+function toggleInvestmentPanel(force){
+  var panel = document.getElementById('investmentPanel');
+  var btn = document.getElementById('investmentToggle');
+  if(!panel || !btn) return;
+  var show = typeof force === 'boolean' ? force : !panel.classList.contains('show');
+  panel.classList.toggle('show', show);
+  btn.textContent = show ? '📉 Hide invested-cash view' : '📈 Show invested-cash view';
+}
+
+function setBuyPath(path){
+  buyPath = path;
+  document.getElementById('buy-opt-finance').classList.toggle('active', path === 'finance');
+  document.getElementById('buy-opt-cash').classList.toggle('active', path === 'cash');
+  document.getElementById('financeFields').style.display = path === 'finance' ? 'grid' : 'none';
+  var inline = document.getElementById('investInlineLink');
+  if(inline) inline.style.display = path === 'cash' ? 'block' : 'none';
   autoCalc();
 }
 
-function switchTab(t, btn) {
-  tab = t;
-  document.querySelectorAll('.ctab').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  renderChart(S.labels, t==='cum' ? S.buyC : S.buyM, t==='cum' ? S.caasC : S.caasM);
-}
-
-var invRate = 0.04;
-var invCompound = 'monthly';
-
-function fvLump(principal, years) {
-  if (invCompound === 'monthly') {
-    return principal * Math.pow(1 + invRate/12, years*12);
-  }
-  return principal * Math.pow(1 + invRate, years);
-}
-
-function fvMonthly(mo, nMonths) {
-  var r = invCompound === 'monthly' ? invRate/12 : Math.pow(1+invRate, 1/12)-1;
-  return mo * ((Math.pow(1+r, nMonths)-1)/r);
-}
-
-function setInvRate(rate, compound, btn) {
-  invRate = rate / 100;
-  invCompound = compound;
-  document.querySelectorAll('#inv-rate-presets .rpbtn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+function setCaasPath(path){
+  caasPath = path;
+  document.getElementById('caas-opt-continue').classList.toggle('active', path === 'continue');
+  document.getElementById('caas-opt-payoff').classList.toggle('active', path === 'payoff');
   autoCalc();
 }
 
-function setMaintPlan(val) {
-  if (val !== 'custom') {
-    document.getElementById('annualMaint').value = val;
-    autoCalc();
+function populateOptionMonthSelect(){
+  // Legacy no-op retained so older calls do not fail. The payoff month is now typed directly.
+  if(!document.getElementById('optionMonth').value){
+    setVal('optionMonth', 96);
   }
 }
 
-function setInfPreset(val, btn) {
-  document.getElementById('inflationRate').value = val;
-  document.querySelectorAll('#inf-presets .rpbtn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+function setOptionMonth(month){
+  setVal('optionMonth', clamp(parseInt(month,10) || 96, 1, CONTRACT_MONTHS));
   autoCalc();
 }
-function clearInfPreset() {
-  document.querySelectorAll('#inf-presets .rpbtn').forEach(function(b){ b.classList.remove('active'); });
+
+function setMaintPlan(value){
+  if(value !== 'custom') setVal('annualMaint', value);
+  autoCalc();
 }
 
-function autoCalc() {
-  if (document.getElementById('results').classList.contains('show')) calc();
+function setReturnRate(rate, btn){
+  setVal('returnRate', rate);
+  document.querySelectorAll('#advancedContent .rate-presets .rpbtn').forEach(function(el){el.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  autoCalc();
 }
 
-function $d(n) { return '$' + Math.round(Math.abs(n)).toLocaleString(); }
-function $mo(n) { return '$' + Math.round(Math.abs(n)).toLocaleString() + '/mo'; }
-function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
-function gi(id) { return parseInt(document.getElementById(id).value) || 0; }
-function gc(id) { return document.getElementById(id).checked; }
+function clearReturnPresets(){
+  document.querySelectorAll('#advancedContent .rate-presets .rpbtn').forEach(function(el){el.classList.remove('active');});
+}
 
-function calc() {
-  var bp  = gv('buyPrice');
-  var bpTax = bp * 1.10;
+function toggleAccordion(){
+  var c = document.getElementById('advancedContent');
+  var a = document.getElementById('accArrow');
+  if(c.style.display === 'grid'){
+    c.style.display = 'none';
+    a.textContent = '▸ Expand';
+  }else{
+    c.style.display = 'grid';
+    a.textContent = '▾ Collapse';
+  }
+}
 
-  var buyTaxEl = document.getElementById('buy-price-tax-callout');
-  var buyTaxTotal = document.getElementById('buy-price-tax-total');
-  if (bp > 0) {
-    buyTaxEl.style.display = 'block';
-    buyTaxTotal.textContent = $d(bpTax) + ' (+' + $d(bp * 0.10) + ' tax)';
-  } else {
-    buyTaxEl.style.display = 'none';
+var lastOptionMonthValue = null;
+
+function syncResidualFromOptionMonth(forceClamp){
+  var optionEl = document.getElementById('optionMonth');
+  if(!optionEl) return;
+
+  var current = String(optionEl.value || '').trim();
+  var shouldRun = forceClamp === true || current !== lastOptionMonthValue;
+
+  if(!shouldRun) return;
+
+  updateResidual(forceClamp === true);
+  lastOptionMonthValue = String(optionEl.value || '').trim();
+
+  var results = document.getElementById('results');
+  if(results && results.classList.contains('show')) calc();
+}
+
+function handleOptionMonthInput(forceClamp){
+  syncResidualFromOptionMonth(forceClamp === true);
+}
+
+function autoCalc(){
+  updateResidual();
+  if(document.getElementById('results').classList.contains('show')) calc();
+}
+
+function financePayment(principal, annualApr, months){
+  if(months <= 0) return 0;
+  var r = annualApr / 100 / 12;
+  if(r <= 0) return principal / months;
+  return principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
+}
+
+function futureValueLump(pv, annualRate, years){
+  return pv * Math.pow(1 + annualRate / 100, years);
+}
+
+function futureValueMonthlyContribution(monthlyContribution, annualRate, totalMonths, contributionMonths){
+  var monthly = Math.max(0, monthlyContribution || 0);
+  var r = (annualRate || 0) / 100 / 12;
+  var balance = 0;
+  for(var m = 1; m <= totalMonths; m++){
+    balance = balance * (1 + r);
+    if(m <= contributionMonths) balance += monthly;
+  }
+  return balance;
+}
+
+function buyAfterTax(){
+  var buy = gv('buyPrice');
+  var taxRate = gv('taxRate') / 100;
+  var mode = document.getElementById('taxMode').value;
+  return mode === 'pretax' ? buy * (1 + taxRate) : buy;
+}
+
+function setVerdict(verdict){
+  var card = document.getElementById('verdictCard');
+  var icon = document.getElementById('verdictIcon');
+  var head = document.getElementById('verdictHead');
+  var body = document.getElementById('verdictBody');
+  if(!card || !icon || !head || !body) return;
+
+  if(verdict.type === 'direct'){
+    card.className = 'verdict';
+    icon.textContent = '✅';
+  }else if(verdict.type === 'offset'){
+    card.className = 'verdict';
+    icon.textContent = '💡';
+  }else{
+    card.className = 'verdict gold';
+    icon.textContent = '🛡️';
   }
 
-  var apr = buyPath === 'cash' ? 0 : gv('apr') / 100 / 12;
-  var lt  = buyPath === 'cash' ? 0 : (gi('loanTerm') || 120);
-  var mnt = gv('annualMaint');
-  var flt = gv('annualFilters');
-  var rep     = gv('annualRepairs');
-  var repPost = gv('annualRepairsPost');
-  var iaq = gv('annualIAQ');
-  var cmoRaw = gv('caasMonthly');
-  var cmo = cmoRaw;
-  var ctm = gi('caasTermMonths') || 96;
+  head.textContent = verdict.headline;
+  body.textContent = verdict.body;
+}
 
-  var residual = gv('caasResidual');
-  var cMaint   = gc('cMaint');
-  var cFilters = gc('cFilters');
-  var cRepairs = gc('cRepairs');
-  var cIAQ     = gc('cIAQ');
+function calc(){
+  var price = gv('packagePrice');
+  var month = getOptionMonth(true) || 96;
+  var residual = updateResidual(true);
+  lastOptionMonthValue = String(document.getElementById('optionMonth').value || '').trim();
+  var cmo = gv('caasMonthly');
+  var years = gi('analysisYears') || 15;
+  var months = years * 12;
+  var taxMode = document.getElementById('taxMode').value;
+  var taxRate = gv('taxRate') / 100;
+  var buyPreTax = gv('buyPrice');
+  var buyTotalTax = buyAfterTax();
+  var apr = gv('apr');
+  var loanTerm = gi('loanTerm') || 120;
+  var loanPmt = buyPath === 'finance' ? financePayment(buyTotalTax, apr, loanTerm) : 0;
+  var annualReservePre = gv('annualReservePre');
+  var annualReservePost = gv('annualReservePost');
+  var annualFilterCost = gv('annualFilterCost');
+  var annualBulbCost = gv('annualBulbCost');
+  var inflation = gv('inflationRate') / 100;
+  var retRate = gv('returnRate');
+  var postExposure = document.getElementById('postPayoffExposure').value === 'include';
 
-  if (buyPath === 'cash' && bp > 0) {
-    document.getElementById('invest-href').href = 'investment-calculator.html?lumpSum=' + Math.round(bp);
-  }
+  document.getElementById('buyTaxCallout').innerHTML = taxMode === 'pretax'
+    ? 'Modeled buy amount: <strong>' + money2(buyTotalTax) + '</strong> including ' + (taxRate*100).toFixed(1) + '% tax. Confirm final tax treatment in the proposal before signature.'
+    : 'Modeled buy amount: <strong>' + money2(buyTotalTax) + '</strong>. Entered price treated as tax-included.';
 
-  var months = period * 12;
-  var principal = bpTax;
-  var lp = 0;
-  if (buyPath === 'finance' && apr > 0 && principal > 0) {
-    lp = principal * apr * Math.pow(1+apr,lt) / (Math.pow(1+apr,lt)-1);
-  } else if (buyPath === 'finance' && principal > 0) {
-    lp = principal / lt;
-  }
-
-  var infRate = gv('inflationRate') / 100;
-
-  // ── Year 15 replacement cost (always anchored to year 15, using current inflation rate) ──
-  var futureCostYr15 = bpTax * Math.pow(1 + infRate, 15);
-
-  var mMnt = mnt/12, mFlt = flt/12, mRep = rep/12, mRepPost = repPost/12, mIAQ = iaq/12;
-
-  // ── BUY ──
-  var buyC = [buyPath === 'cash' ? bpTax : 0], buyM = [buyPath === 'cash' ? bpTax : 0];
-  for (var m = 1; m <= months; m++) {
-    var inf = Math.pow(1 + infRate, Math.floor((m-1)/12));
-    var mRepNow = m <= 120 ? mRep : mRepPost;
-    var bm = (buyPath === 'finance' && m <= lt ? lp : 0) + (mMnt + mFlt + mRepNow + mIAQ) * inf;
-    bm = Math.max(0, bm);
-    buyM.push(bm);
-    buyC.push(buyC[m-1] + bm);
-  }
-
-  var flatOngoing = 0, inflatedOngoing = 0;
-  for (var m = 1; m <= months; m++) {
-    var mRepNow = m <= 120 ? mRep : mRepPost;
-    flatOngoing     += (mMnt + mFlt + mRepNow + mIAQ);
-    inflatedOngoing += (mMnt + mFlt + mRepNow + mIAQ) * Math.pow(1 + infRate, Math.floor((m-1)/12));
-  }
-  var inflationPremium = inflatedOngoing - flatOngoing;
-
-  // ── CaaS ──
-  var caasC = [0], caasM = [0];
-  var contractEnd = caasPath === 'continue' ? 180 : ctm;
-
-  for (var m = 1; m <= months; m++) {
-    var inf = Math.pow(1 + infRate, Math.floor((m-1)/12));
-    var mRepNow = m <= 120 ? mRep : mRepPost;
-    var cm = 0;
-    if (m <= contractEnd) {
-      cm = cmo;
-      if (!cRepairs) cm += mRepNow * inf;
-      cm = Math.max(0, cm);
-    } else {
-      cm = (mMnt + mFlt + mRepNow + mIAQ) * inf;
-      cm = Math.max(0, cm);
-    }
-    caasM.push(cm);
-    caasC.push(caasC[m-1] + cm);
-  }
-
-  if (caasPath === 'payoff' && residual > 0 && ctm <= months) {
-    for (var i = ctm; i <= months; i++) {
-      caasC[i] += residual;
-    }
-    caasM[ctm] += residual;
-  }
-
+  var buyCumulative = [];
+  var caasCumulative = [];
   var labels = [];
-  for (var i = 0; i <= months; i++) labels.push(i%12===0 ? 'Yr '+(i/12) : '');
+  var buyRunning = buyPath === 'cash' ? buyTotalTax : 0;
+  var caasRunning = 0;
+  var serviceCostBuy = 0;
+  var serviceCostPostPayoff = 0;
+  var inflationPremium = 0;
+  var flatServiceCost = 0;
+  var flatReserveCost = 0;
+  var flatFilterCost = 0;
+  var flatBulbCost = 0;
 
-  S = { buyC:buyC, caasC:caasC, buyM:buyM, caasM:caasM, labels:labels };
-  renderChart(labels, tab==='cum' ? buyC : buyM, tab==='cum' ? caasC : caasM);
+  buyCumulative.push(buyRunning);
+  caasCumulative.push(caasRunning);
+  labels.push('Start');
 
-  var buyTotal  = buyC[months];
-  var caasTotal = caasC[months];
+  for(var m=1; m<=months; m++){
+    var yIndex = Math.floor((m-1)/12);
+    var mult = Math.pow(1 + inflation, yIndex);
+    var reserveMonthly = (m <= 120 ? annualReservePre : annualReservePost) / 12;
+    var filterMonthly = annualFilterCost / 12;
+    var bulbMonthly = annualBulbCost / 12;
+    var serviceMonthly = reserveMonthly + filterMonthly + bulbMonthly;
+    var serviceInflated = serviceMonthly * mult;
+    flatReserveCost += reserveMonthly;
+    flatFilterCost += filterMonthly;
+    flatBulbCost += bulbMonthly;
+    flatServiceCost += serviceMonthly;
+    inflationPremium += serviceInflated - serviceMonthly;
 
-  document.getElementById('chart-card').style.display = caasTotal < buyTotal ? 'block' : 'none';
-  var savings   = caasTotal - buyTotal;
-  var caasAvg   = caasTotal / months;
-  var yr = period;
-  var rateShort = invCompound === 'monthly' ? '4% HYSA' : (invRate===0.08 ? '8% S&P real' : '10% S&P nom.');
+    var loanCost = (buyPath === 'finance' && m <= loanTerm) ? loanPmt : 0;
+    buyRunning += loanCost + serviceInflated;
+    serviceCostBuy += serviceInflated;
 
-  var investedFV     = fvLump(bpTax, yr);
-  var interestEarned = investedFV - bpTax;
-  var netAdvantage   = investedFV - caasTotal;
-
-  document.getElementById('m-invested').textContent     = $d(Math.round(investedFV));
-  document.getElementById('m-invested-sub').textContent = $d(Math.round(bpTax)) + ' at ' + rateShort;
-  document.getElementById('m-interest').textContent     = '+' + $d(Math.round(interestEarned));
-  document.getElementById('m-interest-sub').textContent = 'investing system cost · ' + rateShort;
-
-  var savEl  = document.getElementById('m-sav-val');
-  var savSub = document.getElementById('m-sav-sub');
-  var savLbl = document.getElementById('m-sav-lbl');
-  if (netAdvantage >= 0) {
-    savEl.textContent  = '+' + $d(Math.round(netAdvantage));
-    savEl.style.color  = '#168a20';
-    savLbl.textContent = 'Net advantage';
-    savSub.textContent = 'CaaS + invest vs writing a check';
-  } else {
-    savEl.textContent  = $d(Math.round(Math.abs(netAdvantage)));
-    savEl.style.color  = '#c97d10';
-    savLbl.textContent = 'CaaS net cost';
-    savSub.textContent = 'after ' + rateShort + ' interest earned';
-  }
-
-  var tierLabel = TIER_LABELS[activePreset] || 'Custom';
-  var badgeEl = document.getElementById('tier-badge');
-  badgeEl.textContent = '● ' + BRAND_LABELS[activeBrand] + ' · ' + tierLabel + (activePreset !== 'custom' ? ' · $' + Math.round(bp).toLocaleString() : ' · Custom quote');
-
-  var vc = document.getElementById('v-card');
-  var vi = document.getElementById('v-icon');
-  var vh = document.getElementById('v-hed');
-  var vb = document.getElementById('v-body');
-
-  if (savings < -100) {
-    vc.className='verdict cw'; vi.textContent='✅';
-    vh.textContent = 'CaaS wins — saves ' + $d(-savings) + ' AND earns ' + $d(Math.round(interestEarned)) + ' in interest';
-    vb.textContent = 'CaaS is the clear choice — it costs less over ' + yr + ' years AND investing the system cost at ' + rateShort + ' earns ' + $d(Math.round(interestEarned)) + ' in interest. That\'s a net advantage of +' + $d(Math.round(netAdvantage)) + ' vs writing a check. Predictable payments, no surprise bills, no depreciating asset.';
-  } else if (netAdvantage > 0) {
-    vc.className='verdict cw'; vi.textContent='💡';
-    vh.textContent = 'CaaS + invest wins by ' + $d(Math.round(netAdvantage)) + ' over ' + yr + ' years';
-    vb.textContent = 'Buying appears to save ' + $d(Math.abs(savings)) + ' on cost alone — but investing the system cost at ' + rateShort + ' earns ' + $d(Math.round(interestEarned)) + ' in interest, making CaaS + invest the smarter financial decision by ' + $d(Math.round(netAdvantage)) + '. Keep your capital working for you instead of sinking it into a depreciating system.';
-  } else {
-    vc.className='verdict cw'; vi.textContent='✅';
-    vh.textContent = 'CaaS — peace of mind, predictable payments, inflation-proof';
-    vb.textContent = 'Investing the system cost at ' + rateShort + ' covers ' + Math.round((interestEarned/caasTotal)*100) + '% of your entire CaaS membership. Add in the fixed monthly payment, no repair surprises, no out-of-warranty risk, and a new system waiting when you\'re ready — CaaS is the smarter long-term choice.';
-  }
-
-  var loanPmts  = buyPath === 'finance' ? Math.min(lt,months)*lp : 0;
-  var intPaid   = buyPath === 'finance' ? Math.max(0, loanPmts-principal) : 0;
-  var cContractPmts = Math.min(contractEnd,months)*cmo;
-  var pathLabel = caasPath==='payoff'
-    ? (residual>0 ? 'Pay off '+$d(residual)+' at mo.'+ctm : 'Pay off at mo.'+ctm)
-    : 'Continue to mo.180';
-  var postMonths = caasPath === 'continue' ? 0 : Math.max(0, months - ctm);
-  var contractYrs = Math.round(Math.min(ctm, months) / 12 * 10) / 10;
-
-  function caasIncludedLabel(annualCost) {
-    if (postMonths <= 0) return '✓ included';
-    var postCost = (annualCost / 12) * postMonths;
-    return '✓ incl. thru yr ' + contractYrs + ', then ' + $d(Math.round(postCost));
-  }
-
-  // ── Investment opportunity rows ──
-  var invRows = [];
-  if (buyPath === 'cash') {
-    var lumpInv = bpTax;
-    var fvInv = fvLump(lumpInv, yr);
-    invRows.push(['💰 Invest lump sum at ' + (invRate*100).toFixed(0) + '%', $d(Math.round(lumpInv)) + ' → ' + $d(Math.round(fvInv)), '—']);
-    invRows.push(['Net position (invest vs CaaS)', $d(Math.round(fvInv)), $d(caasTotal)]);
-  } else {
-    var lumpInv = bpTax;
-    var fvLumpInv = fvLump(lumpInv, yr);
-    var netInv = fvLumpInv - intPaid;
-    invRows.push(['💰 Invest system cost at ' + (invRate*100).toFixed(0) + '%', $d(Math.round(lumpInv)) + ' → ' + $d(Math.round(fvLumpInv)), '—']);
-    invRows.push(['Less: loan interest paid', '-' + $d(Math.round(intPaid)), '—']);
-    invRows.push(['Net investment value', $d(Math.round(netInv)), $d(caasTotal)]);
-    var diff = lp - cmo;
-    if (diff > 0) {
-      var fvGapEnd = fvMonthly(diff, lt);
-      var fvGap15 = fvLump(fvGapEnd, (months - lt) / 12);
-      invRows.push(['💰 Monthly gap invested (' + $mo(diff) + ' × ' + Math.round(lt/12) + 'yr)', $d(Math.round(diff*lt)) + ' → ' + $d(Math.round(fvGap15)), '—']);
+    if(caasPath === 'continue'){
+      caasRunning += cmo;
+    }else{
+      if(m <= month){
+        caasRunning += cmo;
+        if(m === month) caasRunning += residual;
+      }else if(postExposure){
+        caasRunning += serviceInflated;
+        serviceCostPostPayoff += serviceInflated;
+      }
     }
+
+    buyCumulative.push(buyRunning);
+    caasCumulative.push(caasRunning);
+    labels.push(m % 12 === 0 ? 'Yr ' + (m/12) : '');
   }
 
-  // ── Main cost breakdown rows ──
+  var buyTotal = buyCumulative[buyCumulative.length - 1];
+  var caasTotal = caasCumulative[caasCumulative.length - 1];
+  var delta = buyTotal - caasTotal;
+  var cashPreserved = buyTotalTax;
+  var cashFV = futureValueLump(cashPreserved, retRate, years);
+  var growth = cashFV - cashPreserved;
+  var paymentDeltaMonthly = buyPath === 'finance' ? (loanPmt - cmo) : 0;
+  var positivePaymentDelta = Math.max(0, paymentDeltaMonthly);
+  var paymentDeltaMonths = buyPath === 'finance' ? Math.min(loanTerm, months) : 0;
+  var paymentDeltaContributed = positivePaymentDelta * paymentDeltaMonths;
+  var paymentDeltaFV = futureValueMonthlyContribution(positivePaymentDelta, retRate, months, paymentDeltaMonths);
+  var paymentDeltaGrowth = Math.max(0, paymentDeltaFV - paymentDeltaContributed);
+  var netFlex = growth + Math.max(0, delta) + paymentDeltaGrowth;
+  var interestPaid = buyPath === 'finance' ? Math.max(0, loanPmt * Math.min(loanTerm, months) - buyTotalTax) : 0;
+  var futureSystemCost = buyTotalTax * Math.pow(1 + inflation, 15);
+
+  document.getElementById('caasDisplay').innerHTML = money2(cmo) + ' <span>/mo</span>';
+  document.getElementById('buyDisplay').innerHTML = buyPath === 'finance'
+    ? money2(loanPmt) + ' <span>/mo loan</span>'
+    : money2(buyTotalTax) + ' <span>cash</span>';
+
+  syncInvestmentLinks(cashPreserved);
+  document.getElementById('mResidual').textContent = money2(residual);
+  document.getElementById('mResidualSub').textContent = 'month ' + month + ' estimate';
+  document.getElementById('mCash').textContent = money(cashPreserved);
+  document.getElementById('mGrowth').textContent = '+' + money(growth);
+  document.getElementById('mGrowthSub').textContent = getInvestmentRateLabel(retRate) + ' over ' + years + ' yr';
+  document.getElementById('investPrincipal').textContent = money(cashPreserved);
+  document.getElementById('investRate').textContent = retRate.toFixed(1) + '%';
+  document.getElementById('investRateSub').innerHTML = getInvestmentRateLabel(retRate);
+  document.getElementById('investFuture').textContent = money(cashFV);
+  document.getElementById('investFutureSub').textContent = 'after ' + years + ' years';
+  document.getElementById('investGrowth').textContent = '+' + money(growth);
+  document.getElementById('investNarrative').innerHTML = 'If the homeowner preserves <strong>' + money(cashPreserved) + '</strong> instead of tying it up in the system purchase, this illustration shows it growing to <strong>' + money(cashFV) + '</strong> at ' + getInvestmentRateLabel(retRate) + ' over ' + years + ' years. Advisors should describe this as cash flexibility only — not a recommendation to use a HYSA, buy the S&amp;P 500, or pursue any specific investment strategy.';
+  document.getElementById('payDeltaMonthly').textContent = buyPath === 'finance' ? money2(Math.max(0, paymentDeltaMonthly)) : '—';
+  document.getElementById('payDeltaMonthlySub').textContent = buyPath === 'finance'
+    ? 'Loan payment minus Comfort Club payment'
+    : 'Only applies to financed buy path';
+  document.getElementById('payDeltaMonths').textContent = buyPath === 'finance' ? paymentDeltaMonths.toLocaleString() : '0';
+  document.getElementById('payDeltaFuture').textContent = buyPath === 'finance' ? money(paymentDeltaFV) : '—';
+  document.getElementById('payDeltaFutureSub').textContent = buyPath === 'finance'
+    ? getInvestmentRateLabel(retRate) + ' over selected horizon'
+    : 'Switch buy path to finance to view';
+  document.getElementById('payDeltaGrowth').textContent = buyPath === 'finance' ? '+' + money(paymentDeltaGrowth) : '—';
+  document.getElementById('paymentDeltaNarrative').innerHTML = buyPath === 'finance'
+    ? 'For customers who want the deeper math, this shows the monthly payment gap only: <strong>' + money2(loanPmt) + '</strong> loan payment minus <strong>' + money2(cmo) + '</strong> Comfort Club payment = <strong>' + money2(Math.max(0, paymentDeltaMonthly)) + '</strong>/mo. If that positive difference is saved for ' + paymentDeltaMonths + ' months and left to compound through the selected horizon, the illustrative value is <strong>' + money(paymentDeltaFV) + '</strong>. This excludes separate ownership service costs, which are shown in the main cost breakdown.'
+    : 'The payment-difference view is designed for finance comparisons. In the cash path, use the cash-preservation illustration above because the customer is comparing a large upfront check against the Comfort Club monthly payment.';
+
+  var deltaEl = document.getElementById('mDelta');
+  var deltaLbl = document.getElementById('mDeltaLbl');
+  var deltaSub = document.getElementById('mDeltaSub');
+  if(delta >= 0){
+    deltaLbl.textContent = 'Modeled CaaS lead';
+    deltaEl.textContent = money(delta);
+    deltaEl.style.color = '#166a3e';
+    deltaSub.textContent = 'buy costs more over ' + years + ' yr';
+  }else{
+    deltaLbl.textContent = 'Raw cost premium';
+    deltaEl.textContent = money(Math.abs(delta));
+    deltaEl.style.color = '#c97d10';
+    deltaSub.textContent = 'Comfort Club value is risk transfer';
+  }
+
+  var tier = activePreset.charAt(0).toUpperCase() + activePreset.slice(1);
+  document.getElementById('tierBadge').textContent = BRAND_LABELS[activeBrand] + ' · ' + tier + ' · ' + money(price) + ' / ' + money2(cmo) + '/mo';
+
+  var rawGap = Math.abs(delta);
+  var cashGrowth = cashFV - cashPreserved;
+  var flexOffset = 0;
+  var flexSource = '';
+
+  if(buyPath === 'cash'){
+    flexOffset = cashGrowth;
+    flexSource = 'cash-preservation growth';
+  }else if(buyPath === 'finance'){
+    flexOffset = paymentDeltaFV;
+    flexSource = 'payment-difference savings';
+  }
+
+  if(delta >= 0){
+    setVerdict({
+      type: 'direct',
+      headline: 'Comfort Club is the direct financial winner',
+      body: 'Comfort Club is modeled lower on raw cash outlay by ' + money(delta) + ' over the selected horizon. The cash-flexibility illustration is additional context only and should not be presented as financial advice. The convenience value is that covered service is bundled and the payoff estimate remains transparent.'
+    });
+  }else if(flexOffset > rawGap){
+    setVerdict({
+      type: 'offset',
+      headline: 'Cash flexibility helps offset the raw premium',
+      body: 'Traditional ownership is modeled lower on raw outlay by ' + money(rawGap) + ', but the optional ' + flexSource + ' illustration may offset that difference under the selected assumptions. This is hypothetical only; returns are not guaranteed. The remaining value conversation is convenience: covered service stays bundled and the payoff estimate is easy to explain at any selected month.'
+    });
+  }else{
+    setVerdict({
+      type: 'risk',
+      headline: 'Comfort Club is the lower-surprise choice',
+      body: 'Traditional ownership is modeled lower on raw outlay by ' + money(rawGap) + '. Comfort Club should be explained as the lower-surprise option because CM Heating owns the system and remains responsible for covered service under the agreement. The customer also has transparent payoff math if they want to resolve the contract later. Normal exclusions apply.'
+    });
+  }
+
+  updateCoach({
+    brand: BRAND_LABELS[activeBrand],
+    tier: tier,
+    price: price,
+    cmo: cmo,
+    month: month,
+    residual: residual,
+    buyPath: buyPath,
+    buyTotalTax: buyTotalTax,
+    loanPmt: loanPmt,
+    loanTerm: loanTerm,
+    years: years,
+    buyTotal: buyTotal,
+    caasTotal: caasTotal,
+    delta: delta,
+    cashPreserved: cashPreserved,
+    growth: growth,
+    retRate: retRate,
+    paymentDeltaMonthly: paymentDeltaMonthly,
+    paymentDeltaFV: paymentDeltaFV,
+    flexOffset: flexOffset,
+    flexSource: flexSource,
+    rawGap: rawGap,
+    serviceCostBuy: serviceCostBuy,
+    annualReservePre: annualReservePre,
+    annualReservePost: annualReservePost,
+    annualFilterCost: annualFilterCost,
+    annualBulbCost: annualBulbCost,
+    flatReserveCost: flatReserveCost,
+    flatFilterCost: flatFilterCost,
+    flatBulbCost: flatBulbCost,
+    caasPath: caasPath
+  });
+
+  var caasPathText = caasPath === 'continue'
+    ? money2(cmo) + ' × ' + months + ' months modeled'
+    : money2(cmo) + ' × ' + Math.min(month,months) + ' months + residual ' + money2(residual) + (postExposure && months > month ? ' + post-payoff service exposure' : '');
+
   var rows = [
-    ['Equipment (before tax)',          buyPath==='cash' ? $d(bp)+' (cash)' : $d(bp),  $d(cContractPmts)],
-    ['Sales tax (10%)',                  buyPath==='cash' ? $d(Math.round(bp*0.10)) : $d(Math.round(bp*0.10))+' (financed)', '✓ in monthly'],
-    ['Financing interest',              buyPath==='cash' ? '—' : $d(intPaid),           '—'],
-    ['Residual / end of contract',     '—',           caasPath==='payoff' ? $d(residual) : pathLabel],
-    ['Maintenance ('+yr+' yr)',        $d(mnt*yr),    caasIncludedLabel(mnt)],
-    ['Filters ('+yr+' yr)',            $d(flt*yr),    caasIncludedLabel(flt)],
-    ['Repairs yr 1–10',               $d(rep*10),    cRepairs ? '✓ included' : $d(rep*10)],
-    ['Repairs yr 11–'+yr+' (out of warranty)',  $d(repPost*(yr-10)),  cRepairs ? '✓ included' : $d(repPost*(yr-10))],
-    ['IAQ / UV bulbs ('+yr+' yr)',     $d(iaq*yr),    caasIncludedLabel(iaq)],
-    ['Cost inflation ('+infRate*100+'%/yr)',  '+' + $d(Math.round(inflationPremium)) + ' on maint, repairs, filters, IAQ', 'Fixed monthly — inflation-proof'],
-    ['TOTAL ('+yr+'-yr cost of ownership)',   $d(buyTotal),  $d(caasTotal)]
+    ['Initial system purchase', buyPath === 'cash' ? money2(buyTotalTax) + ' paid upfront' : money2(buyTotalTax) + ' financed base', 'Included in rental contract economics'],
+    ['Loan payment / interest', buyPath === 'finance' ? money2(loanPmt) + '/mo · interest ' + money2(interestPaid) : '—', '—'],
+    ['Comfort Club payments', '—', caasPathText],
+    ['Residual / payoff option', '—', money2(residual) + ' at month ' + month + ' if payoff is selected'],
+    ['Labor/service reserve yrs 1–10', money2(annualReservePre) + '/yr planning reserve · ' + money2(annualReservePre/12) + '/mo equivalent', 'Covered service included while under Comfort Club'],
+    ['Labor/service reserve yrs 11–15', money2(annualReservePost) + '/yr planning reserve · ' + money2(annualReservePost/12) + '/mo equivalent', 'Covered service included while under Comfort Club'],
+    ['Filters / media', money2(annualFilterCost) + '/yr · ' + money2(flatFilterCost) + ' over horizon before inflation', 'Eligible filters included under the Comfort Club agreement'],
+    ['IAQ / UV bulbs', money2(annualBulbCost) + '/yr · ' + money2(flatBulbCost) + ' over horizon before inflation', 'Eligible IAQ/UV bulbs included under the Comfort Club agreement'],
+    ['Total modeled ownership service costs', money2(flatServiceCost) + ' before inflation', 'Included in Comfort Club economics while under contract'],
+    ['Service-cost inflation', '+' + money2(inflationPremium), 'Fixed payment reduces exposure while under Comfort Club'],
+    ['Cash flexibility illustration', 'Cash used or financed', money(cashPreserved) + ' preserved; ' + money(growth) + ' possible growth at ' + retRate.toFixed(1) + '%'],
+    ['Payment-difference illustration', buyPath === 'finance' ? money2(Math.max(0, paymentDeltaMonthly)) + '/mo positive gap; ' + money(paymentDeltaFV) + ' future value' : 'Not applicable to cash path', 'Comfort Club payment compared against loan payment only'],
+    ['Year-15 upgrade exposure', 'Illustrative next-system cost: ' + money(futureSystemCost), 'Review upgrade / new Comfort Club contract'],
+    ['Total modeled outlay', money2(buyTotal), money2(caasTotal)]
   ];
-
-  // ── Replacement cost at year 15 (always at yr 15 regardless of analysis period) ──
-  var replacementRows = '';
-  if (bp > 0) {
-    var pctIncrease = Math.round(((futureCostYr15 - bpTax) / bpTax) * 100);
-    replacementRows =
-      '<tr><td colspan="3" style="padding:12px 10px 5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);border-top:2px solid var(--border);background:#f0f4ff">📅 System Replacement · Year 15 (at ' + (infRate*100).toFixed(0) + '% inflation/yr)</td></tr>' +
-      '<tr style="background:#f5f8ff">' +
-        '<td style="font-size:13px">Next system · today\'s ' + $d(Math.round(bpTax)) + ' grows to this by yr 15</td>' +
-        '<td style="text-align:right;font-weight:700;color:#c97d10;font-size:14px">' + $d(Math.round(futureCostYr15)) + '</td>' +
-        '<td style="text-align:right;color:#168a20;font-weight:600">🔄 New contract — no lump sum</td>' +
-      '</tr>' +
-      '<tr class="true-total">' +
-        '<td><strong>True 15-yr cost of ownership</strong> <span style="font-size:11px;font-weight:500;color:var(--muted)">(incl. replacement)</span></td>' +
-        '<td style="text-align:right;color:#c97d10;font-size:15px"><strong>' + $d(Math.round(buyTotal + futureCostYr15)) + '</strong></td>' +
-        '<td style="text-align:right;color:#1a3560;font-size:15px"><strong>' + $d(caasTotal) + '</strong></td>' +
-      '</tr>';
-  }
-
-  document.getElementById('btbody').innerHTML =
-    rows.map(function(r,i){
-      return '<tr'+(i===rows.length-1?' class="total"':'')+'>'+
-        '<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';
-    }).join('') +
-    replacementRows +
-    '<tr><td colspan="3" style="padding:10px 10px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#c97d10;border-top:2px solid #f0ece5">Investment Opportunity (' + (invRate*100).toFixed(0) + '% ' + (invCompound==='monthly'?'HYSA':'S&P') + ')</td></tr>' +
-    invRows.map(function(r){
-      return '<tr style="background:#fffbf5">'+
-        '<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';
-    }).join('');
+  document.getElementById('breakdownBody').innerHTML = rows.map(function(r,idx){
+    return '<tr' + (idx === rows.length-1 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>';
+  }).join('');
 
   document.getElementById('results').classList.add('show');
-
-  // ── CaaS + Invest vs Write a Check ──
-  var caasInvestCard = document.getElementById('caas-invest-card');
-  var caasInvestBody = document.getElementById('caas-invest-body');
-
-  if (bp > 0 && cmoRaw > 0) {
-    var lumpSum        = bpTax;
-    var investedFV     = fvLump(lumpSum, yr);
-    var interestEarned = investedFV - lumpSum;
-    var netAdvantage   = investedFV - caasTotal;
-    var rateShort      = invCompound === 'monthly' ? '4% HYSA' : (invRate===0.08 ? '8% S&P real' : '10% S&P nom.');
-    var coversPct      = Math.round((interestEarned / caasTotal) * 100);
-
-    var buySavings   = Math.max(0, savings * -1);
-    var trueAdvantage = interestEarned - buySavings;
-
-    var bottomLine = '';
-    var bottomColor = '';
-
-    if (trueAdvantage > 0) {
-      bottomLine  = '🎯 <strong>True advantage: CaaS + invest wins by +' + $d(Math.round(trueAdvantage)) + '</strong>' +
-        (buySavings > 0
-          ? ' — interest earned (' + $d(Math.round(interestEarned)) + ') outweighs buying cheaper (' + $d(Math.round(buySavings)) + ')'
-          : ' — interest earned on top of CaaS already costing less') +
-        '. You keep your capital and never own a depreciating system.';
-      bottomColor = 'rgba(58,170,53,0.1)';
-    } else {
-      bottomLine  = '🏠 In this scenario, buying is the better financial choice by <strong>' + $d(Math.round(Math.abs(trueAdvantage))) + '</strong> — buy savings (' + $d(Math.round(buySavings)) + ') exceed the interest earned (' + $d(Math.round(interestEarned)) + '). CaaS still offers peace of mind, fixed payments, and no repair risk.';
-      bottomColor = 'rgba(201,125,16,0.08)';
-    }
-
-    caasInvestBody.innerHTML =
-      '<div style="display:flex;flex-direction:column;gap:10px">' +
-
-        '<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f5f8fb;border-radius:10px">' +
-          '<div style="font-size:24px;flex-shrink:0">1️⃣</div>' +
-          '<div style="font-size:13px;color:#4a4a5a;line-height:1.5">Instead of writing a check for <strong>' + $d(Math.round(lumpSum)) + '</strong>, invest it at <strong>' + rateShort + '</strong></div>' +
-        '</div>' +
-
-        '<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#f0faf4;border-radius:10px;border:1px solid rgba(58,170,53,0.2)">' +
-          '<div style="font-size:24px;flex-shrink:0">2️⃣</div>' +
-          '<div>' +
-            '<div style="font-size:13px;color:#4a4a5a">Over ' + yr + ' years your <strong>' + $d(Math.round(lumpSum)) + '</strong> grows to <strong style="color:#168a20;font-size:16px">' + $d(Math.round(investedFV)) + '</strong></div>' +
-            '<div style="font-size:12px;color:#888;margin-top:2px">Interest earned: <strong style="color:#168a20">+' + $d(Math.round(interestEarned)) + '</strong> — covers <strong style="color:#168a20">' + coversPct + '%</strong> of your CaaS membership</div>' +
-          '</div>' +
-        '</div>' +
-
-        '<div style="padding:13px 15px;border-radius:10px;font-size:13px;color:#1a3560;line-height:1.6;background:' + bottomColor + ';border-left:4px solid #3aaa35">' +
-          bottomLine +
-        '</div>' +
-
-      '</div>';
-
-    caasInvestCard.style.display = 'block';
-  } else {
-    caasInvestCard.style.display = 'none';
-  }
-
-  // ── Investment Angle ──
-  var investCard = document.getElementById('invest-angle-card');
-  var investBody = document.getElementById('invest-angle-body');
-  var annRate = invRate;
-  var rateLabel = invCompound === 'monthly'
-    ? (annRate*100).toFixed(0) + '% HYSA (monthly compounding, taxed as ordinary income)'
-    : annRate === 0.08
-      ? '8% S&amp;P real return (inflation-adjusted)'
-      : '10% S&amp;P nominal (historical avg, pre-inflation)';
-
-  var html = '';
-
-  if (buyPath === 'cash') {
-    var lump = bp * 1.10;
-    var fv = fvLump(lump, yr);
-    html += '<div style="margin-bottom:14px;padding:12px;background:#fdf5e8;border-radius:8px">' +
-      '<div style="font-size:12px;font-weight:700;color:#c97d10;margin-bottom:6px">📦 Cash Purchase Scenario</div>' +
-      '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
-      'Instead of writing a <strong>' + $d(lump) + '</strong> check, invested at ' + rateLabel + ' grows to:<br>' +
-      '<span style="font-size:20px;font-weight:800;color:#1a3560">' + $d(Math.round(fv)) + '</span> after ' + yr + ' years<br>' +
-      '<span style="font-size:11px;color:#888">Interest earned: ' + $d(Math.round(fv - lump)) + ' &nbsp;|&nbsp; Total CaaS cost: ' + $d(caasTotal) + '</span>' +
-      '</div></div>';
-  }
-
-  if (buyPath === 'finance') {
-    var diff = lp - cmo;
-    var lump = bp * 1.10;
-    var ltYrs = Math.round(lt / 12 * 10) / 10;
-
-    var fvLumpAt15 = fvLump(lump, yr);
-    var netAfterInterest = fvLumpAt15 - intPaid;
-    html += '<div style="margin-bottom:12px;padding:12px;background:#f0f4ff;border-radius:8px">' +
-      '<div style="font-size:12px;font-weight:700;color:#1a3560;margin-bottom:6px">🏦 Invest the Full System Cost</div>' +
-      '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
-      'Invest <strong>' + $d(Math.round(lump)) + '</strong> (tax-inclusive) at ' + rateLabel + ', make loan payments normally.<br>' +
-      '<strong>' + $d(Math.round(fvLumpAt15)) + '</strong> investment value at year ' + yr + '<br>' +
-      '<span style="color:#c97d10">minus <strong>' + $d(Math.round(intPaid)) + '</strong> total loan interest paid</span><br>' +
-      '<span style="font-size:15px;font-weight:800;color:#1a3560">= Net ' + $d(Math.round(netAfterInterest)) + ' after ' + yr + ' years</span><br>' +
-      '<span style="font-size:11px;color:#888">CaaS total cost: ' + $d(caasTotal) + ' &nbsp;|&nbsp; Loan term: ' + ltYrs + ' yrs</span>' +
-      '</div></div>';
-
-    if (diff > 0) {
-      var fvAtLoanEnd = fvMonthly(diff, lt);
-      var remainingMonths = months - lt;
-      var fvAt15 = fvLump(fvAtLoanEnd, remainingMonths / 12);
-      html += '<div style="padding:12px;background:#f5f8ff;border-radius:8px">' +
-        '<div style="font-size:12px;font-weight:700;color:#1a3560;margin-bottom:6px">📈 Invest the Monthly Difference</div>' +
-        '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
-        'Loan <strong>' + $mo(lp) + '</strong> vs CaaS <strong>' + $mo(cmoRaw) + '</strong> — gap: <strong>' + $mo(diff) + '</strong><br>' +
-        'Invest that gap for the <strong>' + ltYrs + '-yr loan term</strong> at ' + rateLabel + ' → <strong>' + $d(Math.round(fvAtLoanEnd)) + '</strong><br>' +
-        'Left invested through year ' + yr + ':<br>' +
-        '<span style="font-size:15px;font-weight:800;color:#1a3560">' + $d(Math.round(fvAt15)) + '</span><br>' +
-        '<span style="font-size:11px;color:#888">Total contributed: ' + $d(Math.round(diff * lt)) + ' &nbsp;|&nbsp; Growth: ' + $d(Math.round(fvAt15 - diff * lt)) + '</span>' +
-        '</div></div>';
-    } else if (diff < 0) {
-      var monthlySavings = Math.abs(diff);
-      var fvSavingsAtLoanEnd = fvMonthly(monthlySavings, lt);
-      var remainingMonths2 = months - lt;
-      var fvSavingsAt15 = fvLump(fvSavingsAtLoanEnd, remainingMonths2 / 12);
-      html += '<div style="padding:12px;background:#edfaf0;border-radius:8px;border-left:3px solid #3aaa35">' +
-        '<div style="font-size:12px;font-weight:700;color:#168a20;margin-bottom:6px">✅ Buying Saves More Monthly — Invest the Difference</div>' +
-        '<div style="font-size:12px;color:#4a4a5a;line-height:1.7">' +
-        'CaaS <strong>' + $mo(cmoRaw) + '</strong> costs more than the loan <strong>' + $mo(lp) + '</strong> — buying saves <strong>' + $mo(monthlySavings) + '</strong>.<br>' +
-        'Invest those savings for the <strong>' + ltYrs + '-yr loan term</strong> at ' + rateLabel + ' → <strong>' + $d(Math.round(fvSavingsAtLoanEnd)) + '</strong><br>' +
-        'Left invested through year ' + yr + ':<br>' +
-        '<span style="font-size:15px;font-weight:800;color:#168a20">' + $d(Math.round(fvSavingsAt15)) + '</span><br>' +
-        '<span style="font-size:11px;color:#888">Total contributed: ' + $d(Math.round(monthlySavings * lt)) + ' &nbsp;|&nbsp; Growth: ' + $d(Math.round(fvSavingsAt15 - monthlySavings * lt)) + ' &nbsp;|&nbsp; Plus system ownership at year ' + ltYrs + '</span>' +
-        '</div></div>';
-    }
-  }
-
-  investCard.style.display = html ? 'block' : 'none';
-  investBody.innerHTML = html;
-
-  // ── Year 15 Replacement Cost Card ──
-  var rcCard = document.getElementById('replacement-cost-card');
-  var rcBody = document.getElementById('replacement-cost-body');
-  document.getElementById('rc-yr').textContent = yr;
-
-  if (bp > 0) {
-    var todayCost   = bpTax;
-    var increase    = futureCostYr15 - todayCost;
-    var pctIncrease = Math.round((increase / todayCost) * 100);
-
-    rcBody.innerHTML =
-      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">' +
-
-        '<div style="flex:1;min-width:160px;padding:12px;background:#f5f8fb;border-radius:8px;text-align:center">' +
-          '<div style="font-size:11px;color:#888;margin-bottom:4px">Today\'s installed cost</div>' +
-          '<div style="font-size:22px;font-weight:800;color:#1a3560">' + $d(Math.round(todayCost)) + '</div>' +
-          '<div style="font-size:11px;color:#888">incl. 10% tax</div>' +
-        '</div>' +
-
-        '<div style="display:flex;align-items:center;font-size:20px;color:#c97d10;padding:0 4px">→</div>' +
-
-        '<div style="flex:1;min-width:160px;padding:12px;background:#fff8f0;border-radius:8px;text-align:center;border:1px solid rgba(201,125,16,0.2)">' +
-          '<div style="font-size:11px;color:#888;margin-bottom:4px">Replacement cost at year 15</div>' +
-          '<div style="font-size:22px;font-weight:800;color:#c97d10">' + $d(Math.round(futureCostYr15)) + '</div>' +
-          '<div style="font-size:11px;color:#888">at ' + (infRate*100).toFixed(0) + '% inflation/yr · incl. 10% tax</div>' +
-        '</div>' +
-
-      '</div>' +
-
-      '<div style="padding:10px 12px;background:#f0f7f0;border-radius:8px;border-left:3px solid #3aaa35;font-size:12px;color:#4a4a5a;line-height:1.6;margin-bottom:10px">' +
-        '📈 That\'s <strong>+' + $d(Math.round(increase)) + ' (' + pctIncrease + '% more)</strong> to replace this system out-of-pocket at year 15.' +
-      '</div>' +
-
-      '<div style="padding:10px 12px;background:rgba(201,125,16,0.08);border-radius:8px;border-left:3px solid var(--amber);font-size:12px;color:#4a4a5a;line-height:1.6">' +
-        '🔄 <strong>Ready for a new system?</strong> At year 15, replacing this system will cost an estimated <strong>' + $d(Math.round(futureCostYr15)) + '</strong> out-of-pocket. Simply sign a new CaaS contract instead — 15-year warranty, peace-of-mind cost of ownership built in, and inflation-free payments moving forward.' +
-      '</div>';
-
-    rcCard.style.display = 'block';
-  } else {
-    rcCard.style.display = 'none';
-  }
+  renderChart(labels, buyCumulative, caasCumulative);
 }
 
-function renderChart(labels, buyData, caasData) {
-  var ctx = document.getElementById('chart').getContext('2d');
-  if (chartInst) chartInst.destroy();
+
+function setViewMode(mode){
+  var body = document.body;
+  body.classList.remove('simple-mode','math-mode');
+  body.classList.add(mode === 'math' ? 'math-mode' : 'simple-mode');
+  var simpleBtn = document.getElementById('viewSimpleBtn');
+  var mathBtn = document.getElementById('viewMathBtn');
+  if(simpleBtn) simpleBtn.classList.toggle('active', mode !== 'math');
+  if(mathBtn) mathBtn.classList.toggle('active', mode === 'math');
+}
+
+function printCustomerView(){
+  document.body.classList.add('customer-print');
+  document.body.classList.remove('internal-print');
+  setTimeout(function(){ window.print(); document.body.classList.remove('customer-print'); }, 80);
+}
+
+function printInternalView(){
+  document.body.classList.add('internal-print');
+  document.body.classList.remove('customer-print');
+  setTimeout(function(){ window.print(); document.body.classList.remove('internal-print'); }, 80);
+}
+
+function toggleAdvisorRefresher(force){
+  var card = document.getElementById('coachCard');
+  var toggle = document.getElementById('advisorRefresherToggle');
+  var arrow = document.getElementById('advisorRefresherArrow');
+  if(!card) return;
+  var open = typeof force === 'boolean' ? force : card.classList.contains('collapsed');
+  card.classList.toggle('collapsed', !open);
+  if(toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if(arrow) arrow.textContent = open ? '▾ Close' : '▸ Open';
+}
+
+function showObjection(key, btn){
+  document.querySelectorAll('.obj-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  var response = getObjectionResponse(key);
+  var box = document.getElementById('objectionAnswer');
+  if(box) box.innerHTML = response;
+}
+
+function getObjectionResponse(key){
+  var month = getOptionMonth(true) || 96;
+  var residual = calculateResidual(gv('packagePrice'), month);
+  var buyTotal = buyAfterTax();
+  var cmo = gv('caasMonthly');
+  var loanTerm = gi('loanTerm') || 120;
+  var loanPmt = financePayment(buyTotal, gv('apr'), loanTerm);
+  var delta = Math.max(0, loanPmt - cmo);
+  var responses = {
+    own: '<strong>Clear explanation:</strong> “Absolutely — buying is still an option. The difference is ownership means you also own the future service reserve, maintenance, filter, IAQ, and post-warranty exposure. Comfort Club is for homeowners who would rather keep CM Heating responsible for the covered system under the agreement.”',
+    move: '<strong>Clear explanation:</strong> “The Comfort Club agreement is designed to be transferable or handled through the property/UCC process according to the contract. We would follow the contract process at the time of sale, and ServiceTitan / the signed agreement controls the final details.”',
+    year8: '<strong>Clear explanation:</strong> “At month ' + month + ', the estimated residual shown by the tool is ' + money2(residual) + '. That uses the approved straight-line formula: MSRP × (180 − month) ÷ 180. The big point is transparency: the customer can see the payoff estimate without guesswork, then either continue the program or resolve the residual per contract terms.”',
+    payoff: '<strong>Clear explanation:</strong> “Yes. The customer can request a payoff estimate at any point. The estimate is easy to explain because the residual steps down using the same straight-line formula: MSRP × (180 − selected month) ÷ 180. ServiceTitan and the signed contract control the final payoff details.”',
+    cash: '<strong>Clear explanation:</strong> “Yes, writing a check is available for customers who prefer ownership. The reason I still show Comfort Club first is convenience: it preserves cash flexibility, bundles covered service into one predictable payment, and still gives a transparent payoff estimate if the customer wants to resolve the contract later.”',
+    finance: '<strong>Clear explanation:</strong> “Comfort Club is not traditional financing. With financing, you own the equipment and the loan while also carrying future maintenance and repair exposure. With Comfort Club, CM Heating owns the system during the rental term and remains responsible for covered service under the agreement.”',
+    included: '<strong>Clear explanation:</strong> “Comfort Club includes scheduled maintenance, covered repairs, eligible filters, IAQ/UV bulbs, and emergency service for covered service. There is no separate diagnostic, trip, deductible, or after-hours fee for covered service. Normal exclusions apply.”',
+    invest: '<strong>Clear explanation:</strong> “This section is only a cash-flexibility illustration. It does not recommend a HYSA, the S&P 500, or any investment. It simply shows what preserved cash or the monthly payment difference could do under hypothetical assumptions. Returns are not guaranteed.”',
+    year15: '<strong>Clear explanation:</strong> “The modeled term is 15 years. Around year 15, CM Heating recommends reviewing replacement or a new Comfort Club agreement. The customer may be able to continue paying according to contract terms, but the signed agreement controls.”'
+  };
+  return responses[key] || 'Choose a question to see a clear explanation.';
+}
+
+function buildTalkTrack(data){
+  var ownershipPath = data.buyPath === 'finance'
+    ? 'traditional financing at about ' + money2(data.loanPmt) + '/mo'
+    : 'writing a check for about ' + money2(data.buyTotalTax);
+  return '“You have three ways to solve the same comfort problem: Comfort Club, traditional financing, or writing a check. I’m showing Comfort Club first because it is the convenience path: it gives the homeowner a managed outcome instead of just a piece of equipment. Your cash stays flexible, covered service is bundled into one predictable monthly payment, and CM Heating remains responsible for the covered system under the agreement. You are not guessing about payoff, either — the residual estimate is transparent and can be calculated for any month using the straight-line formula. In this scenario, Comfort Club is ' + money2(data.cmo) + '/mo. The ownership comparison is ' + ownershipPath + ', plus separate service costs over time.”';
+}
+
+function buildNextStep(data){
+  if(data.delta >= 0){
+    return 'Summary: “This example shows Comfort Club lower by about ' + money(data.delta) + ' over ' + data.years + ' years, before we even talk about cash flexibility.” The choice is whether the customer prefers the convenience of predictable covered-service responsibility and transparent payoff flexibility, or traditional ownership.';
+  }
+  if(data.flexOffset > data.rawGap){
+    return 'Summary: “Ownership is lower on raw outlay by about ' + money(data.rawGap) + ', but the optional ' + data.flexSource + ' illustration can offset that gap under these assumptions.” Comfort Club may still make sense when the customer values convenience: covered-service responsibility stays with CM Heating and the payoff estimate remains transparent. Any cash-flexibility illustration is hypothetical and not financial advice.';
+  }
+  return 'This scenario favors ownership on raw modeled outlay. Comfort Club costs more in exchange for convenience, covered-service responsibility, cash flexibility, transparent payoff math, and fewer separate service events.';
+}
+
+function buildServiceTitanNote(data){
+  var buyLabel = data.buyPath === 'finance'
+    ? 'traditional financing comparison at approximately ' + money2(data.loanPmt) + '/mo for ' + data.loanTerm + ' months'
+    : 'cash purchase / write-a-check comparison at approximately ' + money2(data.buyTotalTax);
+  return [
+    'Reviewed Comfort Club vs traditional ownership options with homeowner.',
+    'Comfort Club shown first as recommended option. Modeled package: ' + data.brand + ' ' + data.tier + ' at ' + money2(data.price) + ' MSRP / contract value with Comfort Club payment of ' + money2(data.cmo) + '/mo.',
+    'Modeled option month: ' + data.month + '. Estimated residual: ' + money2(data.residual) + ' using approved straight-line formula MSRP × (180 − selected month) ÷ 180. Explained that customer may request a payoff estimate at any point; ServiceTitan and signed contract control final payoff details.',
+    'Ownership path reviewed: ' + buyLabel + '. Buy path includes modeled labor/service reserve assumptions of $150/yr for years 1–10 and $250/yr for years 11–15, plus separate filter and IAQ/UV bulb ownership costs, with service-cost inflation if enabled.',
+    'Explained that CM Heating owns the system during the Comfort Club rental term and remains responsible for the covered system under the agreement. Positioning emphasized convenience, predictable covered-service responsibility, and transparent residual math. Normal exclusions apply.',
+    'Cash-flexibility and payment-difference illustrations, if reviewed, were described as hypothetical only and not financial advice. Returns are not guaranteed.',
+    'ServiceTitan and signed contract remain final authority.'
+  ].join('\n');
+}
+
+function updateCoach(data){
+  var talk = document.getElementById('hcaTalkTrack');
+  var step = document.getElementById('hcaNextStep');
+  var note = document.getElementById('serviceTitanNote');
+  if(talk) talk.textContent = buildTalkTrack(data);
+  if(step) step.textContent = buildNextStep(data);
+  if(note) note.value = buildServiceTitanNote(data);
+}
+
+function renderChart(labels, buyData, caasData){
+  var canvas = document.getElementById('chart');
+  if(!canvas || typeof Chart === 'undefined') return;
+  var ctx = canvas.getContext('2d');
+  if(chartInst) chartInst.destroy();
   chartInst = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        { label:'Buy (all-in)', data:buyData, borderColor:'#1a3560', backgroundColor:'rgba(26,53,96,0.06)', borderWidth:2.5, pointRadius:0, pointHoverRadius:5, fill:tab==='cum', tension:0.2 },
-        { label:'CaaS (all-in)', data:caasData, borderColor:'#c97d10', backgroundColor:'rgba(201,125,16,0.06)', borderWidth:2.5, borderDash:[5,3], pointRadius:0, pointHoverRadius:5, fill:tab==='cum', tension:0.2 }
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Buy / own modeled outlay', data:buyData, borderColor:'#1a3560', backgroundColor:'rgba(26,53,96,.04)', borderWidth:3, pointRadius:0, fill:true, tension:.12},
+        {label:'Comfort Club modeled outlay', data:caasData, borderColor:'#c97d10', backgroundColor:'rgba(201,125,16,.04)', borderWidth:3, pointRadius:0, fill:false, borderDash:[6,4], tension:.12}
       ]
     },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      interaction:{ mode:'index', intersect:false },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{
-        legend:{ display:false },
-        tooltip:{ callbacks:{ label:function(c){ return ' '+c.dataset.label+': $'+Math.round(c.parsed.y).toLocaleString(); } } }
+        legend:{display:true,position:'top'},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label + ': ' + money2(ctx.parsed.y);}}}
       },
       scales:{
-        x:{ grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{family:'Outfit',size:11}, color:'#6b6b7b', maxRotation:0 } },
-        y:{ grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{family:'Outfit',size:11}, color:'#6b6b7b', callback:function(v){ return v>=1000?'$'+Math.round(v/1000)+'k':'$'+v; } } }
+        x:{grid:{display:false}},
+        y:{ticks:{callback:function(v){return '$' + Math.round(v/1000) + 'k';}}}
       }
     }
   });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  selectPreset('good', document.getElementById('p-good'));
+function resetDefaults(){
+  activeBrand = 'american_standard';
+  activePreset = 'best';
+  buyPath = 'finance';
+  caasPath = 'continue';
+  setVal('brandSelect','american_standard');
+  setVal('optionMonth',96);
+  setVal('taxMode','pretax');
+  setVal('taxRate',10);
+  setVal('apr',9.99);
+  setVal('loanTerm',120);
+  setVal('annualReservePre',150);
+  setVal('annualReservePost',250);
+  setVal('annualFilterCost',180);
+  setVal('annualBulbCost',167);
+  setVal('inflationRate',3);
+  setVal('returnRate',4);
+  setVal('analysisYears',15);
+  setVal('postPayoffExposure','include');
+  setBuyPath('finance');
+  setCaasPath('continue');
+  selectPreset('best', document.getElementById('p-best'));
+  calc();
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  selectPreset('best', document.getElementById('p-best'));
+  var optionEl = document.getElementById('optionMonth');
+  if(optionEl){
+    lastOptionMonthValue = String(optionEl.value || '').trim();
+    ['input','change','keyup','blur','paste'].forEach(function(evt){
+      optionEl.addEventListener(evt, function(){
+        handleOptionMonthInput(evt === 'change' || evt === 'blur');
+      });
+    });
+
+    window.setInterval(function(){
+      syncResidualFromOptionMonth(false);
+    }, 350);
+  }
+  calc();
 });
 </script>
 </body>
