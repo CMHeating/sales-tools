@@ -261,6 +261,7 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
     </div>
   </div>
   <div class="hdr-actions">
+    <a class="btn-top" href="index.html">← HCA Toolkit</a>
     <button class="btn-top" onclick="window.print()">🖨 Print / Save PDF</button>
   </div>
 </header>
@@ -676,6 +677,7 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
 
     <div class="bdown-card math-deep">
       <h3>Cost and value breakdown</h3>
+      <p class="sub" style="margin-bottom:14px">At the 15-year horizon, ownership includes an inflation-adjusted replacement-system planning exposure.</p>
       <table class="btable">
         <thead><tr><th>Element</th><th>Buy / own</th><th>Comfort Club</th></tr></thead>
         <tbody id="breakdownBody"></tbody>
@@ -1091,9 +1093,6 @@ function calc(){
     labels.push(m % 12 === 0 ? 'Yr ' + (m/12) : '');
   }
 
-  var buyTotal = buyCumulative[buyCumulative.length - 1];
-  var caasTotal = caasCumulative[caasCumulative.length - 1];
-  var delta = buyTotal - caasTotal;
   var cashPreserved = buyTotalTax;
   var cashFV = futureValueLump(cashPreserved, retRate, years);
   var growth = cashFV - cashPreserved;
@@ -1106,6 +1105,15 @@ function calc(){
   var netFlex = growth + Math.max(0, delta) + paymentDeltaGrowth;
   var interestPaid = buyPath === 'finance' ? Math.max(0, loanPmt * Math.min(loanTerm, months) - buyTotalTax) : 0;
   var futureSystemCost = buyTotalTax * Math.pow(1 + inflation, 15);
+  var year15SystemIncluded = years >= 15;
+  if(year15SystemIncluded){
+    buyRunning += futureSystemCost;
+    buyCumulative[buyCumulative.length - 1] = buyRunning;
+  }
+
+  var buyTotal = buyCumulative[buyCumulative.length - 1];
+  var caasTotal = caasCumulative[caasCumulative.length - 1];
+  var delta = buyTotal - caasTotal;
 
   document.getElementById('caasDisplay').innerHTML = money2(cmo) + ' <span>/mo</span>';
   document.getElementById('buyDisplay').innerHTML = buyPath === 'finance'
@@ -1221,6 +1229,8 @@ function calc(){
     flatReserveCost: flatReserveCost,
     flatFilterCost: flatFilterCost,
     flatBulbCost: flatBulbCost,
+    futureSystemCost: futureSystemCost,
+    year15SystemIncluded: year15SystemIncluded,
     caasPath: caasPath
   });
 
@@ -1241,7 +1251,7 @@ function calc(){
     ['Service-cost inflation', '+' + money2(inflationPremium), 'Fixed payment reduces exposure while under Comfort Club'],
     ['Cash flexibility illustration', 'Cash used or financed', money(cashPreserved) + ' preserved; ' + money(growth) + ' possible growth at ' + retRate.toFixed(1) + '%'],
     ['Payment-difference illustration', buyPath === 'finance' ? money2(Math.max(0, paymentDeltaMonthly)) + '/mo positive gap; ' + money(paymentDeltaFV) + ' future value' : 'Not applicable to cash path', 'Comfort Club payment compared against loan payment only'],
-    ['Year-15 upgrade exposure', 'Illustrative next-system cost: ' + money(futureSystemCost), 'Review upgrade / new Comfort Club contract'],
+    ['Year-15 replacement exposure', year15SystemIncluded ? 'Added to ownership calculation: ' + money(futureSystemCost) : 'Not included unless 15-year horizon is selected. Year-15 estimate: ' + money(futureSystemCost), 'Review upgrade / new Comfort Club agreement or continue per contract terms'],
     ['Total modeled outlay', money2(buyTotal), money2(caasTotal)]
   ];
   document.getElementById('breakdownBody').innerHTML = rows.map(function(r,idx){
@@ -1341,7 +1351,7 @@ function buildServiceTitanNote(data){
     'Reviewed Comfort Club vs traditional ownership options with homeowner.',
     'Comfort Club shown first as recommended option. Modeled package: ' + data.brand + ' ' + data.tier + ' at ' + money2(data.price) + ' MSRP / contract value with Comfort Club payment of ' + money2(data.cmo) + '/mo.',
     'Modeled option month: ' + data.month + '. Estimated residual: ' + money2(data.residual) + ' using approved straight-line formula MSRP × (180 − selected month) ÷ 180. Explained that customer may request a payoff estimate at any point; ServiceTitan and signed contract control final payoff details.',
-    'Ownership path reviewed: ' + buyLabel + '. Buy path includes modeled labor/service reserve assumptions of $150/yr for years 1–10 and $250/yr for years 11–15, plus separate filter and IAQ/UV bulb ownership costs, with service-cost inflation if enabled.',
+    'Ownership path reviewed: ' + buyLabel + '. Buy path includes modeled labor/service reserve assumptions of $150/yr for years 1–10 and $250/yr for years 11–15, plus separate filter and IAQ/UV bulb ownership costs, with service-cost inflation if enabled. If the 15-year horizon is selected, the comparison also includes an inflation-adjusted year-15 replacement-system exposure on the ownership path.',
     'Explained that CM Heating owns the system during the Comfort Club rental term and remains responsible for the covered system under the agreement. Positioning emphasized convenience, predictable covered-service responsibility, and transparent residual math. Normal exclusions apply.',
     'Cash-flexibility and payment-difference illustrations, if reviewed, were described as hypothetical only and not financial advice. Returns are not guaranteed.',
     'ServiceTitan and signed contract remain final authority.'
