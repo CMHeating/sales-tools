@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>HCA Field Guide | CM Heating</title>
+<title>HCA Command Center v2.2.1 | CM Heating</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -212,6 +212,149 @@ details div{margin-top:12px}
 .footer{text-align:center;color:#94a3b8;font-size:12px;padding:28px}
 .hidden-by-search{display:none!important}
 
+.command-center{
+  background:rgba(22,36,60,.96);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:22px;
+  padding:20px;
+  margin-bottom:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.24);
+}
+.command-center h2{
+  font-family:'Playfair Display',serif;
+  font-size:27px;
+  margin-bottom:6px;
+}
+.command-center p{color:#cbd5e1;margin-bottom:14px}
+.command-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;
+}
+.command-link{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:15px;
+  border-radius:16px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  color:white;
+  text-decoration:none;
+  transition:.16s;
+}
+.command-link:hover{background:rgba(255,255,255,.14);transform:translateY(-1px)}
+.command-link strong{display:block;font-size:15px;margin-bottom:2px}
+.command-link span{display:block;font-size:12px;color:#cbd5e1;line-height:1.35}
+.command-emoji{font-size:24px;line-height:1}
+
+.red-flag-panel{
+  background:#fff1f2;
+  color:#102033;
+  border:2px solid #fb7185;
+  border-left:8px solid var(--red);
+  border-radius:22px;
+  padding:20px;
+  margin-bottom:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.22);
+}
+.red-flag-panel h2{
+  color:#991b1b;
+  font-family:'Playfair Display',serif;
+  font-size:26px;
+  margin-bottom:8px;
+}
+.red-flag-panel p{color:#6b2530;margin-bottom:14px}
+.red-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:12px;
+}
+.red-card{
+  background:white;
+  border:1px solid #fecdd3;
+  border-radius:16px;
+  padding:14px;
+}
+.red-card h3{color:#b91c1c;font-size:16px;margin-bottom:6px}
+.red-card p{font-size:13px;color:#374151;margin-bottom:9px}
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.small-btn{
+  border:0;
+  border-radius:999px;
+  background:var(--blue);
+  color:white;
+  padding:7px 10px;
+  font-family:'Outfit',Arial,sans-serif;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.small-btn.orange{background:var(--orange);color:#102033}
+.small-btn.gray{background:#334155}
+.small-btn.green{background:var(--green)}
+.copy-bank{
+  background:white;
+  color:var(--ink);
+  border-radius:22px;
+  padding:22px;
+  margin-bottom:22px;
+  box-shadow:0 10px 30px rgba(0,0,0,.24);
+}
+.copy-bank h2{
+  color:var(--blue);
+  font-family:'Playfair Display',serif;
+  font-size:27px;
+  margin-bottom:8px;
+}
+.copy-card{
+  background:var(--soft);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:15px;
+}
+.copy-card h3{color:var(--blue);font-size:17px;margin-bottom:7px}
+.copy-card p{font-size:13px;color:#52677a;margin-bottom:10px}
+.copy-text{
+  background:white;
+  border:1px dashed #9fb3c8;
+  border-radius:12px;
+  padding:11px;
+  font-size:12px;
+  color:#334155;
+  white-space:pre-wrap;
+  margin-bottom:10px;
+}
+.filter-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.filter-chip{
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.08);
+  color:white;
+  padding:8px 11px;
+  border-radius:999px;
+  font-family:'Outfit',Arial,sans-serif;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.filter-chip:hover,.filter-chip.active{background:var(--orange);color:#102033}
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:22px;
+  transform:translateX(-50%) translateY(80px);
+  opacity:0;
+  background:#0f172a;
+  color:white;
+  padding:11px 16px;
+  border-radius:999px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  z-index:200;
+  transition:.2s;
+  font-weight:900;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
 @media(max-width:740px){
   .header{position:relative;padding:18px}
   .brand h1{font-size:27px}
@@ -240,12 +383,132 @@ details div{margin-top:12px}
 <main class="wrap">
 
   <div class="notice">
-    🚧 LIVING KNOWLEDGE BASE — ACTIVE DRAFT
+    🚧 HCA COMMAND CENTER v2.2 — ACTIVE FIELD TEST
     <small>Built from Cheat Sheet 2.0 and current CM Heating HCA field knowledge. Some rate screenshots, source PDFs, rebate links, and jurisdiction documents still need to be attached.</small>
   </div>
 
   <div class="security-note">
     🔒 Public-page rule: do not publish passwords, dealer portal credentials, private PINs, customer data, or protected login details here. Use this page for process, rules, and public/internal-safe guidance only.
+  </div>
+
+  <section class="command-center searchable" id="command-center" data-tags="all command center dashboard install availability quoting comfort club caas calculator jurisdiction permit electrical labor ductless warranty objection contact rebate placement">
+    <h2>⚡ HCA Command Center</h2>
+    <p>Fast paths for HCAs in the home. Start here when you need the answer, the tool, the red flag, or the escalation path quickly.</p>
+    <div class="command-grid">
+      <a class="command-link" href="install-availability-secure.html"><div class="command-emoji">📅</div><div><strong>Install Availability</strong><span>Check scheduling before promising timing.</span></div></a>
+      <a class="command-link" href="hca-caas-quoting.html"><div class="command-emoji">🧾</div><div><strong>HCA Quoting Tool</strong><span>Build governed package options.</span></div></a>
+      <a class="command-link" href="caas-calculator.html"><div class="command-emoji">🟢</div><div><strong>Comfort Club Calculator</strong><span>Compare CaaS vs. ownership paths.</span></div></a>
+      <a class="command-link" href="#jurisdictions"><div class="command-emoji">🏙️</div><div><strong>Jurisdiction Checker</strong><span>Setbacks, no-next-day, site plan risks.</span></div></a>
+      <a class="command-link" href="#electrical"><div class="command-emoji">⚡</div><div><strong>Electrical Quick Calc</strong><span>Main amps × 0.80; over 60% needs review.</span></div></a>
+      <a class="command-link" href="#labor"><div class="command-emoji">🛠️</div><div><strong>Labor Timing</strong><span>Half day, full day, 1.5 day, ductless logic.</span></div></a>
+      <a class="command-link" href="#objections"><div class="command-emoji">💬</div><div><strong>Objection Scripts</strong><span>Customer-safe talk tracks and field logic.</span></div></a>
+      <a class="command-link" href="#contacts"><div class="command-emoji">☎️</div><div><strong>Escalation Contacts</strong><span>Who to ask when unsure.</span></div></a>
+    </div>
+  </section>
+
+  <section class="red-flag-panel searchable" id="red-flags" data-tags="all red flags stop verify financing credit rebate pud permit placement electrical labor ductless warranty objection contact fireplace commercial">
+    <h2>🚨 Red Flags — Stop & Verify</h2>
+    <p>Use these when a promise could create a scheduling, rebate, credit, permitting, electrical, or warranty problem.</p>
+    <div class="red-grid">
+      <div class="red-card">
+        <h3>💳 Credit / Second Look</h3>
+        <p>Bankruptcy is a no-go flag. Second-look customers do not receive free months off. Verify required docs before assuming approval.</p>
+        <div class="action-row"><a class="small-btn" href="#financing">Open financing</a><button class="small-btn gray" onclick="copyNote('credit-note')">Copy note</button></div>
+      </div>
+      <div class="red-card">
+        <h3>💵 PUD / Rebate Promise</h3>
+        <p>Do not over-promise rebates. Collect attic/crawl photos and heat load calc early; text the calculation group when ready.</p>
+        <div class="action-row"><a class="small-btn" href="#rebates">Open rebates</a><button class="small-btn gray" onclick="copyNote('pud-note')">Copy note</button></div>
+      </div>
+      <div class="red-card">
+        <h3>📏 Outdoor Clearance</h3>
+        <p>Check service side, house clearance, property line, meters, dryer vents, windows, decks, HOA, and jurisdiction-specific rules.</p>
+        <div class="action-row"><a class="small-btn" href="#placement">Open placement</a><button class="small-btn gray" onclick="copyNote('placement-note')">Copy note</button></div>
+      </div>
+      <div class="red-card">
+        <h3>⚡ Electrical Review</h3>
+        <p>If the quick calc is over 60%, or access is difficult, get a second opinion before treating the job as standard.</p>
+        <div class="action-row"><a class="small-btn" href="#electrical">Open electrical</a><button class="small-btn gray" onclick="copyNote('electrical-note')">Copy note</button></div>
+      </div>
+      <div class="red-card">
+        <h3>🏙️ No Next-Day City</h3>
+        <p>Kirkland, Woodway, Woodinville, critical areas, and some Edmonds cases need special scheduling or permitting review.</p>
+        <div class="action-row"><a class="small-btn" href="#jurisdictions">Open jurisdictions</a><button class="small-btn gray" onclick="copyNote('jurisdiction-note')">Copy note</button></div>
+      </div>
+      <div class="red-card">
+        <h3>🔥 Commercial / ZC Fireplace</h3>
+        <p>Commercial application changes warranty/guarantees. Zero-clearance fireplace jobs require multi-day coordination and construction availability.</p>
+        <div class="action-row"><a class="small-btn" href="#warranty">Open warranty</a><a class="small-btn orange" href="#fireplace">Fireplace</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="copy-bank searchable" id="copy-notes" data-tags="all copy service titan servicetitan notes documentation electrical rebate pud permit placement credit financing ductwork warranty refund home warranty">
+    <span class="tag">Documentation</span>
+    <h2>📋 Copy-to-ServiceTitan Notes</h2>
+    <p class="section-intro">Use these to document field decisions cleanly. Replace bracketed fields before saving.</p>
+    <div class="subgrid">
+      <div class="copy-card">
+        <h3>Electrical Review Needed</h3>
+        <div class="copy-text" id="electrical-note">Electrical quick check reviewed. Main service: [amps]. Large circuits 25A+: [list]. Load ratio estimate: [percent]. Because this appears to require review, HCA will confirm with sales/electrical before promising install scope or timing.</div>
+        <button class="small-btn" onclick="copyNote('electrical-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>PUD Calc Pending</h3>
+        <div class="copy-text" id="pud-note">PUD/rebate path discussed. HCA collected/needs attic and crawl insulation photos plus heat load calculation. Rebate eligibility and final sizing are pending calculation/source confirmation before final promise.</div>
+        <button class="small-btn" onclick="copyNote('pud-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>Outdoor Placement Verified</h3>
+        <div class="copy-text" id="placement-note">Outdoor unit placement reviewed with homeowner. Location: [location]. Clearances checked: service side, house distance, property line, meters/vents/windows/deck/HOA. Photos/measurements captured as applicable. Jurisdiction-specific rules still control permitting approval.</div>
+        <button class="small-btn" onclick="copyNote('placement-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>Credit / Second Look</h3>
+        <div class="copy-text" id="credit-note">Credit path reviewed. Required documents: current driver’s license, signed credit authorization, and proof of ownership/mortgage statement or deed as applicable. Approval is subject to credit decision process; second-look terms may differ.</div>
+        <button class="small-btn" onclick="copyNote('credit-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>Jurisdiction / Permit Risk</h3>
+        <div class="copy-text" id="jurisdiction-note">Jurisdiction/permitting risk reviewed for [city]. HCA flagged setback/site plan/critical area/no-next-day considerations. Scheduling should not be promised until permitting/install coordination confirms feasibility.</div>
+        <button class="small-btn" onclick="copyNote('jurisdiction-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>Ductwork Declined</h3>
+        <div class="copy-text" id="ductwork-note">Customer is aware existing ductwork may be contributing to hot/cold spots and comfort concerns. CM Heating proposed ductwork modifications/options, and customer is choosing to proceed without those changes at this time.</div>
+        <button class="small-btn" onclick="copyNote('ductwork-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>Home Warranty</h3>
+        <div class="copy-text" id="home-warranty-note">Home warranty expectations reviewed. CM Heating does not install and wait for payment from the home warranty company. Customer is responsible for payment by installation day and may pursue reimbursement directly with their warranty provider.</div>
+        <button class="small-btn" onclick="copyNote('home-warranty-note')">Copy ST Note</button>
+      </div>
+      <div class="copy-card">
+        <h3>Refund Request Format</h3>
+        <div class="copy-text" id="refund-note">Subject: [Customer Name] – Refund Request
+Refund amount: [$ amount]
+Reason for refund: [reason]
+Customer link: [ServiceTitan/customer link]
+Manager approval required before accounting is added.</div>
+        <button class="small-btn" onclick="copyNote('refund-note')">Copy Refund Template</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="filter-chips" id="filterChips">
+    <button class="filter-chip active" data-tag="all">All</button>
+    <button class="filter-chip" data-tag="financing">Financing</button>
+    <button class="filter-chip" data-tag="rebate">Rebates</button>
+    <button class="filter-chip" data-tag="permit">Permits</button>
+    <button class="filter-chip" data-tag="placement">Placement</button>
+    <button class="filter-chip" data-tag="electrical">Electrical</button>
+    <button class="filter-chip" data-tag="labor">Labor</button>
+    <button class="filter-chip" data-tag="ductless">Ductless</button>
+    <button class="filter-chip" data-tag="equipment">Equipment</button>
+    <button class="filter-chip" data-tag="warranty">Warranty</button>
+    <button class="filter-chip" data-tag="objection">Objections</button>
+    <button class="filter-chip" data-tag="fireplace">Fireplace</button>
+    <button class="filter-chip" data-tag="contact">Contacts</button>
   </div>
 
   <div class="search-row">
@@ -254,20 +517,20 @@ details div{margin-top:12px}
   </div>
 
   <nav class="quick-grid" id="top">
-    <a class="quick-card searchable" href="#financing"><div class="icon">💳</div><h2>Financing / Credit</h2><p>Equifax, second look, refund workflow, financing screenshot slots.</p></a>
-    <a class="quick-card searchable" href="#rebates"><div class="icon">💵</div><h2>Rebates</h2><p>PUD, PSE, Targeted Electrification, Midstream, qualifying flags.</p></a>
-    <a class="quick-card searchable" href="#placement"><div class="icon">📏</div><h2>Outdoor Placement</h2><p>Setbacks, clearances, property lines, meters, decks, HOAs.</p></a>
-    <a class="quick-card searchable" href="#jurisdictions"><div class="icon">🏙️</div><h2>Jurisdictions</h2><p>Everett, Kirkland, Edmonds, Woodinville, Bothell, Bellevue.</p></a>
-    <a class="quick-card searchable" href="#electrical"><div class="icon">⚡</div><h2>Electrical</h2><p>Panel quick calc, Level 1/2 difficulty, swap rules, red flags.</p></a>
-    <a class="quick-card searchable" href="#labor"><div class="icon">🛠️</div><h2>Labor Timing</h2><p>Furnace, HP/AC, oil conversion, ductless, cassettes, slim duct.</p></a>
-    <a class="quick-card searchable" href="#ductless"><div class="icon">❄️</div><h2>Ductless / Mitsubishi</h2><p>Head clearances, line lengths, branch boxes, MXZ / PUZ rules.</p></a>
-    <a class="quick-card searchable" href="#equipment"><div class="icon">🔥</div><h2>Equipment Rules</h2><p>Bosch, Daikin, Ameristar, Goodman, thermostats, pre-coiled jobs.</p></a>
-    <a class="quick-card searchable" href="#warranty"><div class="icon">🛡️</div><h2>Warranty / Permits</h2><p>Transfer rules, guarantees, commercial equipment, inspections.</p></a>
-    <a class="quick-card searchable" href="#objections"><div class="icon">💬</div><h2>Objections / Scripts</h2><p>Itemized pricing, reseller permits, home warranties, blind spots.</p></a>
-    <a class="quick-card searchable" href="#contacts"><div class="icon">☎️</div><h2>Escalation Contacts</h2><p>Sales, install, permitting, operations, electrical, plumbing.</p></a>
+    <a class="quick-card searchable" href="#financing" data-tags="financing credit equifax refund"><div class="icon">💳</div><h2>Financing / Credit</h2><p>Equifax, second look, refund workflow, financing screenshot slots.</p></a>
+    <a class="quick-card searchable" href="#rebates" data-tags="rebate rebates pud pse midstream heat pump"><div class="icon">💵</div><h2>Rebates</h2><p>PUD, PSE, Targeted Electrification, Midstream, qualifying flags.</p></a>
+    <a class="quick-card searchable" href="#placement" data-tags="placement outdoor clearance setback property line"><div class="icon">📏</div><h2>Outdoor Placement</h2><p>Setbacks, clearances, property lines, meters, decks, HOAs.</p></a>
+    <a class="quick-card searchable" href="#jurisdictions" data-tags="jurisdiction permit permits city setback no next day"><div class="icon">🏙️</div><h2>Jurisdictions</h2><p>Everett, Kirkland, Edmonds, Woodinville, Bothell, Bellevue.</p></a>
+    <a class="quick-card searchable" href="#electrical" data-tags="electrical panel load breaker wire"><div class="icon">⚡</div><h2>Electrical</h2><p>Panel quick calc, Level 1/2 difficulty, swap rules, red flags.</p></a>
+    <a class="quick-card searchable" href="#labor" data-tags="labor timing install schedule"><div class="icon">🛠️</div><h2>Labor Timing</h2><p>Furnace, HP/AC, oil conversion, ductless, cassettes, slim duct.</p></a>
+    <a class="quick-card searchable" href="#ductless" data-tags="ductless mitsubishi mini split"><div class="icon">❄️</div><h2>Ductless / Mitsubishi</h2><p>Head clearances, line lengths, branch boxes, MXZ / PUZ rules.</p></a>
+    <a class="quick-card searchable" href="#equipment" data-tags="equipment bosch daikin ameristar goodman thermostat"><div class="icon">🔥</div><h2>Equipment Rules</h2><p>Bosch, Daikin, Ameristar, Goodman, thermostats, pre-coiled jobs.</p></a>
+    <a class="quick-card searchable" href="#warranty" data-tags="warranty permit inspection commercial guarantee"><div class="icon">🛡️</div><h2>Warranty / Permits</h2><p>Transfer rules, guarantees, commercial equipment, inspections.</p></a>
+    <a class="quick-card searchable" href="#objections" data-tags="objection objections scripts itemized pricing"><div class="icon">💬</div><h2>Objections / Scripts</h2><p>Itemized pricing, reseller permits, home warranties, blind spots.</p></a>
+    <a class="quick-card searchable" href="#contacts" data-tags="contact contacts escalation"><div class="icon">☎️</div><h2>Escalation Contacts</h2><p>Sales, install, permitting, operations, electrical, plumbing.</p></a>
   </nav>
 
-  <section id="financing" class="section searchable">
+  <section id="financing" class="section searchable" data-tags="financing credit equifax second look refund docs ownership mortgage bankruptcy service titan">
     <span class="tag">Financing</span>
     <h2>💳 Financing / Credit / Refunds</h2>
     <p class="section-intro">Use this for credit workflow, second-look warnings, refund routing, and financing screenshot references.</p>
@@ -317,7 +580,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="rebates" class="section searchable">
+  <section id="rebates" class="section searchable" data-tags="rebate rebates pud pse midstream heat pump electrification targeted savings ahri">
     <span class="tag">Rebates</span>
     <h2>💵 Rebates / PUD / PSE</h2>
     <div class="subgrid">
@@ -369,7 +632,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="placement" class="section searchable">
+  <section id="placement" class="section searchable" data-tags="placement outdoor clearance setback property line meters dryer vent hoa deck window generator propane">
     <span class="tag">Placement</span>
     <h2>📏 Outdoor Unit Placement / Clearance / Safety Distances</h2>
     <div class="subgrid">
@@ -420,7 +683,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="jurisdictions" class="section searchable">
+  <section id="jurisdictions" class="section searchable" data-tags="jurisdiction jurisdictions permit permits city setback no next day critical area site plan kirkland edmonds everett woodinville bothell bellevue">
     <span class="tag">Jurisdictions</span>
     <h2>🏙️ City / Jurisdiction Quick Reference</h2>
     <div class="table-wrap">
@@ -447,7 +710,7 @@ details div{margin-top:12px}
     <div class="placeholder">Add source link / screenshot: site plan and floor plan jurisdiction spreadsheet</div>
   </section>
 
-  <section id="electrical" class="section searchable">
+  <section id="electrical" class="section searchable" data-tags="electrical panel load breaker wire swap ampacity level quick calc hot tub ev charger">
     <span class="tag">Electrical</span>
     <h2>⚡ Electrical Rules / Quick Calc / Difficulty Levels</h2>
     <div class="subgrid">
@@ -502,7 +765,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="labor" class="section searchable">
+  <section id="labor" class="section searchable" data-tags="labor timing install schedule furnace heat pump oil conversion ductless cassette slim duct">
     <span class="tag">Labor</span>
     <h2>🛠️ Labor Timing / Project Length</h2>
     <div class="subgrid">
@@ -514,7 +777,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="ductless" class="section searchable">
+  <section id="ductless" class="section searchable" data-tags="ductless mitsubishi mini split line length clearance head branch box mxz puz cassette">
     <span class="tag">Ductless</span>
     <h2>❄️ Ductless / Mitsubishi Rules</h2>
     <div class="subgrid">
@@ -527,7 +790,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="equipment" class="section searchable">
+  <section id="equipment" class="section searchable" data-tags="equipment bosch daikin ameristar goodman thermostat pre-coiled line set coil txv">
     <span class="tag">Equipment</span>
     <h2>🔥 Equipment-Specific Rules</h2>
     <div class="subgrid">
@@ -539,7 +802,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="warranty" class="section searchable">
+  <section id="warranty" class="section searchable" data-tags="warranty permit inspection commercial guarantee transfer registration lemon craftsmanship">
     <span class="tag">Warranty / Permits</span>
     <h2>🛡️ Warranty, Guarantees, Permits</h2>
     <div class="subgrid">
@@ -550,7 +813,7 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="objections" class="section searchable">
+  <section id="objections" class="section searchable" data-tags="objection objections scripts itemized pricing reseller home warranty talk track customer language">
     <span class="tag">Sales Logic</span>
     <h2>💬 Objections / Scripts / Field Logic</h2>
     <div class="subgrid">
@@ -561,31 +824,72 @@ details div{margin-top:12px}
     </div>
   </section>
 
-  <section id="contacts" class="section searchable">
+
+  <section id="fireplace" class="section searchable" data-tags="fireplace zc zero clearance insert scheduling construction tile weekend payment">
+    <span class="tag">Fireplace</span>
+    <h2>🔥 Fireplace Install Rules</h2>
+    <p class="section-intro">Use this for insert vs. zero-clearance scheduling expectations.</p>
+    <div class="subgrid">
+      <div class="info warning">
+        <h3>Zero-Clearance Fireplace</h3>
+        <ul>
+          <li>ZC fireplaces are multi-day projects.</li>
+          <li>Day 1: fireplace crew performs GFP install, usually half day.</li>
+          <li>Construction/demo/build-back work must be coordinated separately.</li>
+          <li>No ZC fireplace installs on weekends when construction services are unavailable.</li>
+          <li>Check construction availability before promising schedule.</li>
+          <li>Payment is due on Day 1 when physical install is completed.</li>
+        </ul>
+      </div>
+      <div class="info success">
+        <h3>Fireplace Inserts</h3>
+        <ul>
+          <li>Usually half-day install crew project.</li>
+          <li>Construction/demo/build-back often not needed.</li>
+          <li>Can be scheduled based on fireplace crew availability.</li>
+          <li>Weekend scheduling may be possible if fireplace crew is working.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="contacts" class="section searchable" data-tags="contact contacts escalation manager permitting operations electrical plumbing sales install coordination">
     <span class="tag">Escalation</span>
     <h2>☎️ Escalation Contacts</h2>
+    <div class="callout">
+  <strong>Org update:</strong> Anthony Basham and Kailana are no longer active escalation contacts. Plumbing coordination should route to <strong>Havannah Nelson-Johnson</strong>.
+</div>
+
     <div class="subgrid">
       <div class="info"><h3>Sales / Coordination</h3><ul><li>Sales Manager: Geoff Simons</li><li>Sales Coordinator: Amy Liebel</li></ul></div>
       <div class="info"><h3>Install / Operations</h3><ul><li>Install Manager: Lyle Jones</li><li>Install Coordination Manager: Brittny</li><li>Operations: Laura Weiss</li></ul></div>
-      <div class="info"><h3>Permitting / Trades</h3><ul><li>Permitting: Sabrina</li><li>Electrical Manager: Jon Jansen</li><li>Plumbing Manager: Anthony Basham</li></ul></div>
+      <div class="info"><h3>Permitting / Trades</h3><ul><li>Permitting: Sabrina</li><li>Electrical Manager: Jon Jansen</li><li>Plumbing Coordinator: Havannah Nelson-Johnson</li></ul></div>
       <div class="info"><h3>Support References</h3><ul><li>Service Titan support contact should stay internal.</li><li>Gensco, American Standard, Mitsubishi, Johnstone support details should be added carefully without publishing credentials.</li><li>Keep passwords and dealer portal credentials out of this public page.</li></ul></div>
     </div>
   </section>
 
 </main>
 
-<footer class="footer">CM Heating · Internal HCA Field Guide · Draft framework from Cheat Sheet 2.0</footer>
+<footer class="footer">CM Heating · HCA Command Center v2.2.1 Test · Built from Field Guide + Cheat Sheet 2.0</footer>
 
 <script>
 const searchBox = document.getElementById("searchBox");
 const clearSearch = document.getElementById("clearSearch");
 const searchable = Array.from(document.querySelectorAll(".searchable"));
+let activeTag = "all";
+
+function tagsFor(el){
+  return (el.dataset.tags || "").toLowerCase();
+}
 
 function runSearch(){
   const q = searchBox.value.trim().toLowerCase();
   searchable.forEach(function(el){
     const text = el.innerText.toLowerCase();
-    if(!q || text.includes(q)){
+    const tags = tagsFor(el);
+    const matchesSearch = !q || text.includes(q) || tags.includes(q);
+    const matchesTag = activeTag === "all" || tags.includes(activeTag);
+    if(matchesSearch && matchesTag){
       el.classList.remove("hidden-by-search");
     }else{
       el.classList.add("hidden-by-search");
@@ -594,10 +898,63 @@ function runSearch(){
 }
 
 searchBox.addEventListener("input", runSearch);
+
 clearSearch.addEventListener("click", function(){
   searchBox.value = "";
+  activeTag = "all";
+  document.querySelectorAll(".filter-chip").forEach(function(b){
+    b.classList.toggle("active", b.dataset.tag === "all");
+  });
   runSearch();
   searchBox.focus();
+});
+
+function copyNote(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const text = el.innerText.trim();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text)
+      .then(function(){ showToast("Copied to clipboard"); })
+      .catch(function(){ fallbackCopy(text); });
+  }else{
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text){
+  const temp = document.createElement("textarea");
+  temp.value = text;
+  temp.setAttribute("readonly", "");
+  temp.style.position = "fixed";
+  temp.style.left = "-9999px";
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand("copy");
+  temp.remove();
+  showToast("Copied to clipboard");
+}
+
+function showToast(message){
+  let toast = document.getElementById("toast");
+  if(!toast){
+    toast = document.createElement("div");
+    toast.id = "toast";
+    toast.className = "toast";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add("show");
+  window.setTimeout(function(){toast.classList.remove("show");}, 1800);
+}
+
+document.querySelectorAll(".filter-chip").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".filter-chip").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    activeTag = btn.dataset.tag || "all";
+    runSearch();
+  });
 });
 </script>
 
