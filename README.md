@@ -91,7 +91,7 @@ Print to PDF for in-person 1-on-1s.
 ### 8. Executive Summary
 **File:** `exec-summary.html`
 
-Weekly report for Paul (Sr VP) and Kailana (GM). One page with:
+Weekly report for Paul (Sr VP). One page with:
 - 5 KPI tiles — pipeline value, conversion rate, attempts, doc compliance, critical leads
 - Full team performance table with status badges
 - Pipeline value by HCA
@@ -123,7 +123,7 @@ Generated on demand — not a static file in the repo.
 - Geoff opens Daily Brief before each 1-on-1
 
 **Weekly**
-- Geoff forwards Exec Summary to Paul + Kailana
+- Geoff forwards Exec Summary to Paul
 - Leaderboard auto-updates on office screen
 
 ## Best Practice Follow-Up Timing

@@ -74,7 +74,7 @@ Many `.before-xxx.html` files exist as named snapshots before significant change
 | `install-availability-secure.html` | Install Availability Tracker (Firebase Hosting production) |
 | `leaderboard.html` | Follow-up leaderboard (office screen display, auto-cycles) |
 | `daily-brief.html` | Geoff's daily 1-on-1 prep tool |
-| `exec-summary.html` | Weekly report for Paul (Sr VP) and Kailana (GM) |
+| `exec-summary.html` | Weekly report for Paul (Sr VP) |
 | `tracker-[name].html` | Per-HCA activity trackers (Amber, Chester, Davis, Jay, Joe, Joseph, Kyle, Samir, Trevor) |
 
 ## HCA Roster
