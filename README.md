@@ -158,7 +158,6 @@ Generated on demand — not a static file in the repo.
 |---|---|
 | Geoff Simons | Sales MGR |
 | Paul | Sr VP |
-| Kailana | GM |
 
 ---
 Built May 2026 — CM Heating Sales Operations
