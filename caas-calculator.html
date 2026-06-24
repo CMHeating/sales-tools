@@ -250,54 +250,75 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
 @media(max-width:560px){.presets,.pill-row,.metrics,.two,.path-tree,.accordion-content,.guard-grid{grid-template-columns:1fr}.hdr{align-items:flex-start}.chart-wrap{height:250px}.comp-price{font-size:31px}}
 @media print{.btn-top,.presets,.ctrl-row,.accordion{display:none!important}.hdr,.card-head,.verdict{-webkit-print-color-adjust:exact;print-color-adjust:exact}#results{display:block!important}.wrap{padding:14px}.card,.chart-card,.bdown-card,.guard-card,.comp-box{box-shadow:none;break-inside:avoid}}
 
-/* === Early Buyout / Residual Calculator === */
-.early-buyout-card{
-  background:#fff;
-  border:1px solid #e4e0d7;
+
+/* === Cash Flexibility Card === */
+.cash-flex-card{
+  background:linear-gradient(135deg,#fff,#f1ffe8);
+  border:1.5px solid #c8e8a0;
   border-radius:var(--radius);
   box-shadow:var(--shadow);
   padding:18px;
   margin-bottom:18px;
 }
-.early-buyout-card .buyout-row{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:12px;
-  align-items:end;
+.cash-flex-card h3{
+  font-family:'Playfair Display',serif;
+  font-size:21px;
+  color:var(--navy);
+  line-height:1.15;
+  margin-bottom:7px;
 }
-.early-buyout-card .buyout-result{
-  min-height:58px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-}
-.early-buyout-card .buyout-result-label{
-  font-size:11px;
-  font-weight:800;
+.cash-flex-card p{
+  font-size:13px;
   color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.07em;
+  line-height:1.55;
+}
+.cash-flex-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin:14px 0;
+}
+.cash-flex-pill{
+  background:#fff;
+  border:1px solid #e2e8ea;
+  border-radius:12px;
+  padding:13px;
+}
+.cash-flex-pill b{
+  display:block;
+  color:var(--navy);
+  font-size:13px;
   margin-bottom:4px;
 }
-.early-buyout-card .buyout-result-value{
-  font-family:'Playfair Display',serif;
-  font-size:28px;
-  font-weight:700;
-  color:var(--navy);
-  line-height:1;
-}
-.early-buyout-card .buyout-note{
-  margin-top:10px;
-  font-size:12px;
+.cash-flex-pill span{
+  display:block;
   color:var(--muted);
-  background:#f7f9fb;
-  border:1px solid #e2e8ea;
-  border-radius:10px;
-  padding:10px 12px;
+  font-size:12px;
+  line-height:1.4;
+}
+.cash-flex-talk{
+  background:var(--navy);
+  color:#fff;
+  border-radius:12px;
+  padding:14px;
+  margin-top:12px;
+}
+.cash-flex-talk b{
+  display:block;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:rgba(255,255,255,.68);
+  margin-bottom:5px;
+}
+.cash-flex-talk span{
+  display:block;
+  font-size:14px;
+  font-weight:700;
   line-height:1.45;
 }
 @media(max-width:720px){
-  .early-buyout-card .buyout-row{grid-template-columns:1fr}
+  .cash-flex-grid{grid-template-columns:1fr}
 }
 
 </style>
@@ -607,28 +628,33 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
     </div>
   </div>
 
-  
-<section class="early-buyout-card" id="earlyBuyoutCard">
-  <div class="stitle">Early Buyout Calculator</div>
+<section class="cash-flex-card" id="cashFlexCard">
+  <div class="eyebrow">Cash flexibility</div>
+  <h3>Keep cash available while CM Heating stays responsible for covered comfort.</h3>
+  <p>
+    Comfort Club gives homeowners another path besides writing a large check or financing equipment.
+    Instead of tying up cash in the HVAC system, they can keep money available for other priorities while
+    covered service, maintenance, filters, IAQ bulbs, and emergency support are bundled into one predictable payment.
+  </p>
 
-  <div class="buyout-row">
-    <div class="field">
-      <div class="lbl">Month # (1–180)</div>
-      <input type="number" id="earlyBuyoutMonth" value="96" min="1" max="180" step="1" inputmode="numeric">
+  <div class="cash-flex-grid">
+    <div class="cash-flex-pill">
+      <b>Preserve cash</b>
+      <span>Keep money available for emergency savings, other home repairs, investments, or paying down higher-interest debt.</span>
     </div>
-
-    <div>
-      <button type="button" class="btn-calc" style="width:100%;max-width:none" onclick="calculateEarlyBuyout(true)">Calculate Residual</button>
+    <div class="cash-flex-pill">
+      <b>Transfer risk</b>
+      <span>With buying or financing, the homeowner owns future repair exposure. With Comfort Club, CM Heating remains responsible for the covered system.</span>
     </div>
-
-    <div class="buyout-result">
-      <div class="buyout-result-label">Estimated residual</div>
-      <div class="buyout-result-value" id="earlyBuyoutResult">—</div>
+    <div class="cash-flex-pill">
+      <b>Predictability</b>
+      <span>Maintenance, covered repairs, eligible filters, IAQ bulbs, and emergency service are included under the agreement.</span>
     </div>
   </div>
 
-  <div class="buyout-note" id="earlyBuyoutFormula">
-    Formula: MSRP × (180 − month) ÷ 180. Straight-line depreciation over 15 years.
+  <div class="cash-flex-talk">
+    <b>HCA talking point</b>
+    <span>“You can own the equipment and the risk, or you can keep your cash flexible and let CM Heating stay responsible for your comfort system.”</span>
   </div>
 </section>
 
@@ -1524,81 +1550,6 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   calc();
 });
-
-/* === Early Buyout / Residual Calculator === */
-function earlyBuyoutMoney(value, cents) {
-  const n = Number(value || 0);
-  return "$" + n.toLocaleString(undefined, {
-    minimumFractionDigits: cents ? 2 : 0,
-    maximumFractionDigits: cents ? 2 : 0
-  });
-}
-
-function getEarlyBuyoutMsrp() {
-  const ids = ["packagePrice", "buyPrice"];
-  for (const id of ids) {
-    const el = document.getElementById(id);
-    const val = el ? parseFloat(el.value) : NaN;
-    if (Number.isFinite(val) && val > 0) return val;
-  }
-  return 21499;
-}
-
-function clampEarlyBuyoutMonth(value) {
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return 96;
-  return Math.max(1, Math.min(180, parsed));
-}
-
-function calculateEarlyBuyout(forceClamp) {
-  const monthEl = document.getElementById("earlyBuyoutMonth");
-  const resultEl = document.getElementById("earlyBuyoutResult");
-  const formulaEl = document.getElementById("earlyBuyoutFormula");
-
-  if (!monthEl || !resultEl || !formulaEl) return;
-
-  const msrp = getEarlyBuyoutMsrp();
-  const month = clampEarlyBuyoutMonth(monthEl.value);
-
-  if (forceClamp) monthEl.value = month;
-
-  const residual = msrp * (180 - month) / 180;
-
-  resultEl.textContent = earlyBuyoutMoney(residual, true);
-  formulaEl.innerHTML =
-    "Formula: " +
-    earlyBuyoutMoney(msrp, false) +
-    " × (180 − " +
-    month +
-    ") ÷ 180 = <strong>" +
-    earlyBuyoutMoney(residual, true) +
-    "</strong>. ServiceTitan and the signed contract remain final authority.";
-}
-
-function wireEarlyBuyoutCard() {
-  const monthEl = document.getElementById("earlyBuyoutMonth");
-  if (!monthEl) return;
-
-  monthEl.addEventListener("input", () => calculateEarlyBuyout(false));
-  monthEl.addEventListener("change", () => calculateEarlyBuyout(true));
-  monthEl.addEventListener("blur", () => calculateEarlyBuyout(true));
-
-  ["packagePrice", "buyPrice"].forEach(id => {
-    const source = document.getElementById(id);
-    if (source) {
-      source.addEventListener("input", () => calculateEarlyBuyout(false));
-      source.addEventListener("change", () => calculateEarlyBuyout(false));
-    }
-  });
-
-  calculateEarlyBuyout(true);
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", wireEarlyBuyoutCard);
-} else {
-  wireEarlyBuyoutCard();
-}
 
 </script>
 </body>
