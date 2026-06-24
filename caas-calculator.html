@@ -321,6 +321,77 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
   .cash-flex-grid{grid-template-columns:1fr}
 }
 
+
+/* === Break-Even Point Card === */
+.break-even-card{
+  background:#fff;
+  border:1px solid #e4e0d7;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:18px;
+  margin-bottom:18px;
+}
+.break-even-card h3{
+  font-family:'Playfair Display',serif;
+  font-size:20px;
+  color:var(--navy);
+  line-height:1.15;
+  margin-bottom:6px;
+}
+.break-even-card p{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+.break-even-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:14px;
+}
+.break-even-metric{
+  background:#fcfbfa;
+  border:1px solid #e8e4dc;
+  border-radius:12px;
+  padding:13px;
+  text-align:center;
+}
+.break-even-metric b{
+  display:block;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+.break-even-metric strong{
+  display:block;
+  font-family:'Playfair Display',serif;
+  font-size:24px;
+  color:var(--navy);
+  line-height:1.1;
+}
+.break-even-metric span{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.35;
+}
+.break-even-note{
+  margin-top:12px;
+  font-size:12px;
+  color:#5f6b72;
+  background:#f7f9fb;
+  border:1px dashed #c8d1d4;
+  border-radius:10px;
+  padding:10px 12px;
+  line-height:1.45;
+}
+@media(max-width:720px){
+  .break-even-grid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body class="simple-mode">
@@ -744,6 +815,39 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
       <div class="met"><div class="met-lbl" id="mDeltaLbl">Cost difference</div><div class="met-val" id="mDelta">$0</div><div class="met-sub" id="mDeltaSub">over selected horizon</div></div>
     </div>
 
+
+<div class="break-even-card math-deep" id="breakEvenCard">
+  <div class="eyebrow">Rent vs. buy break-even</div>
+  <h3>When does modeled ownership catch Comfort Club?</h3>
+  <p>
+    This compares the month-by-month modeled cost of the buy/own path against Comfort Club.
+    It is an illustration only. ServiceTitan, the signed agreement, and actual customer choices remain final.
+  </p>
+
+  <div class="break-even-grid">
+    <div class="break-even-metric">
+      <b>Break-even point</b>
+      <strong id="breakEvenPoint">—</strong>
+      <span id="breakEvenPointSub">Run comparison</span>
+    </div>
+    <div class="break-even-metric">
+      <b>At break-even</b>
+      <strong id="breakEvenAmount">—</strong>
+      <span>Modeled cumulative cost</span>
+    </div>
+    <div class="break-even-metric">
+      <b>Final horizon gap</b>
+      <strong id="breakEvenFinalGap">—</strong>
+      <span id="breakEvenFinalGapSub">Selected analysis horizon</span>
+    </div>
+  </div>
+
+  <div class="break-even-note" id="breakEvenNote">
+    Run the comparison to calculate the first month where modeled buy/own cost equals or exceeds Comfort Club.
+  </div>
+</div>
+
+
     <div class="invest-action-row math-deep">
       <button class="btn-invest" id="investmentToggle" onclick="toggleInvestmentPanel()">📈 Show invested-cash view</button>
     </div>
@@ -1126,6 +1230,61 @@ function setVerdict(verdict){
   body.textContent = verdict.body;
 }
 
+
+function updateBreakEvenCard(buyCumulative, caasCumulative, horizonMonths, finalDelta){
+  var pointEl = document.getElementById('breakEvenPoint');
+  var pointSubEl = document.getElementById('breakEvenPointSub');
+  var amountEl = document.getElementById('breakEvenAmount');
+  var finalGapEl = document.getElementById('breakEvenFinalGap');
+  var finalGapSubEl = document.getElementById('breakEvenFinalGapSub');
+  var noteEl = document.getElementById('breakEvenNote');
+
+  if(!pointEl || !pointSubEl || !amountEl || !finalGapEl || !finalGapSubEl || !noteEl) return;
+
+  var crossMonth = null;
+  var crossAmount = 0;
+  var max = Math.min(buyCumulative.length, caasCumulative.length);
+
+  for(var i = 1; i < max; i++){
+    if(buyCumulative[i] >= caasCumulative[i]){
+      crossMonth = i;
+      crossAmount = Math.max(buyCumulative[i], caasCumulative[i]);
+      break;
+    }
+  }
+
+  var years = horizonMonths / 12;
+
+  if(crossMonth !== null){
+    var yr = crossMonth / 12;
+    pointEl.textContent = crossMonth <= 1 ? 'Month 1' : 'Month ' + crossMonth;
+    pointSubEl.textContent = 'About year ' + yr.toFixed(1);
+    amountEl.textContent = money(crossAmount);
+    noteEl.innerHTML =
+      'Break-even is the first modeled month where buy/own cumulative cost equals or exceeds Comfort Club. In this scenario, that happens around <strong>month ' +
+      crossMonth +
+      '</strong> — about <strong>year ' +
+      yr.toFixed(1) +
+      '</strong>.';
+  }else{
+    pointEl.textContent = 'Not reached';
+    pointSubEl.textContent = 'Within ' + years.toFixed(0) + '-year horizon';
+    amountEl.textContent = '—';
+    noteEl.innerHTML =
+      'No break-even point was reached inside the selected analysis horizon. In this scenario, the buy/own path remains lower on raw modeled outlay during the selected period, so Comfort Club should be explained as cash flexibility, service bundling, and risk transfer.';
+  }
+
+  if(finalDelta >= 0){
+    finalGapEl.textContent = money(finalDelta);
+    finalGapEl.style.color = '#166a3e';
+    finalGapSubEl.textContent = 'Buy/own costs more by horizon';
+  }else{
+    finalGapEl.textContent = money(Math.abs(finalDelta));
+    finalGapEl.style.color = '#c97d10';
+    finalGapSubEl.textContent = 'Comfort Club raw premium by horizon';
+  }
+}
+
 function calc(){
   var price = gv('packagePrice');
   var month = getOptionMonth(true) || 96;
@@ -1226,6 +1385,7 @@ function calc(){
   var buyTotal = buyCumulative[buyCumulative.length - 1];
   var caasTotal = caasCumulative[caasCumulative.length - 1];
   var delta = buyTotal - caasTotal;
+  updateBreakEvenCard(buyCumulative, caasCumulative, months, delta);
 
   document.getElementById('caasDisplay').innerHTML = money2(cmo) + ' <span>/mo</span>';
   document.getElementById('buyDisplay').innerHTML = buyPath === 'finance'
