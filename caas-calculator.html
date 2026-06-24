@@ -249,6 +249,57 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
 @media(max-width:900px){.hero,.form-grid,.comparison-grid{grid-template-columns:1fr}.pill-row,.metrics{grid-template-columns:1fr 1fr}.accordion-content{grid-template-columns:1fr 1fr}.config-top{grid-template-columns:1fr}}
 @media(max-width:560px){.presets,.pill-row,.metrics,.two,.path-tree,.accordion-content,.guard-grid{grid-template-columns:1fr}.hdr{align-items:flex-start}.chart-wrap{height:250px}.comp-price{font-size:31px}}
 @media print{.btn-top,.presets,.ctrl-row,.accordion{display:none!important}.hdr,.card-head,.verdict{-webkit-print-color-adjust:exact;print-color-adjust:exact}#results{display:block!important}.wrap{padding:14px}.card,.chart-card,.bdown-card,.guard-card,.comp-box{box-shadow:none;break-inside:avoid}}
+
+/* === Early Buyout / Residual Calculator === */
+.early-buyout-card{
+  background:#fff;
+  border:1px solid #e4e0d7;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:18px;
+  margin-bottom:18px;
+}
+.early-buyout-card .buyout-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  align-items:end;
+}
+.early-buyout-card .buyout-result{
+  min-height:58px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.early-buyout-card .buyout-result-label{
+  font-size:11px;
+  font-weight:800;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  margin-bottom:4px;
+}
+.early-buyout-card .buyout-result-value{
+  font-family:'Playfair Display',serif;
+  font-size:28px;
+  font-weight:700;
+  color:var(--navy);
+  line-height:1;
+}
+.early-buyout-card .buyout-note{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+  background:#f7f9fb;
+  border:1px solid #e2e8ea;
+  border-radius:10px;
+  padding:10px 12px;
+  line-height:1.45;
+}
+@media(max-width:720px){
+  .early-buyout-card .buyout-row{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body class="simple-mode">
@@ -556,7 +607,33 @@ input[readonly]{background:#f6f4ef;color:#5d5d66;cursor:not-allowed}
     </div>
   </div>
 
-  <div class="ctrl-row">
+  
+<section class="early-buyout-card" id="earlyBuyoutCard">
+  <div class="stitle">Early Buyout Calculator</div>
+
+  <div class="buyout-row">
+    <div class="field">
+      <div class="lbl">Month # (1–180)</div>
+      <input type="number" id="earlyBuyoutMonth" value="96" min="1" max="180" step="1" inputmode="numeric">
+    </div>
+
+    <div>
+      <button type="button" class="btn-calc" style="width:100%;max-width:none" onclick="calculateEarlyBuyout(true)">Calculate Residual</button>
+    </div>
+
+    <div class="buyout-result">
+      <div class="buyout-result-label">Estimated residual</div>
+      <div class="buyout-result-value" id="earlyBuyoutResult">—</div>
+    </div>
+  </div>
+
+  <div class="buyout-note" id="earlyBuyoutFormula">
+    Formula: MSRP × (180 − month) ÷ 180. Straight-line depreciation over 15 years.
+  </div>
+</section>
+
+
+<div class="ctrl-row">
     <button class="btn-calc" onclick="calc()">Compare Comfort Club vs. Buy →</button>
     <button class="btn-reset" onclick="resetDefaults()">Reset example</button>
   </div>
@@ -1447,6 +1524,82 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   calc();
 });
+
+/* === Early Buyout / Residual Calculator === */
+function earlyBuyoutMoney(value, cents) {
+  const n = Number(value || 0);
+  return "$" + n.toLocaleString(undefined, {
+    minimumFractionDigits: cents ? 2 : 0,
+    maximumFractionDigits: cents ? 2 : 0
+  });
+}
+
+function getEarlyBuyoutMsrp() {
+  const ids = ["packagePrice", "buyPrice"];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    const val = el ? parseFloat(el.value) : NaN;
+    if (Number.isFinite(val) && val > 0) return val;
+  }
+  return 21499;
+}
+
+function clampEarlyBuyoutMonth(value) {
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 96;
+  return Math.max(1, Math.min(180, parsed));
+}
+
+function calculateEarlyBuyout(forceClamp) {
+  const monthEl = document.getElementById("earlyBuyoutMonth");
+  const resultEl = document.getElementById("earlyBuyoutResult");
+  const formulaEl = document.getElementById("earlyBuyoutFormula");
+
+  if (!monthEl || !resultEl || !formulaEl) return;
+
+  const msrp = getEarlyBuyoutMsrp();
+  const month = clampEarlyBuyoutMonth(monthEl.value);
+
+  if (forceClamp) monthEl.value = month;
+
+  const residual = msrp * (180 - month) / 180;
+
+  resultEl.textContent = earlyBuyoutMoney(residual, true);
+  formulaEl.innerHTML =
+    "Formula: " +
+    earlyBuyoutMoney(msrp, false) +
+    " × (180 − " +
+    month +
+    ") ÷ 180 = <strong>" +
+    earlyBuyoutMoney(residual, true) +
+    "</strong>. ServiceTitan and the signed contract remain final authority.";
+}
+
+function wireEarlyBuyoutCard() {
+  const monthEl = document.getElementById("earlyBuyoutMonth");
+  if (!monthEl) return;
+
+  monthEl.addEventListener("input", () => calculateEarlyBuyout(false));
+  monthEl.addEventListener("change", () => calculateEarlyBuyout(true));
+  monthEl.addEventListener("blur", () => calculateEarlyBuyout(true));
+
+  ["packagePrice", "buyPrice"].forEach(id => {
+    const source = document.getElementById(id);
+    if (source) {
+      source.addEventListener("input", () => calculateEarlyBuyout(false));
+      source.addEventListener("change", () => calculateEarlyBuyout(false));
+    }
+  });
+
+  calculateEarlyBuyout(true);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", wireEarlyBuyoutCard);
+} else {
+  wireEarlyBuyoutCard();
+}
+
 </script>
 </body>
 </html>
