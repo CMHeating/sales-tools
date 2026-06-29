@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CM Heating Install Availability</title>
+<title>TEST — CM Heating Install Availability</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script type="module">
@@ -21,10 +21,10 @@ const FIREBASE_CONFIG = {
   appId: "1:187871662912:web:1d52671de23c4f38d620a5"
 };
 
-const DB_AVAIL    = "cmh_availability";
-const DB_LOCKS    = "cmh_edit_locks";
-const DB_AUDIT    = "cmh_audit_logs";
-const DB_SCHEDULE = "cmh_schedule";
+const DB_AVAIL    = "cmh_availability_test";
+const DB_LOCKS    = "cmh_edit_locks_test";
+const DB_AUDIT    = "cmh_audit_logs_test";
+const DB_SCHEDULE = "cmh_schedule_test";
 
 const INSTALL_USERS = [
   {
@@ -2269,6 +2269,22 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 </style>
 </head>
 <body>
+
+<div style="
+  position: sticky;
+  top: 0;
+  z-index: 99999;
+  background: #7f1d1d;
+  color: #fff;
+  padding: 10px 14px;
+  font-family: Arial, sans-serif;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: .03em;
+">
+  TEST ENVIRONMENT — reads/writes TEST Firebase paths only. LIVE BOARD IS NOT BEING EDITED.
+</div>
+
 
 <div class="topbar">
   <div class="topbar-left">
