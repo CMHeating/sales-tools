@@ -185,7 +185,7 @@ This is the Field Guide card requested by Samir. The card should be named **Serv
    Have homeowner(s) complete the ServiceTitan credit authorization form. Use the existing Equifax credit pull link already built in the HCA Toolkit; the new Field Guide card should link directly to it.
 
 7. **Second-look escalation**  
-   Email `credit@reliableair.com` for second-look review when credit is near 640, when the payment is above the current internal limit, or when the credit result is unclear. Current payment limit placeholder: $200/month until updated.
+   Email `credit@reliableair.com` for second-look review when credit is near 640, when the payment is above the current internal limit, or when the credit result is unclear. Current payment review threshold: $239.99/month until updated.
 
 8. **Contract generation and signature**  
    Generate the rental contract from ServiceTitan. Verify homeowner names, property address, rental package, monthly payment, term/residual language, and separation of COD extras before signature. All required homeowners must sign.
