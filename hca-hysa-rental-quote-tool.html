@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HCA HYSA Rent vs Buy Quote Tool — Beta</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #687386;
+      --line: #dfe6ef;
+      --accent: #1f6feb;
+      --accent-dark: #174ea6;
+      --good-bg: #eaf7ef;
+      --good-text: #116329;
+      --warn-bg: #fff6df;
+      --warn-text: #7a4b00;
+      --shadow: 0 12px 30px rgba(23, 32, 51, 0.08);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #102a54 0%, #1f6feb 100%);
+      color: white;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 42px);
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 920px;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 15px;
+      background: white;
+      color: var(--text);
+      outline: none;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      border: 0;
+      accent-color: var(--accent);
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.12);
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr 86px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfcfe;
+      margin-top: 12px;
+    }
+
+    .toggle-row input {
+      width: auto;
+      transform: scale(1.15);
+    }
+
+    .toggle-row label {
+      margin: 0;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+    }
+
+    button.secondary {
+      background: #edf2f8;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button.secondary:hover {
+      background: #e3eaf3;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      padding: 15px;
+      background: #fbfcfe;
+      min-height: 112px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 7px;
+    }
+
+    .metric .value {
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .metric .note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .good {
+      background: var(--good-bg);
+    }
+
+    .good .value,
+    .good .label {
+      color: var(--good-text);
+    }
+
+    .warn {
+      background: var(--warn-bg);
+    }
+
+    .warn .value,
+    .warn .label {
+      color: var(--warn-text);
+    }
+
+    .sales-box {
+      border: 1px solid var(--line);
+      background: #fbfcfe;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .sales-box h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .sales-box p {
+      margin: 0;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5fa;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .disclaimer {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .copied {
+      color: var(--good-text);
+      font-weight: 700;
+      font-size: 13px;
+      display: none;
+      margin-left: 4px;
+    }
+
+    @media (max-width: 940px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .hero {
+        padding: 22px;
+      }
+
+      .input-grid,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .range-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .page {
+        max-width: none;
+        padding: 0;
+      }
+
+      .hero,
+      .card {
+        box-shadow: none;
+      }
+
+      .actions,
+      .disclaimer {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Beta quoting tool</div>
+      <h1>HYSA Rent vs Buy Quote Tool</h1>
+      <p>
+        Show a customer what happens when they keep the HVAC purchase price invested instead of paying cash up front.
+        Adjust the system price, monthly rental payment, free months, HYSA rate, compounding horizon, and residual month from 1 to 180.
+      </p>
+    </section>
+
+    <section class="grid">
+      <aside class="card">
+        <h2>Quote Inputs</h2>
+
+        <div class="input-grid">
+          <div>
+            <label for="packagePrice">Package Price</label>
+            <input id="packagePrice" type="number" min="0" step="1" value="21499" />
+          </div>
+
+          <div>
+            <label for="monthlyPayment">Monthly Payment</label>
+            <input id="monthlyPayment" type="number" min="0" step="0.01" value="259.99" />
+          </div>
+
+          <div>
+            <label for="apy">HYSA APY</label>
+            <input id="apy" type="number" min="0" step="0.01" value="4" />
+          </div>
+
+          <div>
+            <label for="freeMonths">Free Months</label>
+            <input id="freeMonths" type="number" min="0" step="1" value="3" />
+          </div>
+
+          <div>
+            <label for="years">Years to Show</label>
+            <input id="years" type="number" min="1" max="15" step="1" value="8" />
+          </div>
+
+          <div>
+            <label for="termMonths">Contract Term</label>
+            <input id="termMonths" type="number" min="1" max="180" step="1" value="180" />
+          </div>
+
+          <div class="full">
+            <label for="residualMonthSlider">Residual Month</label>
+            <div class="range-row">
+              <input id="residualMonthSlider" type="range" min="1" max="180" step="1" value="96" />
+              <input id="residualMonth" type="number" min="1" max="180" step="1" value="96" />
+            </div>
+            <div class="help">
+              Choose any month from 1 to 180. Month 96 is the default membership checkpoint.
+            </div>
+          </div>
+
+          <div class="full">
+            <label for="residualValue">Straight-Line Residual / Payoff</label>
+            <input id="residualValue" type="number" min="0" step="0.01" value="10032.87" />
+            <div id="residualHelp" class="help">
+              Auto residual uses package price × remaining months ÷ contract term.
+            </div>
+          </div>
+
+          <div class="full">
+            <label for="paymentMode">Savings Treatment</label>
+            <select id="paymentMode">
+              <option value="untouched" selected>Customer keeps the full system cost invested; rent paid from monthly cash flow</option>
+              <option value="draw">Rental payments are withdrawn from the HYSA after free months</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <input id="compoundMonthly" type="checkbox" checked />
+          <label for="compoundMonthly">Use monthly compounding from APY</label>
+        </div>
+
+        <div class="actions">
+          <button id="recalculate" type="button">Recalculate</button>
+          <button id="autoResidual" class="secondary" type="button">Auto residual</button>
+          <button id="resetDefaults" class="secondary" type="button">Reset</button>
+          <button id="printQuote" class="secondary" type="button">Print</button>
+        </div>
+      </aside>
+
+      <section>
+        <div class="card">
+          <div class="summary-grid">
+            <div class="metric good">
+              <div class="label">First-Year HYSA Interest</div>
+              <div id="firstYearInterest" class="value">$0</div>
+              <div id="firstYearInterestNote" class="note">Interest earned in months 1–12.</div>
+            </div>
+
+            <div class="metric good">
+              <div class="label">Free-Month Value</div>
+              <div id="freeMonthValue" class="value">$0</div>
+              <div id="freeMonthNote" class="note">Promo value based on free months × monthly payment.</div>
+            </div>
+
+            <div class="metric good">
+              <div class="label">First-Year Benefit</div>
+              <div id="firstYearBenefit" class="value">$0</div>
+              <div class="note">HYSA interest plus free-month value.</div>
+            </div>
+
+            <div class="metric">
+              <div class="label">First-Year Rent Paid</div>
+              <div id="firstYearRentPaid" class="value">$0</div>
+              <div class="note">Actual payments after the free-month period.</div>
+            </div>
+
+            <div class="metric">
+              <div class="label">Ending HYSA Balance</div>
+              <div id="endingBalance" class="value">$0</div>
+              <div id="endingBalanceNote" class="note">Projected balance at selected horizon.</div>
+            </div>
+
+            <div class="metric warn">
+              <div class="label">Residual Spread</div>
+              <div id="residualSpread" class="value">$0</div>
+              <div id="residualSpreadNote" class="note">HYSA balance at chosen month minus residual/payoff.</div>
+            </div>
+          </div>
+
+          <div class="sales-box">
+            <h2>Customer Summary</h2>
+            <p id="salesSummary"></p>
+            <div class="actions">
+              <button id="copySummary" type="button">Copy Summary</button>
+              <span id="copied" class="copied">Copied</span>
+            </div>
+            <div class="small-note">
+              Use this as a quoting aid only. HYSA rates can change, taxes are not included, and customer eligibility/payment terms must be verified.
+            </div>
+          </div>
+
+          <h2>Year-by-Year Projection</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Start Balance</th>
+                  <th>Interest Earned</th>
+                  <th>Rent Paid</th>
+                  <th>Free-Month Value</th>
+                  <th>End Balance</th>
+                  <th>Total Interest</th>
+                  <th>Total Rent Paid</th>
+                </tr>
+              </thead>
+              <tbody id="projectionRows"></tbody>
+            </table>
+          </div>
+
+          <p class="disclaimer">
+            Payment timing uses conservative beginning-of-month rental withdrawals when “payments are withdrawn from HYSA” is selected.
+            When “keeps the full system cost invested” is selected, the HYSA balance compounds without rental withdrawals.
+            Auto residual assumes straight-line depreciation to zero at the contract term.
+          </p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const defaults = {
+      packagePrice: 21499,
+      monthlyPayment: 259.99,
+      apy: 4,
+      freeMonths: 3,
+      years: 8,
+      termMonths: 180,
+      residualMonth: 96,
+      residualValue: 10032.87,
+      paymentMode: "untouched",
+      compoundMonthly: true
+    };
+
+    const ids = {
+      packagePrice: document.getElementById("packagePrice"),
+      monthlyPayment: document.getElementById("monthlyPayment"),
+      apy: document.getElementById("apy"),
+      freeMonths: document.getElementById("freeMonths"),
+      years: document.getElementById("years"),
+      termMonths: document.getElementById("termMonths"),
+      residualMonthSlider: document.getElementById("residualMonthSlider"),
+      residualMonth: document.getElementById("residualMonth"),
+      residualValue: document.getElementById("residualValue"),
+      residualHelp: document.getElementById("residualHelp"),
+      paymentMode: document.getElementById("paymentMode"),
+      compoundMonthly: document.getElementById("compoundMonthly"),
+      firstYearInterest: document.getElementById("firstYearInterest"),
+      firstYearInterestNote: document.getElementById("firstYearInterestNote"),
+      freeMonthValue: document.getElementById("freeMonthValue"),
+      freeMonthNote: document.getElementById("freeMonthNote"),
+      firstYearBenefit: document.getElementById("firstYearBenefit"),
+      firstYearRentPaid: document.getElementById("firstYearRentPaid"),
+      endingBalance: document.getElementById("endingBalance"),
+      endingBalanceNote: document.getElementById("endingBalanceNote"),
+      residualSpread: document.getElementById("residualSpread"),
+      residualSpreadNote: document.getElementById("residualSpreadNote"),
+      salesSummary: document.getElementById("salesSummary"),
+      projectionRows: document.getElementById("projectionRows"),
+      copied: document.getElementById("copied")
+    };
+
+    function money(value) {
+      const safeValue = Number.isFinite(value) ? value : 0;
+      return safeValue.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function numberValue(input, fallback = 0) {
+      const value = Number(input.value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function monthlyRateFromApy(apyPercent, compoundMonthly) {
+      const apy = Math.max(0, apyPercent) / 100;
+      if (!compoundMonthly) {
+        return apy / 12;
+      }
+      return Math.pow(1 + apy, 1 / 12) - 1;
+    }
+
+    function straightLineResidual(packagePrice, residualMonth, termMonths) {
+      const safeTerm = Math.max(1, Math.round(termMonths));
+      const safeMonth = clamp(Math.round(residualMonth), 1, safeTerm);
+      const remainingMonths = Math.max(0, safeTerm - safeMonth);
+      return packagePrice * (remainingMonths / safeTerm);
+    }
+
+    function readSettings() {
+      const termMonths = clamp(Math.round(numberValue(ids.termMonths, defaults.termMonths)), 1, 180);
+      const residualMonth = clamp(Math.round(numberValue(ids.residualMonth, defaults.residualMonth)), 1, termMonths);
+      const years = clamp(numberValue(ids.years, defaults.years), 1, 15);
+
+      ids.termMonths.value = termMonths;
+      ids.residualMonth.value = residualMonth;
+      ids.residualMonth.max = termMonths;
+      ids.residualMonthSlider.max = termMonths;
+      ids.residualMonthSlider.value = residualMonth;
+      ids.years.value = years;
+
+      return {
+        packagePrice: Math.max(0, numberValue(ids.packagePrice, defaults.packagePrice)),
+        monthlyPayment: Math.max(0, numberValue(ids.monthlyPayment, defaults.monthlyPayment)),
+        apy: Math.max(0, numberValue(ids.apy, defaults.apy)),
+        freeMonths: Math.max(0, Math.round(numberValue(ids.freeMonths, defaults.freeMonths))),
+        years,
+        termMonths,
+        residualMonth,
+        residualValue: Math.max(0, numberValue(ids.residualValue, defaults.residualValue)),
+        paymentMode: ids.paymentMode.value,
+        compoundMonthly: ids.compoundMonthly.checked
+      };
+    }
+
+    function calculateProjection(settings) {
+      const totalMonths = Math.max(1, Math.round(settings.years * 12));
+      const maxMonthsToCalculate = Math.max(totalMonths, settings.residualMonth);
+      const monthlyRate = monthlyRateFromApy(settings.apy, settings.compoundMonthly);
+      const rows = [];
+
+      let balance = settings.packagePrice;
+      let totalInterest = 0;
+      let totalRentPaid = 0;
+      let firstYearInterest = 0;
+      let firstYearRentPaid = 0;
+      let firstYearFreeValue = 0;
+      let residualMonthBalance = null;
+
+      for (let month = 1; month <= maxMonthsToCalculate; month += 1) {
+        const yearIndex = Math.ceil(month / 12);
+        const isFreeMonth = month <= settings.freeMonths;
+        const scheduledPayment = isFreeMonth ? 0 : settings.monthlyPayment;
+        const freeValue = isFreeMonth ? settings.monthlyPayment : 0;
+
+        if (settings.paymentMode === "draw" && scheduledPayment > 0) {
+          balance = Math.max(0, balance - scheduledPayment);
+        }
+
+        const interestThisMonth = balance * monthlyRate;
+        balance += interestThisMonth;
+        totalInterest += interestThisMonth;
+        totalRentPaid += scheduledPayment;
+
+        if (month <= 12) {
+          firstYearInterest += interestThisMonth;
+          firstYearRentPaid += scheduledPayment;
+          firstYearFreeValue += freeValue;
+        }
+
+        if (month === settings.residualMonth) {
+          residualMonthBalance = balance;
+        }
+
+        if (month <= totalMonths) {
+          let row = rows[yearIndex - 1];
+          if (!row) {
+            row = {
+              year: yearIndex,
+              startBalance: month === 1 ? settings.packagePrice : rows[yearIndex - 2].endBalance,
+              interest: 0,
+              rentPaid: 0,
+              freeValue: 0,
+              endBalance: balance,
+              totalInterest: 0,
+              totalRentPaid: 0
+            };
+            rows.push(row);
+          }
+
+          row.interest += interestThisMonth;
+          row.rentPaid += scheduledPayment;
+          row.freeValue += freeValue;
+          row.endBalance = balance;
+          row.totalInterest = totalInterest;
+          row.totalRentPaid = totalRentPaid;
+        }
+      }
+
+      return {
+        rows,
+        balanceAtHorizon: rows.length ? rows[rows.length - 1].endBalance : settings.packagePrice,
+        firstYearInterest,
+        firstYearRentPaid,
+        firstYearFreeValue,
+        firstYearBenefit: firstYearInterest + firstYearFreeValue,
+        residualMonthBalance,
+        residualSpread: (residualMonthBalance || 0) - settings.residualValue
+      };
+    }
+
+    function render() {
+      const settings = readSettings();
+      const result = calculateProjection(settings);
+      const modeText = settings.paymentMode === "draw"
+        ? "assuming rental payments are drawn from that HYSA after the free-month period"
+        : "assuming the full system cost stays invested and rent is paid from monthly cash flow";
+      const autoResidualValue = straightLineResidual(settings.packagePrice, settings.residualMonth, settings.termMonths);
+      const remainingMonths = Math.max(0, settings.termMonths - settings.residualMonth);
+      const freeMonthPhrase = settings.freeMonths === 1 ? "1 free month" : `${settings.freeMonths} free months`;
+
+      ids.firstYearInterest.textContent = money(result.firstYearInterest);
+      ids.firstYearInterestNote.textContent = `${settings.apy.toFixed(2)}% APY, ${modeText}.`;
+      ids.freeMonthValue.textContent = money(result.firstYearFreeValue);
+      ids.freeMonthNote.textContent = `${settings.freeMonths} free month(s) × ${money(settings.monthlyPayment)}.`;
+      ids.firstYearBenefit.textContent = money(result.firstYearBenefit);
+      ids.firstYearRentPaid.textContent = money(result.firstYearRentPaid);
+      ids.endingBalance.textContent = money(result.balanceAtHorizon);
+      ids.endingBalanceNote.textContent = `Projected after ${settings.years} year(s).`;
+      ids.residualSpread.textContent = money(result.residualSpread);
+      ids.residualSpreadNote.textContent = `${money(result.residualMonthBalance)} HYSA balance at month ${settings.residualMonth} minus ${money(settings.residualValue)} residual/payoff.`;
+      ids.residualHelp.textContent = `Auto residual at month ${settings.residualMonth}: ${money(settings.packagePrice)} × ${remainingMonths} remaining months ÷ ${settings.termMonths} contract months = ${money(autoResidualValue)}.`;
+
+      ids.salesSummary.textContent =
+        `Instead of paying ${money(settings.packagePrice)} out of pocket today, the customer can keep that money in a ${settings.apy.toFixed(2)}% APY HYSA. ` +
+        `With a ${money(settings.monthlyPayment)} rental payment and ${freeMonthPhrase}, the first-year HYSA interest is ${money(result.firstYearInterest)}. ` +
+        `The free-month value is ${money(result.firstYearFreeValue)}, making the first-year interest-plus-promo benefit ${money(result.firstYearBenefit)}. ` +
+        `At month ${settings.residualMonth}, the projected HYSA balance is ${money(result.residualMonthBalance)}, compared with the ${money(settings.residualValue)} straight-line residual/payoff.`;
+
+      ids.projectionRows.innerHTML = result.rows.map((row) => `
+        <tr>
+          <td>Year ${row.year}</td>
+          <td>${money(row.startBalance)}</td>
+          <td>${money(row.interest)}</td>
+          <td>${money(row.rentPaid)}</td>
+          <td>${money(row.freeValue)}</td>
+          <td>${money(row.endBalance)}</td>
+          <td>${money(row.totalInterest)}</td>
+          <td>${money(row.totalRentPaid)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function resetDefaults() {
+      ids.packagePrice.value = defaults.packagePrice;
+      ids.monthlyPayment.value = defaults.monthlyPayment;
+      ids.apy.value = defaults.apy;
+      ids.freeMonths.value = defaults.freeMonths;
+      ids.years.value = defaults.years;
+      ids.termMonths.value = defaults.termMonths;
+      ids.residualMonth.value = defaults.residualMonth;
+      ids.residualMonthSlider.value = defaults.residualMonth;
+      ids.residualValue.value = defaults.residualValue;
+      ids.paymentMode.value = defaults.paymentMode;
+      ids.compoundMonthly.checked = defaults.compoundMonthly;
+      render();
+    }
+
+    function autoResidual() {
+      const settings = readSettings();
+      const residual = straightLineResidual(settings.packagePrice, settings.residualMonth, settings.termMonths);
+      ids.residualValue.value = residual.toFixed(2);
+      render();
+    }
+
+    async function copySummary() {
+      const text = ids.salesSummary.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        ids.copied.style.display = "inline";
+        setTimeout(() => {
+          ids.copied.style.display = "none";
+        }, 1600);
+      } catch (error) {
+        alert("Copy failed. You can manually highlight and copy the customer summary.");
+      }
+    }
+
+    ids.residualMonthSlider.addEventListener("input", () => {
+      ids.residualMonth.value = ids.residualMonthSlider.value;
+      render();
+    });
+
+    ids.residualMonth.addEventListener("input", () => {
+      ids.residualMonthSlider.value = ids.residualMonth.value;
+      render();
+    });
+
+    ids.termMonths.addEventListener("input", () => {
+      const termMonths = clamp(Math.round(numberValue(ids.termMonths, defaults.termMonths)), 1, 180);
+      ids.termMonths.value = termMonths;
+      ids.residualMonth.max = termMonths;
+      ids.residualMonthSlider.max = termMonths;
+      if (numberValue(ids.residualMonth, defaults.residualMonth) > termMonths) {
+        ids.residualMonth.value = termMonths;
+        ids.residualMonthSlider.value = termMonths;
+      }
+      render();
+    });
+
+    [
+      ids.packagePrice,
+      ids.monthlyPayment,
+      ids.apy,
+      ids.freeMonths,
+      ids.years,
+      ids.residualValue,
+      ids.paymentMode,
+      ids.compoundMonthly
+    ].forEach((element) => {
+      element.addEventListener("input", render);
+      element.addEventListener("change", render);
+    });
+
+    document.getElementById("recalculate").addEventListener("click", render);
+    document.getElementById("resetDefaults").addEventListener("click", resetDefaults);
+    document.getElementById("autoResidual").addEventListener("click", autoResidual);
+    document.getElementById("printQuote").addEventListener("click", () => window.print());
+    document.getElementById("copySummary").addEventListener("click", copySummary);
+
+    render();
+  </script>
+</body>
+</html>
