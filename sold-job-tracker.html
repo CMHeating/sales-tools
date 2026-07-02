@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-title" content="Sold Tracker" />
+<title>HCA Sold Job Tracker | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#0a1628;--line:rgba(255,255,255,.10);--text:#fff;--muted:rgba(255,255,255,.58);--muted2:rgba(255,255,255,.34);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444}*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.16),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.30),transparent 60%);pointer-events:none}.screen{position:relative;z-index:1;min-height:100vh}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}.badge{display:inline-block;background:var(--orange);color:#fff;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}.title h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.05}.title p{font-size:13px;color:var(--muted);margin-top:6px;max-width:760px}.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.status-pill{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:1px solid rgba(245,158,11,.35);color:#fde68a;background:rgba(245,158,11,.12);white-space:nowrap}.back-link{color:var(--muted);font-size:12px;text-decoration:none}.controls{padding:18px 22px;display:grid;grid-template-columns:1fr;gap:12px;border-bottom:1px solid var(--line)}.control-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.select,.search{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:12px 14px;outline:none}.select{min-width:230px}.select option{color:#0a1628}.search{flex:1;min-width:220px}.filter-btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 12px;font-family:Outfit,sans-serif;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}.filter-btn.active{background:rgba(201,125,16,.18);border-color:rgba(201,125,16,.55);color:#ffd399}.summary{padding:18px 22px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:16px;padding:14px}.stat span{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted2)}.stat strong{display:block;font-size:26px;margin-top:4px}.stat.needs strong{color:#fecaca}.stat.active strong{color:#fde68a}.stat.done strong{color:#bbf7d0}.main{padding:2px 22px 40px}.section{margin-top:22px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.section h2{font-family:"Playfair Display",serif;font-size:22px}.section small{color:var(--muted2);font-size:12px}.list{display:grid;gap:12px}.empty-card{background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.14);border-radius:16px;padding:18px;color:var(--muted);font-size:14px}.footer-note{margin-top:24px;color:var(--muted2);font-size:12px;line-height:1.5}.selected-label{color:#ffd399;font-weight:800}@media(min-width:760px){.controls{grid-template-columns:1fr auto}.summary{grid-template-columns:repeat(4,minmax(0,1fr))}.title h1{font-size:38px}}@media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.control-row{width:100%}.select,.search{width:100%;min-width:0}.filter-btn{flex:1}.summary{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <div class="title">
+      <div class="badge">CM Heating</div>
+      <h1>HCA Sold Job Tracker</h1>
+      <p>After-sale visibility for HVAC Sales Quote jobs — financing, permits, HOA/TBD blockers, install date, duct cleaning, registration, completion, and follow-up later.</p>
+    </div>
+    <div class="top-actions">
+      <div class="status-pill">Waiting for sync</div>
+      <a class="back-link" href="index.html">← HCA Tools</a>
+    </div>
+  </header>
+
+  <section class="controls">
+    <div class="control-row">
+      <select id="hcaSelect" class="select" aria-label="Select HCA"></select>
+      <input id="searchBox" class="search" type="search" placeholder="Search customer, notes, job #, estimate #…" />
+    </div>
+    <div class="control-row">
+      <button class="filter-btn active" data-view="all" onclick="setView('all')">All</button>
+      <button class="filter-btn" data-view="needs" onclick="setView('needs')">Needs</button>
+      <button class="filter-btn" data-view="active" onclick="setView('active')">Active</button>
+      <button class="filter-btn" data-view="done" onclick="setView('done')">Done</button>
+    </div>
+  </section>
+
+  <section class="summary">
+    <div class="stat"><span>Selected HCA</span><strong id="selectedHcaLabel" class="selected-label">—</strong></div>
+    <div class="stat needs"><span>Needs Attention</span><strong>0</strong></div>
+    <div class="stat active"><span>Active</span><strong>0</strong></div>
+    <div class="stat done"><span>Done</span><strong>0</strong></div>
+  </section>
+
+  <main class="main">
+    <div class="section-head">
+      <small>Total visible: <strong>0</strong></small>
+      <small>Last sync: <strong>Waiting for first import</strong></small>
+    </div>
+
+    <section class="section">
+      <div class="section-head"><h2>Needs Attention / TBD</h2><small>Red: no install date, HOA, financing, permitting, or other blocker</small></div>
+      <div class="list"><div class="empty-card">No TBD / blocker jobs loaded yet for this HCA.</div></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Active / Scheduled</h2><small>Sold jobs moving through install operations</small></div>
+      <div class="list"><div class="empty-card">No active sold jobs loaded yet for this HCA.</div></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Done / Follow-Up Later</h2><small>Completed jobs stay visible for post-install follow-up</small></div>
+      <div class="list"><div class="empty-card">No completed sold jobs loaded yet for this HCA.</div></div>
+    </section>
+
+    <p class="footer-note">Data gate: Booked Job Alert enriches homeowner details, Sold Estimate Alert [Sales Quote] creates the sold record and assigns the HCA, COMBO LOG 2026 / TBD drives operational status, and Completed Form Alert moves jobs into Done / Follow-Up Later after validation.</p>
+  </main>
+</div>
+<script>
+var HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
+var ALIASES={'JAY MILO':'Javierre Milo','JOE RUBLE':'Joseph Ruble','JOSEPH RUBLE':'Joseph Ruble','ADAM WEBERG':'Adam Weberg'};
+var currentView='all';
+function normalizeHca(v){var clean=String(v||'').trim();return ALIASES[clean.toUpperCase()]||clean||'Adam Weberg'}
+function getParam(name){return new URLSearchParams(window.location.search).get(name)||''}
+function setView(view){currentView=view;document.querySelectorAll('.filter-btn').forEach(function(btn){btn.classList.toggle('active',btn.dataset.view===view)})}
+function init(){var selected=normalizeHca(getParam('hca'));if(HCAS.indexOf(selected)<0)selected='Adam Weberg';var select=document.getElementById('hcaSelect');select.innerHTML=HCAS.map(function(hca){return '<option value="'+hca+'">'+hca+'</option>'}).join('');select.value=selected;document.getElementById('selectedHcaLabel').textContent=selected;select.addEventListener('change',function(){document.getElementById('selectedHcaLabel').textContent=select.value;var url=new URL(window.location.href);url.searchParams.set('hca',select.value);history.replaceState({},'',url.toString())})}
+init();
+</script>
+</body>
+</html>
