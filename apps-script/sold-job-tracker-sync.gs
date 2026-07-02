@@ -19,6 +19,7 @@ const SOLD_TRACKER_CONFIG = {
   firebasePath: "cmh_sold_tracker",
   backfillStartIso: "2026-06-01T00:00:00",
   gmailAfterQuery: "after:2026/6/1",
+  serviceTitanFrom: "alerts@servicetitan.com",
   maxThreadsPerQuery: 500,
   bundleWindowDays: 30,
   timeZone: "America/Los_Angeles"
@@ -52,6 +53,46 @@ const HCA_ALIASES = {
   "TREVOR BOHM": "Trevor Bohm"
 };
 
+const SERVICE_TITAN_FIELD_LABELS = [
+  "Booked Job Alert",
+  "Sold Estimate Alert",
+  "Completed Form Alert",
+  "Sales Quote",
+  "Name",
+  "Estimate Name",
+  "Estimate#",
+  "Estimate #",
+  "Opportunity#",
+  "Opportunity #",
+  "Sold by",
+  "Sold By",
+  "Date",
+  "Amount",
+  "Customer",
+  "Job#",
+  "Job #",
+  "Appointment#",
+  "Appointment #",
+  "Business Unit",
+  "BU",
+  "Job Type",
+  "Project Type",
+  "Type",
+  "Summary",
+  "Description",
+  "Notes",
+  "Job Notes",
+  "HOA",
+  "Homeowners Association",
+  "Timeline",
+  "When",
+  "Age of Equipment",
+  "System Age",
+  "Equipment Age",
+  "Form",
+  "Form Name"
+];
+
 function syncSoldJobTracker() {
   const startedAt = new Date();
   const soldAlerts = readSoldEstimateAlerts_();
@@ -60,8 +101,8 @@ function syncSoldJobTracker() {
   const combo = readComboLog_();
   const payload = buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, combo, startedAt);
   pushSoldTrackerToFirebase_(payload);
-  Logger.log(JSON.stringify(payload.summary, null, 2));
-  return payload.summary;
+  Logger.log(JSON.stringify(payload.sourceSummary, null, 2));
+  return payload.sourceSummary;
 }
 
 function previewSoldJobTracker() {
@@ -94,9 +135,9 @@ function deleteSoldTrackerTriggers_() {
 }
 
 function readSoldEstimateAlerts_() {
-  const query = 'subject:"Sold Estimate Alert [Sales Quote]" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
-  return readServiceTitanMessages_(query).map(msg => {
-    const body = msg.body;
+  const query = 'from:' + SOLD_TRACKER_CONFIG.serviceTitanFrom + ' subject:"Sold Estimate Alert [Sales Quote]" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
+  const rows = readServiceTitanMessages_(query, "Sold Estimate Alert [Sales Quote]").map(msg => {
+    const body = getServiceTitanBody_(msg.body, "Sold Estimate Alert");
     const customer = getField_(body, ["Customer"]);
     const soldBy = getField_(body, ["Sold by", "Sold By"]);
     const rawDate = getField_(body, ["Date"]);
@@ -117,14 +158,15 @@ function readSoldEstimateAlerts_() {
       jobNumber: cleanText_(getField_(body, ["Job#", "Job #", "Job"])),
       personKey: personKeyFromFullName_(customer)
     };
-  }).filter(item => item.customer && item.hca);
+  }).filter(item => item.customer && item.hca && HCA_CANONICAL.includes(item.hca));
+  return dedupeBy_(rows, item => item.jobNumber || item.estimateNumber || item.messageId);
 }
 
 function readBookedJobAlerts_() {
-  const query = 'subject:"Booked Job Alert [Sales Quote]" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
-  return readServiceTitanMessages_(query).map(msg => {
-    const body = msg.body;
-    const customer = cleanText_(getField_(body, ["Customer", "Name"]));
+  const query = 'from:' + SOLD_TRACKER_CONFIG.serviceTitanFrom + ' subject:"Booked Job Alert [Sales Quote]" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
+  const rows = readServiceTitanMessages_(query, "Booked Job Alert [Sales Quote]").map(msg => {
+    const body = getServiceTitanBody_(msg.body, "Booked Job Alert");
+    const customer = cleanText_(getField_(body, ["Customer", "Name"]) || inferBookedCustomer_(body));
     return {
       source: "Booked Job Alert [Sales Quote]",
       messageId: msg.messageId,
@@ -132,7 +174,7 @@ function readBookedJobAlerts_() {
       subject: msg.subject,
       customer,
       personKey: personKeyFromFullName_(customer),
-      jobNumber: cleanText_(getField_(body, ["Job#", "Job #", "Job"])),
+      jobNumber: cleanText_(getField_(body, ["Job#", "Job #", "Job"]) || inferHashNumber_(body)),
       appointmentNumber: cleanText_(getField_(body, ["Appointment#", "Appointment #", "Appointment"])),
       businessUnit: cleanText_(getField_(body, ["Business Unit", "BU"])),
       projectType: cleanText_(getField_(body, ["Job Type", "Project Type", "Type"])),
@@ -142,13 +184,14 @@ function readBookedJobAlerts_() {
       systemAge: cleanText_(getField_(body, ["Age of Equipment", "System Age", "Equipment Age"]))
     };
   }).filter(item => item.customer || item.jobNumber || item.appointmentNumber);
+  return dedupeBy_(rows, item => item.jobNumber || item.appointmentNumber || item.messageId);
 }
 
 function readCompletedFormAlerts_() {
-  const query = 'subject:"Completed Form Alert" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
-  return readServiceTitanMessages_(query).map(msg => {
-    const body = msg.body;
-    const customer = cleanText_(getField_(body, ["Customer", "Name"]));
+  const query = 'from:' + SOLD_TRACKER_CONFIG.serviceTitanFrom + ' subject:"Completed Form Alert" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
+  const rows = readServiceTitanMessages_(query, "Completed Form Alert").map(msg => {
+    const body = getServiceTitanBody_(msg.body, "Completed Form Alert");
+    const customer = cleanText_(getField_(body, ["Customer", "Name"]) || inferCompletedCustomer_(body));
     return {
       source: "Completed Form Alert",
       messageId: msg.messageId,
@@ -156,29 +199,40 @@ function readCompletedFormAlerts_() {
       subject: msg.subject,
       customer,
       personKey: personKeyFromFullName_(customer),
-      jobNumber: cleanText_(getField_(body, ["Job#", "Job #", "Job"])),
+      jobNumber: cleanText_(getField_(body, ["Job#", "Job #", "Job"]) || inferHashNumber_(body)),
       formName: cleanText_(getField_(body, ["Form", "Form Name", "Name"])),
       completedDate: isoDate_(msg.emailDate)
     };
   }).filter(item => item.customer || item.jobNumber);
+  return dedupeBy_(rows, item => item.jobNumber || item.messageId);
 }
 
-function readServiceTitanMessages_(query) {
+function readServiceTitanMessages_(query, subjectNeedle) {
   const threads = GmailApp.search(query, 0, SOLD_TRACKER_CONFIG.maxThreadsPerQuery);
   const messages = [];
   threads.forEach(thread => {
     thread.getMessages().forEach(message => {
       const subject = message.getSubject() || "";
-      if (!subject) return;
+      const from = message.getFrom() || "";
+      if (subjectNeedle && subject.indexOf(subjectNeedle) === -1) return;
+      if (from.toLowerCase().indexOf(SOLD_TRACKER_CONFIG.serviceTitanFrom.toLowerCase()) === -1) return;
       messages.push({
         messageId: message.getId(),
         subject,
+        from,
         emailDate: message.getDate(),
         body: message.getPlainBody() || ""
       });
     });
   });
   return messages;
+}
+
+function getServiceTitanBody_(body, alertMarker) {
+  const text = String(body || "").replace(/\u00a0/g, " ");
+  const markerIndex = alertMarker ? text.toLowerCase().indexOf(alertMarker.toLowerCase()) : -1;
+  if (markerIndex >= 0) return text.slice(markerIndex);
+  return text;
 }
 
 function readComboLog_() {
@@ -400,16 +454,52 @@ function pushSoldTrackerToFirebase_(payload) {
 }
 
 function getField_(body, labels) {
-  const lines = String(body || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const text = String(body || "").replace(/\u00a0/g, " ");
+  const labelsToFind = labels.map(escapeRegex_).join("|");
+  const stopLabels = SERVICE_TITAN_FIELD_LABELS.map(escapeRegex_).join("|");
+  const compact = text.replace(/\s+/g, " ").trim();
+  const compactRegex = new RegExp("(?:^|\\s)(?:" + labelsToFind + ")\\s*:?\\s*(.*?)(?=\\s(?:" + stopLabels + ")\\s*:|$)", "i");
+  const compactMatch = compact.match(compactRegex);
+  if (compactMatch && cleanText_(compactMatch[1])) return cleanText_(compactMatch[1]);
+
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   for (const label of labels) {
-    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp("^" + escaped + "\\s*:?\\s*(.+)$", "i");
+    const re = new RegExp("^" + escapeRegex_(label) + "\\s*:?\\s*(.+)$", "i");
     for (const line of lines) {
       const match = line.match(re);
-      if (match) return match[1].trim();
+      if (match) return trimAtNextLabel_(match[1]);
     }
   }
   return "";
+}
+
+function trimAtNextLabel_(value) {
+  const stopLabels = SERVICE_TITAN_FIELD_LABELS.map(escapeRegex_).join("|");
+  const re = new RegExp("^(.*?)(?=\\s(?:" + stopLabels + ")\\s*:|$)", "i");
+  const match = cleanText_(value).match(re);
+  return match ? cleanText_(match[1]) : cleanText_(value);
+}
+
+function inferBookedCustomer_(body) {
+  const lines = String(body || "").split(/\r?\n/).map(line => cleanText_(line)).filter(Boolean);
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (/^\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}\s*(AM|PM)$/i.test(lines[i])) {
+      const candidate = lines[i + 1];
+      if (/^[A-Za-z][A-Za-z .'-]+$/.test(candidate) && !/^BUSINESS UNIT/i.test(candidate)) return candidate;
+    }
+  }
+  return "";
+}
+
+function inferCompletedCustomer_(body) {
+  const compact = String(body || "").replace(/\s+/g, " ").trim();
+  const match = compact.match(/\b\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}\s*(?:AM|PM)\s+(.+?)\s+\d{2,6}\s+/i);
+  return match ? cleanText_(match[1]) : "";
+}
+
+function inferHashNumber_(body) {
+  const match = String(body || "").match(/#\s*(\d{6,})/);
+  return match ? match[1] : "";
 }
 
 function cleanText_(value) {
@@ -473,6 +563,17 @@ function groupBy_(items, key) {
   }, {});
 }
 
+function dedupeBy_(items, keyFn) {
+  const seen = {};
+  return items.filter(item => {
+    const key = keyFn(item);
+    if (!key) return true;
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
 function compactObject_(obj) {
   const out = {};
   Object.keys(obj || {}).forEach(key => {
@@ -493,4 +594,8 @@ function isoDate_(date) {
 
 function isoDateTime_(date) {
   return Utilities.formatDate(new Date(date), SOLD_TRACKER_CONFIG.timeZone, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+
+function escapeRegex_(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
