@@ -8,7 +8,8 @@
  *
  * Required Script Properties:
  * - FIREBASE_DATABASE_URL = https://install-availability-tracker-default-rtdb.firebaseio.com
- * - FIREBASE_AUTH_TOKEN   = optional; only needed if Firebase rules require REST auth
+ * - FIREBASE_WEB_API_KEY  = Firebase web API key for anonymous auth
+ * - FIREBASE_AUTH_TOKEN   = optional; only needed if Firebase rules require a specific token
  *
  * Main function:
  * - syncSoldJobTracker()
@@ -438,21 +439,53 @@ function determineStage_(primaryCombo, tbdMatches, completed) {
 function pushSoldTrackerToFirebase_(payload) {
   const props = PropertiesService.getScriptProperties();
   const baseUrl = (props.getProperty("FIREBASE_DATABASE_URL") || "").replace(/\/$/, "");
-  const token = props.getProperty("FIREBASE_AUTH_TOKEN") || "";
   if (!baseUrl) throw new Error("Missing Script Property FIREBASE_DATABASE_URL");
+
+  const explicitToken = props.getProperty("FIREBASE_AUTH_TOKEN") || "";
+  const authToken = explicitToken || getFirebaseAnonymousIdToken_();
+
   let url = baseUrl + "/" + SOLD_TRACKER_CONFIG.firebasePath + ".json";
-  if (token) url += "?auth=" + encodeURIComponent(token);
+  url += "?auth=" + encodeURIComponent(authToken);
+
   const response = UrlFetchApp.fetch(url, {
     method: "put",
     contentType: "application/json",
     muteHttpExceptions: true,
     payload: JSON.stringify(payload)
   });
+
   const code = response.getResponseCode();
   if (code < 200 || code >= 300) {
     throw new Error("Firebase write failed: " + code + " " + response.getContentText());
   }
+
   return response.getContentText();
+}
+
+function getFirebaseAnonymousIdToken_() {
+  const props = PropertiesService.getScriptProperties();
+  const apiKey = props.getProperty("FIREBASE_WEB_API_KEY");
+  if (!apiKey) throw new Error("Missing Script Property FIREBASE_WEB_API_KEY");
+
+  const response = UrlFetchApp.fetch(
+    "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=" + encodeURIComponent(apiKey),
+    {
+      method: "post",
+      contentType: "application/json",
+      muteHttpExceptions: true,
+      payload: JSON.stringify({ returnSecureToken: true })
+    }
+  );
+
+  const code = response.getResponseCode();
+  const body = response.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error("Firebase anonymous auth failed: " + code + " " + body);
+  }
+
+  const parsed = JSON.parse(body);
+  if (!parsed.idToken) throw new Error("Firebase anonymous auth did not return idToken");
+  return parsed.idToken;
 }
 
 function getField_(body, labels) {
