@@ -74,12 +74,14 @@ const CUSTOMER_NAME_ALIASES = {
 };
 
 const SOLD_TRACKER_EXCLUDED_JOB_NUMBERS = {
+  "403071370": "Hobo Joe - test environment",
   "397908109": "Wayne Ho - custom ductwork corrections",
   "402164750": "Ralph Alexander - cancelled install",
   "399411772": "Bill Havelka - standalone Air Ranger"
 };
 
 const SOLD_TRACKER_EXCLUDED_ESTIMATE_NUMBERS = {
+  "403381591": "Hobo Joe - test environment",
   "398353736": "Wayne Ho - custom ductwork corrections",
   "402319098": "Ralph Alexander - cancelled install",
   "399777519": "Bill Havelka - standalone Air Ranger"
@@ -276,6 +278,9 @@ function shouldExcludeSoldTrackerEstimate_(item) {
   if (/\bAIR RANGER\b/.test(text) && /\b(STAND ALONE|STANDALONE|MAINTENANCE CLUB)\b/.test(text)) return true;
   if (/\bDRYER VENT\b/.test(text) && /\b(PAN OFF|CLEAN|CLEANING)\b/.test(text)) return true;
   if (/\bCUSTOM DUCTWORK CORRECTIONS\b/.test(text)) return true;
+
+  if (/\bHOBO JOE\b/.test(text)) return true;
+  if (/\bREANTAL 2\b/.test(text)) return true;
 
   return false;
 }
