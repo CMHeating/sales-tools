@@ -186,7 +186,33 @@ function shouldExcludeSoldTrackerEstimate_(item) {
     item.customer
   ].filter(Boolean).join(" "));
 
-  const hasPrimaryHvacScope = /\b(FURNACE|HEAT PUMP|HP|AC|AIR CONDITIONER|AIR CONDITIONING|DUCTLESS|MINI SPLIT|MINISPLIT|MITSUBISHI|MIDEA|DAIKIN|GOODMAN|AMERICAN STANDARD|AMERISTAR|QUEST|AIR HANDLER|COIL|FULL SYSTEM|HPAH|DUAL FUEL)\b/.test(text);
+  const primaryHvacTerms = [
+    "FURNACE",
+    "HEAT PUMP",
+    "HP",
+    "AC",
+    "AIR CONDITIONER",
+    "AIR CONDITIONING",
+    "DUCTLESS",
+    "MINI SPLIT",
+    "MINISPLIT",
+    "MITSUBISHI",
+    "MIDEA",
+    "DAIKIN",
+    "GOODMAN",
+    "AMERICAN STANDARD",
+    "AMERISTAR",
+    "QUEST",
+    "AIR HANDLER",
+    "COIL",
+    "FULL SYSTEM",
+    "HPAH",
+    "DUAL FUEL"
+  ];
+
+  const hasPrimaryHvacScope = primaryHvacTerms.some(term => {
+    return new RegExp("\\b" + term.replace(/ /g, "\\s+") + "\\b").test(text);
+  });
 
   if (hasPrimaryHvacScope) return false;
 
