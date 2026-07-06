@@ -68,6 +68,23 @@ const HCA_ALIASES = {
 };
 
 
+
+const CUSTOMER_NAME_ALIASES = {
+  "JAE KIM": "TOPSTONE HOLDINGS"
+};
+
+const SOLD_TRACKER_EXCLUDED_JOB_NUMBERS = {
+  "397908109": "Wayne Ho - custom ductwork corrections",
+  "402164750": "Ralph Alexander - cancelled install",
+  "399411772": "Bill Havelka - standalone Air Ranger"
+};
+
+const SOLD_TRACKER_EXCLUDED_ESTIMATE_NUMBERS = {
+  "398353736": "Wayne Ho - custom ductwork corrections",
+  "402319098": "Ralph Alexander - cancelled install",
+  "399777519": "Bill Havelka - standalone Air Ranger"
+};
+
 const SERVICE_TITAN_FIELD_LABELS = [
   "Booked Job Alert",
   "Sold Estimate Alert",
@@ -156,7 +173,7 @@ function readSoldEstimateAlerts_() {
     const customerRaw = getField_(body, ["Customer"]);
     const soldByRaw = getField_(body, ["Sold by", "Sold By"]);
     const rawDate = getField_(body, ["Date"]);
-    const customer = cleanServiceTitanDisplay_(customerRaw);
+    const customer = canonicalCustomerName_(cleanServiceTitanDisplay_(customerRaw));
     const hca = normalizeHca_(cleanServiceTitanDisplay_(soldByRaw));
     return {
       source: "Sold Estimate Alert [Sales Quote]",
@@ -181,6 +198,12 @@ function readSoldEstimateAlerts_() {
 }
 
 function shouldExcludeSoldTrackerEstimate_(item) {
+  const jobNumber = String(item.jobNumber || "").trim();
+  const estimateNumber = String(item.estimateNumber || "").trim();
+
+  if (jobNumber && SOLD_TRACKER_EXCLUDED_JOB_NUMBERS[jobNumber]) return true;
+  if (estimateNumber && SOLD_TRACKER_EXCLUDED_ESTIMATE_NUMBERS[estimateNumber]) return true;
+
   const text = normalizeDuplicateText_([
     item.estimateName,
     item.customer
@@ -218,6 +241,7 @@ function shouldExcludeSoldTrackerEstimate_(item) {
 
   if (/\bAIR RANGER\b/.test(text) && /\b(STAND ALONE|STANDALONE|MAINTENANCE CLUB)\b/.test(text)) return true;
   if (/\bDRYER VENT\b/.test(text) && /\b(PAN OFF|CLEAN|CLEANING)\b/.test(text)) return true;
+  if (/\bCUSTOM DUCTWORK CORRECTIONS\b/.test(text)) return true;
 
   return false;
 }
@@ -738,7 +762,7 @@ function nameWords_(value) {
 
 function isOrganizationName_(name) {
   const text = cleanServiceTitanDisplay_(name).toUpperCase();
-  return /\b(CHURCH|LLC|INC|CORP|COMPANY|ASSOCIATION|HOA|BAPTIST|CENTER|SCHOOL|RESTAURANT|PROPERTY|PROPERTIES|APARTMENTS|CONDOMINIUM|CONDO|MINISTRIES)\b/.test(text);
+  return /\b(CHURCH|LLC|INC|CORP|COMPANY|ASSOCIATION|HOA|BAPTIST|CENTER|SCHOOL|RESTAURANT|PROPERTY|PROPERTIES|APARTMENTS|CONDOMINIUM|CONDO|MINISTRIES|HOLDINGS)\b/.test(text);
 }
 
 function organizationKey_(name) {
@@ -764,10 +788,17 @@ function primaryCustomerNameSegment_(name) {
   return cleaned;
 }
 
-function personKeyFromFullName_(name) {
-  if (isOrganizationName_(name)) return organizationKey_(name);
+function canonicalCustomerName_(name) {
+  const cleaned = cleanServiceTitanDisplay_(name);
+  const normalized = organizationKey_(cleaned);
+  return CUSTOMER_NAME_ALIASES[normalized] || cleaned;
+}
 
-  const primaryName = primaryCustomerNameSegment_(name);
+function personKeyFromFullName_(name) {
+  const canonicalName = canonicalCustomerName_(name);
+  if (isOrganizationName_(canonicalName)) return organizationKey_(canonicalName);
+
+  const primaryName = primaryCustomerNameSegment_(canonicalName);
   const words = nameWords_(primaryName);
 
   if (!words.length) return "";
