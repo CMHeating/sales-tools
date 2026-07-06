@@ -692,7 +692,7 @@ function parseSheetDate_(value) {
   if (!value) return null;
 
   const raw = cleanText_(value);
-  const slash = raw.match(/^(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{2,4}))?$/);
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
   if (slash) {
     const month = Number(slash[1]);
     const day = Number(slash[2]);
@@ -748,9 +748,28 @@ function organizationKey_(name) {
     .trim();
 }
 
+function primaryCustomerNameSegment_(name) {
+  const cleaned = cleanServiceTitanDisplay_(name);
+  const parts = cleaned.split(/\s+AND\s+/i).map(part => part.trim()).filter(Boolean);
+
+  if (parts.length < 2) return cleaned;
+
+  const firstPartWords = nameWords_(parts[0]);
+
+  // Split only when the first side already looks like a complete person name.
+  // Example: "Jeffrey Van Cleave and Sueyoung Han" -> "Jeffrey Van Cleave"
+  // Do not split: "Brad and Stephanie Silldorff" -> keep full name.
+  if (firstPartWords.length >= 2) return parts[0];
+
+  return cleaned;
+}
+
 function personKeyFromFullName_(name) {
   if (isOrganizationName_(name)) return organizationKey_(name);
-  const words = nameWords_(name);
+
+  const primaryName = primaryCustomerNameSegment_(name);
+  const words = nameWords_(primaryName);
+
   if (!words.length) return "";
   if (words.length === 1) return words[0];
   return words[words.length - 1] + "|" + words[0];
