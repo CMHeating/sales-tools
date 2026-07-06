@@ -615,16 +615,29 @@ function parseServiceTitanDate_(value, fallbackDate) {
   return isoDateTime_(fallbackDate);
 }
 
+function nameWords_(value) {
+  return cleanServiceTitanDisplay_(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter(word => !["M", "F", "MR", "MRS", "MS", "JR", "SR", "II", "III", "IV"].includes(word));
+}
+
 function personKeyFromFullName_(name) {
-  const words = cleanServiceTitanDisplay_(name).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  const words = nameWords_(name);
   if (!words.length) return "";
   if (words.length === 1) return words[0];
   return words[words.length - 1] + "|" + words[0];
 }
 
+
+
 function personKeyFromParts_(first, last) {
-  const f = cleanText_(first).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean)[0] || "";
-  const l = cleanText_(last).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean)[0] || "";
+  const firstWords = nameWords_(first);
+  const lastWords = nameWords_(last);
+  const f = firstWords[0] || "";
+  const l = lastWords.length ? lastWords[lastWords.length - 1] : "";
   return l && f ? l + "|" + f : (l || f);
 }
 
