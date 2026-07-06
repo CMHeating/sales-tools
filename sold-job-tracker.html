@@ -32,7 +32,7 @@ function getParam(name){return new URLSearchParams(window.location.search).get(n
 function group(stage){stage=String(stage||'').toUpperCase();if(stage.indexOf('NEEDS')>=0||stage.indexOf('TBD')>=0)return'needs';if(stage.indexOf('DONE')>=0||stage.indexOf('COMPLETE')>=0)return'done';return'active'}
 function label(stage){stage=String(stage||'SOLD_PENDING_MATCH').toUpperCase();if(stage==='SOLD_NEEDS_ATTENTION')return'Needs attention';if(stage==='SOLD_DONE_FOLLOW_UP_LATER')return'Done / follow-up later';if(stage==='SOLD_ACTIVE')return'Active / scheduled';if(stage==='SOLD_PENDING_MATCH')return'Pending Combo Log match';return stage.replaceAll('_',' ')}
 function money(v){var n=Number(String(v||'').replace(/[^0-9.-]/g,''));return Number.isFinite(n)&&n!==0?n.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}):''}
-function dateLabel(v){if(!v)return'';var d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+function dateLabel(v){if(!v)return'';var m=String(v).match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);var d=m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])):new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
 function dateTimeLabel(v){if(!v)return'';var d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}
 function chip(k,v,c){return v?'<div class="detail-chip '+(c||'')+'"><span>'+esc(k)+'</span>'+esc(v)+'</div>':''}
 function hcaOk(job){return selectedHca==='All HCAs'||normalizeHca(job.hca||job.soldBy||job.salesRep)===selectedHca}
