@@ -260,13 +260,18 @@ function readComboLog_() {
 }
 
 function sheetToObjects_(sheet) {
-  const values = sheet.getDataRange().getValues();
+  const range = sheet.getDataRange();
+  const values = range.getValues();
+  const displayValues = range.getDisplayValues();
   if (values.length < 2) return [];
-  const headers = values[0].map(v => normalizeHeader_(v));
-  return values.slice(1).map(row => {
+  const headers = displayValues[0].map(v => normalizeHeader_(v));
+  return values.slice(1).map((row, rowOffset) => {
     const obj = {};
     headers.forEach((header, index) => {
-      if (header) obj[header] = row[index];
+      if (!header) return;
+      const value = row[index];
+      const displayValue = displayValues[rowOffset + 1][index];
+      obj[header] = value instanceof Date ? displayValue : value;
     });
     return obj;
   });
@@ -573,9 +578,30 @@ function parseMoney_(value) {
 
 function parseSheetDate_(value) {
   if (!value) return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return isoDate_(value);
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : isoDate_(d);
+
+  const raw = cleanText_(value);
+  const slash = raw.match(/^(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{2,4}))?$/);
+  if (slash) {
+    const month = Number(slash[1]);
+    const day = Number(slash[2]);
+    let year = slash[3] ? Number(slash[3]) : new Date().getFullYear();
+    if (year < 100) year += 2000;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return String(year).padStart(4, "0") + "-" +
+        String(month).padStart(2, "0") + "-" +
+        String(day).padStart(2, "0");
+    }
+  }
+
+  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  if (iso) return raw;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Utilities.formatDate(value, SOLD_TRACKER_CONFIG.timeZone, "yyyy-MM-dd");
+  }
+
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : Utilities.formatDate(d, SOLD_TRACKER_CONFIG.timeZone, "yyyy-MM-dd");
 }
 
 function parseServiceTitanDate_(value, fallbackDate) {
