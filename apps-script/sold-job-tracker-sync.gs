@@ -183,11 +183,18 @@ function readSoldEstimateAlerts_() {
   const query = 'from:' + SOLD_TRACKER_CONFIG.serviceTitanFrom + ' subject:"Sold Estimate Alert [Sales Quote]" ' + SOLD_TRACKER_CONFIG.gmailAfterQuery;
   const rows = readServiceTitanMessages_(query, "Sold Estimate Alert [Sales Quote]").map(msg => {
     const body = getServiceTitanBody_(msg.body, "Sold Estimate Alert");
+
     const customerRaw = getField_(body, ["Customer"]);
     const soldByRaw = getField_(body, ["Sold by", "Sold By"]);
     const rawDate = getField_(body, ["Date"]);
-    const customer = canonicalCustomerName_(cleanServiceTitanDisplay_(customerRaw));
+
+    const estimateNumber = extractServiceTitanNumber_(getField_(body, ["Estimate#", "Estimate #"]));
+    const opportunityNumber = extractServiceTitanNumber_(getField_(body, ["Opportunity#", "Opportunity #"]));
+    const jobNumber = extractServiceTitanNumber_(getField_(body, ["Job#", "Job #"]));
+
+    const customer = resolveSoldTrackerCustomerName_(customerRaw, jobNumber, estimateNumber);
     const hca = normalizeHca_(cleanServiceTitanDisplay_(soldByRaw));
+
     return {
       source: "Sold Estimate Alert [Sales Quote]",
       messageId: msg.messageId,
@@ -200,13 +207,14 @@ function readSoldEstimateAlerts_() {
       soldDateRaw: cleanText_(rawDate),
       amount: parseMoney_(getField_(body, ["Amount"])),
       estimateName: cleanServiceTitanDisplay_(getField_(body, ["Name", "Estimate Name"])),
-      estimateNumber: extractServiceTitanNumber_(getField_(body, ["Estimate#", "Estimate #"])),
-      opportunityNumber: extractServiceTitanNumber_(getField_(body, ["Opportunity#", "Opportunity #"])),
-      jobNumber: extractServiceTitanNumber_(getField_(body, ["Job#", "Job #"])),
+      estimateNumber,
+      opportunityNumber,
+      jobNumber,
       personKey: personKeyFromFullName_(customer)
     };
   }).filter(item => item.customer && item.hca && HCA_CANONICAL.includes(item.hca))
     .filter(item => !shouldExcludeSoldTrackerEstimate_(item));
+
   return collapseDuplicateSoldAlerts_(dedupeBy_(rows, item => item.jobNumber || item.estimateNumber || item.messageId));
 }
 
@@ -503,11 +511,12 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
   const jobs = soldAlerts.map(sold => {
     const mainMatches = pickComboMatches_(sold, mainByKey[sold.personKey] || [], false);
     const tbdMatches = pickComboMatches_(sold, tbdByKey[sold.personKey] || [], true);
+    const tbdDependencyMatches = pickTbdDependencyMatches_(sold, tbdByKey[sold.personKey] || []);
     const primaryCombo = tbdMatches[0] || mainMatches.find(row => row.department.toUpperCase() === "HVAC") || mainMatches[0] || null;
     const booked = (bookedByKey[sold.personKey] || [])[0] || null;
     const completed = (sold.jobNumber && completedByJob[sold.jobNumber] && completedByJob[sold.jobNumber][0]) || (completedByKey[sold.personKey] || [])[0] || null;
     const relatedWork = buildRelatedWork_(sold, combo.mainRows.concat(combo.tbdRows), primaryCombo);
-    const stage = determineStage_(primaryCombo, tbdMatches, completed);
+    const stage = determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatches);
 
     return {
       id: sold.jobNumber || sold.estimateNumber || sold.messageId,
@@ -571,6 +580,25 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
   };
 }
 
+function pickTbdDependencyMatches_(sold, rows) {
+  return rows.filter(row => {
+    if (row.personKey !== sold.personKey) return false;
+
+    const rowHca = normalizeHca_(row.salesRep);
+    const hcaMatch = !rowHca || rowHca === sold.hca;
+
+    const department = String(row.department || "").toUpperCase();
+
+    // HVAC/blank TBD rows are already handled as primary TBD matches.
+    // This function is only for dependencies like ELEC panel swaps.
+    const isDependencyDepartment = department && department !== "HVAC";
+
+    return hcaMatch && isDependencyDepartment;
+  }).sort((a, b) => {
+    return String(a.department || "").localeCompare(String(b.department || ""));
+  });
+}
+
 function pickComboMatches_(sold, rows, isTbd) {
   const soldDate = sold.soldDate ? new Date(sold.soldDate) : null;
   return rows.filter(row => {
@@ -588,30 +616,43 @@ function pickComboMatches_(sold, rows, isTbd) {
 
 function buildRelatedWork_(sold, rows, primaryCombo) {
   const soldDate = sold.soldDate ? new Date(sold.soldDate) : null;
+
   return rows.filter(row => {
     if (row.personKey !== sold.personKey) return false;
     if (primaryCombo && row === primaryCombo) return false;
+
+    // Include TBD dependency rows even without an install date.
+    // Example: HVAC sold by HCA, electrical panel swap on TBD holding the install.
+    if (row.isTbd) return true;
+
     if (!soldDate || !row.installDate) return false;
     return daysBetween_(soldDate, new Date(row.installDate)) <= SOLD_TRACKER_CONFIG.relatedWorkWindowDays;
   }).map(row => compactObject_({
     department: row.department,
     installDate: row.installDate,
+    sourceSheet: row.sourceSheet,
     salesRep: row.salesRep,
     jurisdiction: row.jurisdiction,
     mechanical: row.mechanical,
     electrical: row.electrical,
+    permitNotes: row.permitNotes,
+    jobCompleted: row.jobCompleted,
     notes: row.jobNotes || row.paymentNotes || row.permitNotes
   })).slice(0, 8);
 }
 
-function determineStage_(primaryCombo, tbdMatches, completed) {
-  if (tbdMatches && tbdMatches.length) return "SOLD_NEEDS_ATTENTION";
+function determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatches) {
+  if ((tbdMatches && tbdMatches.length) || (tbdDependencyMatches && tbdDependencyMatches.length)) {
+    return "SOLD_NEEDS_ATTENTION";
+  }
+
   if (primaryCombo) {
     const joined = [primaryCombo.jobCompleted, primaryCombo.registration, primaryCombo.permitNotes, primaryCombo.paymentMethod].join(" ").toUpperCase();
     if (completed && /DONE|COMPLETE|FINALED|PIF|FUNDS SECURED/.test(joined)) return "SOLD_DONE_FOLLOW_UP_LATER";
     if (/DONE|COMPLETE/.test(String(primaryCombo.jobCompleted || "").toUpperCase())) return "SOLD_DONE_FOLLOW_UP_LATER";
     if (primaryCombo.installDate) return "SOLD_ACTIVE";
   }
+
   if (completed) return "SOLD_DONE_FOLLOW_UP_LATER";
   return "SOLD_PENDING_MATCH";
 }
