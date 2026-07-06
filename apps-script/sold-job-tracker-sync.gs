@@ -175,8 +175,25 @@ function readSoldEstimateAlerts_() {
       jobNumber: extractServiceTitanNumber_(getField_(body, ["Job#", "Job #"])),
       personKey: personKeyFromFullName_(customer)
     };
-  }).filter(item => item.customer && item.hca && HCA_CANONICAL.includes(item.hca));
+  }).filter(item => item.customer && item.hca && HCA_CANONICAL.includes(item.hca))
+    .filter(item => !shouldExcludeSoldTrackerEstimate_(item));
   return collapseDuplicateSoldAlerts_(dedupeBy_(rows, item => item.jobNumber || item.estimateNumber || item.messageId));
+}
+
+function shouldExcludeSoldTrackerEstimate_(item) {
+  const text = normalizeDuplicateText_([
+    item.estimateName,
+    item.customer
+  ].filter(Boolean).join(" "));
+
+  const hasPrimaryHvacScope = /\b(FURNACE|HEAT PUMP|HP|AC|AIR CONDITIONER|AIR CONDITIONING|DUCTLESS|MINI SPLIT|MINISPLIT|MITSUBISHI|MIDEA|DAIKIN|GOODMAN|AMERICAN STANDARD|AMERISTAR|QUEST|AIR HANDLER|COIL|FULL SYSTEM|HPAH|DUAL FUEL)\b/.test(text);
+
+  if (hasPrimaryHvacScope) return false;
+
+  if (/\bAIR RANGER\b/.test(text) && /\b(STAND ALONE|STANDALONE|MAINTENANCE CLUB)\b/.test(text)) return true;
+  if (/\bDRYER VENT\b/.test(text) && /\b(PAN OFF|CLEAN|CLEANING)\b/.test(text)) return true;
+
+  return false;
 }
 
 function collapseDuplicateSoldAlerts_(rows) {
