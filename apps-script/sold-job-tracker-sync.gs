@@ -22,6 +22,8 @@ const SOLD_TRACKER_CONFIG = {
   gmailAfterQuery: "after:2026/6/1",
   serviceTitanFrom: "alerts@servicetitan.com",
   maxThreadsPerQuery: 500,
+  comboMatchWindowDays: 120,
+  relatedWorkWindowDays: 60,
   bundleWindowDays: 30,
   timeZone: "America/Los_Angeles"
 };
@@ -51,8 +53,20 @@ const HCA_ALIASES = {
   "JOSEPH RUBLE": "Joseph Ruble",
   "KYLE MCALISTER": "Kyle McAlister",
   "SAMIR KHOURY": "Samir Khoury",
-  "TREVOR BOHM": "Trevor Bohm"
+  "TREVOR BOHM": "Trevor Bohm",
+  "ADAM": "Adam Weberg",
+  "AMBER": "Amber Maddalena",
+  "CHESTER": "Chester Granard",
+  "DAVIS": "Davis Diosdado",
+  "JAY": "Javierre Milo",
+  "JAVIERRE": "Javierre Milo",
+  "JOE": "Joe Chounramany",
+  "JOSEPH": "Joseph Ruble",
+  "KYLE": "Kyle McAlister",
+  "SAMIR": "Samir Khoury",
+  "TREVOR": "Trevor Bohm"
 };
+
 
 const SERVICE_TITAN_FIELD_LABELS = [
   "Booked Job Alert",
@@ -162,7 +176,61 @@ function readSoldEstimateAlerts_() {
       personKey: personKeyFromFullName_(customer)
     };
   }).filter(item => item.customer && item.hca && HCA_CANONICAL.includes(item.hca));
-  return dedupeBy_(rows, item => item.jobNumber || item.estimateNumber || item.messageId);
+  return collapseDuplicateSoldAlerts_(dedupeBy_(rows, item => item.jobNumber || item.estimateNumber || item.messageId));
+}
+
+function collapseDuplicateSoldAlerts_(rows) {
+  const clusters = [];
+  const sorted = rows.slice().sort((a, b) => {
+    return new Date(a.soldDate || a.emailDate).getTime() - new Date(b.soldDate || b.emailDate).getTime();
+  });
+
+  sorted.forEach(row => {
+    const key = [
+      row.hca,
+      row.personKey,
+      normalizeDuplicateText_(row.estimateName),
+      String(row.amount === null || row.amount === undefined ? "" : row.amount)
+    ].join("|");
+
+    const rowDate = new Date(row.soldDate || row.emailDate);
+    const cluster = clusters.find(existing => {
+      if (existing.key !== key) return false;
+      return daysBetween_(new Date(existing.latestDate), rowDate) <= 3;
+    });
+
+    if (!cluster) {
+      clusters.push({
+        key,
+        latestDate: row.soldDate || row.emailDate,
+        item: row,
+        count: 1,
+        refs: row.messageId ? [row.messageId] : []
+      });
+      return;
+    }
+
+    cluster.count += 1;
+    if (row.messageId) cluster.refs.push(row.messageId);
+
+    const existingDate = new Date(cluster.latestDate);
+    if (!Number.isNaN(rowDate.getTime()) && (Number.isNaN(existingDate.getTime()) || rowDate >= existingDate)) {
+      cluster.latestDate = row.soldDate || row.emailDate;
+      cluster.item = row;
+    }
+
+    cluster.item.duplicateSoldAlertCount = cluster.count;
+    cluster.item.duplicateSoldAlertRefs = cluster.refs;
+  });
+
+  return clusters.map(cluster => cluster.item);
+}
+
+function normalizeDuplicateText_(value) {
+  return cleanText_(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
 }
 
 function readBookedJobAlerts_() {
@@ -400,10 +468,11 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
 function pickComboMatches_(sold, rows, isTbd) {
   const soldDate = sold.soldDate ? new Date(sold.soldDate) : null;
   return rows.filter(row => {
-    const hcaMatch = normalizeHca_(row.salesRep) === sold.hca;
+    const rowHca = normalizeHca_(row.salesRep);
+    const hcaMatch = !rowHca || rowHca === sold.hca;
     const department = String(row.department || "").toUpperCase();
-    const departmentOk = isTbd || department === "HVAC" || department === "";
-    const dateOk = isTbd || !soldDate || !row.installDate || daysBetween_(soldDate, new Date(row.installDate)) <= SOLD_TRACKER_CONFIG.bundleWindowDays;
+    const departmentOk = department === "HVAC" || department === "";
+    const dateOk = isTbd || !soldDate || !row.installDate || daysBetween_(soldDate, new Date(row.installDate)) <= SOLD_TRACKER_CONFIG.comboMatchWindowDays;
     return hcaMatch && departmentOk && dateOk;
   }).sort((a, b) => {
     if (!soldDate) return 0;
@@ -417,7 +486,7 @@ function buildRelatedWork_(sold, rows, primaryCombo) {
     if (row.personKey !== sold.personKey) return false;
     if (primaryCombo && row === primaryCombo) return false;
     if (!soldDate || !row.installDate) return false;
-    return daysBetween_(soldDate, new Date(row.installDate)) <= SOLD_TRACKER_CONFIG.bundleWindowDays;
+    return daysBetween_(soldDate, new Date(row.installDate)) <= SOLD_TRACKER_CONFIG.relatedWorkWindowDays;
   }).map(row => compactObject_({
     department: row.department,
     installDate: row.installDate,
@@ -624,7 +693,20 @@ function nameWords_(value) {
     .filter(word => !["M", "F", "MR", "MRS", "MS", "JR", "SR", "II", "III", "IV"].includes(word));
 }
 
+function isOrganizationName_(name) {
+  const text = cleanServiceTitanDisplay_(name).toUpperCase();
+  return /\b(CHURCH|LLC|INC|CORP|COMPANY|ASSOCIATION|HOA|BAPTIST|CENTER|SCHOOL|RESTAURANT|PROPERTY|PROPERTIES|APARTMENTS|CONDOMINIUM|CONDO|MINISTRIES)\b/.test(text);
+}
+
+function organizationKey_(name) {
+  return cleanServiceTitanDisplay_(name)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+}
+
 function personKeyFromFullName_(name) {
+  if (isOrganizationName_(name)) return organizationKey_(name);
   const words = nameWords_(name);
   if (!words.length) return "";
   if (words.length === 1) return words[0];
@@ -634,6 +716,7 @@ function personKeyFromFullName_(name) {
 
 
 function personKeyFromParts_(first, last) {
+  if (!cleanText_(first) && isOrganizationName_(last)) return organizationKey_(last);
   const firstWords = nameWords_(first);
   const lastWords = nameWords_(last);
   const f = firstWords[0] || "";
