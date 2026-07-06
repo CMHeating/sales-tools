@@ -85,6 +85,17 @@ const SOLD_TRACKER_EXCLUDED_ESTIMATE_NUMBERS = {
   "399777519": "Bill Havelka - standalone Air Ranger"
 };
 
+
+const SOLD_TRACKER_CUSTOMER_NAME_BY_JOB_NUMBER = {
+  "400247160": "April and Robert Pearson",
+  "400716079": "Jeffrey Morris"
+};
+
+const SOLD_TRACKER_CUSTOMER_NAME_BY_ESTIMATE_NUMBER = {
+  "400317699": "April and Robert Pearson",
+  "402477206": "Jeffrey Morris"
+};
+
 const SERVICE_TITAN_FIELD_LABELS = [
   "Booked Job Alert",
   "Sold Estimate Alert",
@@ -195,6 +206,29 @@ function readSoldEstimateAlerts_() {
   }).filter(item => item.customer && item.hca && HCA_CANONICAL.includes(item.hca))
     .filter(item => !shouldExcludeSoldTrackerEstimate_(item));
   return collapseDuplicateSoldAlerts_(dedupeBy_(rows, item => item.jobNumber || item.estimateNumber || item.messageId));
+}
+
+function isMalformedSoldCustomerName_(name) {
+  const text = normalizeDuplicateText_(name);
+  return /^CUSTOMER NEEDS\b/.test(text)
+    || /^NEEDS\b/.test(text)
+    || /\b(APPROXIMATE PAYMENT|QUALIFIES FOR|CUSTOM OFFER|REMOTE COIL|BTU HIGH EFFICIENCY)\b/.test(text);
+}
+
+function resolveSoldTrackerCustomerName_(customerRaw, jobNumber, estimateNumber) {
+  const jobKey = String(jobNumber || "").trim();
+  const estimateKey = String(estimateNumber || "").trim();
+
+  if (jobKey && SOLD_TRACKER_CUSTOMER_NAME_BY_JOB_NUMBER[jobKey]) {
+    return canonicalCustomerName_(SOLD_TRACKER_CUSTOMER_NAME_BY_JOB_NUMBER[jobKey]);
+  }
+
+  if (estimateKey && SOLD_TRACKER_CUSTOMER_NAME_BY_ESTIMATE_NUMBER[estimateKey]) {
+    return canonicalCustomerName_(SOLD_TRACKER_CUSTOMER_NAME_BY_ESTIMATE_NUMBER[estimateKey]);
+  }
+
+  const candidate = canonicalCustomerName_(cleanServiceTitanDisplay_(customerRaw));
+  return isMalformedSoldCustomerName_(candidate) ? "" : candidate;
 }
 
 function shouldExcludeSoldTrackerEstimate_(item) {
