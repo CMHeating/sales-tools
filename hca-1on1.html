@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HCA 1:1 Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.12);--muted:rgba(255,255,255,.64);--muted2:rgba(255,255,255,.42);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#60a5fa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh}
+body:before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.18),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.26),transparent 60%);pointer-events:none}
+.screen{position:relative;z-index:1;min-height:100vh}
+.top{display:flex;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:8px}
+h1{font-family:"Playfair Display",serif;font-size:34px;line-height:1.05}
+p{color:var(--muted);font-size:14px;line-height:1.5}
+.back{color:var(--muted);text-decoration:none;font-size:12px}
+.main{padding:22px;display:grid;gap:18px;max-width:1180px;margin:0 auto}
+.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 18px 48px rgba(0,0,0,.18)}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:900px){.grid{grid-template-columns:380px 1fr}.status-grid{grid-template-columns:repeat(3,1fr)}}
+h2{font-family:"Playfair Display",serif;font-size:24px;margin-bottom:8px}
+label{display:block;color:var(--muted2);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 6px}
+select,input,textarea{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:13px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:12px;outline:none}
+select option{color:#0a1628}
+textarea{min-height:86px;resize:vertical}
+.help{font-size:12px;color:var(--muted2);margin-top:7px}
+.rule-list{display:grid;gap:8px;margin-top:12px}
+.rule{font-size:13px;color:var(--muted);background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:10px}
+.status-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.stat{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:13px}
+.stat span{display:block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.stat strong{display:block;font-size:22px;margin-top:4px}
+.status-pill{display:inline-block;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);color:var(--muted)}
+.status-pill.booked,.status-pill.completed{color:#bbf7d0;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35)}
+.status-pill.due{color:#fde68a;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.35)}
+.status-pill.overdue{color:#fecaca;background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35)}
+.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
+.slot{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.055);border-radius:15px;padding:12px;text-align:left;color:#fff;cursor:pointer;font-family:Outfit,sans-serif}
+.slot strong{display:block;font-size:15px}
+.slot span{display:block;color:var(--muted2);font-size:12px;margin-top:3px}
+.slot:hover,.slot.selected{border-color:rgba(201,125,16,.72);box-shadow:0 0 0 3px rgba(201,125,16,.18)}
+.slot.busy{opacity:.42;cursor:not-allowed}
+.btn{border:0;background:var(--orange);color:white;font-family:Outfit,sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-radius:999px;padding:13px 16px;cursor:pointer;margin-top:16px;width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.notice{border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.12);color:#fde68a;border-radius:15px;padding:13px;font-size:13px;line-height:1.45}
+.error{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12);color:#fecaca}
+.success{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12);color:#bbf7d0}
+.table{display:grid;gap:8px;margin-top:12px}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:11px}
+.row small{display:block;color:var(--muted2);margin-top:3px}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <div>
+      <div class="badge">HCA Tools</div>
+      <h1>HCA 1:1 Scheduler</h1>
+      <p>Book one 20-minute 1:1 with Geoff every two weeks. Amy can use this calendar to protect dispatch coverage.</p>
+    </div>
+    <a class="back" href="index.html">← HCA Toolkit</a>
+  </header>
+
+  <main class="main">
+    <div id="setupNotice" class="notice">
+      Backend not connected yet. Paste the Apps Script Web App URL into <strong>APP_SCRIPT_URL</strong> inside this page after deployment.
+    </div>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Book my 1:1</h2>
+        <p>Select your name. Your assigned day shows first, but backup slots may appear if allowed.</p>
+
+        <label for="hcaSelect">HCA</label>
+        <select id="hcaSelect"></select>
+
+        <div class="rule-list" id="rulesBox"></div>
+
+        <label for="topic">Main topic</label>
+        <select id="topic">
+          <option value="">Choose one...</option>
+          <option>Deal review</option>
+          <option>Comfort Club / rental presentation</option>
+          <option>Customer objection</option>
+          <option>Lead quality / right HCA right consult</option>
+          <option>Schedule / dispatch issue</option>
+          <option>Customer escalation</option>
+          <option>Personal development / coaching</option>
+          <option>Other</option>
+        </select>
+
+        <label for="jobRef">Customer / job / opportunity number</label>
+        <input id="jobRef" placeholder="Optional">
+
+        <label for="dispatchImpact">Urgent for today’s dispatch board?</label>
+        <select id="dispatchImpact">
+          <option>No</option>
+          <option>Yes — Amy should be aware this affects routing</option>
+        </select>
+
+        <label for="outcome">What do you want to leave with?</label>
+        <input id="outcome" placeholder="Clear next step, objection response, coaching feedback, etc.">
+
+        <label for="notes">Notes for Geoff</label>
+        <textarea id="notes" placeholder="Anything Geoff should read before the meeting"></textarea>
+
+        <button class="btn" id="bookBtn" disabled>Book selected slot</button>
+      </div>
+
+      <div class="card">
+        <h2>Available slots</h2>
+        <div id="statusBox" class="status-grid"></div>
+        <div id="slotMessage" class="help">Select an HCA to load slots.</div>
+        <div id="slots" class="slot-grid"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2-week cycle tracker</h2>
+      <p>Shows who has booked or completed their required 1:1 for the current cycle.</p>
+      <div id="tracker" class="table"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec"; // Paste deployed Apps Script Web App URL here.
+
+const HCAS = [
+  {name:"Amber Maddalena",homeDay:"Tuesday",off:["Friday","Saturday"],allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Davis Diosdado",homeDay:"Wednesday",off:["Friday","Saturday"],allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Chester Granard",homeDay:"Thursday",off:["Friday","Saturday"],allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Javierre Milo",homeDay:"Tuesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"],alias:"Jay"},
+  {name:"Joe Chounramany",homeDay:"Tuesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Joseph Ruble",homeDay:"Wednesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Kyle McAlister",homeDay:"Wednesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Samir Khoury",homeDay:"Thursday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Adam Weberg",homeDay:"Thursday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]}
+];
+
+let selectedSlot = null;
+let currentPayload = null;
+
+function esc(v){return String(v ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+function qs(id){return document.getElementById(id)}
+function statusClass(s){s=String(s||"").toLowerCase();if(s.includes("overdue"))return"overdue";if(s.includes("due"))return"due";if(s.includes("booked"))return"booked";if(s.includes("completed"))return"completed";return""}
+function dateTimeLabel(iso){if(!iso)return"";return new Date(iso).toLocaleString([], {weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})}
+
+function init(){
+  qs("hcaSelect").innerHTML = '<option value="">Select your name...</option>' + HCAS.map(h=>`<option value="${esc(h.name)}">${esc(h.alias ? h.alias + " / " + h.name : h.name)}</option>`).join("");
+  qs("hcaSelect").addEventListener("change", loadForHca);
+  qs("bookBtn").addEventListener("click", bookSlot);
+  if(APP_SCRIPT_URL){qs("setupNotice").style.display="none";loadTracker();}
+  else{renderRules(null);renderDemoTracker();}
+}
+init();
+
+function renderRules(hca){
+  if(!hca){
+    qs("rulesBox").innerHTML = [
+      "One 20-minute 1:1 every 2 weeks.",
+      "No standard Monday bookings.",
+      "Tuesday/Thursday start after training around 9:00.",
+      "Wednesday starts after training around 9:30.",
+      "Friday is overflow for Tue–Sat crew only."
+    ].map(x=>`<div class="rule">${esc(x)}</div>`).join("");
+    return;
+  }
+  qs("rulesBox").innerHTML = [
+    `Home day: ${hca.homeDay}`,
+    `Allowed days: ${hca.allowed.join(", ")}`,
+    `Days off blocked: ${hca.off.join(", ")}`,
+    "Geoff calendar conflicts are blocked automatically."
+  ].map(x=>`<div class="rule">${esc(x)}</div>`).join("");
+}
+
+function renderDemoTracker(){
+  qs("tracker").innerHTML = HCAS.map(h=>`<div class="row"><div><strong>${esc(h.name)}</strong><small>Home day: ${esc(h.homeDay)}</small></div><span class="status-pill">Not connected</span></div>`).join("");
+}
+
+async function loadTracker(){
+  if(!APP_SCRIPT_URL)return;
+  try{
+    const payload = await api({action:"status"});
+    currentPayload = payload;
+    renderTracker(payload);
+  }catch(err){
+    qs("setupNotice").style.display="block";
+    qs("setupNotice").className="notice error";
+    qs("setupNotice").textContent="Could not load scheduler backend: " + err.message;
+  }
+}
+
+async function loadForHca(){
+  selectedSlot=null;
+  qs("bookBtn").disabled=true;
+  const name=qs("hcaSelect").value;
+  const hca=HCAS.find(x=>x.name===name);
+  renderRules(hca);
+  qs("slots").innerHTML="";
+  qs("statusBox").innerHTML="";
+  if(!name){qs("slotMessage").textContent="Select an HCA to load slots.";return;}
+  if(!APP_SCRIPT_URL){qs("slotMessage").textContent="Backend not connected yet. Deploy Apps Script and paste the Web App URL into this page.";return;}
+  qs("slotMessage").textContent="Loading available slots...";
+  try{
+    const payload = await api({action:"availability",hca:name});
+    currentPayload = payload;
+    renderTracker(payload);
+    renderStatus(payload);
+    renderSlots(payload.slots || []);
+  }catch(err){
+    qs("slotMessage").textContent="Could not load slots: " + err.message;
+  }
+}
+
+function renderStatus(payload){
+  const hca=qs("hcaSelect").value;
+  const item=(payload.hcas||[]).find(x=>x.name===hca)||{};
+  qs("statusBox").innerHTML=[
+    ["Cycle", `${payload.cycle?.start || ""} to ${payload.cycle?.end || ""}`],
+    ["Status", item.status || "Not booked"],
+    ["Booked time", item.meetingStart ? dateTimeLabel(item.meetingStart) : "None yet"]
+  ].map(([a,b])=>`<div class="stat"><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join("");
+}
+
+function renderSlots(slots){
+  if(!slots.length){qs("slotMessage").textContent="No open slots found. Check with Geoff/Amy for an override.";return;}
+  qs("slotMessage").textContent="Choose one available slot.";
+  qs("slots").innerHTML=slots.map((s,i)=>`<button class="slot ${s.available?'':'busy'}" data-index="${i}" ${s.available?'':'disabled'}><strong>${esc(dateTimeLabel(s.start))}</strong><span>${esc(s.reason || (s.homeDay ? "Home day" : "Backup slot"))}</span></button>`).join("");
+  [...document.querySelectorAll(".slot")].forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      [...document.querySelectorAll(".slot")].forEach(x=>x.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedSlot=slots[Number(btn.dataset.index)];
+      qs("bookBtn").disabled=false;
+    });
+  });
+}
+
+function renderTracker(payload){
+  const rows=payload.hcas||[];
+  qs("tracker").innerHTML=rows.map(h=>`<div class="row"><div><strong>${esc(h.name)}</strong><small>${esc(h.homeDay || "")}${h.meetingStart ? " · " + esc(dateTimeLabel(h.meetingStart)) : ""}</small></div><span class="status-pill ${statusClass(h.status)}">${esc(h.status || "Not booked")}</span></div>`).join("");
+}
+
+async function bookSlot(){
+  const hca=qs("hcaSelect").value;
+  if(!hca||!selectedSlot)return;
+  if(!qs("topic").value){alert("Choose a main topic first.");return;}
+  qs("bookBtn").disabled=true;
+  qs("bookBtn").textContent="Booking...";
+  try{
+    const payload = await api({
+      action:"book",
+      hca,
+      start:selectedSlot.start,
+      topic:qs("topic").value,
+      jobRef:qs("jobRef").value,
+      dispatchImpact:qs("dispatchImpact").value,
+      outcome:qs("outcome").value,
+      notes:qs("notes").value
+    });
+    qs("setupNotice").style.display="block";
+    qs("setupNotice").className="notice success";
+    qs("setupNotice").textContent="Booked. Amy will be able to see this on the HCA 1:1 Schedule calendar.";
+    currentPayload=payload;
+    renderTracker(payload);
+    renderStatus(payload);
+    renderSlots(payload.slots||[]);
+  }catch(err){
+    qs("setupNotice").style.display="block";
+    qs("setupNotice").className="notice error";
+    qs("setupNotice").textContent="Booking failed: " + err.message;
+    qs("bookBtn").disabled=false;
+  }finally{
+    qs("bookBtn").textContent="Book selected slot";
+  }
+}
+
+async function api(params){
+  const url = APP_SCRIPT_URL + "?" + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  const text = await res.text();
+  let json;
+  try{json=JSON.parse(text)}catch(e){throw new Error("Bad backend response")}
+  if(!json.ok)throw new Error(json.error || "Unknown error");
+  return json;
+}
+</script>
+</body>
+</html>
