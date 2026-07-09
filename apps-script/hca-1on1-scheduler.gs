@@ -157,8 +157,12 @@ function availableSlotsForHca_(hcaName, scheduleCal, primaryCal) {
   return allSlots
     .sort((a, b) => {
       if (a.available !== b.available) return a.available ? -1 : 1;
+
+      const timeDiff = new Date(a.start).getTime() - new Date(b.start).getTime();
+      if (timeDiff !== 0) return timeDiff;
+
       if (a.homeDay !== b.homeDay) return a.homeDay ? -1 : 1;
-      return new Date(a.start).getTime() - new Date(b.start).getTime();
+      return 0;
     })
     .slice(0, 24);
 }
