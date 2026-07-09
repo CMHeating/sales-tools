@@ -30,10 +30,10 @@ const HCA_1ON1_CONFIG = {
   lookAheadDays: 21,
   bookingIdPrefix: "HCA_1ON1_BOOKING_ID:",
   windows: {
-    Tuesday:   { start: "09:00", end: "11:30" },
-    Wednesday: { start: "09:30", end: "11:30" },
-    Thursday:  { start: "09:00", end: "11:30" },
-    Friday:    { start: "08:00", end: "11:30" }
+    Tuesday:   { start: "08:00", end: "11:20" },
+    Wednesday: { start: "08:00", end: "11:20" },
+    Thursday:  { start: "08:00", end: "11:20" },
+    Friday:    { start: "08:00", end: "11:20" }
   }
 };
 
@@ -230,10 +230,18 @@ function buildSlotStarts_(day, startTime, endTime) {
   const out = [];
   const start = withTime_(day, startTime);
   const end = withTime_(day, endTime);
-  const step = HCA_1ONONEMINUTES_() + HCA_1ON1_CONFIG.bufferMinutes;
+  const durationMs = HCA_1ONONEMINUTES_() * 60000;
+  const stepMs = (HCA_1ONONEMINUTES_() + HCA_1ON1_CONFIG.bufferMinutes) * 60000;
+  const finalStartMs = end.getTime() - durationMs;
 
-  for (let t = start.getTime(); t + HCA_1ONONEMINUTES_() * 60000 <= end.getTime(); t += step * 60000) {
+  for (let t = start.getTime(); t <= finalStartMs; t += stepMs) {
+    if (finalStartMs - t < stepMs && t !== finalStartMs) break;
     out.push(new Date(t));
+  }
+
+  if (finalStartMs >= start.getTime()) {
+    const last = out.length ? out[out.length - 1].getTime() : null;
+    if (last !== finalStartMs) out.push(new Date(finalStartMs));
   }
 
   return out;
