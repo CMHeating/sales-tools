@@ -29,7 +29,7 @@ const HCA_1ON1_ROSTER = [
   { name: "Amber Maddalena", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
   { name: "Davis Diosdado", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
   { name: "Chester Granard", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Javierre Milo", alias: "Jay", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Jay Milo", alias: "Jay", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
   { name: "Joe Chounramany", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
   { name: "Joseph Ruble", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
   { name: "Kyle McAlister", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
