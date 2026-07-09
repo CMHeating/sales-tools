@@ -5,12 +5,15 @@
  * - Execute as: Me
  * - Who has access: Anyone with the link, or anyone in CM Heating domain if available
  *
- * Calendar required:
- * - HCA 1:1 Schedule
+ * Calendar behavior:
+ * - Creates tracker event on the HCA 1:1 Schedule calendar
+ * - Creates the actual invite on Geoffrey Simons' CM Heating calendar
+ * - Adds the selected HCA as a guest so they receive a Google Calendar invite they can accept
  */
 
 const HCA_1ON1_CONFIG = {
   calendarName: "HCA 1:1 Schedule",
+  ownerCalendarId: "geoffrey.simons@cmheating.com",
   timeZone: "America/Los_Angeles",
   meetingMinutes: 20,
   bufferMinutes: 5,
@@ -26,15 +29,16 @@ const HCA_1ON1_CONFIG = {
 };
 
 const HCA_1ON1_ROSTER = [
-  { name: "Amber Maddalena", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Davis Diosdado", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Chester Granard", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Jay Milo", alias: "Jay", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Joe Chounramany", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Joseph Ruble", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Kyle McAlister", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Samir Khoury", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Adam Weberg", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] }
+  { name: "Amber Maddalena", email: "amber.maddalena@cmheating.com", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
+  { name: "Davis Diosdado", email: "davis.diosdado@cmheating.com", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
+  { name: "Chester Granard", email: "chester.granard@cmheating.com", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
+  { name: "Jay Milo", alias: "Jay", email: "javierre.milo@cmheating.com", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Joe Chounramany", email: "jchounramany@cmheating.com", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Joseph Ruble", email: "joseph.ruble@cmheating.com", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Kyle McAlister", email: "kmcalister@cmheating.com", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Samir Khoury", email: "samir.khoury@cmheating.com", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Trevor Bohm", email: "trevor.bohm@cmheating.com", off: ["Tuesday", "Friday", "Sunday"], allowed: ["Wednesday", "Thursday"] },
+  { name: "Adam Weberg", email: "adam@cmheating.com", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] }
 ];
 
 function doGet(e) {
@@ -66,17 +70,18 @@ function doGet(e) {
 
 function buildHcaOneOnOnePayload_(selectedHca) {
   const scheduleCal = getHcaOneOnOneCalendar_();
-  const primaryCal = CalendarApp.getDefaultCalendar();
+  const ownerCal = getOwnerCalendar_();
   const cycle = currentHcaOneOnOneCycle_();
   const hcas = HCA_1ON1_ROSTER.map(hca => summarizeHcaOneOnOne_(hca, scheduleCal, cycle));
   const selected = selectedHca ? findHca_(selectedHca) : null;
-  const slots = selected ? availableSlotsForHca_(selected.name, scheduleCal, primaryCal) : [];
+  const slots = selected ? availableSlotsForHca_(selected.name, scheduleCal, ownerCal) : [];
 
   return {
     ok: true,
     updated: isoDateTime_(new Date()),
     cycle,
     calendarName: HCA_1ON1_CONFIG.calendarName,
+    ownerCalendarId: HCA_1ON1_CONFIG.ownerCalendarId,
     hcas,
     slots
   };
@@ -87,17 +92,18 @@ function bookHcaOneOnOne_(params) {
   const startIso = clean_(params.start);
   const hca = findHca_(hcaName);
   if (!hca) throw new Error("Unknown HCA: " + hcaName);
+  if (!hca.email) throw new Error("Missing email for HCA: " + hca.name);
   if (!startIso) throw new Error("Missing selected start time.");
 
   const scheduleCal = getHcaOneOnOneCalendar_();
-  const primaryCal = CalendarApp.getDefaultCalendar();
+  const ownerCal = getOwnerCalendar_();
   const cycle = currentHcaOneOnOneCycle_();
   const existing = summarizeHcaOneOnOne_(hca, scheduleCal, cycle);
   if (existing.meetingStart && String(existing.status || "").toLowerCase() === "booked") {
     throw new Error("You already have a 1:1 booked for this cycle. Cancel it first if you need to reschedule.");
   }
 
-  const slots = availableSlotsForHca_(hca.name, scheduleCal, primaryCal);
+  const slots = availableSlotsForHca_(hca.name, scheduleCal, ownerCal);
   const selected = slots.find(slot => slot.available && slot.start === startIso);
   if (!selected) throw new Error("That slot is no longer available. Refresh and choose another slot.");
 
@@ -106,15 +112,21 @@ function bookHcaOneOnOne_(params) {
   const bookingId = bookingId_(hca.name, start);
   const title = "HCA 1:1 — " + hca.name;
   const description = bookingDescription_(hca, cycle, bookingId);
-  const eventOptions = {
+  const sharedEventOptions = {
     description,
     location: "CM Heating / Phone / Office"
   };
+  const ownerInviteOptions = {
+    description,
+    location: "CM Heating / Phone / Office",
+    guests: hca.email,
+    sendInvites: true
+  };
 
-  const scheduleEvent = scheduleCal.createEvent(title, start, end, eventOptions);
-  const primaryEvent = primaryCal.createEvent(title, start, end, eventOptions);
+  const scheduleEvent = scheduleCal.createEvent(title, start, end, sharedEventOptions);
+  const ownerEvent = ownerCal.createEvent(title, start, end, ownerInviteOptions);
   setBusyIfPossible_(scheduleEvent);
-  setBusyIfPossible_(primaryEvent);
+  setBusyIfPossible_(ownerEvent);
 
   return buildHcaOneOnOnePayload_(hca.name);
 }
@@ -125,7 +137,7 @@ function cancelHcaOneOnOne_(params) {
   if (!hca) throw new Error("Unknown HCA: " + hcaName);
 
   const scheduleCal = getHcaOneOnOneCalendar_();
-  const primaryCal = CalendarApp.getDefaultCalendar();
+  const ownerCal = getOwnerCalendar_();
   const cycle = currentHcaOneOnOneCycle_();
   const existing = summarizeHcaOneOnOne_(hca, scheduleCal, cycle);
   const start = clean_(params.start) ? new Date(clean_(params.start)) : (existing.meetingStart ? new Date(existing.meetingStart) : null);
@@ -136,8 +148,8 @@ function cancelHcaOneOnOne_(params) {
   }
 
   const deletedFromSchedule = deleteMatchingBookings_(scheduleCal, hca, cycle, bookingId, start);
-  const deletedFromPrimary = deleteMatchingBookings_(primaryCal, hca, cycle, bookingId, start);
-  const deleted = deletedFromSchedule + deletedFromPrimary;
+  const deletedFromOwner = deleteMatchingBookings_(ownerCal, hca, cycle, bookingId, start);
+  const deleted = deletedFromSchedule + deletedFromOwner;
 
   if (!deleted) {
     throw new Error("No matching booked 1:1 found to cancel.");
@@ -146,7 +158,7 @@ function cancelHcaOneOnOne_(params) {
   return buildHcaOneOnOnePayload_(hca.name);
 }
 
-function availableSlotsForHca_(hcaName, scheduleCal, primaryCal) {
+function availableSlotsForHca_(hcaName, scheduleCal, ownerCal) {
   const hca = findHca_(hcaName);
   if (!hca) throw new Error("Unknown HCA: " + hcaName);
 
@@ -170,7 +182,7 @@ function availableSlotsForHca_(hcaName, scheduleCal, primaryCal) {
 
     starts.forEach(start => {
       const end = new Date(start.getTime() + HCA_1ONONEMINUTES_() * 60000);
-      const available = start > now && !hasCalendarConflict_(primaryCal, start, end) && !hasCalendarConflict_(scheduleCal, start, end);
+      const available = start > now && !hasCalendarConflict_(ownerCal, start, end) && !hasCalendarConflict_(scheduleCal, start, end);
 
       allSlots.push({
         start: start.toISOString(),
@@ -221,6 +233,7 @@ function summarizeHcaOneOnOne_(hca, scheduleCal, cycle) {
 
   return {
     name: hca.name,
+    email: hca.email || "",
     allowed: hca.allowed,
     off: hca.off,
     status,
@@ -285,6 +298,8 @@ function bookingDescription_(hca, cycle, bookingId) {
   return [
     HCA_1ON1_CONFIG.bookingIdPrefix + " " + bookingId,
     "HCA: " + hca.name,
+    "HCA Email: " + (hca.email || ""),
+    "Organizer calendar: " + HCA_1ON1_CONFIG.ownerCalendarId,
     "Cycle: " + cycle.start + " to " + cycle.end,
     "Booked through HCA Toolkit.",
     "Cancel/reschedule by using the HCA 1:1 Scheduler page."
@@ -332,6 +347,16 @@ function getHcaOneOnOneCalendar_() {
   });
 }
 
+function getOwnerCalendar_() {
+  const ownerCalendarId = clean_(HCA_1ON1_CONFIG.ownerCalendarId);
+  if (ownerCalendarId) {
+    const ownerCal = CalendarApp.getCalendarById(ownerCalendarId);
+    if (ownerCal) return ownerCal;
+  }
+
+  return CalendarApp.getDefaultCalendar();
+}
+
 function setBusyIfPossible_(event) {
   try {
     event.setTransparency(CalendarApp.EventTransparency.OPAQUE);
@@ -358,7 +383,12 @@ function safeIsTransparent_(event) {
 
 function findHca_(name) {
   const key = clean_(name).toUpperCase();
-  return HCA_1ON1_ROSTER.find(hca => hca.name.toUpperCase() === key || String(hca.alias || "").toUpperCase() === key);
+  return HCA_1ON1_ROSTER.find(hca => {
+    const nameMatches = hca.name.toUpperCase() === key;
+    const aliasMatches = String(hca.alias || "").toUpperCase() === key;
+    const emailMatches = String(hca.email || "").toUpperCase() === key;
+    return nameMatches || aliasMatches || emailMatches;
+  });
 }
 
 function HCA_1ONONEMINUTES_() {
