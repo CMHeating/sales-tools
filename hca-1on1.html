@@ -17,19 +17,16 @@ body:before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse
 .badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:8px}
 h1{font-family:"Playfair Display",serif;font-size:34px;line-height:1.05}
 p{color:var(--muted);font-size:14px;line-height:1.5}
-.back{color:var(--muted);text-decoration:none;font-size:12px}
+.back{color:var(--muted);text-decoration:none;font-size:12px;white-space:nowrap}
 .main{padding:22px;display:grid;gap:18px;max-width:1180px;margin:0 auto}
 .card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 18px 48px rgba(0,0,0,.18)}
 .grid{display:grid;grid-template-columns:1fr;gap:16px}
 @media(min-width:900px){.grid{grid-template-columns:380px 1fr}.status-grid{grid-template-columns:repeat(3,1fr)}}
 h2{font-family:"Playfair Display",serif;font-size:24px;margin-bottom:8px}
 label{display:block;color:var(--muted2);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 6px}
-select,input,textarea{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:13px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:12px;outline:none}
+select{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:13px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:12px;outline:none}
 select option{color:#0a1628}
-textarea{min-height:86px;resize:vertical}
 .help{font-size:12px;color:var(--muted2);margin-top:7px}
-.rule-list{display:grid;gap:8px;margin-top:12px}
-.rule{font-size:13px;color:var(--muted);background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:10px}#rulesBox{display:none}
 .status-grid{display:grid;grid-template-columns:1fr;gap:10px}
 .stat{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:13px}
 .stat span{display:block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
@@ -41,10 +38,10 @@ textarea{min-height:86px;resize:vertical}
 .slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
 .slot{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.055);border-radius:15px;padding:12px;text-align:left;color:#fff;cursor:pointer;font-family:Outfit,sans-serif}
 .slot strong{display:block;font-size:15px}
-.slot span{display:block;color:var(--muted2);font-size:12px;margin-top:3px}
 .slot:hover,.slot.selected{border-color:rgba(201,125,16,.72);box-shadow:0 0 0 3px rgba(201,125,16,.18)}
 .slot.busy{opacity:.42;cursor:not-allowed}
 .btn{border:0;background:var(--orange);color:white;font-family:Outfit,sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-radius:999px;padding:13px 16px;cursor:pointer;margin-top:16px;width:100%}
+.btn.secondary{display:none;background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.44);color:#fecaca}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .notice{border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.12);color:#fde68a;border-radius:15px;padding:13px;font-size:13px;line-height:1.45}
 .error{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12);color:#fecaca}
@@ -60,7 +57,7 @@ textarea{min-height:86px;resize:vertical}
     <div>
       <div class="badge">HCA Tools</div>
       <h1>HCA 1:1 Scheduler</h1>
-      <p>Book one 20-minute 1:1 with Geoff every two weeks. Amy can use this calendar to protect dispatch coverage.</p>
+      <p>Book one 20-minute 1:1 with Geoff every two weeks.</p>
     </div>
     <a class="back" href="index.html">← HCA Toolkit</a>
   </header>
@@ -78,8 +75,8 @@ textarea{min-height:86px;resize:vertical}
         <label for="hcaSelect">HCA</label>
         <select id="hcaSelect"></select>
 
-        <div class="rule-list" id="rulesBox"></div>
-<button class="btn" id="bookBtn" disabled>Book selected slot</button>
+        <button class="btn" id="bookBtn" disabled>Book selected slot</button>
+        <button class="btn secondary" id="cancelBtn">Cancel this 1:1</button>
       </div>
 
       <div class="card">
@@ -99,58 +96,42 @@ textarea{min-height:86px;resize:vertical}
 </div>
 
 <script>
-const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec"; // Paste deployed Apps Script Web App URL here.
+const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
 
 const HCAS = [
-  {name:"Amber Maddalena",homeDay:"Tuesday",off:["Friday","Saturday"],allowed:["Tuesday","Wednesday","Thursday"]},
-  {name:"Davis Diosdado",homeDay:"Wednesday",off:["Friday","Saturday"],allowed:["Tuesday","Wednesday","Thursday"]},
-  {name:"Chester Granard",homeDay:"Thursday",off:["Friday","Saturday"],allowed:["Tuesday","Wednesday","Thursday"]},
-  {name:"Javierre Milo",homeDay:"Tuesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"],alias:"Jay"},
-  {name:"Joe Chounramany",homeDay:"Tuesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Joseph Ruble",homeDay:"Wednesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Kyle McAlister",homeDay:"Wednesday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Samir Khoury",homeDay:"Thursday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Adam Weberg",homeDay:"Thursday",off:["Sunday","Monday"],allowed:["Tuesday","Wednesday","Thursday","Friday"]}
+  {name:"Amber Maddalena",allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Davis Diosdado",allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Chester Granard",allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Javierre Milo",allowed:["Tuesday","Wednesday","Thursday","Friday"],alias:"Jay"},
+  {name:"Joe Chounramany",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Joseph Ruble",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Kyle McAlister",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Samir Khoury",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Adam Weberg",allowed:["Tuesday","Wednesday","Thursday","Friday"]}
 ];
 
 let selectedSlot = null;
 let currentPayload = null;
+let selectedHcaSummary = null;
 
 function esc(v){return String(v ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function qs(id){return document.getElementById(id)}
-function statusClass(s){s=String(s||"").toLowerCase();if(s.includes("overdue"))return"overdue";if(s.includes("due"))return"due";if(s.includes("booked"))return"booked";if(s.includes("completed"))return"completed";return""}
+function statusClass(s){s=String(s||"").toLowerCase();if(s.includes("overdue"))return"overdue";if(s.includes("due"))return"due";if(s.includes("completed"))return"completed";if(s.includes("booked"))return"booked";return""}
 function dateTimeLabel(iso){if(!iso)return"";return new Date(iso).toLocaleString([], {weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})}
+function isBooked(item){return String(item?.status||"").toLowerCase()==="booked" && Boolean(item?.meetingStart)}
 
 function init(){
   qs("hcaSelect").innerHTML = '<option value="">Select your name...</option>' + HCAS.map(h=>`<option value="${esc(h.name)}">${esc(h.alias ? h.alias + " / " + h.name : h.name)}</option>`).join("");
   qs("hcaSelect").addEventListener("change", loadForHca);
   qs("bookBtn").addEventListener("click", bookSlot);
+  qs("cancelBtn").addEventListener("click", cancelBooking);
   if(APP_SCRIPT_URL){qs("setupNotice").style.display="none";loadTracker();}
-  else{renderRules(null);renderDemoTracker();}
+  else{renderDemoTracker();}
 }
 init();
 
-function renderRules(hca){
-  if(!hca){
-    qs("rulesBox").innerHTML = [
-      "One 20-minute 1:1 every 2 weeks.",
-      "No standard Monday bookings.",
-      "Tuesday/Thursday start after training around 9:00.",
-      "Wednesday starts after training around 9:30.",
-      "Friday is overflow for Tue–Sat crew only."
-    ].map(x=>`<div class="rule">${esc(x)}</div>`).join("");
-    return;
-  }
-  qs("rulesBox").innerHTML = [
-    `Home day: ${hca.homeDay}`,
-    `Allowed days: ${hca.allowed.join(", ")}`,
-    `Days off blocked: ${hca.off.join(", ")}`,
-    "Geoff calendar conflicts are blocked automatically."
-  ].map(x=>`<div class="rule">${esc(x)}</div>`).join("");
-}
-
 function renderDemoTracker(){
-  qs("tracker").innerHTML = HCAS.map(h=>`<div class="row"><div><strong>${esc(h.name)}</strong><small>Home day: ${esc(h.homeDay)}</small></div><span class="status-pill">Not connected</span></div>`).join("");
+  qs("tracker").innerHTML = HCAS.map(h=>`<div class="row"><div><strong>${esc(h.name)}</strong><small>Backend not connected</small></div><span class="status-pill">Not connected</span></div>`).join("");
 }
 
 async function loadTracker(){
@@ -160,18 +141,17 @@ async function loadTracker(){
     currentPayload = payload;
     renderTracker(payload);
   }catch(err){
-    qs("setupNotice").style.display="block";
-    qs("setupNotice").className="notice error";
-    qs("setupNotice").textContent="Could not load scheduler backend: " + err.message;
+    showNotice("Could not load scheduler backend: " + err.message, "error");
   }
 }
 
 async function loadForHca(){
   selectedSlot=null;
+  selectedHcaSummary=null;
   qs("bookBtn").disabled=true;
+  qs("bookBtn").style.display="block";
+  qs("cancelBtn").style.display="none";
   const name=qs("hcaSelect").value;
-  const hca=HCAS.find(x=>x.name===name);
-  renderRules(hca);
   qs("slots").innerHTML="";
   qs("statusBox").innerHTML="";
   if(!name){qs("slotMessage").textContent="Select an HCA to load slots.";return;}
@@ -182,6 +162,11 @@ async function loadForHca(){
     currentPayload = payload;
     renderTracker(payload);
     renderStatus(payload);
+    if(isBooked(selectedHcaSummary)){
+      qs("slots").innerHTML="";
+      qs("slotMessage").textContent="You already have a 1:1 booked. Cancel it first if you need to reschedule.";
+      return;
+    }
     renderSlots(payload.slots || []);
   }catch(err){
     qs("slotMessage").textContent="Could not load slots: " + err.message;
@@ -191,11 +176,16 @@ async function loadForHca(){
 function renderStatus(payload){
   const hca=qs("hcaSelect").value;
   const item=(payload.hcas||[]).find(x=>x.name===hca)||{};
+  selectedHcaSummary=item;
   qs("statusBox").innerHTML=[
     ["Cycle", `${payload.cycle?.start || ""} to ${payload.cycle?.end || ""}`],
     ["Status", item.status || "Not booked"],
     ["Booked time", item.meetingStart ? dateTimeLabel(item.meetingStart) : "None yet"]
   ].map(([a,b])=>`<div class="stat"><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join("");
+
+  const booked=isBooked(item);
+  qs("cancelBtn").style.display=booked?"block":"none";
+  qs("bookBtn").style.display=booked?"none":"block";
 }
 
 function renderSlots(slots){
@@ -214,40 +204,59 @@ function renderSlots(slots){
 
 function renderTracker(payload){
   const rows=payload.hcas||[];
-  qs("tracker").innerHTML=rows.map(h=>`<div class="row"><div><strong>${esc(h.name)}</strong><small>${esc(h.homeDay || "")}${h.meetingStart ? " · " + esc(dateTimeLabel(h.meetingStart)) : ""}</small></div><span class="status-pill ${statusClass(h.status)}">${esc(h.status || "Not booked")}</span></div>`).join("");
+  qs("tracker").innerHTML=rows.map(h=>`<div class="row"><div><strong>${esc(h.name)}</strong><small>${h.meetingStart ? esc(dateTimeLabel(h.meetingStart)) : "No booking this cycle"}</small></div><span class="status-pill ${statusClass(h.status)}">${esc(h.status || "Not booked")}</span></div>`).join("");
 }
 
 async function bookSlot(){
   const hca=qs("hcaSelect").value;
   if(!hca||!selectedSlot)return;
-  if(!qs("topic").value){alert("Choose a main topic first.");return;}
   qs("bookBtn").disabled=true;
   qs("bookBtn").textContent="Booking...";
   try{
     const payload = await api({
       action:"book",
       hca,
-      start:selectedSlot.start,
-      topic:"",
-      jobRef:"",
-      dispatchImpact:"",
-      outcome:"",
-      notes:""
+      start:selectedSlot.start
     });
-    qs("setupNotice").style.display="block";
-    qs("setupNotice").className="notice success";
-    qs("setupNotice").textContent="Booked. Amy will be able to see this on the HCA 1:1 Schedule calendar.";
+    showNotice("Booked. This now appears on the HCA 1:1 Schedule calendar and blocks Geoff's calendar.", "success");
+    currentPayload=payload;
+    renderTracker(payload);
+    renderStatus(payload);
+    qs("slots").innerHTML="";
+    qs("slotMessage").textContent="You are booked for this cycle.";
+  }catch(err){
+    showNotice("Booking failed: " + err.message, "error");
+    qs("bookBtn").disabled=false;
+  }finally{
+    qs("bookBtn").textContent="Book selected slot";
+  }
+}
+
+async function cancelBooking(){
+  const hca=qs("hcaSelect").value;
+  const item=selectedHcaSummary||{};
+  if(!hca||!item.meetingStart)return;
+  const ok=confirm(`Cancel ${hca}'s 1:1 on ${dateTimeLabel(item.meetingStart)}?`);
+  if(!ok)return;
+  qs("cancelBtn").disabled=true;
+  qs("cancelBtn").textContent="Canceling...";
+  try{
+    const payload = await api({
+      action:"cancel",
+      hca,
+      bookingId:item.bookingId || "",
+      start:item.meetingStart || ""
+    });
+    showNotice("Canceled. The 1:1 was removed from the HCA schedule and Geoff's calendar.", "success");
     currentPayload=payload;
     renderTracker(payload);
     renderStatus(payload);
     renderSlots(payload.slots||[]);
   }catch(err){
-    qs("setupNotice").style.display="block";
-    qs("setupNotice").className="notice error";
-    qs("setupNotice").textContent="Booking failed: " + err.message;
-    qs("bookBtn").disabled=false;
+    showNotice("Cancel failed: " + err.message, "error");
   }finally{
-    qs("bookBtn").textContent="Book selected slot";
+    qs("cancelBtn").disabled=false;
+    qs("cancelBtn").textContent="Cancel this 1:1";
   }
 }
 
@@ -259,6 +268,12 @@ async function api(params){
   try{json=JSON.parse(text)}catch(e){throw new Error("Bad backend response")}
   if(!json.ok)throw new Error(json.error || "Unknown error");
   return json;
+}
+
+function showNotice(message, kind){
+  qs("setupNotice").style.display="block";
+  qs("setupNotice").className="notice " + (kind || "");
+  qs("setupNotice").textContent=message;
 }
 </script>
 </body>
