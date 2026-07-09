@@ -9,6 +9,10 @@
  * - Creates tracker event on the HCA 1:1 Schedule calendar
  * - Creates the actual invite on Geoffrey Simons' CM Heating calendar
  * - Adds the selected HCA as a guest so they receive a Google Calendar invite they can accept
+ *
+ * Performance note:
+ * - Availability checks prefetch calendar events once per request, then test slots in memory.
+ * - Avoid per-slot CalendarApp.getEvents calls because mobile loading becomes slow.
  */
 
 const HCA_1ON1_CONFIG = {
@@ -72,7 +76,9 @@ function buildHcaOneOnOnePayload_(selectedHca) {
   const scheduleCal = getHcaOneOnOneCalendar_();
   const ownerCal = getOwnerCalendar_();
   const cycle = currentHcaOneOnOneCycle_();
-  const hcas = HCA_1ON1_ROSTER.map(hca => summarizeHcaOneOnOne_(hca, scheduleCal, cycle));
+  const cycleBounds = cycleBounds_(cycle);
+  const scheduleCycleEvents = scheduleCal.getEvents(cycleBounds.start, cycleBounds.end);
+  const hcas = HCA_1ON1_ROSTER.map(hca => summarizeHcaOneOnOne_(hca, scheduleCycleEvents, cycle));
   const selected = selectedHca ? findHca_(selectedHca) : null;
   const slots = selected ? availableSlotsForHca_(selected.name, scheduleCal, ownerCal) : [];
 
@@ -98,7 +104,9 @@ function bookHcaOneOnOne_(params) {
   const scheduleCal = getHcaOneOnOneCalendar_();
   const ownerCal = getOwnerCalendar_();
   const cycle = currentHcaOneOnOneCycle_();
-  const existing = summarizeHcaOneOnOne_(hca, scheduleCal, cycle);
+  const cycleBounds = cycleBounds_(cycle);
+  const scheduleCycleEvents = scheduleCal.getEvents(cycleBounds.start, cycleBounds.end);
+  const existing = summarizeHcaOneOnOne_(hca, scheduleCycleEvents, cycle);
   if (existing.meetingStart && String(existing.status || "").toLowerCase() === "booked") {
     throw new Error("You already have a 1:1 booked for this cycle. Cancel it first if you need to reschedule.");
   }
@@ -139,7 +147,9 @@ function cancelHcaOneOnOne_(params) {
   const scheduleCal = getHcaOneOnOneCalendar_();
   const ownerCal = getOwnerCalendar_();
   const cycle = currentHcaOneOnOneCycle_();
-  const existing = summarizeHcaOneOnOne_(hca, scheduleCal, cycle);
+  const cycleBounds = cycleBounds_(cycle);
+  const scheduleCycleEvents = scheduleCal.getEvents(cycleBounds.start, cycleBounds.end);
+  const existing = summarizeHcaOneOnOne_(hca, scheduleCycleEvents, cycle);
   const start = clean_(params.start) ? new Date(clean_(params.start)) : (existing.meetingStart ? new Date(existing.meetingStart) : null);
   const bookingId = clean_(params.bookingId) || existing.bookingId || (start ? bookingId_(hca.name, start) : "");
 
@@ -174,6 +184,13 @@ function availableSlotsForHca_(hcaName, scheduleCal, ownerCal) {
     days.push(d);
   }
 
+  if (!days.length) return [];
+
+  const rangeStart = new Date(now.getTime() - HCA_1ON1_CONFIG.bufferMinutes * 60000);
+  const rangeEnd = new Date(today.getTime() + (HCA_1ON1_CONFIG.lookAheadDays + 2) * 86400000);
+  const ownerEvents = ownerCal.getEvents(rangeStart, rangeEnd);
+  const scheduleEvents = scheduleCal.getEvents(rangeStart, rangeEnd);
+
   const allSlots = [];
   days.forEach(day => {
     const dayName = dayName_(day);
@@ -182,7 +199,7 @@ function availableSlotsForHca_(hcaName, scheduleCal, ownerCal) {
 
     starts.forEach(start => {
       const end = new Date(start.getTime() + HCA_1ONONEMINUTES_() * 60000);
-      const available = start > now && !hasCalendarConflict_(ownerCal, start, end) && !hasCalendarConflict_(scheduleCal, start, end);
+      const available = start > now && !eventsConflict_(ownerEvents, start, end) && !eventsConflict_(scheduleEvents, start, end);
 
       allSlots.push({
         start: start.toISOString(),
@@ -213,15 +230,15 @@ function buildSlotStarts_(day, startTime, endTime) {
   return out;
 }
 
-function summarizeHcaOneOnOne_(hca, scheduleCal, cycle) {
-  const bounds = cycleBounds_(cycle);
+function summarizeHcaOneOnOne_(hca, scheduleEvents, cycle) {
   const title = "HCA 1:1 — " + hca.name;
-  const events = scheduleCal.getEvents(bounds.start, bounds.end)
+  const events = (scheduleEvents || [])
     .filter(event => eventLooksLikeHcaBooking_(event, hca, title))
     .sort((a, b) => a.getStartTime().getTime() - b.getStartTime().getTime());
 
   const now = new Date();
   const event = events[0] || null;
+  const bounds = cycleBounds_(cycle);
   const cycleEnd = new Date(bounds.end.getTime() - 1000);
   const dueSoon = now >= new Date(cycleEnd.getTime() - 3 * 86400000);
 
@@ -279,18 +296,16 @@ function eventLooksLikeHcaBooking_(event, hca, title) {
   return eventTitle === title || (hasBookingId && hasHcaLine);
 }
 
-function hasCalendarConflict_(calendar, start, end) {
-  const events = calendar.getEvents(
-    new Date(start.getTime() - HCA_1ON1_CONFIG.bufferMinutes * 60000),
-    new Date(end.getTime() + HCA_1ON1_CONFIG.bufferMinutes * 60000)
-  );
+function eventsConflict_(events, start, end) {
+  const bufferedStart = new Date(start.getTime() - HCA_1ON1_CONFIG.bufferMinutes * 60000);
+  const bufferedEnd = new Date(end.getTime() + HCA_1ON1_CONFIG.bufferMinutes * 60000);
 
-  return events.some(event => {
+  return (events || []).some(event => {
     const title = event.getTitle() || "";
     if (/Canceled|Cancelled/i.test(title)) return false;
     if (safeIsAllDay_(event)) return false;
     if (safeIsTransparent_(event)) return false;
-    return event.getEndTime() > start && event.getStartTime() < end;
+    return event.getEndTime() > bufferedStart && event.getStartTime() < bufferedEnd;
   });
 }
 
