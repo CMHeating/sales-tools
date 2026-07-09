@@ -80,19 +80,6 @@ textarea{min-height:86px;resize:vertical}
 
         <div class="rule-list" id="rulesBox"></div>
 
-        <label for="topic">Main topic</label>
-        <select id="topic">
-          <option value="">Choose one...</option>
-          <option>Deal review</option>
-          <option>Comfort Club / rental presentation</option>
-          <option>Customer objection</option>
-          <option>Lead quality / right HCA right consult</option>
-          <option>Schedule / dispatch issue</option>
-          <option>Customer escalation</option>
-          <option>Personal development / coaching</option>
-          <option>Other</option>
-        </select>
-
         <label for="jobRef">Customer / job / opportunity number</label>
         <input id="jobRef" placeholder="Optional">
 
@@ -257,7 +244,7 @@ async function bookSlot(){
       action:"book",
       hca,
       start:selectedSlot.start,
-      topic:qs("topic").value,
+      topic:"",
       jobRef:qs("jobRef").value,
       dispatchImpact:qs("dispatchImpact").value,
       outcome:qs("outcome").value,
