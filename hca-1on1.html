@@ -59,7 +59,7 @@ select option{color:#0a1628}
       <h1>HCA 1:1 Scheduler</h1>
       <p>Book one 20-minute 1:1 with Geoff every two weeks.</p>
     </div>
-    <a class="back" href="index.html">← HCA Toolkit</a>
+    <a class="back" href="https://cmheating.github.io/sales-tools/">← HCA Toolkit</a>
   </header>
 
   <main class="main">
@@ -70,7 +70,7 @@ select option{color:#0a1628}
     <section class="grid">
       <div class="card">
         <h2>Book my 1:1</h2>
-        <p>Select your name, choose an available 20-minute slot, and book it. No topic or prep notes required.</p>
+        <p>Select your name, choose an available 20-minute slot, and book it. The booking will be created on Geoff's CM calendar and sent to you as a calendar invite.</p>
 
         <label for="hcaSelect">HCA</label>
         <select id="hcaSelect"></select>
@@ -99,15 +99,16 @@ select option{color:#0a1628}
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
 
 const HCAS = [
-  {name:"Amber Maddalena",allowed:["Tuesday","Wednesday","Thursday"]},
-  {name:"Davis Diosdado",allowed:["Tuesday","Wednesday","Thursday"]},
-  {name:"Chester Granard",allowed:["Tuesday","Wednesday","Thursday"]},
-  {name:"Jay Milo",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Joe Chounramany",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Joseph Ruble",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Kyle McAlister",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Samir Khoury",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
-  {name:"Adam Weberg",allowed:["Tuesday","Wednesday","Thursday","Friday"]}
+  {name:"Amber Maddalena",email:"amber.maddalena@cmheating.com",allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Davis Diosdado",email:"davis.diosdado@cmheating.com",allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Chester Granard",email:"chester.granard@cmheating.com",allowed:["Tuesday","Wednesday","Thursday"]},
+  {name:"Jay Milo",email:"javierre.milo@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Joe Chounramany",email:"jchounramany@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Joseph Ruble",email:"joseph.ruble@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Kyle McAlister",email:"kmcalister@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Samir Khoury",email:"samir.khoury@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Trevor Bohm",email:"trevor.bohm@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]},
+  {name:"Adam Weberg",email:"adam@cmheating.com",allowed:["Tuesday","Wednesday","Thursday","Friday"]}
 ];
 
 let selectedSlot = null;
@@ -218,7 +219,7 @@ async function bookSlot(){
       hca,
       start:selectedSlot.start
     });
-    showNotice("Booked. This now appears on the HCA 1:1 Schedule calendar and blocks Geoff's calendar.", "success");
+    showNotice("Booked. This was added to Geoff's CM calendar and sent to the HCA as a calendar invite.", "success");
     currentPayload=payload;
     renderTracker(payload);
     renderStatus(payload);
@@ -247,7 +248,7 @@ async function cancelBooking(){
       bookingId:item.bookingId || "",
       start:item.meetingStart || ""
     });
-    showNotice("Canceled. The 1:1 was removed from the HCA schedule and Geoff's calendar.", "success");
+    showNotice("Canceled. The 1:1 was removed from the schedule and Geoff's calendar.", "success");
     currentPayload=payload;
     renderTracker(payload);
     renderStatus(payload);
