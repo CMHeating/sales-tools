@@ -10,6 +10,10 @@
  * - Creates the actual invite on Geoffrey Simons' CM Heating calendar
  * - Adds the selected HCA as a guest so they receive a Google Calendar invite they can accept
  *
+ * Dispatch behavior:
+ * - Booking emails dispatch so a ServiceTitan schedule blocker can be added
+ * - Canceling emails dispatch, the HCA, and Geoff so the blocker can be removed/updated
+ *
  * Performance note:
  * - Availability checks prefetch calendar events once per request, then test slots in memory.
  * - Avoid per-slot CalendarApp.getEvents calls because mobile loading becomes slow.
@@ -18,6 +22,7 @@
 const HCA_1ON1_CONFIG = {
   calendarName: "HCA 1:1 Schedule",
   ownerCalendarId: "geoffrey.simons@cmheating.com",
+  dispatchEmail: "amy@cmheating.com",
   timeZone: "America/Los_Angeles",
   meetingMinutes: 20,
   bufferMinutes: 5,
@@ -88,6 +93,7 @@ function buildHcaOneOnOnePayload_(selectedHca) {
     cycle,
     calendarName: HCA_1ON1_CONFIG.calendarName,
     ownerCalendarId: HCA_1ON1_CONFIG.ownerCalendarId,
+    dispatchEmail: HCA_1ON1_CONFIG.dispatchEmail,
     hcas,
     slots
   };
@@ -135,6 +141,7 @@ function bookHcaOneOnOne_(params) {
   const ownerEvent = ownerCal.createEvent(title, start, end, ownerInviteOptions);
   setBusyIfPossible_(scheduleEvent);
   setBusyIfPossible_(ownerEvent);
+  notifyDispatchBooked_(hca, start, end, bookingId);
 
   return buildHcaOneOnOnePayload_(hca.name);
 }
@@ -151,6 +158,7 @@ function cancelHcaOneOnOne_(params) {
   const scheduleCycleEvents = scheduleCal.getEvents(cycleBounds.start, cycleBounds.end);
   const existing = summarizeHcaOneOnOne_(hca, scheduleCycleEvents, cycle);
   const start = clean_(params.start) ? new Date(clean_(params.start)) : (existing.meetingStart ? new Date(existing.meetingStart) : null);
+  const end = existing.meetingEnd ? new Date(existing.meetingEnd) : (start ? new Date(start.getTime() + HCA_1ONONEMINUTES_() * 60000) : null);
   const bookingId = clean_(params.bookingId) || existing.bookingId || (start ? bookingId_(hca.name, start) : "");
 
   if (!bookingId && !start) {
@@ -165,6 +173,7 @@ function cancelHcaOneOnOne_(params) {
     throw new Error("No matching booked 1:1 found to cancel.");
   }
 
+  notifyBookingCanceled_(hca, start, end, bookingId);
   return buildHcaOneOnOnePayload_(hca.name);
 }
 
@@ -309,12 +318,103 @@ function eventsConflict_(events, start, end) {
   });
 }
 
+function notifyDispatchBooked_(hca, start, end, bookingId) {
+  const subject = "BLOCKER NEEDED: HCA 1:1 — " + hca.name + " — " + shortDateTime_(start);
+  const body = [
+    "A 20-minute HCA 1:1 was booked through HCA Toolkit.",
+    "",
+    "ServiceTitan action needed:",
+    "Add a dispatch board blocker for this HCA during the 1:1 window.",
+    "",
+    "HCA: " + hca.name,
+    "HCA email: " + (hca.email || ""),
+    "Time: " + humanDateTimeRange_(start, end),
+    "Organizer calendar: " + HCA_1ON1_CONFIG.ownerCalendarId,
+    "Booking ID: " + bookingId,
+    "",
+    "Booked through HCA Toolkit."
+  ].join("\n");
+
+  sendEmailSafe_({
+    to: [HCA_1ON1_CONFIG.dispatchEmail],
+    subject,
+    body
+  });
+}
+
+function notifyBookingCanceled_(hca, start, end, bookingId) {
+  const timeText = start && end ? humanDateTimeRange_(start, end) : "Time not found";
+  const subject = "CANCELED: HCA 1:1 — " + hca.name + (start ? " — " + shortDateTime_(start) : "");
+  const body = [
+    "An HCA 1:1 was canceled through HCA Toolkit.",
+    "",
+    "ServiceTitan action needed:",
+    "Remove or update the dispatch board blocker for this HCA.",
+    "",
+    "HCA: " + hca.name,
+    "HCA email: " + (hca.email || ""),
+    "Canceled time: " + timeText,
+    "Organizer calendar: " + HCA_1ON1_CONFIG.ownerCalendarId,
+    "Booking ID: " + (bookingId || ""),
+    "",
+    "Canceled through HCA Toolkit."
+  ].join("\n");
+
+  sendEmailSafe_({
+    to: [HCA_1ON1_CONFIG.dispatchEmail],
+    cc: [hca.email, HCA_1ON1_CONFIG.ownerCalendarId],
+    subject,
+    body
+  });
+}
+
+function sendEmailSafe_(message) {
+  try {
+    const to = uniqueEmails_(message.to || []).join(",");
+    const cc = uniqueEmails_(message.cc || []).filter(email => to.split(",").indexOf(email) === -1).join(",");
+    if (!to) return;
+
+    const payload = {
+      to,
+      subject: message.subject || "HCA 1:1 Scheduler Notice",
+      body: message.body || "",
+      name: "HCA Toolkit"
+    };
+    if (cc) payload.cc = cc;
+
+    MailApp.sendEmail(payload);
+  } catch (err) {
+    Logger.log("HCA 1:1 email notice failed: " + (err && err.message ? err.message : String(err)));
+  }
+}
+
+function uniqueEmails_(emails) {
+  const seen = {};
+  return (Array.isArray(emails) ? emails : [emails])
+    .map(email => clean_(email).toLowerCase())
+    .filter(email => {
+      if (!email || seen[email]) return false;
+      seen[email] = true;
+      return true;
+    });
+}
+
+function shortDateTime_(date) {
+  return Utilities.formatDate(date, HCA_1ON1_CONFIG.timeZone, "EEE MMM d h:mm a");
+}
+
+function humanDateTimeRange_(start, end) {
+  return Utilities.formatDate(start, HCA_1ON1_CONFIG.timeZone, "EEEE, MMMM d, yyyy h:mm a") +
+    "–" + Utilities.formatDate(end, HCA_1ON1_CONFIG.timeZone, "h:mm a z");
+}
+
 function bookingDescription_(hca, cycle, bookingId) {
   return [
     HCA_1ON1_CONFIG.bookingIdPrefix + " " + bookingId,
     "HCA: " + hca.name,
     "HCA Email: " + (hca.email || ""),
     "Organizer calendar: " + HCA_1ON1_CONFIG.ownerCalendarId,
+    "Dispatch email: " + HCA_1ON1_CONFIG.dispatchEmail,
     "Cycle: " + cycle.start + " to " + cycle.end,
     "Booked through HCA Toolkit.",
     "Cancel/reschedule by using the HCA 1:1 Scheduler page."
