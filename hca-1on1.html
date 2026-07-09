@@ -201,7 +201,7 @@ function renderStatus(payload){
 function renderSlots(slots){
   if(!slots.length){qs("slotMessage").textContent="No open slots found. Check with Geoff/Amy for an override.";return;}
   qs("slotMessage").textContent="Choose one available slot.";
-  qs("slots").innerHTML=slots.map((s,i)=>`<button class="slot ${s.available?'':'busy'}" data-index="${i}" ${s.available?'':'disabled'}><strong>${esc(dateTimeLabel(s.start))}</strong><span>${esc(s.reason || (s.homeDay ? "Home day" : "Backup slot"))}</span></button>`).join("");
+  qs("slots").innerHTML=slots.map((s,i)=>`<button class="slot ${s.available?'':'busy'}" data-index="${i}" ${s.available?'':'disabled'}><strong>${esc(dateTimeLabel(s.start))}</strong></button>`).join("");
   [...document.querySelectorAll(".slot")].forEach(btn=>{
     btn.addEventListener("click",()=>{
       [...document.querySelectorAll(".slot")].forEach(x=>x.classList.remove("selected"));
