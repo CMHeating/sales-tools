@@ -16,6 +16,7 @@ const HCA_1ON1_CONFIG = {
   bufferMinutes: 5,
   cycleAnchorIso: "2026-07-06",
   lookAheadDays: 21,
+  bookingIdPrefix: "HCA_1ON1_BOOKING_ID:",
   windows: {
     Tuesday:   { start: "09:00", end: "11:30" },
     Wednesday: { start: "09:30", end: "11:30" },
@@ -25,15 +26,15 @@ const HCA_1ON1_CONFIG = {
 };
 
 const HCA_1ON1_ROSTER = [
-  { name: "Amber Maddalena", homeDay: "Tuesday", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Davis Diosdado", homeDay: "Wednesday", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Chester Granard", homeDay: "Thursday", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
-  { name: "Javierre Milo", homeDay: "Tuesday", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Joe Chounramany", homeDay: "Tuesday", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Joseph Ruble", homeDay: "Wednesday", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Kyle McAlister", homeDay: "Wednesday", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Samir Khoury", homeDay: "Thursday", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { name: "Adam Weberg", homeDay: "Thursday", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] }
+  { name: "Amber Maddalena", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
+  { name: "Davis Diosdado", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
+  { name: "Chester Granard", off: ["Friday", "Saturday"], allowed: ["Tuesday", "Wednesday", "Thursday"] },
+  { name: "Javierre Milo", alias: "Jay", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Joe Chounramany", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Joseph Ruble", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Kyle McAlister", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Samir Khoury", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] },
+  { name: "Adam Weberg", off: ["Sunday", "Monday"], allowed: ["Tuesday", "Wednesday", "Thursday", "Friday"] }
 ];
 
 function doGet(e) {
@@ -53,6 +54,10 @@ function doGet(e) {
       return json_(bookHcaOneOnOne_(p));
     }
 
+    if (action === "cancel") {
+      return json_(cancelHcaOneOnOne_(p));
+    }
+
     throw new Error("Unknown action: " + action);
   } catch (err) {
     return json_({ ok: false, error: err.message || String(err) });
@@ -64,7 +69,8 @@ function buildHcaOneOnOnePayload_(selectedHca) {
   const primaryCal = CalendarApp.getDefaultCalendar();
   const cycle = currentHcaOneOnOneCycle_();
   const hcas = HCA_1ON1_ROSTER.map(hca => summarizeHcaOneOnOne_(hca, scheduleCal, cycle));
-  const slots = selectedHca ? availableSlotsForHca_(selectedHca, scheduleCal, primaryCal) : [];
+  const selected = selectedHca ? findHca_(selectedHca) : null;
+  const slots = selected ? availableSlotsForHca_(selected.name, scheduleCal, primaryCal) : [];
 
   return {
     ok: true,
@@ -85,33 +91,57 @@ function bookHcaOneOnOne_(params) {
 
   const scheduleCal = getHcaOneOnOneCalendar_();
   const primaryCal = CalendarApp.getDefaultCalendar();
+  const cycle = currentHcaOneOnOneCycle_();
+  const existing = summarizeHcaOneOnOne_(hca, scheduleCal, cycle);
+  if (existing.meetingStart && String(existing.status || "").toLowerCase() === "booked") {
+    throw new Error("You already have a 1:1 booked for this cycle. Cancel it first if you need to reschedule.");
+  }
 
-  const slots = availableSlotsForHca_(hcaName, scheduleCal, primaryCal);
+  const slots = availableSlotsForHca_(hca.name, scheduleCal, primaryCal);
   const selected = slots.find(slot => slot.available && slot.start === startIso);
   if (!selected) throw new Error("That slot is no longer available. Refresh and choose another slot.");
 
   const start = new Date(startIso);
   const end = new Date(start.getTime() + HCA_1ONONEMINUTES_() * 60000);
-
+  const bookingId = bookingId_(hca.name, start);
   const title = "HCA 1:1 — " + hca.name;
-  const cycle = currentHcaOneOnOneCycle_();
-  const description = [
-    "HCA: " + hca.name,
-    "Cycle: " + cycle.start + " to " + cycle.end,
-    "",
-    "Main topic: " + clean_(params.topic),
-    "Customer/job/opportunity: " + clean_(params.jobRef),
-    "Dispatch impact: " + clean_(params.dispatchImpact),
-    "Desired outcome: " + clean_(params.outcome),
-    "",
-    "Notes:",
-    clean_(params.notes)
-  ].join("\n");
-
-  scheduleCal.createEvent(title, start, end, {
+  const description = bookingDescription_(hca, cycle, bookingId);
+  const eventOptions = {
     description,
     location: "CM Heating / Phone / Office"
-  });
+  };
+
+  const scheduleEvent = scheduleCal.createEvent(title, start, end, eventOptions);
+  const primaryEvent = primaryCal.createEvent(title, start, end, eventOptions);
+  setBusyIfPossible_(scheduleEvent);
+  setBusyIfPossible_(primaryEvent);
+
+  return buildHcaOneOnOnePayload_(hca.name);
+}
+
+function cancelHcaOneOnOne_(params) {
+  const hcaName = clean_(params.hca);
+  const hca = findHca_(hcaName);
+  if (!hca) throw new Error("Unknown HCA: " + hcaName);
+
+  const scheduleCal = getHcaOneOnOneCalendar_();
+  const primaryCal = CalendarApp.getDefaultCalendar();
+  const cycle = currentHcaOneOnOneCycle_();
+  const existing = summarizeHcaOneOnOne_(hca, scheduleCal, cycle);
+  const start = clean_(params.start) ? new Date(clean_(params.start)) : (existing.meetingStart ? new Date(existing.meetingStart) : null);
+  const bookingId = clean_(params.bookingId) || existing.bookingId || (start ? bookingId_(hca.name, start) : "");
+
+  if (!bookingId && !start) {
+    throw new Error("No booked 1:1 found for " + hca.name + " in the current cycle.");
+  }
+
+  const deletedFromSchedule = deleteMatchingBookings_(scheduleCal, hca, cycle, bookingId, start);
+  const deletedFromPrimary = deleteMatchingBookings_(primaryCal, hca, cycle, bookingId, start);
+  const deleted = deletedFromSchedule + deletedFromPrimary;
+
+  if (!deleted) {
+    throw new Error("No matching booked 1:1 found to cancel.");
+  }
 
   return buildHcaOneOnOnePayload_(hca.name);
 }
@@ -145,11 +175,7 @@ function availableSlotsForHca_(hcaName, scheduleCal, primaryCal) {
       allSlots.push({
         start: start.toISOString(),
         end: end.toISOString(),
-        available,
-        homeDay: dayName === hca.homeDay,
-        reason: available
-          ? (dayName === hca.homeDay ? "Assigned home day" : "Backup slot")
-          : "Busy"
+        available
       });
     });
   });
@@ -157,12 +183,7 @@ function availableSlotsForHca_(hcaName, scheduleCal, primaryCal) {
   return allSlots
     .sort((a, b) => {
       if (a.available !== b.available) return a.available ? -1 : 1;
-
-      const timeDiff = new Date(a.start).getTime() - new Date(b.start).getTime();
-      if (timeDiff !== 0) return timeDiff;
-
-      if (a.homeDay !== b.homeDay) return a.homeDay ? -1 : 1;
-      return 0;
+      return new Date(a.start).getTime() - new Date(b.start).getTime();
     })
     .slice(0, 24);
 }
@@ -181,14 +202,15 @@ function buildSlotStarts_(day, startTime, endTime) {
 }
 
 function summarizeHcaOneOnOne_(hca, scheduleCal, cycle) {
-  const start = new Date(cycle.start + "T00:00:00");
-  const end = new Date(cycle.end + "T23:59:59");
-  const events = scheduleCal.getEvents(start, end, { search: "HCA 1:1 — " + hca.name })
+  const bounds = cycleBounds_(cycle);
+  const title = "HCA 1:1 — " + hca.name;
+  const events = scheduleCal.getEvents(bounds.start, bounds.end)
+    .filter(event => eventLooksLikeHcaBooking_(event, hca, title))
     .sort((a, b) => a.getStartTime().getTime() - b.getStartTime().getTime());
 
   const now = new Date();
   const event = events[0] || null;
-  const cycleEnd = new Date(cycle.end + "T23:59:59");
+  const cycleEnd = new Date(bounds.end.getTime() - 1000);
   const dueSoon = now >= new Date(cycleEnd.getTime() - 3 * 86400000);
 
   let status = "Not booked";
@@ -199,13 +221,91 @@ function summarizeHcaOneOnOne_(hca, scheduleCal, cycle) {
 
   return {
     name: hca.name,
-    homeDay: hca.homeDay,
     allowed: hca.allowed,
     off: hca.off,
     status,
     meetingStart: event ? event.getStartTime().toISOString() : "",
     meetingEnd: event ? event.getEndTime().toISOString() : "",
+    bookingId: event ? (extractBookingId_(event.getDescription()) || bookingId_(hca.name, event.getStartTime())) : "",
     eventTitle: event ? event.getTitle() : ""
+  };
+}
+
+function deleteMatchingBookings_(calendar, hca, cycle, bookingId, start) {
+  const bounds = cycleBounds_(cycle);
+  const title = "HCA 1:1 — " + hca.name;
+  const events = calendar.getEvents(bounds.start, bounds.end);
+  let deleted = 0;
+
+  events.forEach(event => {
+    if (!eventLooksLikeHcaBooking_(event, hca, title)) return;
+
+    const desc = event.getDescription() || "";
+    const eventBookingId = extractBookingId_(desc);
+    const idMatches = bookingId && eventBookingId && eventBookingId === bookingId;
+    const legacyTimeMatches = start && Math.abs(event.getStartTime().getTime() - start.getTime()) < 60000;
+
+    if (idMatches || legacyTimeMatches) {
+      event.deleteEvent();
+      deleted += 1;
+    }
+  });
+
+  return deleted;
+}
+
+function eventLooksLikeHcaBooking_(event, hca, title) {
+  if (!event) return false;
+  if (safeIsAllDay_(event)) return false;
+
+  const eventTitle = event.getTitle() || "";
+  const desc = event.getDescription() || "";
+  const hasBookingId = desc.indexOf(HCA_1ON1_CONFIG.bookingIdPrefix) !== -1;
+  const hasHcaLine = desc.indexOf("HCA: " + hca.name) !== -1;
+
+  return eventTitle === title || (hasBookingId && hasHcaLine);
+}
+
+function hasCalendarConflict_(calendar, start, end) {
+  const events = calendar.getEvents(
+    new Date(start.getTime() - HCA_1ON1_CONFIG.bufferMinutes * 60000),
+    new Date(end.getTime() + HCA_1ON1_CONFIG.bufferMinutes * 60000)
+  );
+
+  return events.some(event => {
+    const title = event.getTitle() || "";
+    if (/Canceled|Cancelled/i.test(title)) return false;
+    if (safeIsAllDay_(event)) return false;
+    if (safeIsTransparent_(event)) return false;
+    return event.getEndTime() > start && event.getStartTime() < end;
+  });
+}
+
+function bookingDescription_(hca, cycle, bookingId) {
+  return [
+    HCA_1ON1_CONFIG.bookingIdPrefix + " " + bookingId,
+    "HCA: " + hca.name,
+    "Cycle: " + cycle.start + " to " + cycle.end,
+    "Booked through HCA Toolkit.",
+    "Cancel/reschedule by using the HCA 1:1 Scheduler page."
+  ].join("\n");
+}
+
+function bookingId_(hcaName, start) {
+  return slug_(hcaName) + "-" + new Date(start).toISOString().replace(/[:.]/g, "-");
+}
+
+function extractBookingId_(description) {
+  const text = String(description || "");
+  const prefix = HCA_1ON1_CONFIG.bookingIdPrefix;
+  const line = text.split(/\r?\n/).find(row => row.indexOf(prefix) === 0);
+  return line ? clean_(line.slice(prefix.length)) : "";
+}
+
+function cycleBounds_(cycle) {
+  return {
+    start: new Date(cycle.start + "T00:00:00"),
+    end: new Date(cycle.end + "T23:59:59")
   };
 }
 
@@ -232,17 +332,28 @@ function getHcaOneOnOneCalendar_() {
   });
 }
 
-function hasCalendarConflict_(calendar, start, end) {
-  const events = calendar.getEvents(
-    new Date(start.getTime() - HCA_1ON1_CONFIG.bufferMinutes * 60000),
-    new Date(end.getTime() + HCA_1ON1_CONFIG.bufferMinutes * 60000)
-  );
+function setBusyIfPossible_(event) {
+  try {
+    event.setTransparency(CalendarApp.EventTransparency.OPAQUE);
+  } catch (err) {
+    // Created calendar events are normally busy by default. Keep going if Apps Script cannot set it.
+  }
+}
 
-  return events.some(event => {
-    const title = event.getTitle() || "";
-    if (/Canceled|Cancelled/i.test(title)) return false;
-    return event.getEndTime() > start && event.getStartTime() < end;
-  });
+function safeIsAllDay_(event) {
+  try {
+    return event.isAllDayEvent();
+  } catch (err) {
+    return false;
+  }
+}
+
+function safeIsTransparent_(event) {
+  try {
+    return event.getTransparency() === CalendarApp.EventTransparency.TRANSPARENT;
+  } catch (err) {
+    return false;
+  }
 }
 
 function findHca_(name) {
@@ -275,6 +386,10 @@ function isoDate_(date) {
 
 function isoDateTime_(date) {
   return Utilities.formatDate(date, HCA_1ON1_CONFIG.timeZone, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+
+function slug_(value) {
+  return clean_(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 function clean_(value) {
