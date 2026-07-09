@@ -73,29 +73,13 @@ textarea{min-height:86px;resize:vertical}
     <section class="grid">
       <div class="card">
         <h2>Book my 1:1</h2>
-        <p>Select your name. Your assigned day shows first, but backup slots may appear if allowed.</p>
+        <p>Select your name, choose an available 20-minute slot, and book it. No topic or prep notes required.</p>
 
         <label for="hcaSelect">HCA</label>
         <select id="hcaSelect"></select>
 
         <div class="rule-list" id="rulesBox"></div>
-
-        <label for="jobRef">Customer / job / opportunity number</label>
-        <input id="jobRef" placeholder="Optional">
-
-        <label for="dispatchImpact">Urgent for today’s dispatch board?</label>
-        <select id="dispatchImpact">
-          <option>No</option>
-          <option>Yes — Amy should be aware this affects routing</option>
-        </select>
-
-        <label for="outcome">What do you want to leave with?</label>
-        <input id="outcome" placeholder="Clear next step, objection response, coaching feedback, etc.">
-
-        <label for="notes">Notes for Geoff</label>
-        <textarea id="notes" placeholder="Anything Geoff should read before the meeting"></textarea>
-
-        <button class="btn" id="bookBtn" disabled>Book selected slot</button>
+<button class="btn" id="bookBtn" disabled>Book selected slot</button>
       </div>
 
       <div class="card">
@@ -245,10 +229,10 @@ async function bookSlot(){
       hca,
       start:selectedSlot.start,
       topic:"",
-      jobRef:qs("jobRef").value,
-      dispatchImpact:qs("dispatchImpact").value,
-      outcome:qs("outcome").value,
-      notes:qs("notes").value
+      jobRef:"",
+      dispatchImpact:"",
+      outcome:"",
+      notes:""
     });
     qs("setupNotice").style.display="block";
     qs("setupNotice").className="notice success";
