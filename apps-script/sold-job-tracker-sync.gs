@@ -162,13 +162,18 @@ function previewSoldJobTracker() {
 }
 
 function setupSoldTrackerDailyTrigger() {
+  setupSoldTrackerHourlyTrigger_();
+}
+
+function setupSoldTrackerHourlyTrigger_() {
   deleteSoldTrackerTriggers_();
+
   ScriptApp.newTrigger("syncSoldJobTracker")
     .timeBased()
-    .everyDays(1)
-    .atHour(6)
-    .inTimezone(SOLD_TRACKER_CONFIG.timeZone)
+    .everyHours(1)
     .create();
+
+  Logger.log("Sold Job Tracker hourly trigger installed.");
 }
 
 function deleteSoldTrackerTriggers_() {
