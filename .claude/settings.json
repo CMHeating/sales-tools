@@ -1,13 +1,20 @@
 {
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "obsidian@obsidian-skills": true
+  },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
       "source": {
         "source": "github",
         "repo": "obra/superpowers-marketplace"
       }
+    },
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "kepano/obsidian-skills"
+      }
     }
-  },
-  "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true
   }
 }
