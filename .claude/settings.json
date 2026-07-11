@@ -2,7 +2,8 @@
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true,
     "obsidian@obsidian-skills": true,
-    "andrej-karpathy-skills@karpathy-skills": true
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "watch@claude-video": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
@@ -21,6 +22,12 @@
       "source": {
         "source": "github",
         "repo": "forrestchang/andrej-karpathy-skills"
+      }
+    },
+    "claude-video": {
+      "source": {
+        "source": "github",
+        "repo": "bradautomates/claude-video"
       }
     }
   }
