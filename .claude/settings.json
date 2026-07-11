@@ -1,7 +1,8 @@
 {
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true,
-    "obsidian@obsidian-skills": true
+    "obsidian@obsidian-skills": true,
+    "andrej-karpathy-skills@karpathy-skills": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
@@ -14,6 +15,12 @@
       "source": {
         "source": "github",
         "repo": "kepano/obsidian-skills"
+      }
+    },
+    "karpathy-skills": {
+      "source": {
+        "source": "github",
+        "repo": "forrestchang/andrej-karpathy-skills"
       }
     }
   }
