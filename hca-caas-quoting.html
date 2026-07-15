@@ -367,9 +367,10 @@ select:focus,input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 
 
 <div class="card">
   <div class="stitle">Step 2 — Package Selection</div>
-  <div class="r3">
+  <div class="r3" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
     <div><label>Brand</label><select id="bsel"></select></div>
     <div><label>Tier</label><select id="tsel"></select></div>
+    <div id="prow"><label>Model</label><select id="psel"></select></div>
     <div><label id="slbl">Size</label><select id="ssel"></select></div>
   </div>
   <div id="pinfo" style="margin-top:6px"></div>
@@ -597,20 +598,36 @@ function fillTiers(){
   if(ts.includes("GOOD")) sel.value="GOOD";
   else if(ts.includes("BETTER")) sel.value="BETTER";
   else if(ts.includes("BEST")) sel.value="BEST";
+  fillConfigs();
+}
+// A Brand+Tier can hold many distinct packages (e.g. the S8V2/S8X2/S9V2/S9X2
+// furnace permutations of a dual-fuel line). The Model dropdown makes each one
+// reachable instead of silently showing the first. Label = the package id with
+// the brand stripped (5HCL5-S9X2-DF9, SUZ-HPAH, 5Zone-DL60K-BB).
+const BRSHORT=["Ameristar","Mitsubishi","AmStan","Goodman","Daikin","Midea"];
+const cfgLabel=(x)=>{for(const p of BRSHORT){if(x.id.startsWith(p))return x.id.slice(p.length);}return x.id;};
+function fillConfigs(){
+  const b=document.getElementById("bsel").value,ti=document.getElementById("tsel").value;
+  const pp=pkgs(b,ti);
+  document.getElementById("psel").innerHTML=pp.map(x=>`<option value="${x.id}">${cfgLabel(x)}</option>`).join("");
+  // Only one package under this Brand+Tier -> nothing to choose, hide the row.
+  document.getElementById("prow").style.display=pp.length>1?"":"none";
   fillSizes();
 }
 function fillSizes(){
-  const b=document.getElementById("bsel").value,ti=document.getElementById("tsel").value;
+  const b=document.getElementById("bsel").value,ti=document.getElementById("tsel").value,cfg=document.getElementById("psel").value;
   const pp=pkgs(b,ti);
-  const su=pp[0]?pp[0].su:"";
+  const cp=pp.find(x=>x.id===cfg)||pp[0];
+  const su=cp?cp.su:"";
   document.getElementById("slbl").textContent=su==="BTU"?"BTU size":su==="Zone"?"Configuration":"Tonnage";
-  document.getElementById("ssel").innerHTML=szkeys(pp).map(s=>`<option>${s}</option>`).join("");
+  document.getElementById("ssel").innerHTML=szkeys(cp?[cp]:[]).map(s=>`<option>${s}</option>`).join("");
   render();
 }
 function render(){
   const b=document.getElementById("bsel").value,ti=document.getElementById("tsel").value,s=document.getElementById("ssel").value;
+  const cfg=document.getElementById("psel").value;
   const pp=pkgs(b,ti);
-  CP=pp.find(x=>x.sz[s])||pp[0];
+  CP=pp.find(x=>x.id===cfg)||pp.find(x=>x.sz[s])||pp[0];
   CS=CP&&CP.sz[s]?s:CP?Object.keys(CP.sz)[0]:null;
   const resdiv=document.getElementById("res"),nodiv=document.getElementById("nodata");
   if(!CP||!CS||!CP.sz[CS]){resdiv.style.display="none";nodiv.style.display="block";updateQuoteSummary();return;}
@@ -652,7 +669,7 @@ function currentQuoteText(){
   const sd=CP.sz[CS];
   return [
     "Comfort as a Service Quote",
-    "Package: "+b+" "+ti+" "+CJ+" "+CS,
+    "Package: "+CP.id+" "+CS+"  (HCA code "+(sd.code||"—")+")",
     "ServiceTitan code (rental): "+(sd.stsku||"—"),
     "ServiceTitan code (COD): "+(sd.codsku||"—"),
     "Description: "+CP.lbl,
@@ -700,7 +717,7 @@ function updateQuoteSummary(){
   const {msrp,monthly}=CP.sz[CS];
   const pay=monthly!==undefined?monthly:caasMonthly(msrp);
   const resid=Math.round(msrp*84/RESID_DENOM);
-  const pkg=`${b} ${ti} ${CJ} ${CS}`;
+  const pkg=`${CP.id} ${CS}`;
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   set("qpkg",pkg);
   set("qrent",moneyMonthly(pay)+"/mo");
@@ -732,7 +749,8 @@ document.getElementById("jtabs").addEventListener("click",e=>{
   fill();
 });
 document.getElementById("bsel").addEventListener("change",fillTiers);
-document.getElementById("tsel").addEventListener("change",fillSizes);
+document.getElementById("tsel").addEventListener("change",fillConfigs);
+document.getElementById("psel").addEventListener("change",fillSizes);
 document.getElementById("ssel").addEventListener("change",render);
 document.getElementById("jd").textContent=JD["ACGF"];
 fill();
