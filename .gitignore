@@ -67,3 +67,6 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# graphify knowledge graph — rebuild locally; commit only a full graph (needs LLM key for the HTML tools)
+graphify-out/
