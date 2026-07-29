@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>🔒 Internal Financing Sheets | CM Heating</title>
+<style>
+:root{
+  --navy:#0a1628; --navy2:#111f36; --card:#16243c; --card2:#1e3354;
+  --blue:#005aa9; --blue2:#0ea5e9; --orange:#f58220; --green:#16a34a;
+  --red:#dc2626; --white:#ffffff; --ink:#102033; --muted:#64748b;
+  --line:#d7e2ea; --soft:#f4f8fb;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--navy);color:var(--white);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 60px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:rgba(17,31,54,.96);border-radius:16px;padding:16px 18px}
+.top h1{font-size:22px;flex:1 1 260px}
+.top p{color:#cbd5e1;font-size:13px;width:100%;margin-top:4px}
+.btn{border:0;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer;font-size:14px}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.ghost{background:rgba(255,255,255,.08);color:#fff}
+.btn.orange{background:var(--orange);color:#102033}
+.btn.red{background:var(--red);color:#fff}
+#statusBadge{font-weight:800;font-size:13px;padding:7px 12px;border-radius:999px;background:#172554;color:#fecaca}
+.notice{background:#172554;color:#bfdbfe;border-radius:14px;padding:14px 16px;margin:18px 0;font-size:14px}
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px;gap:16px}
+.locked .lock{font-size:52px}
+.locked h2{color:#fff}
+.locked p{color:#cbd5e1;max-width:520px}
+#adminBar{display:none;background:rgba(245,130,32,.12);border:1px solid var(--orange);border-radius:14px;padding:14px 16px;margin:16px 0;gap:10px;flex-wrap:wrap;align-items:center}
+#adminBar.show{display:flex}
+#adminBar span{font-weight:700;font-size:13px;color:#ffd7ad;flex:1 1 200px}
+#gallery{display:grid;grid-template-columns:1fr;gap:16px;margin-top:8px}
+.sheet{background:#fff;color:var(--ink);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.sheet .head{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+.sheet .head h3{color:var(--blue);font-size:16px;flex:1}
+.sheet img{width:100%;height:auto;display:block}
+.sheet .del{display:none}
+.sheet.admin .del{display:inline-block}
+.empty{color:#cbd5e1;text-align:center;padding:34px;font-size:14px}
+#content{display:none}
+#content.show{display:block}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>🔒 Internal Financing Sheets</h1>
+    <span id="statusBadge">○ LOGIN REQUIRED</span>
+    <button class="btn blue" id="btnLogin" type="button">Log in</button>
+    <button class="btn ghost hidden" id="btnLogout" type="button">Log out</button>
+    <a class="btn ghost" href="hca-field-guide.html">← Field Guide</a>
+    <p>CM Heating internal use only — lender rate sheets, dealer terms, and program details. Do not screen-share or show to homeowners.</p>
+  </div>
+
+  <!-- Locked state: shown by default, stays shown unless Firebase confirms a valid user (fail closed) -->
+  <div id="locked" class="locked">
+    <div class="lock">🔒</div>
+    <h2>Staff login required</h2>
+    <p>This page contains internal dealer terms and credentials. Tap <b>Log in</b> and use your name + the same PIN you use for the Install Availability sheet.</p>
+  </div>
+
+  <!-- Protected content: hidden until authenticated; sheets are loaded from the database, never stored in this file -->
+  <div id="content">
+    <div id="adminBar">
+      <span>Admin mode — you can add or remove sheets. Everyone signed in can view them.</span>
+      <label class="btn orange" style="cursor:pointer">
+        + Add sheet
+        <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
+      </label>
+    </div>
+    <div class="notice">These sheets load from the CM Heating database after login. They are <b>not</b> stored in this page's source, so they are not exposed on the public web.</div>
+    <div id="gallery"></div>
+    <div id="empty" class="empty">No sheets uploaded yet. An admin can tap “+ Add sheet”.</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+/* ---- Reused verbatim from install-availability-secure.html so the SAME PINs work ---- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+const INSTALL_USERS = [
+  { role:"ADMIN", name:"Geoff",   email:"geoffrey.simons@cmheating.com" },
+  { role:"ADMIN", name:"Amy",     email:"amy@cmheating.com" },
+  { role:"ADMIN", name:"Laura",   email:"laura.weiss@cmheating.com" },
+  { role:"ADMIN", name:"Jazryn",  email:"jazryn.delacruz@cmheating.com" },
+  { role:"ADMIN", name:"Sabrina", email:"sabrina.kennard@cmheating.com" },
+  { role:"ADMIN", name:"Lily",    email:"lily.sarrazin@cmheating.com" },
+  { role:"ADMIN", name:"Jen",     email:"jennifer@cmheating.com" },
+  { role:"ADMIN", name:"Brittny", email:"bmiller@cmheating.com" },
+  { role:"HCA",   name:"Amber",   email:"amber.maddalena@cmheating.com" },
+  { role:"HCA",   name:"Chester", email:"chester.granard@cmheating.com" },
+  { role:"HCA",   name:"Davis",   email:"davis.diosdado@cmheating.com" },
+  { role:"HCA",   name:"Jay",     email:"javierre.milo@cmheating.com" },
+  { role:"HCA",   name:"Joe",     email:"jchounramany@cmheating.com" },
+  { role:"HCA",   name:"Joseph",  email:"joseph.ruble@cmheating.com" },
+  { role:"HCA",   name:"Kyle",    email:"kmcalistar@cmheating.com" },
+  { role:"HCA",   name:"Samir",   email:"samir.khoury@cmheating.com" },
+  { role:"HCA",   name:"Trevor",  email:"trevor.bohm@cmheating.com" },
+  { role:"HCA",   name:"Adam",    email:"adam@cmheating.com" }
+];
+
+const DB_FINANCING = "cmh_financing";
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+let currentUser = null;   // {role,name,email}
+let financeListenerStarted = false;
+
+const $ = id => document.getElementById(id);
+const norm = v => String(v || "").trim().toLowerCase();
+const findByEmail = e => INSTALL_USERS.find(u => norm(u.email) === norm(e)) || null;
+function findByName(input){
+  const t = norm(input); if(!t) return null;
+  const exact = INSTALL_USERS.find(u => u.name.toLowerCase() === t);
+  if (exact) return exact;
+  const m = INSTALL_USERS.filter(u => u.name.toLowerCase().startsWith(t));
+  return m.length === 1 ? m[0] : null;
+}
+function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
+
+function badge(txt,color){ const b=$("statusBadge"); b.textContent=txt; b.style.color=color; }
+
+async function login(){
+  const name = prompt("Enter your name:"); if(name===null) return;
+  const user = findByName(name);
+  if(!user){ alert("Name not recognized. Try your first name, exactly as listed."); return; }
+  const pin = prompt(`Enter PIN for ${user.name}:`); if(pin===null) return;
+  try{
+    await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin));
+  }catch(err){
+    console.error("Login error:", err);
+    alert("Incorrect PIN, or your Auth user isn't set up yet.");
+  }
+}
+
+$("btnLogin").addEventListener("click", login);
+$("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
+
+/* ---- Auth gate: fail CLOSED. Content shows only for a recognized, signed-in user. ---- */
+onAuthStateChanged(auth, user => {
+  const known = user ? findByEmail(user.email) : null;
+  if(!known){
+    currentUser = null;
+    lock();
+    if(user) signOut(auth).catch(e=>console.error(e)); // signed in but not on the list
+    return;
+  }
+  currentUser = { role:known.role, name:known.name, email:known.email };
+  unlock();
+});
+
+function lock(){
+  $("locked").classList.remove("hidden");
+  $("content").classList.remove("show");
+  $("btnLogin").classList.remove("hidden");
+  $("btnLogout").classList.add("hidden");
+  $("adminBar").classList.remove("show");
+  badge("○ LOGIN REQUIRED", "#fecaca");
+}
+
+function unlock(){
+  $("locked").classList.add("hidden");
+  $("content").classList.add("show");
+  $("btnLogin").classList.add("hidden");
+  $("btnLogout").classList.remove("hidden");
+  badge(`● ${currentUser.role}: ${currentUser.name}`, "#86efac");
+  $("adminBar").classList.toggle("show", currentUser.role === "ADMIN");
+  if(!financeListenerStarted){ startFinanceListener(); financeListenerStarted = true; }
+}
+
+/* ---- Load sheets from the database (never from this file) ---- */
+function startFinanceListener(){
+  onValue(ref(db, DB_FINANCING + "/sheets"), snap => {
+    const data = snap.val() || {};
+    const rows = Object.entries(data)
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || String(a.label).localeCompare(String(b.label)));
+    renderGallery(rows);
+  });
+}
+
+function renderGallery(rows){
+  const g = $("gallery"); g.innerHTML = "";
+  $("empty").style.display = rows.length ? "none" : "block";
+  const isAdmin = currentUser && currentUser.role === "ADMIN";
+  for(const r of rows){
+    const card = document.createElement("div");
+    card.className = "sheet" + (isAdmin ? " admin" : "");
+    const head = document.createElement("div");
+    head.className = "head";
+    const h = document.createElement("h3");
+    h.textContent = r.label || "Untitled sheet";
+    head.appendChild(h);
+    if(isAdmin){
+      const del = document.createElement("button");
+      del.className = "btn red del";
+      del.textContent = "Delete";
+      del.addEventListener("click", () => deleteSheet(r.id, r.label));
+      head.appendChild(del);
+    }
+    const img = document.createElement("img");
+    img.src = r.dataUrl; img.alt = r.label || "";
+    img.loading = "lazy";
+    card.appendChild(head);
+    card.appendChild(img);
+    g.appendChild(card);
+  }
+}
+
+/* ---- Admin upload: downscale in-browser, then store in the DB ---- */
+$("fileInput").addEventListener("change", async e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = "";
+  for(const f of files){
+    const label = prompt(`Label for "${f.name}" (e.g. "Synchrony — Home Specialty Rates"):`, f.name.replace(/\.[^.]+$/,""));
+    if(label === null) continue;
+    try{
+      const dataUrl = await downscale(f, 1500, 0.82);
+      await push(ref(db, DB_FINANCING + "/sheets"), {
+        label, dataUrl,
+        order: Date.now(),
+        updatedBy: currentUser ? currentUser.name : "unknown",
+        updatedAt: new Date().toISOString()
+      });
+    }catch(err){
+      console.error("Upload failed:", err);
+      alert(`Couldn't add "${f.name}". ${err && err.message ? err.message : ""}`);
+    }
+  }
+});
+
+async function deleteSheet(id, label){
+  if(!confirm(`Remove "${label || "this sheet"}"? This affects everyone.`)) return;
+  try{ await remove(ref(db, DB_FINANCING + "/sheets/" + id)); }
+  catch(err){ console.error("Delete failed:", err); alert("Delete failed."); }
+}
+
+function downscale(file, maxW, quality){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Not a readable image")); };
+    img.src = url;
+  });
+}
+</script>
+</body>
+</html>

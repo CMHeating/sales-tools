@@ -86,3 +86,13 @@ Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Javierre Milo), Joe Choun
 All tools share a consistent dark theme — navy/dark blue backgrounds (`#0a1628`), orange accent (`#f58220` / `#c97d10`), white text, IBM Plex or Outfit fonts. New UI should match this visual language.
 
 The Leaderboard and Install Availability tools use Firebase JS SDK v10 loaded via CDN (`https://www.gstatic.com/firebasejs/10.12.0/`). All other tools are pure client-side with no external dependencies beyond Google Fonts.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
