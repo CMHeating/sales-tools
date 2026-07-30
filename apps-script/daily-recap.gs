@@ -109,17 +109,15 @@ function sendDailyRecap() {
 }
 
 function buildRecapBody_(hca, dateLabel) {
-  /* The code legend sits above the block on purpose. Below it, a rep reading
-     top-to-bottom meets "(W/I/TF/R)" before anything has said what TF means,
-     and on a phone the answer is a scroll away past the whole block. */
+  /* Lead Source and Outcome list their options in full rather than as letter
+     codes, so nothing has to be looked up or remembered. The collector still
+     accepts the old single letters — see normalizeLeadSource_/normalizeOutcome_
+     — because reps who learned W/I/TF/R and S/E/F will keep typing them. */
   return "Hi " + hca.first + ",\n\n" +
     "Please reply to this email with one block per appointment you ran today (" + dateLabel + ").\n\n" +
-    "Codes:\n" +
-    "  Lead Source — W = Web,  I = Inbound,  TF = Tech Flip,  R = Revisit\n" +
-    "  Outcome     — S = Sold,  E = Estimate,  F = Follow-up needed\n\n" +
     "Customer:\n" +
-    "Lead Source (W/I/TF/R):\n" +
-    "Outcome (S/E/F):\n" +
+    "Lead Source (Web / Inbound / Tech Flip / Revisit):\n" +
+    "Outcome (Sold / Estimate / Follow-up needed):\n" +
     "What did you offer as a deal? (package/tier + price):\n" +
     "Water Heater presented? (Y/N — interest level):\n" +
     "Follow-up date (if not closed):\n" +

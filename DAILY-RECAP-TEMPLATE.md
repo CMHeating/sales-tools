@@ -15,18 +15,13 @@ Columns: Date, HCA Name, Type (Sick/Vacation/Swap), Notes
 
 ### Body
 
-The code legend goes above the block, not below it. Below, a rep reading
-top-to-bottom meets `(W/I/TF/R)` before anything has said what `TF` means, and
-on a phone the answer is a scroll away past the whole block.
+Lead Source and Outcome list their options in full. Nothing has to be looked
+up or remembered, and there is no separate legend to keep in sync.
 
 ```
-Codes:
-  Lead Source — W = Web,  I = Inbound,  TF = Tech Flip,  R = Revisit
-  Outcome     — S = Sold,  E = Estimate,  F = Follow-up needed
-
 Customer:
-Lead Source (W/I/TF/R):
-Outcome (S/E/F):
+Lead Source (Web / Inbound / Tech Flip / Revisit):
+Outcome (Sold / Estimate / Follow-up needed):
 What did you offer as a deal? (package/tier + price):
 Water Heater presented? (Y/N — interest level):
 Follow-up date (if not closed):
@@ -36,14 +31,18 @@ If not sold — What is the objection or holdback from completing the sale?:
 One block per appointment run that day. Reps repeat the block if they ran
 more than one.
 
-### Quick codes
+### Accepted values
 
-| Lead Source | | Outcome | |
-|---|---|---|---|
-| `W` | Web | `S` | Sold |
-| `I` | Inbound | `E` | Estimate |
-| `TF` | Tech Flip | `F` | Follow-up needed |
-| `R` | Revisit | | |
+| Field | Asked for | Also accepted |
+|---|---|---|
+| Lead Source | `Web`, `Inbound`, `Tech Flip`, `Revisit` | `W`, `I`, `TF`, `R` |
+| Outcome | `Sold`, `Estimate`, `Follow-up needed` | `S`, `E`, `F` |
+
+The email asks for the full words. The collector still accepts the older
+single-letter codes, because reps who learned `W/I/TF/R` and `S/E/F` will keep
+typing them and those replies should not be dropped. Matching is
+case-insensitive and tolerant of surrounding text, so "web lead" and
+"sold - signed tonight" both resolve.
 
 There is deliberately no "Not Valid" outcome. The objection/holdback question
 replaced it.
