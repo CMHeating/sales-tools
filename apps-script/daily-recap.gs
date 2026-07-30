@@ -168,10 +168,13 @@ function buildTestModeBody_(plan) {
 function collectRecapReplies() {
   const now = new Date();
   const plan = buildTodayPlan_(now);
-  const replies = findRecapReplies_(plan.dateLabel);
+  const lastRun = readLastDigestRun_();
+  const replies = findRecapReplies_(plan.dateLabel, lastRun);
 
   const byHca = {};
+  const late = [];
   replies.forEach(r => {
+    if (r.late) { late.push(r); return; }
     if (!byHca[r.hca.name]) byHca[r.hca.name] = { hca: r.hca, entries: [] };
     byHca[r.hca.name].entries = byHca[r.hca.name].entries.concat(r.entries);
   });
@@ -180,7 +183,7 @@ function collectRecapReplies() {
   Object.keys(byHca).forEach(n => { responded[n] = true; });
   const missing = plan.working.filter(h => !responded[h.name]);
 
-  const body = buildDigestBody_(plan, byHca, missing);
+  const body = buildDigestBody_(plan, byHca, missing, late);
   sendEmailSafe_({
     to: [DAILY_RECAP_CONFIG.managerEmail],
     subject: (DAILY_RECAP_CONFIG.TEST_MODE ? "[TEST] " : "") +
@@ -188,11 +191,25 @@ function collectRecapReplies() {
     body: body
   });
 
-  Logger.log("Digest sent. " + Object.keys(byHca).length + " replied, " + missing.length + " missing.");
-  return { replied: Object.keys(byHca).length, missing: missing.length };
+  writeLastDigestRun_(now);
+  Logger.log("Digest sent. " + Object.keys(byHca).length + " replied, " + missing.length +
+    " missing, " + late.length + " late.");
+  return { replied: Object.keys(byHca).length, missing: missing.length, late: late.length };
 }
 
-function findRecapReplies_(dateLabel) {
+/*
+ * Attribution is by subject, not arrival time. Every recap subject carries its
+ * date ("Daily Recap — Thursday, July 30, 2026") and Gmail keeps it on the
+ * reply, so a reply is counted against the night it answers.
+ *
+ * Without this, the broad newer_than search would re-parse yesterday's replies
+ * into tonight's digest and double-count them.
+ *
+ * A reply to an earlier night still matters — reps in the field often answer
+ * after the 8:15pm cutoff — so those come back flagged late, bounded to ones
+ * that arrived since the previous digest run so they are reported exactly once.
+ */
+function findRecapReplies_(dateLabel, sinceDate) {
   const cfg = DAILY_RECAP_CONFIG;
   const query = 'subject:"' + cfg.subjectPrefix + '" newer_than:' + cfg.replyLookbackDays + "d";
   const out = [];
@@ -211,12 +228,42 @@ function findRecapReplies_(dateLabel) {
       const hca = RECAP_ROSTER.filter(h => from.indexOf(h.email.toLowerCase()) !== -1)[0];
       if (!hca) return;
 
+      const subject = String(msg.getSubject() || "");
+      const isTonight = subject.indexOf(dateLabel) !== -1;
+
+      if (!isTonight) {
+        if (!sinceDate) return;                       // no prior run recorded
+        const received = msg.getDate();
+        if (!received || received <= sinceDate) return;
+      }
+
       const entries = parseRecapReply_(msg.getPlainBody());
-      if (entries.length) out.push({ hca: hca, entries: entries });
+      if (entries.length) {
+        out.push({ hca: hca, entries: entries, late: !isTonight, subject: subject });
+      }
     });
   });
 
   return out;
+}
+
+function readLastDigestRun_() {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty("lastDigestRunIso");
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  } catch (err) {
+    return null;
+  }
+}
+
+function writeLastDigestRun_(when) {
+  try {
+    PropertiesService.getScriptProperties().setProperty("lastDigestRunIso", when.toISOString());
+  } catch (err) {
+    Logger.log("Could not record digest run time: " + (err && err.message ? err.message : String(err)));
+  }
 }
 
 /*
@@ -298,7 +345,7 @@ function normalizeOutcome_(value) {
   return value.trim().toUpperCase();
 }
 
-function buildDigestBody_(plan, byHca, missing) {
+function buildDigestBody_(plan, byHca, missing, late) {
   const lines = [];
   lines.push("Recap digest for " + plan.dateLabel + " (" + plan.weekday + ")");
   if (DAILY_RECAP_CONFIG.TEST_MODE) {
@@ -335,6 +382,20 @@ function buildDigestBody_(plan, byHca, missing) {
     missing.forEach(h => lines.push("  - " + h.name));
   } else if (plan.working.length) {
     lines.push("All " + plan.working.length + " scheduled HCAs replied.");
+  }
+
+  if (late && late.length) {
+    lines.push("");
+    lines.push("Late replies to earlier recaps (" + late.length + ") —");
+    lines.push("came in after that night's digest had already gone out:");
+    late.forEach(r => {
+      lines.push("");
+      lines.push("  " + r.hca.name + "  (" + r.subject + ")");
+      r.entries.forEach(e => {
+        lines.push("    [" + (e.outcome || "NO OUTCOME GIVEN") + "] " + (e.customer || "(customer not named)"));
+        if (e.outcome !== "SOLD" && e.objection) lines.push("        Objection: " + e.objection);
+      });
+    });
   }
 
   if (!plan.exceptions.ok) {
