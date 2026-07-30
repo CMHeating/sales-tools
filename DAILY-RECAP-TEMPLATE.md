@@ -18,7 +18,7 @@ Columns: Date, HCA Name, Type (Sick/Vacation/Swap), Notes
 ```
 Customer:
 Lead Source (W/I/TF/R):
-Outcome (S/Q/F):
+Outcome (S/E/F):
 Water Heater presented? (Y/N — interest level):
 Follow-up date (if not closed):
 If not sold — What is the objection or holdback from completing the sale?:
@@ -32,7 +32,7 @@ more than one.
 | Lead Source | | Outcome | |
 |---|---|---|---|
 | `W` | Web | `S` | Sold |
-| `I` | Inbound | `Q` | Quoted |
+| `I` | Inbound | `E` | Estimate |
 | `TF` | Tech Flip | `F` | Follow-up needed |
 | `R` | Revisit | | |
 
@@ -42,7 +42,7 @@ replaced it.
 ## Collect (8:15pm Pacific, daily)
 
 Search Gmail for replies to that evening's recap emails. Compile a digest
-grouped by HCA, tagged `[SOLD]` / `[QUOTED]` / `[FOLLOW-UP NEEDED]`, including
+grouped by HCA, tagged `[SOLD]` / `[ESTIMATE]` / `[FOLLOW-UP NEEDED]`, including
 lead source and the objection/holdback for anything not sold. Flag any HCA who
 was scheduled to work and did not reply.
 
@@ -82,14 +82,14 @@ reconstruct leads that are already sitting in it untouched.
 ### Open decisions before a parser is built
 
 1. **Outcome to status.** Tracker statuses are `Contacted`, `Unreachable`,
-   `NotAttempted`, `Lost`, `Sold`. There is no `Quoted`, so today both `Q` and
-   `F` collapse to `Contacted` and the distinction is lost. Adding a `Quoted`
-   status keeps it.
+   `NotAttempted`, `Lost`, `Sold`. There is no `Estimate`, so today both `E`
+   and `F` collapse to `Contacted` and the distinction is lost. Adding an
+   `Estimate` status keeps it.
 2. **Customer matching.** `Customer:` is free text. "Smith" vs "John Smith"
    needs normalisation plus fuzzy matching, and anything unmatched has to land
    in a review queue rather than being dropped silently.
 3. **Missing dollar value.** Recap-sourced leads have no estimate, so they do
-   not contribute to the Pipeline Value tile. An optional `Quoted amount:`
+   not contribute to the Pipeline Value tile. An optional `Estimate amount:`
    line in the template would fix that at the cost of one more field per
    appointment.
 
