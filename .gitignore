@@ -1,3 +1,14 @@
+# --- Secrets: never commit ---
+# PIN config and Firebase Auth artifacts. See INSTALL-AVAILABILITY-SECURITY.md.
+# Catch-all patterns first so a new *.private.* file is ignored by default.
+*.private.json
+*.private.txt
+pin-config.private.json
+install-secret-one-line.private.txt
+install-auth-users.spark.private.json
+firebase.hosting-install-only.json
+firebase.database-spark-only.json
+
 # Logs
 logs
 *.log

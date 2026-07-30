@@ -1,0 +1,42 @@
+# GitHub Pages build configuration for cmheating.github.io/sales-tools/
+#
+# Everything in this repo root is published to the public internet by default.
+# Files listed under `exclude` are kept in the repo but NOT copied to the live
+# site, so they cannot be fetched by URL.
+#
+# Do NOT add a .nojekyll file. That disables Jekyll entirely, which would make
+# these exclusions stop applying and republish every file below.
+
+exclude:
+  # --- Install Availability dev source + snapshots ---
+  # These contain hardcoded ADMIN_PINS / HCA_PINS maps. Production is the
+  # generated install-availability-secure.html (PINs stripped), which stays
+  # published. Nothing links to the files below.
+  - install-availability.html
+  - install-availability-updated.html
+  - install-availability-TEST.html
+  - install-availability-TEST-v2.html
+  - install-availability-TEST.before-compare-backup.html
+  - install-availability.before-slot-locks.html
+  - install-availability.backup-before-updated-look.html
+  - install-availability.archive-before-test-promotion.html
+  - install-availability.pre-new-look-backup.html
+
+  # --- Build tooling ---
+  # Not needed by any browser-facing tool.
+  - scripts/
+
+  # --- Firebase Hosting staging copies ---
+  # Duplicates of files already served from their canonical location.
+  - firebase-hosting-install/
+
+  # --- Internal docs (staff roster, permission model, deploy procedures) ---
+  - INSTALL-AVAILABILITY-SECURITY.md
+  - CLAUDE.md
+  - database.install-availability.spark.rules.json
+
+  # --- Jekyll defaults, preserved because setting `exclude` overrides them ---
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
