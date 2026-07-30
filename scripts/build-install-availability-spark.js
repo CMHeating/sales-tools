@@ -6,7 +6,12 @@ const sourcePath = "install-availability.html";
 const securePath = "install-availability-secure.html";
 const rulesPath = "database.install-availability.spark.rules.json";
 
-const source = fs.readFileSync(sourcePath, "utf8");
+// Normalize to LF before any matching. Windows checkouts get CRLF via
+// core.autocrlf, but the replacement patterns below are written with \n, so
+// without this the regexes silently fail to match and the build aborts on the
+// "still contains old PIN" guard. Normalizing here also means Windows and
+// Linux produce byte-identical output.
+const source = fs.readFileSync(sourcePath, "utf8").replace(/\r\n/g, "\n");
 
 function ruleOr(emails) {
   return emails
