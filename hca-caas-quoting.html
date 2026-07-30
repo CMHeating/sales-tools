@@ -860,9 +860,18 @@ document.getElementById("psel").addEventListener("change",fillSizes);
 document.getElementById("ssel").addEventListener("change",render);
 document.getElementById("jd").textContent=JD["ACGF"];
 fill();
+// Manager panel gate. This is a UI convenience only, NOT security: this file is
+// served publicly, so the value below is readable in view-source by anyone.
+// It exists purely to keep the panel out of the way during normal quoting.
+//
+// Do NOT put a real Install Availability / Firebase Auth PIN here. Doing so
+// publishes a working tracker admin credential to the internet, which is what
+// this line used to do.
+const MANAGER_PANEL_CODE = "2580";
+
 function unlockManager(){
-  const pin = prompt("Enter admin PIN");
-  if(pin === "5613"){
+  const pin = prompt("Enter manager code");
+  if(pin === MANAGER_PANEL_CODE){
     const panel = document.getElementById("managerPanel");
     if(panel) panel.style.display = "block";
     const btn = document.getElementById("managerAccessBtn");
