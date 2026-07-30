@@ -3,15 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CM Heating — Davis Diosdado — Follow-Up Tracker</title>
+<title>CM Heating — Adam Weberg — Follow-Up Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f1f5f9;--white:#fff;--dark:#0f172a;--surface:#1e293b;--orange:#f97316;--muted:#64748b;--border:#e2e8f0;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--blue:#0891b2;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padding:32px;font-size:14px;line-height:1.6;max-width:1100px;margin:0 auto;}
 .page-header{background:var(--surface);border-radius:12px;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
-.page-header img{height:48px;}
-.header-center{text-align:center;}
+.page-header img{height:48px;}.header-center{text-align:center;}
 .header-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;line-height:1;}
 .header-sub{font-size:13px;color:#94a3b8;font-weight:500;margin-top:4px;}
 .print-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
@@ -31,8 +30,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
 .filter-btn.active .count{background:rgba(255,255,255,.2);color:white;}
 .leads-list{display:flex;flex-direction:column;gap:12px;}
 .lead-card{background:var(--white);border-radius:10px;border:1px solid var(--border);overflow:hidden;}
-.lead-card.hidden{display:none;}
-.lead-card.saved{border-color:#bbf7d0;}
+.lead-card.hidden{display:none;}.lead-card.saved{border-color:#bbf7d0;}
 .lead-header{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border);}
 .urgency-bar{width:5px;align-self:stretch;border-radius:3px;flex-shrink:0;min-height:52px;}
 .urg-green{background:#16a34a;}.urg-yellow{background:#d97706;}.urg-orange{background:#f97316;}.urg-red{background:#dc2626;}.urg-black{background:#1e293b;}
@@ -46,8 +44,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
 .status-badge{display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;}
 .badge-Contacted{background:#dcfce7;color:#16a34a;}.badge-Unreachable{background:#fef3c7;color:#d97706;}.badge-NotAttempted{background:#f1f5f9;color:#64748b;}.badge-Lost{background:#fee2e2;color:#dc2626;}.badge-Sold{background:#dbeafe;color:#0891b2;}
 .lead-body{padding:16px 20px;display:flex;gap:16px;align-items:flex-start;}
-.status-group{min-width:190px;}
-.field-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
+.status-group{min-width:190px;}.field-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
 .status-select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--dark);background:var(--white);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
 .status-select:focus{outline:none;border-color:var(--orange);}
 .notes-group{flex:1;}
@@ -59,8 +56,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
 .save-feedback{font-size:11px;font-weight:700;text-align:center;min-height:16px;width:100%;}
 .save-feedback.ok{color:var(--green);}.save-feedback.err{color:var(--red);}
 .st-reminder{display:none;width:100%;background:#fef3c7;border:1px solid #d97706;border-radius:6px;padding:10px;}
-.st-reminder.visible{display:block;}
-.st-reminder-title{font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;}
+.st-reminder.visible{display:block;}.st-reminder-title{font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;}
 .copy-btn{width:100%;padding:8px 10px;background:#d97706;color:white;border:none;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
 .copy-btn:hover{background:#b45309;}.copy-btn.copied{background:#16a34a;cursor:default;}
 .copy-note-preview{font-size:10px;color:#92400e;margin-top:5px;line-height:1.4;word-break:break-word;font-style:italic;}
@@ -92,59 +88,23 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
   </div>
   <button class="print-btn" onclick="window.print()">&#8982; Print / PDF</button>
 </div>
+<div id="setupNotice"></div>
 <div class="summary-bar" id="summaryBar"></div>
 <div class="filters" id="filters"></div>
 <div class="leads-list" id="leadsList"></div>
 <div class="footer">CM Heating Sales Operations &nbsp;&middot;&nbsp; Follow-Up Tracker &nbsp;&middot;&nbsp; <span id="footerDate"></span></div>
 <script>
-const HCA_NAME='Davis Diosdado',SCRIPT_URL='https://script.google.com/macros/s/AKfycbwQax9xn0kEEhb9zVeHpmJ2_fixr0Me13xuz3huXPBWFlbWKVVVyCQK2kjuTDY2Ufz_dw/exec';
+const HCA_NAME='Adam Weberg';
+/* SETUP: paste Adam's Apps Script web-app /exec URL between the quotes below.
+   Until then the page renders fine but follow-ups cannot be saved. */
+const SCRIPT_URL='PASTE_ADAM_APPS_SCRIPT_EXEC_URL_HERE';
 const leads=[
-  {"customer":"Michelle Petelle","address":"4301 224th Place Southwest, Mountlake Terrace, WA 98043 USA","phone":"(253) 651-3080","estimate":"$23K","estimateRaw":22526,"daysOld":127,"createdOn":"12/31/2025","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Mike Meiers Icon Dental","address":"1820 100th Place Southeast, Everett, WA 98208 USA","phone":"(206) 999-7056","estimate":"$19K","estimateRaw":19201,"daysOld":119,"createdOn":"01/08/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"William Paige","address":"2323 141st Street Northwest, Marysville, WA 98271 USA","phone":"(480) 215-4304","estimate":"$5K","estimateRaw":5262,"daysOld":119,"createdOn":"01/08/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Megan Kile","address":"5518 129th Place Southeast, Everett, WA 98208 USA","phone":"(509) 528-7759","estimate":"$19K","estimateRaw":19277,"daysOld":118,"createdOn":"01/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Thomas Aitchison","address":"14050 160th Avenue Northeast, Woodinville, WA 98072 USA","phone":"(206) 422-9186","estimate":"$8K","estimateRaw":8072,"daysOld":118,"createdOn":"01/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Carole Hare","address":"815 124th Street Southwest #151, Everett, WA 98204 USA","phone":"(906) 286-0505","estimate":"$16K","estimateRaw":15576,"daysOld":108,"createdOn":"01/19/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"J Roe","address":"16008 27th Drive Southeast, Mill Creek, WA 98012 USA","phone":"(425) 293-6671","estimate":"$20K","estimateRaw":19715,"daysOld":106,"createdOn":"01/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Matt Berger","address":"820 148th Street Northeast, Arlington, WA 98223 USA","phone":"(425) 269-5536","estimate":"$7K","estimateRaw":7301,"daysOld":101,"createdOn":"01/26/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Jack and Valerie Jorgenson","address":"12419 21st Avenue Southeast, Everett, WA 98208 USA","phone":"(414) 935-8254","estimate":"$18K","estimateRaw":18020,"daysOld":101,"createdOn":"01/26/2026","status":"Contacted","lastFollowUp":"02/19/2026","followUps":1,"notes":""},
-  {"customer":"Carla Berry","address":"918 94th Street Southeast, Everett, WA 98208 USA","phone":"(425) 231-4324","estimate":"$10K","estimateRaw":9889,"daysOld":100,"createdOn":"01/27/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Rebekah Naab","address":"13505 239th Place Southeast, Snohomish, WA 98296 USA","phone":"(360) 529-1686","estimate":"$17K","estimateRaw":17131,"daysOld":92,"createdOn":"02/04/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Chris Gill","address":"6521 Cascade Drive Southeast, Snohomish, WA 98296 USA","phone":"(512) 557-2711","estimate":"$26K","estimateRaw":25547,"daysOld":87,"createdOn":"02/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Heather and Danen Barnhart 0000730","address":"1003 118th Street Northeast, Tulalip Bay, WA 98271 USA","phone":"(425) 350-5508","estimate":"$19K","estimateRaw":19109,"daysOld":85,"createdOn":"02/11/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Judy Haywood","address":"23825 15th Avenue Southeast #UNIT 324, Bothell, WA 98021 USA","phone":"(206) 330-4411","estimate":"$15K","estimateRaw":15362,"daysOld":83,"createdOn":"02/13/2026","status":"Contacted","lastFollowUp":"02/19/2026","followUps":1,"notes":""},
-  {"customer":"Sarah Smith","address":"10309 35th Street Northeast, Lake Stevens, WA 98258 USA","phone":"(253) 576-3909","estimate":"$14K","estimateRaw":14278,"daysOld":81,"createdOn":"02/15/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Jenna Harvey","address":"1307 6th Street, Anacortes, WA 98221 USA","phone":"(843) 437-0932","estimate":"$11K","estimateRaw":10671,"daysOld":78,"createdOn":"02/18/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Ana Engleberg","address":"1025 North Park Drive, Everett, WA 98203 USA","phone":"(858) 519-4322","estimate":"$21K","estimateRaw":21377,"daysOld":75,"createdOn":"02/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Emily Klesick","address":"20774 English Road, Mount Vernon, WA 98274 USA","phone":"(360) 913-0886","estimate":"$16K","estimateRaw":16245,"daysOld":71,"createdOn":"02/25/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Dawn Apuan","address":"3421 102nd Place Southwest, Everett, WA 98275 USA","phone":"(253) 720-2965","estimate":"$10K","estimateRaw":9978,"daysOld":60,"createdOn":"03/08/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"An Hong","address":"1214 167th Place Southwest, Lynnwood, WA 98037 USA","phone":"(206) 290-6316","estimate":"$24K","estimateRaw":24308,"daysOld":59,"createdOn":"03/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Abigail Minor","address":"15926 82nd Place Northeast, Kenmore, WA 98028 USA","phone":"(541) 556-4069","estimate":"$28K","estimateRaw":27681,"daysOld":58,"createdOn":"03/10/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Kirill Chervets","address":"8420 8th Place Southeast, Lake Stevens, WA 98258 USA","phone":"(206) 390-4525","estimate":"$14K","estimateRaw":13790,"daysOld":57,"createdOn":"03/11/2026","status":"Contacted","lastFollowUp":"04/07/2026","followUps":1,"notes":""},
-  {"customer":"Calvin Ingram","address":"2612 Rainbolt Place, Mount Vernon, WA 98274 USA","phone":"(360) 661-9586","estimate":"$6K","estimateRaw":6230,"daysOld":51,"createdOn":"03/17/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Teasha Corrado","address":"22606 22nd Place West, Brier, WA 98036 USA","phone":"(360) 581-5836","estimate":"$31K","estimateRaw":30830,"daysOld":50,"createdOn":"03/18/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Shruti Karmakar","address":"1236 Northeast 117th Street, Seattle, WA 98125 USA","phone":"(929) 200-2425","estimate":"$25K","estimateRaw":24601,"daysOld":48,"createdOn":"03/20/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Elizabeth lam","address":"212 217th Place Southwest, Bothell, WA 98021 USA","phone":"(206) 250-7185","estimate":"$17K","estimateRaw":17496,"daysOld":38,"createdOn":"03/30/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Andrew Sale","address":"11302 4th Avenue Northeast, Tulalip Bay, WA 98271 USA","phone":"(503) 975-8061","estimate":"$20K","estimateRaw":20316,"daysOld":34,"createdOn":"04/03/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Asrat Damena","address":"5029 Wilmington Avenue, Everett, WA 98203 USA","phone":"(206) 643-7025","estimate":"$17K","estimateRaw":17068,"daysOld":31,"createdOn":"04/06/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"David Weymouth","address":"2301 South 19th Street, Mount Vernon, WA 98274 USA","phone":"(360) 661-0585","estimate":"$15K","estimateRaw":14579,"daysOld":28,"createdOn":"04/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Jonas Malm","address":"3105 Glacier Peak Avenue, Everett, WA 98208 USA","phone":"(304) 237-9380","estimate":"$13K","estimateRaw":12924,"daysOld":27,"createdOn":"04/10/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Craig Bernhard","address":"21211 Happy Valley Road, Stanwood, WA 98292 USA","phone":"(360) 652-8732","estimate":"$24K","estimateRaw":24465,"daysOld":27,"createdOn":"04/10/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"David and Natalie Warner","address":"19706 12th Avenue Northwest, Shoreline, WA 98177 USA","phone":"(206) 327-3774","estimate":"$8K","estimateRaw":7565,"daysOld":23,"createdOn":"04/14/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Kathy Jensen","address":"13914 26th Avenue Southeast, Mill Creek, WA 98012 USA","phone":"(206) 849-0249","estimate":"$10K","estimateRaw":9608,"daysOld":22,"createdOn":"04/15/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Amanda Pugh","address":"3814 226th Place Northeast, Arlington, WA 98223 USA","phone":"(404) 923-5168","estimate":"$27K","estimateRaw":26566,"daysOld":21,"createdOn":"04/16/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Sudeep Vaka","address":"9207 Park Road, Edmonds, WA 98020 USA","phone":"(857) 999-1605","estimate":"$16K","estimateRaw":16062,"daysOld":17,"createdOn":"04/20/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Ziwei Xiao","address":"13015 Northeast 197th Place, Woodinville, WA 98072 USA","phone":"(984) 322-8576","estimate":"$18K","estimateRaw":17813,"daysOld":17,"createdOn":"04/20/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Nav Thanka Nadar","address":"3914 168th Place Southeast, Bothell, WA 98012 USA","phone":"(425) 922-0374","estimate":"$7K","estimateRaw":6559,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Regina Gilmore","address":"4120 259th Street Northeast, Arlington, WA 98223 USA","phone":"(425) 299-1991","estimate":"$14K","estimateRaw":13895,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Matt Chomjak","address":"9730 31st Avenue Southeast, Everett, WA 98208 USA","phone":"(425) 346-1313","estimate":"$17K","estimateRaw":16609,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Justin and Heather Leach","address":"18193 West Chinook Drive, Burlington, WA 98233 USA","phone":"(360) 202-4099","estimate":"$26K","estimateRaw":25621,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Claire Hanser","address":"8823 Holly Drive #APT K103, Everett, WA 98208 USA","phone":"(206) 473-2287","estimate":"$9K","estimateRaw":8679,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"John Wick","address":"375 Tillicum Way, Camano, WA 98282 USA","phone":"(425) 417-9454","estimate":"$26K","estimateRaw":25804,"daysOld":10,"createdOn":"04/27/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Tommie Kay Kasnick","address":"19653 Cedardale Road, Mount Vernon, WA 98274 USA","phone":"(360) 616-6011","estimate":"$37K","estimateRaw":37131,"daysOld":10,"createdOn":"04/27/2026","status":"Contacted","lastFollowUp":"05/07/2026","followUps":1,"notes":""},
-  {"customer":"David Toop","address":"20521 81st Drive Northeast, Arlington, WA 98223 USA","phone":"(425) 299-7338","estimate":"$17K","estimateRaw":17432,"daysOld":6,"createdOn":"05/01/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Liam Shissler","address":"18621 Blueberry Lane #B212, Monroe, WA 98272 USA","phone":"(425) 905-5396","estimate":"$19K","estimateRaw":19190,"daysOld":4,"createdOn":"05/03/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"William Thomas","address":"1111 East Casino Road, Everett, WA 98203 USA","phone":"(425) 399-0077","estimate":"$7K","estimateRaw":7018,"daysOld":3,"createdOn":"05/04/2026","status":"Contacted","lastFollowUp":"05/07/2026","followUps":1,"notes":""}
+  /* SETUP: paste Adam's exported lead objects here, same shape as the other
+     trackers, e.g.
+     {"customer":"Jane Doe","address":"123 Main St, Everett, WA 98201 USA",
+      "phone":"(425) 555-0100","estimate":"$18K","estimateRaw":17920,"daysOld":12,
+      "createdOn":"07/18/2026","status":"NotAttempted","lastFollowUp":"Never",
+      "followUps":0,"notes":""}  */
 ];
 function getUrgency(d){if(d<=3)return{cls:'urg-green',filter:'fresh'};if(d<=7)return{cls:'urg-yellow',filter:'fresh'};if(d<=14)return{cls:'urg-orange',filter:'hot'};if(d<=21)return{cls:'urg-red',filter:'critical'};return{cls:'urg-black',filter:'critical'};}
 /* ---- Stale-lead detection (work-schedule aware) ----------------------------
@@ -155,8 +115,8 @@ function getUrgency(d){if(d<=3)return{cls:'urg-green',filter:'fresh'};if(d<=7)re
      - any other open lead                     : 14 work days since last touch
    Note: thresholds run off createdOn / lastFollowUp real dates, not the
    daysOld snapshot field, so they stay correct as the export ages.          */
-const WORK_DAYS=[0,1,2,3,4];/* Sun–Thu; 0=Sun .. 6=Sat */
-const WORK_DAYS_LABEL='Sun–Thu';
+const WORK_DAYS=[2,3,4,5,6];/* Tue–Sat; 0=Sun .. 6=Sat */
+const WORK_DAYS_LABEL='Tue–Sat';
 const STALE_NEW_LIMIT=7,STALE_FOLLOWUP_LIMIT=14;
 function parseTrackerDate(s){if(!s)return null;const m=String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!m)return null;const d=new Date(+m[3],+m[1]-1,+m[2]);return isNaN(d.getTime())?null:d;}
 function workDaysSince(from){if(!from)return 0;const end=new Date();end.setHours(0,0,0,0);const cur=new Date(from.getFullYear(),from.getMonth(),from.getDate());cur.setDate(cur.getDate()+1);let n=0;while(cur<=end){if(WORK_DAYS.indexOf(cur.getDay())!==-1)n++;cur.setDate(cur.getDate()+1);}return n;}
@@ -184,6 +144,7 @@ const totalPipeline=leads.reduce((s,l)=>s+l.estimateRaw,0);
 const criticalCount=leads.filter(l=>l.daysOld>14).length;
 const avgDays=leads.length?Math.round(leads.reduce((s,l)=>s+l.daysOld,0)/leads.length):0;
 const staleCount=leads.filter(l=>!!getStale(l)).length;
+if(SCRIPT_URL.indexOf('PASTE_ADAM')===0){document.getElementById('setupNotice').innerHTML='<div style="background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#92400e"><strong>Setup needed.</strong> This tracker is live but not yet connected. Two things to paste in: Adam\u2019s Apps Script <code>/exec</code> URL into <code>SCRIPT_URL</code>, and his exported leads into <code>const leads</code>.</div>';}
 document.getElementById('summaryBar').innerHTML=`
   <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${leads.length}</div><div class="tile-lbl">Open Leads</div></div>
   <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${fmtK(totalPipeline)}</div><div class="tile-lbl">Pipeline Value</div></div>
@@ -211,6 +172,7 @@ function logFollowUp(i){
   const lead=leads[i],status=document.getElementById(`status-${i}`).value,notes=document.getElementById(`notes-${i}`).value.trim();
   const btn=document.getElementById(`saveBtn-${i}`),feedback=document.getElementById(`saveFeedback-${i}`),badge=document.getElementById(`badge-${i}`),reminder=document.getElementById(`stReminder-${i}`),preview=document.getElementById(`notePreview-${i}`);
   if(!notes){feedback.textContent='Add a note before saving.';feedback.className='save-feedback err';return;}
+  if(SCRIPT_URL.indexOf('PASTE_ADAM')===0){feedback.textContent='Tracker not connected yet \u2014 add the Apps Script URL.';feedback.className='save-feedback err';return;}
   btn.disabled=true;btn.textContent='Saving...';feedback.textContent='';feedback.className='save-feedback';
   const ts=new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
   const stNote=`[${ts}] Status: ${status} | ${notes}`;savedNotes[i]=stNote;
