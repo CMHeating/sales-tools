@@ -19,6 +19,7 @@ Columns: Date, HCA Name, Type (Sick/Vacation/Swap), Notes
 Customer:
 Lead Source (W/I/TF/R):
 Outcome (S/E/F):
+What did you offer as a deal? (package/tier + price):
 Water Heater presented? (Y/N — interest level):
 Follow-up date (if not closed):
 If not sold — What is the objection or holdback from completing the sale?:
@@ -38,6 +39,11 @@ more than one.
 
 There is deliberately no "Not Valid" outcome. The objection/holdback question
 replaced it.
+
+The deal line is free text on purpose — reps write a tier and a price the way
+they naturally would ("BETTER HP $18,500", "BEST DF $249/mo"). The collector
+keeps the raw text and additionally parses out a figure when one is present, so
+nothing is lost when a rep writes it a way the parser does not expect.
 
 ## Collect (8:15pm Pacific, daily)
 
@@ -64,12 +70,12 @@ What the recap can and cannot fill:
 | `lastFollowUp` | recap — date of the reply |
 | `followUps` | recap — increment on each mention |
 | `notes` | recap — objection/holdback + water-heater answer |
+| `estimate` / `estimateRaw` | recap — figure parsed from the deal line, when one is given |
 | `address` | **ServiceTitan only** |
 | `phone` | **ServiceTitan only** |
-| `estimate` / `estimateRaw` | **ServiceTitan only** |
 | `createdOn` | **ServiceTitan only** |
 
-Because five fields have no recap equivalent, the recap **updates** tracker
+Because three fields have no recap equivalent, the recap **updates** tracker
 records rather than replacing the ServiceTitan export outright. The export
 remains the backbone (identity, contact, dollar value, created date); the
 recap supplies the daily delta.
@@ -88,10 +94,13 @@ reconstruct leads that are already sitting in it untouched.
 2. **Customer matching.** `Customer:` is free text. "Smith" vs "John Smith"
    needs normalisation plus fuzzy matching, and anything unmatched has to land
    in a review queue rather than being dropped silently.
-3. **Missing dollar value.** Recap-sourced leads have no estimate, so they do
-   not contribute to the Pipeline Value tile. An optional `Estimate amount:`
-   line in the template would fix that at the cost of one more field per
-   appointment.
+3. **Deal figures are two different units.** The deal line accepts either a
+   one-time total ("BETTER HP $18,500") or a Comfort Club monthly
+   ("BEST DF $249/mo"). `parseDealAmount_` records which it saw and the digest
+   tallies the two separately, because summing them would be meaningless.
+   Anything landing in the tracker's `estimateRaw` needs the same care — that
+   field is a one-time dollar amount, so a monthly cannot be written into it
+   directly.
 
 ## Implementation
 

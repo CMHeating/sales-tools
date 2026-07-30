@@ -114,6 +114,7 @@ function buildRecapBody_(hca, dateLabel) {
     "Customer:\n" +
     "Lead Source (W/I/TF/R):\n" +
     "Outcome (S/E/F):\n" +
+    "What did you offer as a deal? (package/tier + price):\n" +
     "Water Heater presented? (Y/N — interest level):\n" +
     "Follow-up date (if not closed):\n" +
     "If not sold — What is the objection or holdback from completing the sale?:\n\n" +
@@ -304,6 +305,12 @@ function parseRecapReply_(rawBody) {
     else if (label.indexOf("water heater") !== -1)  current.waterHeater = value;
     else if (label.indexOf("follow-up date") !== -1 || label.indexOf("follow up date") !== -1) current.followUpDate = value;
     else if (label.indexOf("objection") !== -1 || label.indexOf("holdback") !== -1) current.objection = value;
+    else if (label.indexOf("deal") !== -1 || label.indexOf("offer") !== -1) {
+      current.deal = value;
+      const money = parseDealAmount_(value);
+      current.dealAmount = money.amount;
+      current.dealIsMonthly = money.monthly;
+    }
   });
 
   commit();
@@ -311,7 +318,34 @@ function parseRecapReply_(rawBody) {
 }
 
 function blankEntry_() {
-  return { customer: "", leadSource: "", outcome: "", waterHeater: "", followUpDate: "", objection: "" };
+  return {
+    customer: "", leadSource: "", outcome: "", waterHeater: "",
+    followUpDate: "", objection: "",
+    deal: "", dealAmount: null, dealIsMonthly: false
+  };
+}
+
+/*
+ * Pulls a figure out of a free-text deal line so recap-sourced leads can carry
+ * a value, which the recap otherwise has no field for.
+ *
+ * Comfort Club is rental-first, so reps write both shapes — "BETTER HP $18,500"
+ * and "BEST DF $249/mo". Those are not comparable, so the monthly flag is kept
+ * alongside the number rather than folded into it. Returns a null amount when
+ * no figure is given; the raw text is always preserved either way.
+ */
+function parseDealAmount_(text) {
+  const raw = String(text || "");
+  const monthly = /\/\s*mo|\bper month\b|\bmonthly\b|\bmo\.\b/i.test(raw);
+
+  const match = raw.match(/\$?\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k\b)?/i);
+  if (!match) return { amount: null, monthly: monthly };
+
+  let n = Number(String(match[1]).replace(/,/g, ""));
+  if (!isFinite(n)) return { amount: null, monthly: monthly };
+  if (match[2]) n = n * 1000;                       // "18k" -> 18000
+
+  return { amount: n, monthly: monthly };
 }
 
 function stripQuoted_(body) {
@@ -367,12 +401,23 @@ function buildDigestBody_(plan, byHca, missing, late) {
       group.entries.forEach(e => {
         lines.push("  [" + (e.outcome || "NO OUTCOME GIVEN") + "] " + (e.customer || "(customer not named)"));
         if (e.leadSource)   lines.push("      Lead source:  " + e.leadSource);
+        if (e.deal)         lines.push("      Deal offered: " + e.deal);
         if (e.waterHeater)  lines.push("      Water heater: " + e.waterHeater);
         if (e.followUpDate) lines.push("      Follow-up:    " + e.followUpDate);
         if (e.outcome !== "SOLD" && e.objection) lines.push("      Objection:    " + e.objection);
         if (e.outcome !== "SOLD" && !e.objection) lines.push("      Objection:    (not provided)");
         lines.push("");
       });
+
+      const totals = sumDeals_(group.entries);
+      if (totals.oneTime || totals.monthly) {
+        const parts = [];
+        if (totals.oneTime) parts.push("$" + formatMoney_(totals.oneTime) + " one-time");
+        if (totals.monthly) parts.push("$" + formatMoney_(totals.monthly) + "/mo rental");
+        lines.push("      Offered today: " + parts.join("  +  ") +
+          (totals.missing ? "   (" + totals.missing + " with no figure given)" : ""));
+        lines.push("");
+      }
     });
   }
 
@@ -519,6 +564,24 @@ function pad2_(n) {
 
 function titleCase_(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+/* Rental monthlies and one-time totals are tallied apart; adding them would be
+   meaningless. Entries with a deal but no figure are counted so a total is
+   never quietly read as covering every appointment. */
+function sumDeals_(entries) {
+  let oneTime = 0, monthly = 0, missing = 0;
+  entries.forEach(e => {
+    if (!e.deal) return;
+    if (e.dealAmount === null || e.dealAmount === undefined) { missing++; return; }
+    if (e.dealIsMonthly) monthly += e.dealAmount;
+    else oneTime += e.dealAmount;
+  });
+  return { oneTime: oneTime, monthly: monthly, missing: missing };
+}
+
+function formatMoney_(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 /* ------------------------------------------------------------------ email */
