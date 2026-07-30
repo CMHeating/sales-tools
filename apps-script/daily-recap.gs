@@ -109,8 +109,14 @@ function sendDailyRecap() {
 }
 
 function buildRecapBody_(hca, dateLabel) {
+  /* The code legend sits above the block on purpose. Below it, a rep reading
+     top-to-bottom meets "(W/I/TF/R)" before anything has said what TF means,
+     and on a phone the answer is a scroll away past the whole block. */
   return "Hi " + hca.first + ",\n\n" +
     "Please reply to this email with one block per appointment you ran today (" + dateLabel + ").\n\n" +
+    "Codes:\n" +
+    "  Lead Source — W = Web,  I = Inbound,  TF = Tech Flip,  R = Revisit\n" +
+    "  Outcome     — S = Sold,  E = Estimate,  F = Follow-up needed\n\n" +
     "Customer:\n" +
     "Lead Source (W/I/TF/R):\n" +
     "Outcome (S/E/F):\n" +
@@ -119,8 +125,6 @@ function buildRecapBody_(hca, dateLabel) {
     "Follow-up date (if not closed):\n" +
     "If not sold — What is the objection or holdback from completing the sale?:\n\n" +
     "Repeat the block if you ran more than one appointment.\n\n" +
-    "Lead Source: W=Web, I=Inbound, TF=Tech Flip, R=Revisit\n" +
-    "Outcome: S=Sold, E=Estimate, F=Follow-up needed\n\n" +
     "Thanks,\n" +
     "Geoff\n";
 }

@@ -15,7 +15,15 @@ Columns: Date, HCA Name, Type (Sick/Vacation/Swap), Notes
 
 ### Body
 
+The code legend goes above the block, not below it. Below, a rep reading
+top-to-bottom meets `(W/I/TF/R)` before anything has said what `TF` means, and
+on a phone the answer is a scroll away past the whole block.
+
 ```
+Codes:
+  Lead Source — W = Web,  I = Inbound,  TF = Tech Flip,  R = Revisit
+  Outcome     — S = Sold,  E = Estimate,  F = Follow-up needed
+
 Customer:
 Lead Source (W/I/TF/R):
 Outcome (S/E/F):
