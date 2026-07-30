@@ -92,6 +92,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
   </div>
   <button class="print-btn" onclick="window.print()">&#8982; Print / PDF</button>
 </div>
+<div id="dataNotice"></div>
 <div class="summary-bar" id="summaryBar"></div>
 <div class="filters" id="filters"></div>
 <div class="leads-list" id="leadsList"></div>
@@ -649,6 +650,29 @@ function staleBanner(st){return`<div class="stale-banner"><span class="stale-fla
 
 function getDaysColor(d){if(d<=7)return'#16a34a';if(d<=14)return'#f97316';return'#dc2626';}
 function fmtK(n){if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+Math.round(n/1e3)+'K';return'$'+n;}
+/* ---- Live recompute of daysOld -------------------------------------------
+   The exported daysOld is a snapshot taken the day this file was generated and
+   drifts further from reality every day the export sits unrefreshed. Recompute
+   it from createdOn so Days Old, the urgency bars, the Critical count and the
+   averages stay true. The snapshot value is kept only where createdOn is
+   missing or unparseable. DATA_AS_OF is derived before the overwrite, so the
+   page can still say how old the underlying export is.                      */
+const DATA_AS_OF=(function(){let newest=null;leads.forEach(l=>{const c=parseTrackerDate(l.createdOn);if(!c)return;const n=Number(l.daysOld);if(!isFinite(n))return;const d=new Date(c.getTime()+n*86400000);if(!newest||d>newest)newest=d;});return newest;})();
+(function(){const t=new Date();t.setHours(0,0,0,0);leads.forEach(l=>{const c=parseTrackerDate(l.createdOn);if(!c)return;const d=Math.round((t-c)/86400000);if(d>=0)l.daysOld=d;});})();
+(function(){
+  if(!DATA_AS_OF)return;
+  const t=new Date();t.setHours(0,0,0,0);
+  const age=Math.round((t-DATA_AS_OF)/86400000);
+  if(age<14)return;
+  const el=document.getElementById('dataNotice');
+  if(!el)return;
+  const asOf=DATA_AS_OF.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  el.innerHTML='<div style="background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.5">'
+    +'<strong>Lead data exported '+asOf+' \u2014 '+age+' days ago.</strong> '
+    +'Days Old, urgency and the Critical count are calculated live from each lead\u2019s Created date, so those are current. '
+    +'The list of leads itself is not \u2014 anything booked, sold or closed since '+asOf+' will not appear here until the export is refreshed.'
+    +'</div>';
+})();
 leads.sort((a,b)=>a.daysOld-b.daysOld);
 const now=new Date();
 document.getElementById('hcaTitle').textContent=HCA_NAME+' — Follow-Up Tracker';
