@@ -93,8 +93,42 @@ reconstruct leads that are already sitting in it untouched.
    line in the template would fix that at the cost of one more field per
    appointment.
 
+## Implementation
+
+`apps-script/daily-recap.gs` implements both jobs. Deploy it in a Google Apps
+Script project that can send mail as geoffrey.simons@cmheating.com and read the
+Exceptions sheet, then:
+
+1. Run `previewDailyRecap()` — sends nothing, logs who tonight's send would go
+   to and why.
+2. Run `installDailyRecapTriggers()` once to create both time-driven triggers.
+3. Leave `TEST_MODE: true` until the email looks right, then set it to `false`.
+
+While `TEST_MODE` is on, the 6pm job sends one email to
+geoffrey.simons@cmheating.com containing the roster decision plus the verbatim
+body each HCA would receive. No HCA is contacted.
+
+Apps Script was chosen over a Cowork scheduled task because the Gmail connector
+available to scheduled sessions can only create drafts, not send, and routines
+created programmatically receive no connector access at all. Apps Script also
+reads the Exceptions sheet directly and runs its triggers in
+`America/Los_Angeles`, so there is no UTC/DST drift.
+
+### Schedule exception handling
+
+| Type | Effect |
+|---|---|
+| `Sick` | removed from today's send |
+| `Vacation` | removed from today's send |
+| `Swap` | added to today's send even if not normally scheduled |
+
+If the Exceptions sheet cannot be read, the send proceeds on base schedules
+alone and emails the manager a warning rather than silently assuming everyone
+is working.
+
 ## Status as of 2026-07-30
 
-The send has not fired yet. A Gmail search across sent mail, the HCA
-addresses, and the distinctive template phrases returns no recap emails and no
-replies. Nothing is flowing into the trackers from this path today.
+Not yet deployed. No recap email has ever been sent — a Gmail search across
+sent mail, the HCA addresses, and the distinctive template phrases returns
+nothing, and no matching scheduled task exists on the account. Nothing is
+flowing into the trackers from this path yet.
