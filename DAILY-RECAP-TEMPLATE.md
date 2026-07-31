@@ -26,10 +26,21 @@ What did you offer as a deal? (package/tier + price):
 Water Heater presented? (Y/N — interest level):
 Follow-up date (if not closed):
 If not sold — What is the objection or holdback from completing the sale?:
+
+Repeat the block if you ran more than one appointment.
+
+Follow-ups on older leads today (who + what happened):
 ```
 
 One block per appointment run that day. Reps repeat the block if they ran
 more than one.
+
+The follow-up line is day-level and deliberately sits outside the repeating
+block. A rep can spend a whole day working the existing backlog and run no
+appointments at all — on the first live night one did exactly that — and
+without this their day reports as nothing. Its label avoids the word
+"customer", which the appointment block already claims as a field label, and
+is matched ahead of "Follow-up date" so the two never collide.
 
 ### Accepted values
 

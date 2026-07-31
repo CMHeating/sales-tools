@@ -134,6 +134,11 @@ function buildRecapBody_(hca, dateLabel) {
     "Follow-up date (if not closed):\n" +
     "If not sold — What is the objection or holdback from completing the sale?:\n\n" +
     "Repeat the block if you ran more than one appointment.\n\n" +
+    /* Day-level, so it sits outside the repeating block. A rep can work a full
+       day on the existing backlog and run no appointments at all; without this
+       their day reports as nothing. Deliberately avoids the word "customer",
+       which the appointment block already claims as a field label. */
+    "Follow-ups on older leads today (who + what happened):\n\n" +
     "Thanks,\n" +
     "Geoff\n";
 }
@@ -189,10 +194,16 @@ function collectRecapReplies() {
   const late = [];
   const responded = {};      // replied at all, whether or not anything parsed
   const notesOnly = {};      // replied, but reported no appointments
+  const followUpsByHca = {}; // day-level backlog work, independent of appointments
 
   replies.forEach(r => {
     if (r.late) { late.push(r); return; }
     responded[r.hca.name] = true;
+    if (r.followUps) {
+      followUpsByHca[r.hca.name] = followUpsByHca[r.hca.name]
+        ? followUpsByHca[r.hca.name] + "\n" + r.followUps
+        : r.followUps;
+    }
     if (!r.entries.length) {
       if (r.note && !notesOnly[r.hca.name]) notesOnly[r.hca.name] = { hca: r.hca, note: r.note };
       return;
@@ -213,7 +224,7 @@ function collectRecapReplies() {
   try {
     const book = getLogSpreadsheet_();
     const wrote = appendRecapRows_(book.ss, plan, byHca);
-    appendComplianceRows_(book.ss, plan, byHca, responded);
+    appendComplianceRows_(book.ss, plan, byHca, responded, followUpsByHca);
     logResult = {
       ok: true, error: "", written: wrote.written, skipped: wrote.skipped,
       url: book.ss.getUrl(), created: book.created
@@ -223,7 +234,7 @@ function collectRecapReplies() {
     Logger.log("Recap log write failed: " + logResult.error);
   }
 
-  const body = buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly);
+  const body = buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, followUpsByHca);
   sendEmailSafe_({
     to: [DAILY_RECAP_CONFIG.managerEmail],
     subject: (DAILY_RECAP_CONFIG.TEST_MODE ? "[TEST] " : "") +
@@ -286,12 +297,14 @@ function findRecapReplies_(dateLabel, sinceDate) {
          carried through so the free-text answer is not lost. */
       const raw = msg.getPlainBody();
       const entries = parseRecapReply_(raw);
+      const followUps = parseFollowUps_(raw);
       out.push({
         hca: hca,
         entries: entries,
+        followUps: followUps,
         late: !isTonight,
         subject: subject,
-        note: entries.length ? "" : ownText_(raw)
+        note: (entries.length || followUps) ? "" : ownText_(raw)
       });
     });
   });
@@ -356,6 +369,11 @@ function parseRecapReply_(rawBody) {
 
     const value = line.slice(idx + 1).trim();
 
+    /* Day-level and always after the last block, so it closes the appointment
+       currently being built and never becomes a field on it. parseFollowUps_
+       reads this section separately. */
+    if (key === "dayFollowUps") { commit(); return; }
+
     if (key === "customer") {
       if (!value) { lastKey = null; return; }        // blank line of the quoted template
       if (current) commit();
@@ -389,6 +407,11 @@ function isSignOffLine_(line) {
 }
 
 function fieldKeyFor_(label) {
+  /* Checked first: this label is day-level, not part of an appointment block,
+     and it must not fall through to the follow-up DATE branch. */
+  if (label.indexOf("older lead") !== -1 ||
+      label.indexOf("follow-ups on") !== -1 ||
+      label.indexOf("follow ups on") !== -1) return "dayFollowUps";
   if (label.indexOf("customer") !== -1) return "customer";
   if (label.indexOf("lead source") !== -1) return "leadSource";
   /* Outcome is tested before the follow-up date because its own prompt now
@@ -435,6 +458,44 @@ function dedupeEntries_(entries) {
     }
   });
   return order;
+}
+
+/*
+ * Reads the day-level follow-up section: the labelled line plus any wrapped or
+ * listed lines under it, stopping at the next known field label or the
+ * sign-off. Kept apart from parseRecapReply_ because this is one answer for the
+ * whole day, not a property of any single appointment.
+ */
+function parseFollowUps_(rawBody) {
+  const lines = stripQuoted_(String(rawBody || "")).split(/\r?\n/);
+  const collected = [];
+  let inSection = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    const idx = line.indexOf(":");
+    const key = idx === -1 ? null : fieldKeyFor_(line.slice(0, idx).toLowerCase());
+
+    if (key === "dayFollowUps") {
+      inSection = true;
+      const rest = line.slice(idx + 1).trim();
+      if (rest) collected.push(rest);
+      continue;
+    }
+    if (!inSection) continue;
+    if (key !== null) break;                       // another labelled field ends it
+    if (isSignOffLine_(trimmed)) break;
+    if (!trimmed) {
+      /* One blank line inside a list is tolerated; two ends the section. */
+      if (collected.length && collected[collected.length - 1] === "") break;
+      if (collected.length) collected.push("");
+      continue;
+    }
+    collected.push(trimmed);
+  }
+
+  return collected.join("\n").replace(/\n{2,}/g, "\n").trim();
 }
 
 function blankEntry_() {
@@ -531,7 +592,7 @@ function normalizeOutcome_(value) {
   return value.trim().toUpperCase();
 }
 
-function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly) {
+function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, followUpsByHca) {
   const lines = [];
   lines.push("Recap digest for " + plan.dateLabel + " (" + plan.weekday + ")");
   if (DAILY_RECAP_CONFIG.TEST_MODE) {
@@ -571,6 +632,18 @@ function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly) {
         lines.push("");
       }
     });
+  }
+
+  const fuNames = followUpsByHca ? Object.keys(followUpsByHca).sort() : [];
+  if (fuNames.length) {
+    lines.push(new Array(60).join("-"));
+    lines.push("Follow-ups on older leads (" + fuNames.length + "):");
+    fuNames.forEach(name => {
+      lines.push("");
+      lines.push("  " + name + " —");
+      String(followUpsByHca[name]).split(/\r?\n/).forEach(l => lines.push("      " + l));
+    });
+    lines.push("");
   }
 
   const noteNames = notesOnly ? Object.keys(notesOnly).sort() : [];
@@ -643,7 +716,7 @@ const RECAP_LOG_HEADERS = [
   "Logged At", "Key"
 ];
 
-const COMPLIANCE_HEADERS = ["Date", "HCA", "Replied", "Appointments Reported", "Logged At"];
+const COMPLIANCE_HEADERS = ["Date", "HCA", "Replied", "Appointments Reported", "Follow-ups On Older Leads", "Logged At"];
 
 /*
  * One row per appointment, append-only. That grain is what makes the log
@@ -696,7 +769,7 @@ function appendRecapRows_(ss, plan, byHca) {
  * apart from the appointment log because a non-reply has no appointment to
  * hang off, and mixing the two would corrupt every count taken over the log.
  */
-function appendComplianceRows_(ss, plan, byHca, responded) {
+function appendComplianceRows_(ss, plan, byHca, responded, followUpsByHca) {
   const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.complianceSheetName, COMPLIANCE_HEADERS);
   const existing = readExistingKeys_(sheet, COMPLIANCE_HEADERS.length, 0, 1);
   const stamp = new Date();
@@ -715,6 +788,7 @@ function appendComplianceRows_(ss, plan, byHca, responded) {
       hca.name,
       didReply ? "Yes" : "No",
       group ? group.entries.length : 0,
+      (followUpsByHca && followUpsByHca[hca.name]) ? followUpsByHca[hca.name] : "",
       stamp
     ]);
   });
