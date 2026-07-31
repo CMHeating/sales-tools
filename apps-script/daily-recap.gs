@@ -317,25 +317,130 @@ function runMorningFollowUp_(workingToday) {
  */
 function buildAckBody_(hca, dateLabel, group) {
   const entries = (group && group.entries) || [];
+  const followUps = (group && group.followUps) || "";
+
+  const sold = entries.filter(e => e.outcome === "SOLD");
   const open = entries.filter(e => e.outcome !== "SOLD");
+  const undated = open.filter(e => !e.followUpDate && e.customer);
+  const totals = sumDeals_(entries);
+  const n = entries.length;
+  const s = n === 1 ? "" : "s";
 
-  let what;
-  if (entries.length) {
-    what = entries.length + " appointment" + (entries.length === 1 ? "" : "s");
-  } else if (group && group.followUps) {
-    what = "your follow-ups";
+  /* The weekday alone reads far better than the full label inside a sentence:
+     "Got Thursday's recap" against "Got Thursday, July 30, 2026, 2
+     appointments". The ack lands the next morning, so the day is unambiguous. */
+  const day = String(dateLabel).split(",")[0];
+
+  /* Each slot is hashed with its own salt so the choices are independent.
+     Sharing one index made two different days collide into identical wording,
+     which is the exact staleness this is meant to avoid. */
+  const who = hca.name || hca.first || "";
+  const pick = (arr, salt) => arr[ackVariant_(who + "|" + dateLabel + "|" + salt) % arr.length];
+
+  const opener = pick([
+    "Morning " + hca.first + " —",
+    "Good morning " + hca.first + ",",
+    hca.first + " —",
+    "Morning " + hca.first + ","
+  ], "opener");
+
+  let receipt;
+  if (n) {
+    receipt = pick([
+      "Got " + day + "'s recap — " + n + " appointment" + s + ". Thanks.",
+      n + " appointment" + s + " in for " + day + ". Thanks for sending it.",
+      "Thanks for " + day + " — " + n + " appointment" + s + " logged.",
+      "Got " + day + ", " + n + " appointment" + s + ". Appreciate it."
+    ], "receipt");
+  } else if (followUps) {
+    receipt = pick([
+      "Got your follow-ups for " + day + ". Thanks for sending it.",
+      "Thanks for " + day + " — noted the follow-up work.",
+      day + " noted, thanks. Good to see the older leads getting worked.",
+      "Got " + day + ". Follow-ups logged, appreciate it."
+    ], "receipt");
   } else {
-    what = "your recap";
+    receipt = pick([
+      "Got your recap for " + day + ". Thanks for sending it.",
+      "Thanks for sending " + day + " through.",
+      day + " received, thanks.",
+      "Got " + day + ". Appreciate it."
+    ], "receipt");
   }
 
-  let body = "Morning " + hca.first + ",\n\n" +
-    "Got " + what + " for " + dateLabel + " — thanks for sending it.\n";
+  /* At most two observations, and every one of them is drawn from what the rep
+     actually wrote. Rotating pleasantries would read as automated within a
+     week; naming their own customer does not. */
+  const notes = [];
 
+  if (sold.length === 1 && sold[0].customer) {
+    notes.push(pick([
+      "Nice work on " + sold[0].customer + ".",
+      "Good close on " + sold[0].customer + ".",
+      "Congrats on " + sold[0].customer + "."
+    ], "sold"));
+  } else if (sold.length > 1) {
+    notes.push(pick([
+      sold.length + " closed — nice work.",
+      "Nice, " + sold.length + " closed.",
+      sold.length + " sold on the day. Good stuff."
+    ], "soldMulti"));
+  }
+
+  if (notes.length < 2 && undated.length) {
+    notes.push(pick([
+      "Worth putting a date on " + undated[0].customer + " so it doesn't drift.",
+      "No next step on " + undated[0].customer + " yet — worth pinning one down.",
+      undated[0].customer + " has no follow-up date on it. Easy one to lose."
+    ], "undated"));
+  }
+
+  if (notes.length < 2 && followUps && n) {
+    notes.push(pick([
+      "Good to see the older leads getting worked too.",
+      "Noted the follow-ups on the older ones as well.",
+      "Appreciate you logging the backlog work too."
+    ], "followups"));
+  }
+
+  if (notes.length < 2 && totals.oneTime >= 10000) {
+    notes.push(pick([
+      "That's $" + formatMoney_(totals.oneTime) + " in front of customers.",
+      "$" + formatMoney_(totals.oneTime) + " on the table from that.",
+      "Puts $" + formatMoney_(totals.oneTime) + " out there."
+    ], "money"));
+  }
+
+  let closer = "";
   if (open.length) {
-    body += "\nShout if you want a hand on any of the ones still open.\n";
+    closer = pick([
+      "Shout if you want a hand on any of the ones still open.",
+      "Let me know if you want me on any of these.",
+      "Happy to jump on any that are stuck.",
+      "Tell me which one you want help with and I'll work it with you."
+    ], "closer");
   }
 
-  return body + "\nGeoff\n";
+  const parts = [opener, "", receipt];
+  if (notes.length) parts.push("", notes.join(" "));
+  if (closer) parts.push("", closer);
+  parts.push("", "Geoff", "");
+  return parts.join("\n");
+}
+
+/*
+ * Stable per rep per day. The same person gets a different turn of phrase
+ * tomorrow, and two reps on the same morning do not receive identical wording
+ * — while a rerun of the same day reproduces exactly what was sent, which
+ * random selection would not.
+ */
+function ackVariant_(seed) {
+  let h = 0;
+  const str = String(seed || "");
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
 }
 
 function buildNudgeBody_(hca, dateLabel) {

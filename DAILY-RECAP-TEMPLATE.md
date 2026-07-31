@@ -97,10 +97,19 @@ hour. The groups are disjoint; nobody appears in both.
 Both messages thread onto the original conversation (`Re: Daily Recap — <that
 day>`), so any reply is still attributed to the night it answers.
 
-The acknowledgement is deliberately factual — it confirms the report landed,
-counts the appointments, and offers help while anything is still open. It does
-not comment on specific deals, because putting an opinion about a customer in
-the manager's voice is his call, not the script's.
+The acknowledgement is built from what the rep actually reported, not from a
+fixed phrase. It counts the appointments, congratulates a close by name, flags
+an open deal that has no next step on it, notes backlog work, and offers help
+while anything is still open — at most two observations, so it stays short.
+
+Wording rotates. Identical text every morning stops being an acknowledgement
+and becomes wallpaper. The variant is a hash of rep + date + slot, so it
+changes day to day and rep to rep while a rerun of the same day reproduces
+exactly what was sent — which random selection would not.
+
+What it never does is comment on the merits of a deal. Naming a customer back
+is proof someone read it; an opinion about that customer in the manager's voice
+is his to give, not the script's.
 
 Whether a rep replied is decided at thread level, not from the subject of their
 own message. Some clients rewrite the subject on a reply, and requiring it to
