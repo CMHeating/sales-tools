@@ -279,44 +279,113 @@ function parseRecapReply_(rawBody) {
   const body = stripQuoted_(String(rawBody || ""));
   const entries = [];
   let current = null;
+  let lastKey = null;
 
   const commit = () => {
-    if (current && (current.customer || current.outcome)) entries.push(current);
+    if (current && (current.customer || current.outcome)) entries.push(finalizeEntry_(current));
     current = null;
+    lastKey = null;
   };
 
   body.split(/\r?\n/).forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) { lastKey = null; return; }        // blank line closes any wrapped value
+
     const idx = line.indexOf(":");
-    if (idx === -1) return;
+    const key = idx === -1 ? null : fieldKeyFor_(line.slice(0, idx).toLowerCase());
 
-    const label = line.slice(0, idx).toLowerCase();
-    const value = line.slice(idx + 1).trim();
-    if (!value) return;
-
-    if (label.indexOf("customer") !== -1) {
-      if (current) commit();
-      current = blankEntry_();
-      current.customer = value;
+    if (key === null) {
+      /* Mail clients hard-wrap long answers, so a line carrying no field label
+         is the tail of the previous answer rather than noise. Without this the
+         wrapped remainder is lost — frequently the entire objection, which is
+         the longest thing a rep writes. */
+      if (current && lastKey && !isSignOffLine_(trimmed)) {
+        current[lastKey] = (current[lastKey] + " " + trimmed).replace(/\s+/g, " ").trim();
+      }
       return;
     }
 
-    if (!current) current = blankEntry_();
+    const value = line.slice(idx + 1).trim();
 
-    if (label.indexOf("lead source") !== -1)        current.leadSource = normalizeLeadSource_(value);
-    else if (label.indexOf("outcome") !== -1)       current.outcome = normalizeOutcome_(value);
-    else if (label.indexOf("water heater") !== -1)  current.waterHeater = value;
-    else if (label.indexOf("follow-up date") !== -1 || label.indexOf("follow up date") !== -1) current.followUpDate = value;
-    else if (label.indexOf("objection") !== -1 || label.indexOf("holdback") !== -1) current.objection = value;
-    else if (label.indexOf("deal") !== -1 || label.indexOf("offer") !== -1) {
-      current.deal = value;
-      const money = parseDealAmount_(value);
-      current.dealAmount = money.amount;
-      current.dealIsMonthly = money.monthly;
+    if (key === "customer") {
+      if (!value) { lastKey = null; return; }        // blank line of the quoted template
+      if (current) commit();
+      current = blankEntry_();
+      current.customer = value;
+      lastKey = "customer";
+      return;
     }
+
+    /* Only a real answer starts an entry. If the blank quoted template could
+       instantiate one, the sign-off trailing it would append into that entry's
+       last open field and surface as a phantom appointment. */
+    if (!value && !current) { lastKey = null; return; }
+
+    if (!current) current = blankEntry_();
+    /* An empty value here does not mean the field went unanswered — a long
+       answer wraps onto the following line, leaving the label line bare. Keep
+       the field open so the continuation can fill it. */
+    if (value) current[key] = value;
+    lastKey = key;
   });
 
   commit();
-  return entries;
+  return dedupeEntries_(entries);
+}
+
+/* Sign-offs and the template's own trailing instructions sit right after the
+   last answer, where they would otherwise be swallowed as a continuation. */
+function isSignOffLine_(line) {
+  return /^(thanks|thank you|thx|regards|best|cheers|sincerely|sent from my|get outlook|repeat the block)\b/i.test(line);
+}
+
+function fieldKeyFor_(label) {
+  if (label.indexOf("customer") !== -1) return "customer";
+  if (label.indexOf("lead source") !== -1) return "leadSource";
+  /* Outcome is tested before the follow-up date because its own prompt now
+     spells out "Follow-up needed" and would otherwise match that branch. */
+  if (label.indexOf("outcome") !== -1) return "outcome";
+  if (label.indexOf("water heater") !== -1) return "waterHeater";
+  if (label.indexOf("follow-up date") !== -1 || label.indexOf("follow up date") !== -1) return "followUpDate";
+  if (label.indexOf("objection") !== -1 || label.indexOf("holdback") !== -1) return "objection";
+  if (label.indexOf("deal") !== -1 || label.indexOf("offer") !== -1) return "deal";
+  return null;
+}
+
+/* Normalisation runs at commit, not per line, so a wrapped value is joined
+   before it is interpreted. "scheduleing pro make an" + "appoint" has to be
+   whole before the lead source can be resolved. */
+function finalizeEntry_(entry) {
+  entry.leadSource = entry.leadSource ? normalizeLeadSource_(entry.leadSource) : "";
+  entry.outcome = entry.outcome ? normalizeOutcome_(entry.outcome) : "";
+  if (entry.deal) {
+    const money = parseDealAmount_(entry.deal);
+    entry.dealAmount = money.amount;
+    entry.dealIsMonthly = money.monthly;
+  }
+  return entry;
+}
+
+/*
+ * Now that quoted lines are parsed too, a rep who answers above the quote AND
+ * leaves answers inside it can yield the same appointment twice. Collapse by
+ * customer, keeping whichever copy carries more filled-in fields.
+ */
+function dedupeEntries_(entries) {
+  const filledCount = e => ["customer", "leadSource", "outcome", "deal", "waterHeater", "followUpDate", "objection"]
+    .reduce((n, k) => n + (e[k] ? 1 : 0), 0);
+
+  const byKey = {}, order = [];
+  entries.forEach(e => {
+    const key = String(e.customer || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    if (!key) { order.push(e); return; }              // unnamed: keep as-is
+    if (!byKey[key]) { byKey[key] = e; order.push(e); return; }
+    if (filledCount(e) > filledCount(byKey[key])) {
+      order[order.indexOf(byKey[key])] = e;
+      byKey[key] = e;
+    }
+  });
+  return order;
 }
 
 function blankEntry_() {
@@ -350,23 +419,36 @@ function parseDealAmount_(text) {
   return { amount: n, monthly: monthly };
 }
 
+/*
+ * Unwraps quote markers rather than discarding quoted lines.
+ *
+ * Reps on phones routinely answer INSIDE the quoted original — their own
+ * message body is just a signature, and every filled-in field sits behind a
+ * "> ". Dropping quoted lines threw those replies away entirely.
+ *
+ * Keeping them is safe because the parser skips fields with no value, so the
+ * blank template that comes back in the quote contributes nothing. Answers
+ * typed above the quote and answers typed inside it both parse.
+ */
 function stripQuoted_(body) {
   const kept = [];
-  const lines = body.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^\s*>/.test(line)) continue;
-    if (/^\s*On .+ wrote:\s*$/.test(line)) break;
-    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(line)) break;
-    if (/^\s*From:\s.+@/.test(line)) break;
-    kept.push(line);
-  }
+  String(body || "").split(/\r?\n/).forEach(line => {
+    const bare = line.replace(/^\s*(?:>\s?)+/, "");
+    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(bare)) return;
+    if (/^\s*wrote:\s*$/i.test(bare)) return;
+    if (/^\s*On\s.+<[^>]+@[^>]+>\s*$/.test(bare)) return;
+    if (/^\s*On\s.+\swrote:\s*$/.test(bare)) return;
+    kept.push(bare);
+  });
   return kept.join("\n");
 }
 
 function normalizeLeadSource_(value) {
   const v = value.trim().toUpperCase();
   if (v.indexOf("TF") === 0 || v.indexOf("TECH") !== -1) return "Tech Flip";
+  /* Scheduling Pro is ServiceTitan's online booking, so it is a Web lead.
+     Reps write it out because that is what the booking says. */
+  if (v.indexOf("SCHEDUL") !== -1 || v.indexOf("SCHED PRO") !== -1 || v.indexOf("ONLINE") !== -1) return "Web";
   if (v.indexOf("W") === 0 || v.indexOf("WEB") !== -1) return "Web";
   if (v.indexOf("I") === 0 || v.indexOf("INBOUND") !== -1) return "Inbound";
   if (v.indexOf("R") === 0 || v.indexOf("REVISIT") !== -1) return "Revisit";
