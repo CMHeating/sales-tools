@@ -491,7 +491,12 @@ function parseRecapReply_(rawBody) {
   let lastKey = null;
 
   const commit = () => {
-    if (current && (current.customer || current.outcome) && !isPlaceholderValue_(current.customer)) {
+    /* Anything with real content counts. Requiring a customer or an outcome
+       specifically dropped blocks where the rep gave a deal and an objection
+       but left the name off and the outcome blank — content worth keeping,
+       and a nameless row is more honest than a silent deletion. The blank
+       quoted template has no content at all, so it still yields nothing. */
+    if (current && entryHasContent_(current) && !isPlaceholderValue_(current.customer)) {
       entries.push(finalizeEntry_(current));
     }
     current = null;
@@ -535,7 +540,21 @@ function parseRecapReply_(rawBody) {
     if (key === "dayFollowUps") { commit(); return; }
 
     if (key === "customer") {
-      if (!value) { lastKey = null; return; }        // blank line of the quoted template
+      if (!value) {
+        /* A Customer line still opens a new block even with no name on it.
+           Reps leave the name off a second appointment, and without this its
+           fields overwrite the first block one by one — the earlier deal,
+           water heater and objection are replaced, the second appointment
+           disappears, and what is left looks like one plausible record rather
+           than a mangled pair. Harmless for the blank quoted template, whose
+           empty entry fails the commit test and is dropped. */
+        if (current && entryHasContent_(current)) {
+          commit();
+          current = blankEntry_();
+        }
+        lastKey = null;
+        return;
+      }
       if (current) commit();
       current = blankEntry_();
       current.customer = value;
@@ -699,6 +718,13 @@ function parseFollowUps_(rawBody) {
   return collected.join("\n").replace(/\n{2,}/g, "\n").trim();
 }
 
+/* Whether anything has actually been recorded against an entry yet. */
+function entryHasContent_(entry) {
+  if (!entry) return false;
+  return ["customer", "leadSource", "outcome", "deal", "waterHeater", "followUpDate", "objection"]
+    .some(k => !!entry[k]);
+}
+
 function blankEntry_() {
   return {
     customer: "", leadSource: "", outcome: "", waterHeater: "",
@@ -741,20 +767,26 @@ function parseDealAmount_(text) {
     if (any) return { amount: total, monthly: monthly };
   }
 
-  /* No dollar sign. A comma-grouped number is still clearly a price. */
-  let m = raw.match(/(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/);
-  if (m) return { amount: Number(m[1].replace(/,/g, "")), monthly: monthly };
+  /* No dollar signs at all. Reps still quote multi-item deals this way
+     ("full system/20k - water heater 3500"), so the same summing applies —
+     but only to figures that could plausibly be prices. A k suffix, comma
+     grouping, or four-plus digits qualifies; everything shorter is left
+     alone, which is what keeps "2 stage", "Silver 13" and "50 gallon" out
+     of the totals. */
+  let total = 0, any = false;
 
-  /* Bare number with a k suffix, e.g. "18k". */
-  m = raw.match(/\b(\d+(?:\.\d+)?)\s*k\b/i);
-  if (m) return { amount: Number(m[1]) * 1000, monthly: monthly };
+  (raw.match(/\b\d+(?:\.\d+)?\s*k\b/gi) || []).forEach(t => {
+    const v = Number(String(t).replace(/\s*k$/i, ""));
+    if (isFinite(v)) { total += v * 1000; any = true; }
+  });
 
-  /* A bare number only counts as a price when it is large enough to be one.
-     This is what keeps "2 stage" and "Silver 13" out of the totals. */
-  m = raw.match(/\b(\d{4,}(?:\.\d+)?)\b/);
-  if (m) return { amount: Number(m[1]), monthly: monthly };
+  const withoutK = raw.replace(/\b\d+(?:\.\d+)?\s*k\b/gi, " ");
+  (withoutK.match(/\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b\d{4,}(?:\.\d+)?\b/g) || []).forEach(t => {
+    const v = Number(String(t).replace(/,/g, ""));
+    if (isFinite(v)) { total += v; any = true; }
+  });
 
-  return { amount: null, monthly: monthly };
+  return { amount: any ? total : null, monthly: monthly };
 }
 
 /*
