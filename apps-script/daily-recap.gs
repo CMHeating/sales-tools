@@ -64,6 +64,11 @@ const DAILY_RECAP_CONFIG = {
   emailNotesSheetName: "Email Notes",
   emailNoteLookbackDays: 60,
 
+  /* The worklist: every open appointment, soonest first. Derived from Recap
+     Log on each refresh, so the log stays the record and this stays the
+     thing you actually work from. */
+  followUpsSheetName: "Follow-Ups",
+
   /* COMBO LOG 2026 — the same sheet sold-job-tracker-sync.gs reads. It is the
      only source for a *scheduled* install date; the ServiceTitan alerts carry
      sold and completed and nothing in between. Blank disables the lookup and
@@ -1913,6 +1918,11 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
   if (!comboRes.ok) {
     status.comboError = "COMBO LOG unreachable; scheduled install dates are missing.";
   }
+  /* Carried so the worklist can show a phone number. Only bookings have one,
+     which is most of the reason the worklist's Phone column is often blank. */
+  status.bookedContacts = bookedRes.booked
+    .filter(b => b.phone)
+    .map(b => ({ customer: b.customer, phone: b.phone }));
   if (!status.ok) {
     status.error = "Gmail alert search failed; reconciliation is incomplete.";
     return status;
@@ -2054,7 +2064,7 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
     h.soldAmountNeedsReview = h.soldAlerts.some(s => s.multiEstimate);
   });
 
-  matchBookedToReplies_(byName, bookedRes.booked, ctx.allLogRows, status);
+  matchBookedToReplies_(byName, bookedRes.booked, ctx.allLogRows, status, ctx.askedOn);
   return status;
 }
 
@@ -2079,8 +2089,13 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
  *   notBooked   reported with no Sales Quote booking behind it — a revisit or
  *               self-generated lead, or a name that does not match
  */
-function matchBookedToReplies_(byName, booked, allLogRows, status) {
+function matchBookedToReplies_(byName, booked, allLogRows, status, askedOn) {
   const claimed = {};
+  /* No compliance data at all means the caller could not tell us which days
+     were asked about — treat every day as fair game rather than silently
+     reporting nothing. */
+  const haveAskedData = askedOn && Object.keys(askedOn).length > 0;
+  let skippedPreLaunch = 0;
 
   /* Every reported appointment, across all reps, so a single-rep query does
      not make everyone else's work look unclaimed. */
@@ -2094,6 +2109,9 @@ function matchBookedToReplies_(byName, booked, allLogRows, status) {
       r.date === b.appointmentIso && namesMatch_(r.customer, b.customer))[0];
 
     if (!hit) {
+      /* Booked on a day nobody was asked for a recap. Not a gap in reporting,
+         and listing it as one buries the days that are. */
+      if (haveAskedData && !askedOn[b.appointmentIso]) { skippedPreLaunch++; return; }
       unclaimed.push({
         customer: b.customer, jobNumber: b.jobNumber, jobType: b.jobType,
         appointmentIso: b.appointmentIso, appointmentAt: b.appointmentAt,
@@ -2139,6 +2157,9 @@ function matchBookedToReplies_(byName, booked, allLogRows, status) {
   unclaimed.sort((a, b) => String(b.appointmentIso).localeCompare(String(a.appointmentIso)));
   status.unclaimedAppointments = unclaimed;
   status.bookedMatched = Object.keys(claimed).length;
+  /* Said out loud rather than silently dropped, so a suspiciously short
+     unclaimed list is explainable. */
+  status.bookedBeforeRecapStarted = skippedPreLaunch;
   if (!status.bookedOk) {
     status.bookedError = "Booked Job Alert search failed; unreported appointments are not shown.";
   }
@@ -2254,6 +2275,10 @@ function parseBookedAlert_(rawBody, received) {
     /* What the booking implies the source was, for comparison with what the
        rep reported. */
     sourceHint: tech ? "Tech Flip" : (viaPro ? "Web" : ""),
+    /* The CSR writes the customer's number on a COW: line, in whatever order
+       suits them — "COW: (206) 427-5394 Michael", "COW: Syed (425) 205-3567",
+       "COW: JOHN 206-972-1766". Pull the number, ignore the arrangement. */
+    phone: (body.match(/COW:[^\n]*?(\(?\d{3}\)?[\s.-]*\d{3}[\s.-]*\d{4})/i) || [])[1] || "",
     hoa: (body.match(/HOA[^\n]*?\(([^)]*)\)/i) || [])[1] || "",
     timeline: cleanValue_((body.match(/timeline[^\n?:]*[?:]\s*([^\n]*)/i) || [])[1] || ""),
     /* Two shapes in the wild — "AGE 13yo" on its own line, and "Age of the
@@ -2517,18 +2542,118 @@ function refreshJobStatus() {
     });
   });
 
+  /* Which days the recap actually ran. An appointment is only "unreported" if
+     somebody was asked to report it — before the recap existed, nobody was.
+     Reading it from the compliance tab rather than a hardcoded launch date
+     means this stays right through any future gap: a week the script was off
+     is not a week of ten reps ignoring it. */
+  const askedOn = {};
+  readSheetRows_(book.ss, cfg.complianceSheetName, COMPLIANCE_HEADERS.length)
+    .forEach(r => { if (r[0]) askedOn[String(r[0])] = true; });
+
   const status = reconcileWithServiceTitan_(byName, ensure, "", days,
-    { allLogRows: allLogRows, fromIso: fromIso, toIso: toIso });
+    { allLogRows: allLogRows, fromIso: fromIso, toIso: toIso, askedOn: askedOn });
 
   const written = writeJobStatus_(book.ss, byName, status, fromIso, toIso);
   const notes = writeEmailNotes_(book.ss, byName, status, fromIso, toIso);
+  const work = writeFollowUps_(book.ss, allLogRows, status, toIso);
   PropertiesService.getScriptProperties()
     .setProperty("jobStatusRefreshedIso", new Date().toISOString());
 
   Logger.log("Job Status: " + written.rows + " rows, " +
-    written.needsAttention + " needing attention, " + notes.rows + " email notes");
+    written.needsAttention + " needing attention, " + notes.rows + " email notes, " +
+    work.rows + " open follow-ups (" + work.overdue + " overdue, " +
+    work.undated + " with no date). " +
+    (status.bookedBeforeRecapStarted || 0) + " booked job(s) skipped — " +
+    "before the recap started.");
   return { rows: written.rows, needsAttention: written.needsAttention,
-           emailNotes: notes.rows, status: status };
+           emailNotes: notes.rows, followUps: work.rows, status: status };
+}
+
+/*
+ * The worklist. Every open appointment, soonest first, with the objection and
+ * the customer's phone where a booking gave one.
+ *
+ * Derived rather than stored: it is rebuilt from Recap Log each refresh, so
+ * nothing has to be kept in sync and the existing tabs keep their schema.
+ * Sold jobs drop off — they belong to the Job Status tab now.
+ *
+ * Undated rows sort to the bottom under a far-future key rather than being
+ * hidden. A deal with no next step is the one most likely to die, so it has
+ * to stay visible; it just should not sit above something due today.
+ */
+function writeFollowUps_(ss, allLogRows, status, todayIso) {
+  const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.followUpsSheetName, FOLLOWUP_HEADERS);
+
+  /* Phone numbers only exist where ServiceTitan booked the job, so this is
+     best-effort by design — most appointments have no booking behind them. */
+  const phoneFor = {};
+  (status.bookedContacts || []).forEach(c => {
+    if (c.customer && c.phone) phoneFor[normName_(c.customer)] = c.phone;
+  });
+
+  const rows = [];
+  (allLogRows || []).forEach(r => {
+    const outcome = String(r[4] || "");
+    if (outcome === "SOLD") return;                    // closed; Job Status owns it
+    const ranOn = String(r[0] || "");
+    const customer = String(r[2] || "");
+    const dueIso = parseFollowUpDate_(r[9], ranOn);
+    const age = daysBetweenIso_(ranOn, todayIso);
+
+    rows.push([
+      dueIso || "",
+      dueIso ? dueLabel_(dueIso, todayIso) : "NO DATE SET",
+      String(r[1] || ""),
+      customer || "(not named)",
+      outcome,
+      String(r[5] || ""),
+      r[6] === "" || r[6] === null ? "" : Number(r[6]),
+      String(r[10] || ""),
+      phoneFor[normName_(customer)] || "",
+      ranOn,
+      age === null ? "" : age,
+      String(r[9] || ""),                              // exactly what they typed
+      recapRowKey_(ranOn, String(r[1] || ""), customer)
+    ]);
+  });
+
+  /* Undated last, then by due date, then oldest appointment first. */
+  rows.sort((a, b) => {
+    const ka = a[0] || "9999-12-31", kb = b[0] || "9999-12-31";
+    return ka.localeCompare(kb) || String(a[9]).localeCompare(String(b[9]));
+  });
+
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, FOLLOWUP_HEADERS.length).clearContent();
+  }
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, FOLLOWUP_HEADERS.length).setValues(rows);
+  }
+
+  return {
+    rows: rows.length,
+    overdue: rows.filter(r => r[0] && r[0] < todayIso).length,
+    undated: rows.filter(r => !r[0]).length
+  };
+}
+
+/* Plain English beats a raw date for the column you scan first. */
+function dueLabel_(dueIso, todayIso) {
+  const n = daysBetweenIso_(todayIso, dueIso);
+  if (n === null) return "";
+  if (n < -1) return "OVERDUE " + Math.abs(n) + " days";
+  if (n === -1) return "OVERDUE yesterday";
+  if (n === 0) return "TODAY";
+  if (n === 1) return "tomorrow";
+  if (n <= 7) return "in " + n + " days";
+  return "in " + n + " days";
+}
+
+function daysBetweenIso_(fromIso, toIso) {
+  const a = isoToDate_(fromIso), b = isoToDate_(toIso);
+  if (!a || !b) return null;
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
 /*
@@ -2702,6 +2827,93 @@ function jobStatusLabel_(row, sold) {
   if (sold.installScheduledOn) return "SOLD — install " + sold.installScheduledOn;
   if (sold.installTbd) return "SOLD — install TBD on the COMBO LOG";
   return "SOLD — no COMBO LOG row found";
+}
+
+const FOLLOWUP_HEADERS = [
+  "Due", "Due In", "HCA", "Customer", "Outcome", "Offered", "Amount",
+  "Objection", "Phone", "Ran On", "Age (days)", "What They Said", "Key"
+];
+
+/*
+ * Turns what a rep actually typed into a date that sorts.
+ *
+ * Eight appointments on the first night produced seven formats: "7/31",
+ * "Monday", "tomorrow-Fri-7/31/26", "calling her back at 12:30 tomorrow",
+ * "Monday (layout review with Lyle)", "no Date scheduled", "no follow up
+ * date". Left as text the column cannot be sorted or filtered, so the log is
+ * a record and never a worklist.
+ *
+ * Returns "" for anything that is not a date — including the several ways
+ * reps write "there isn't one", which is the answer that matters most because
+ * those are the deals that quietly die.
+ */
+function parseFollowUpDate_(text, contextIso) {
+  const raw = String(text || "").trim();
+  if (!raw) return "";
+
+  /* "no follow up date", "no Date scheduled", "none", "tbd". Checked first:
+     "no Date scheduled" contains no digits but does contain a weekday-ish
+     word in other phrasings, and must never resolve to a real day. */
+  if (/\b(no|none|not|n\/a|na|tbd|unknown)\b/i.test(raw) && !/\d/.test(raw)) return "";
+  if (/^\s*(none|n\/a|na|tbd)\s*$/i.test(raw)) return "";
+
+  const base = isoToDate_(contextIso) || new Date();
+  const tz = DAILY_RECAP_CONFIG.timeZone;
+  const dayMs = 86400000;
+
+  /* An explicit M/D wins over everything — "tomorrow-Fri-7/31/26" is both a
+     word and a date, and the date is the precise one. */
+  const md = raw.match(/\b(\d{1,2})\s*[\/\-]\s*(\d{1,2})(?:\s*[\/\-]\s*(\d{2,4}))?\b/);
+  if (md) {
+    const stated = md[3] ? (Number(md[3]) < 100 ? Number(md[3]) + 2000 : Number(md[3])) : null;
+    let year = stated === null ? Number(Utilities.formatDate(base, tz, "yyyy")) : stated;
+    let d = new Date(year, Number(md[1]) - 1, Number(md[2]), 12, 0, 0);
+    /* A follow-up is always ahead of the appointment. "1/5" written on 12/30
+       means January next year — taking the appointment's year would file it
+       eleven months in the past and it would never surface as due. Only when
+       the rep did not state a year; if they wrote one, believe them. */
+    if (stated === null && d.getTime() < base.getTime() - 86400000) {
+      d = new Date(year + 1, Number(md[1]) - 1, Number(md[2]), 12, 0, 0);
+    }
+    if (!isNaN(d.getTime()) && d.getMonth() === Number(md[1]) - 1) {
+      return Utilities.formatDate(d, tz, "yyyy-MM-dd");
+    }
+  }
+
+  if (/\btomorrow\b/i.test(raw)) {
+    return Utilities.formatDate(new Date(base.getTime() + dayMs), tz, "yyyy-MM-dd");
+  }
+  if (/\btoday\b|\btonight\b/i.test(raw)) {
+    return Utilities.formatDate(base, tz, "yyyy-MM-dd");
+  }
+
+  /* A bare weekday means the next one coming, which is how anyone reading
+     "Monday" on a Thursday would take it. */
+  const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const wd = raw.toLowerCase().match(/\b(sun|mon|tues?|wed(nes)?|thur?s?|fri|sat(ur)?)(day)?\b/);
+  if (wd) {
+    const stem = wd[0].replace(/day$/, "");
+    let target = -1;
+    DAYS.forEach((d, i) => { if (target === -1 && d.indexOf(stem) === 0) target = i; });
+    if (target !== -1) {
+      const from = new Date(base.getTime());
+      for (let i = 1; i <= 7; i++) {
+        const cand = new Date(from.getTime() + i * dayMs);
+        if (Number(Utilities.formatDate(cand, tz, "u")) % 7 === target) {
+          return Utilities.formatDate(cand, tz, "yyyy-MM-dd");
+        }
+      }
+    }
+  }
+
+  return "";
+}
+
+function isoToDate_(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 const EMAIL_NOTE_HEADERS = [
