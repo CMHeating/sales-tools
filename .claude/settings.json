@@ -1,11 +1,18 @@
 {
   "enabledPlugins": {
+    "cmh-guard@cmh-tools": true,
     "superpowers@superpowers-marketplace": true,
     "obsidian@obsidian-skills": true,
     "andrej-karpathy-skills@karpathy-skills": true,
     "watch@claude-video": true
   },
   "extraKnownMarketplaces": {
+    "cmh-tools": {
+      "source": {
+        "source": "github",
+        "repo": "CMHeating/sales-tools"
+      }
+    },
     "superpowers-marketplace": {
       "source": {
         "source": "github",
@@ -48,26 +55,6 @@
           {
             "type": "command",
             "command": "command -v graphify >/dev/null 2>&1 && graphify hook-guard read || exit 0"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node scripts/claude-guard.js"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node scripts/claude-guard.js"
           }
         ]
       }

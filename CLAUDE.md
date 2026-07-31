@@ -40,9 +40,33 @@ Both `scripts/build-install-availability-spark.js` and `scripts/extract-install-
 
 ### Guard hook
 
-`scripts/claude-guard.js` enforces the three rules above that are easy to lose track of mid-task — generated files, snapshots, and PIN literals — and reminds you to rebuild after a build input changes. It is wired up in `.claude/settings.json` as a `PreToolUse`/`PostToolUse` hook on the editing tools.
+The rules above that are easy to lose track of mid-task — generated files, snapshots, PIN literals — are enforced by the **`cmh-guard`** plugin, enabled in `.claude/settings.json`. It runs as a `PreToolUse`/`PostToolUse` hook on the editing tools and reads its rules from `.claude/guard.json` in this repo:
 
-It fails open by design: any parse error or unexpected input lets the tool call through. Set `CMH_GUARD_OFF=1` to disable it for a session.
+- `generated[]` — deny hand-edits, and say which source file and build command to use instead
+- `frozen[]` — deny edits to existing `*.before-*.html`, while still allowing new snapshots to be created
+- `secretPatterns[]` — deny PIN literals in any committed file (scoped to `*_PINS` object literals, so numeric maps in the quoting and BOM tools don't false-positive)
+- `rebuild[]` — after an edit to a build input, note that the outputs are stale
+
+To change what is guarded, edit `.claude/guard.json` — not the plugin. It fails open by design: a missing or malformed config, a bad regex, or an unexpected payload all let the tool call through. Set `CMH_GUARD_OFF=1` to disable it for a session.
+
+## Claude Code Plugin Marketplace
+
+This repo doubles as the `cmh-tools` plugin marketplace for all CM Heating repos. `.claude-plugin/marketplace.json` is the catalog; the plugins themselves live in `plugins/`.
+
+To use `cmh-guard` in another repo, add to that repo's `.claude/settings.json`:
+
+```json
+{
+  "enabledPlugins": { "cmh-guard@cmh-tools": true },
+  "extraKnownMarketplaces": {
+    "cmh-tools": { "source": { "source": "github", "repo": "CMHeating/sales-tools" } }
+  }
+}
+```
+
+Then add a `.claude/guard.json` describing that repo's generated files, frozen files, and secret patterns. Without one the plugin loads and does nothing, so it is safe to enable everywhere.
+
+Validate manifest changes before pushing — `claude plugin validate ./plugins/cmh-guard --strict` and `claude plugin validate . --strict`.
 
 ## Install Availability Build Pipeline
 
