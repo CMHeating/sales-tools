@@ -87,12 +87,28 @@ All tools share a consistent dark theme — navy/dark blue backgrounds (`#0a1628
 
 The Leaderboard and Install Availability tools use Firebase JS SDK v10 loaded via CDN (`https://www.gstatic.com/firebasejs/10.12.0/`). All other tools are pure client-side with no external dependencies beyond Google Fonts.
 
-## graphify
+## graphify (optional — only if installed)
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+graphify is a local CLI, not a skill and not part of this repo. It may be
+installed on one machine and absent on another, and `graphify-out/` is not
+committed. The `PreToolUse` hooks in `.claude/settings.json` are already
+written to no-op when the binary is missing, so nothing here is required.
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+**Check before relying on it.** If `graphify` is not on `PATH`, or
+`graphify-out/graph.json` does not exist, skip this section entirely and use
+Grep, Glob and Read directly — that is the normal path, not a fallback.
+
+When it *is* available:
+- For codebase questions, prefer `graphify query "<question>"`. Use
+  `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"`
+  for focused concepts. These return a scoped subgraph, usually much smaller
+  than GRAPH_REPORT.md or raw grep output.
+- If `graphify-out/wiki/index.md` exists, use it for broad navigation instead
+  of raw source browsing.
+- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review, or
+  when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current
+  (AST-only, no API cost).
+
+To set it up in an environment that lacks it, install the CLI and run
+`graphify update .` to generate the graph.
