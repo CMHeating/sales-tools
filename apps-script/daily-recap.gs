@@ -49,6 +49,7 @@ const DAILY_RECAP_CONFIG = {
   logSheetName: "Recap Log",
   complianceSheetName: "Reply Compliance",
   summarySheetName: "Summary",
+  todaySheetName: "Today",
 
   /* The reconciled view: one row per job, whether or not a rep reported it.
      Written on a schedule by refreshJobStatus(), read by the 1:1 scheduler.
@@ -1328,22 +1329,40 @@ function sweepRecapReplies() {
     return { ok: false, written: 0, skipped: 0, marked: [] };
   }
 
-  let out = { ok: true, written: 0, skipped: 0, undated: 0, marked: [] };
+  let out = { ok: true, written: 0, skipped: 0, undated: 0, marked: [], reconciled: false };
   try {
     const book = getLogSpreadsheet_();
     const logged = logRepliesByNight_(book.ss, res.replies);
     out = {
       ok: true, written: logged.written, skipped: logged.skipped,
-      undated: logged.undated, marked: logged.marked
+      undated: logged.undated, marked: logged.marked, reconciled: false
     };
   } catch (err) {
     Logger.log("Reply sweep could not write: " + (err && err.message ? err.message : String(err)));
-    return { ok: false, written: 0, skipped: 0, marked: [] };
+    return { ok: false, written: 0, skipped: 0, marked: [], reconciled: false };
+  }
+
+  /* Writing the Recap Log is only half of it. Job Status is the reconciled view
+     the 1:1 page reads, and it is built from the log rather than watching it —
+     so without this a reply logged at 11am would not reach the 1:1 until the
+     10pm rebuild. Only when something actually changed: a rebuild costs several
+     Gmail searches and most hours the sweep writes nothing. */
+  if (out.written || out.marked.length) {
+    try {
+      refreshJobStatus();
+      out.reconciled = true;
+    } catch (err) {
+      /* The log is already written and correct. A reconciliation that failed
+         will be retried on the next sweep and again tonight. */
+      Logger.log("Sweep wrote rows but Job Status refresh failed: " +
+        (err && err.message ? err.message : String(err)));
+    }
   }
 
   Logger.log("Reply sweep: " + res.replies.length + " repl(ies) seen, " +
     out.written + " new row(s) logged, " + out.skipped + " already there" +
-    (out.marked.length ? ", marked Late: " + out.marked.join(", ") : "") + ".");
+    (out.marked.length ? ", marked Late: " + out.marked.join(", ") : "") +
+    (out.reconciled ? ", Job Status rebuilt" : "") + ".");
   return out;
 }
 
@@ -1510,6 +1529,12 @@ const SHEET_LAYOUTS = {
              70, 110, 90, 85, 170, 120, 120, 120, 240, 130, 300, 300, 140, 0],
     wrap: [21, 23, 24],
     money: [14], hide: [26]
+  },
+  /* Two blocks side by side: the reported appointments in A-H, the reply
+     picture in J-N, with I left narrow as the gutter between them. */
+  "Today": {
+    widths: [95, 140, 190, 150, 280, 110, 120, 300, 24, 95, 140, 80, 110],
+    wrap: [], money: [5], hide: [], plain: true
   }
 };
 
@@ -1529,6 +1554,11 @@ function applySheetLayout_(ss, name) {
     (layout.money || []).forEach(i => {
       sheet.getRange(2, i + 1, lastRow - 1, 1).setNumberFormat('$#,##0');
     });
+    /* A "plain" tab is not one table with one header row — Today has a title,
+       a caption and two blocks side by side — so a frozen header and banding
+       across the whole width would both be wrong there. */
+    if (layout.plain) return;
+
     sheet.setFrozenRows(1);
     /* Banded rows make a wide sheet scannable across, which is how anyone
        actually reads a row here. */
@@ -1578,6 +1608,7 @@ function getLogSpreadsheet_() {
   ensureSheet_(ss, cfg.logSheetName, RECAP_LOG_HEADERS);
   ensureSheet_(ss, cfg.complianceSheetName, COMPLIANCE_HEADERS);
   installSummaryFormulas_(ss);
+  installTodayFormulas_(ss);
 
   /* A brand new spreadsheet still carries the default empty "Sheet1". */
   const first = ss.getSheetByName("Sheet1");
@@ -1591,10 +1622,107 @@ function getLogSpreadsheet_() {
       "Tabs:\n" +
       "  " + cfg.logSheetName + " — one row per appointment reported\n" +
       "  " + cfg.complianceSheetName + " — who was scheduled and whether they replied\n" +
+      "  " + cfg.todaySheetName + " — today and yesterday, live; updates itself\n" +
       "  " + cfg.summarySheetName + " — per-HCA rollup, formula-driven\n"
   });
 
   return { ss: ss, created: true };
+}
+
+/*
+ * The live view of the last two days.
+ *
+ * This is the answer to "should the daily sales sheet be a live document" — it
+ * already is one. Every cell here is a formula over the Recap Log and the
+ * compliance tab, so Sheets recalculates it on its own: when the hourly sweep
+ * writes a late reply underneath, an open tab shows it without anyone running
+ * anything, and nothing can drift out of step with the log because there is no
+ * copy of the data.
+ *
+ * Two days rather than one, because a reply that lands at 11am is answering
+ * yesterday. That is the whole case for the tab: the night's digest is a
+ * snapshot at 8:15pm and the picture keeps changing after it.
+ */
+/*
+ * Puts the formula tabs back if they are missing, and does nothing at all when
+ * they are already there. Called on the scheduled paths, so a tab someone
+ * deleted comes back on its own without the formulas being rewritten every
+ * hour underneath whoever is reading them.
+ */
+function ensureLiveTabs_(ss) {
+  const cfg = DAILY_RECAP_CONFIG;
+  try {
+    if (!ss.getSheetByName(cfg.todaySheetName)) installTodayFormulas_(ss);
+    if (!ss.getSheetByName(cfg.summarySheetName)) installSummaryFormulas_(ss);
+  } catch (err) {
+    Logger.log("Could not ensure the live tabs: " + (err && err.message ? err.message : String(err)));
+  }
+}
+
+/* Forces both formula tabs to be rebuilt, whether or not they exist. Run this
+   once after pasting this script over an older version to get the Today tab. */
+function installLiveTabs() {
+  const book = getLogSpreadsheet_();
+  installTodayFormulas_(book.ss);
+  installSummaryFormulas_(book.ss);
+  applySheetLayout_(book.ss, DAILY_RECAP_CONFIG.todaySheetName);
+  Logger.log("Today and Summary rebuilt: " + book.ss.getUrl());
+  return book.ss.getUrl();
+}
+
+function installTodayFormulas_(ss) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const sheet = ensureSheet_(ss, cfg.todaySheetName, ["Today"]);
+  const log = "'" + cfg.logSheetName + "'";
+  const comp = "'" + cfg.complianceSheetName + "'";
+
+  /* The Date columns hold ISO strings, so the comparison has to be against a
+     string too — a bare TODAY() would compare a date to text and match
+     nothing. */
+  const from = 'TEXT(TODAY()-1,"yyyy-mm-dd")';
+  const today = 'TEXT(TODAY(),"yyyy-mm-dd")';
+
+  sheet.getRange("A1").setValue("Today and yesterday — live").setFontWeight("bold");
+  sheet.getRange("A2").setValue(
+    "Formulas, not a snapshot. The hourly sweep writes late replies underneath and " +
+    "this updates itself — leave the tab open if you like.");
+
+  sheet.getRange("A4").setValue("Appointments reported").setFontWeight("bold");
+  sheet.getRange("A5").setFormula(
+    '=IFERROR(QUERY(' + log + '!A2:M, "select A,B,C,E,F,G,J,K where A >= \'"&' + from +
+    '&"\' order by A desc, B", 0), "Nothing reported yet for today or yesterday.")'
+  );
+
+  sheet.getRange("J4").setValue("Who has answered").setFontWeight("bold");
+  sheet.getRange("J5").setFormula(
+    '=IFERROR(QUERY(' + comp + '!A2:F, "select A,B,C,D where A >= \'"&' + from +
+    '&"\' order by A desc, C, B", 0), "No compliance rows yet.")'
+  );
+
+  /* The only question that matters at 9am: who still owes a recap. "Late" is
+     answered, so it is deliberately not in this list. */
+  sheet.getRange("J20").setValue("Still owed").setFontWeight("bold");
+  sheet.getRange("J21").setFormula(
+    '=IFERROR(QUERY(' + comp + '!A2:F, "select A,B where C = \'No\' and A >= \'"&' + from +
+    '&"\' order by A desc, B", 0), "Nobody — everyone scheduled has answered.")'
+  );
+
+  sheet.getRange("J28").setValue("Answered late").setFontWeight("bold");
+  sheet.getRange("J29").setFormula(
+    '=IFERROR(QUERY(' + comp + '!A2:F, "select A,B,D where C = \'Late\' and A >= \'"&' + from +
+    '&"\' order by A desc, B", 0), "None — everything came in on the night.")'
+  );
+
+  sheet.getRange("A2").setFontColor("#666666");
+  sheet.getRange("E1").setFormula('="Recalculated "&TEXT(NOW(),"ddd d mmm, h:mm am/pm")');
+  sheet.getRange("E1").setFontColor("#666666");
+
+  /* Counts, so the shape of the day reads without scrolling. */
+  sheet.getRange("A3").setFormula(
+    '=IFERROR("Reported so far today: "&COUNTIF(' + log + '!A2:A,' + today + ')&' +
+    '"    |    yesterday: "&COUNTIF(' + log + '!A2:A,' + from + '),"")'
+  );
+  sheet.getRange("A3").setFontColor("#666666");
 }
 
 /*
@@ -2937,6 +3065,9 @@ function refreshJobStatus() {
   const work = writeFollowUps_(book.ss, allLogRows, status, toIso);
   [cfg.logSheetName, cfg.complianceSheetName, cfg.followUpsSheetName,
    cfg.jobStatusSheetName, cfg.emailNotesSheetName].forEach(n => applySheetLayout_(book.ss, n));
+
+  /* Puts the Today tab back if it was deleted, and leaves it alone otherwise. */
+  ensureLiveTabs_(book.ss);
 
   PropertiesService.getScriptProperties()
     .setProperty("jobStatusRefreshedIso", new Date().toISOString());
