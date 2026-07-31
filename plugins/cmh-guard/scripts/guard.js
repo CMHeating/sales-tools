@@ -65,16 +65,20 @@ function notice(text) {
 //
 // Sentinels are built with fromCharCode rather than written as escapes so this
 // file stays plain source with no control characters embedded in it.
-const GLOBSTAR_SLASH = String.fromCharCode(0);
-const GLOBSTAR = String.fromCharCode(1);
+const LEADING_GLOBSTAR = String.fromCharCode(0);
+const GLOBSTAR_SLASH = String.fromCharCode(1);
+const GLOBSTAR = String.fromCharCode(2);
 
 function globToRegExp(glob) {
   const body = glob
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/^\*\*\//, LEADING_GLOBSTAR)
     .replace(/\/\*\*\//g, GLOBSTAR_SLASH)
     .replace(/\*\*/g, GLOBSTAR)
     .replace(/\*/g, "[^/]*")
     .replace(/\?/g, "[^/]")
+    .split(LEADING_GLOBSTAR)
+    .join("(?:.*/)?")
     .split(GLOBSTAR_SLASH)
     .join("/(?:.*/)?")
     .split(GLOBSTAR)
@@ -126,6 +130,46 @@ function incomingText(toolInput) {
     }
   }
   return parts.join("\n");
+}
+
+// What the file looks like right now. A file that doesn't exist yet reads as
+// empty, so everything in a create counts as newly introduced.
+function currentContent(absPath) {
+  try {
+    return fs.readFileSync(absPath, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+// Best-effort replay of this tool call against the current file. Returns null
+// when the call can't be replayed, and the caller falls back to the union of
+// existing content and the incoming fragment.
+function applyToolInput(before, toolInput) {
+  if (typeof toolInput.content === "string") return toolInput.content;
+
+  const edits = Array.isArray(toolInput.edits)
+    ? toolInput.edits
+    : [
+        {
+          old_string: toolInput.old_string,
+          new_string: toolInput.new_string,
+          replace_all: toolInput.replace_all
+        }
+      ];
+
+  let after = before;
+  let applied = false;
+  for (const edit of edits) {
+    if (!edit || typeof edit.new_string !== "string") continue;
+    const oldStr = typeof edit.old_string === "string" ? edit.old_string : "";
+    if (!oldStr || !after.includes(oldStr)) continue;
+    after = edit.replace_all
+      ? after.split(oldStr).join(edit.new_string)
+      : after.replace(oldStr, edit.new_string);
+    applied = true;
+  }
+  return applied ? after : null;
 }
 
 // A secret rule fires when `value` appears close enough after `declaration` to
@@ -185,13 +229,27 @@ function preToolUse(config, toolInput, absPath, relPath, baseName) {
     );
   }
 
-  const text = incomingText(toolInput);
-  if (!text) return;
+  // Scanning the incoming fragment alone is not enough: an edit can drop a
+  // value into a declaration that already sits in the file, so the fragment
+  // carries the secret but not the declaration that scopes it. Replay the call
+  // against the real file, and keep the fragment union as a safety net for a
+  // call that can't be replayed.
+  const incoming = incomingText(toolInput);
+  const before = currentContent(absPath);
+  const simulated = applyToolInput(before, toolInput);
+
+  const candidates = [];
+  if (simulated !== null) candidates.push(simulated);
+  if (incoming) candidates.push(before ? before + "\n" + incoming : incoming);
+  if (!candidates.length) return;
 
   for (const rule of config.secretPatterns || []) {
     if (!rule) continue;
     if (matchesAny(rule.allow, relPath, baseName)) continue;
-    if (!violatesSecretRule(rule, text)) continue;
+    // Only block what this call introduces. A violation already in the file
+    // needs a cleanup, not a wall in front of every later edit to that file.
+    if (violatesSecretRule(rule, before)) continue;
+    if (!candidates.some(candidate => violatesSecretRule(rule, candidate))) continue;
     deny(
       `This edit writes ${rule.name || "a secret literal"} into ${relPath}, which is ` +
         `committed${rule.published === false ? "" : " and published"}. ` +
