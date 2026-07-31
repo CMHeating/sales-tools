@@ -50,6 +50,26 @@
             "command": "command -v graphify >/dev/null 2>&1 && graphify hook-guard read || exit 0"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/claude-guard.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/claude-guard.js"
+          }
+        ]
       }
     ]
   }
