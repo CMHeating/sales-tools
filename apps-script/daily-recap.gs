@@ -13,7 +13,7 @@
  *   1. Paste this file into the script project.
  *   2. Run previewDailyRecap() once and read the log. It sends nothing.
  *   3. Run installDailyRecapTriggers() once to create both time-driven triggers.
- *   4. Leave TEST_MODE true until the email looks right, then set it to false.
+ *   4. Leave it in test until the email looks right, then run goLive().
  *
  * TEST_MODE (see DAILY_RECAP_CONFIG below):
  *   true  — sends ONE email to testRecipient containing the roster decision plus
@@ -26,6 +26,10 @@
  */
 
 const DAILY_RECAP_CONFIG = {
+  /* The starting value only. Once goLive() or goTest() has been run, the live
+     setting is in Script Properties and this is ignored — see isTestMode_().
+     A new project is safe by default; an established one cannot be knocked
+     back into test by someone pasting this file over it. */
   TEST_MODE: true,
 
   timeZone: "America/Los_Angeles",
@@ -118,7 +122,7 @@ function sendDailyRecap() {
     return plan;
   }
 
-  if (DAILY_RECAP_CONFIG.TEST_MODE) {
+  if (isTestMode_()) {
     sendEmailSafe_({
       to: [DAILY_RECAP_CONFIG.testRecipient],
       subject: DAILY_RECAP_CONFIG.testSubjectPrefix + " — " + plan.dateLabel,
@@ -217,7 +221,8 @@ function buildTestModeBody_(plan) {
     : "Schedule Exceptions sheet: COULD NOT BE READ — base schedules used, no overrides applied.\n  Error: " + plan.exceptions.error);
 
   lines.push("");
-  lines.push("To go live, set TEST_MODE to false in DAILY_RECAP_CONFIG.");
+  lines.push("To go live, run goLive() once. It is stored outside this file, so");
+  lines.push("updating the script later will not put the recap back into test.");
   lines.push("");
   lines.push(new Array(70).join("="));
   lines.push("");
@@ -294,7 +299,7 @@ function runMorningFollowUp_(workingToday) {
   const toAck = inScope.filter(h => byHca[h.name]);
   const toNudge = inScope.filter(h => !byHca[h.name]);
 
-  if (cfg.TEST_MODE) {
+  if (isTestMode_()) {
     sendEmailSafe_({
       to: [cfg.testRecipient],
       subject: "[TEST] Recap morning follow-up — " + past.dateLabel,
@@ -590,7 +595,7 @@ function runCollection_(when, isBackfill) {
   const body = buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, followUpsByHca);
   sendEmailSafe_({
     to: [DAILY_RECAP_CONFIG.managerEmail],
-    subject: (DAILY_RECAP_CONFIG.TEST_MODE ? "[TEST] " : "") +
+    subject: (isTestMode_() ? "[TEST] " : "") +
       (isBackfill ? "Recap Backfill — " : "Recap Digest — ") + plan.dateLabel,
     body: body
   });
@@ -691,6 +696,61 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays, includeAllDates) 
   });
 
   return { ok: true, replies: out };
+}
+
+/*
+ * Whether to send to the roster or only to the test recipient.
+ *
+ * This deliberately does not read the constant above once the choice has been
+ * made. The whole file gets pasted over a running project to update it, and a
+ * constant in the source means every update silently reverts a live system to
+ * test — the recap would appear to run, the log would fill in, and no HCA
+ * would ever be emailed. Script Properties survive the paste; the source does
+ * not, so the source cannot be where this lives.
+ */
+function isTestMode_() {
+  try {
+    const stored = PropertiesService.getScriptProperties().getProperty("TEST_MODE");
+    if (stored === "false") return false;
+    if (stored === "true") return true;
+  } catch (err) {
+    Logger.log("Could not read the TEST_MODE property, falling back to the file: " + err);
+  }
+  return DAILY_RECAP_CONFIG.TEST_MODE;
+}
+
+/* Send to the ten HCAs. Survives future pastes of this file. */
+function goLive() {
+  PropertiesService.getScriptProperties().setProperty("TEST_MODE", "false");
+  Logger.log("LIVE — the recap will go to all scheduled HCAs. " +
+    "This setting now survives updates to this file.");
+  return "live";
+}
+
+/* Send only to the test recipient. */
+function goTest() {
+  PropertiesService.getScriptProperties().setProperty("TEST_MODE", "true");
+  Logger.log("TEST — only " + DAILY_RECAP_CONFIG.testRecipient +
+    " will be emailed. No HCA will be contacted.");
+  return "test";
+}
+
+/* Says which mode is in force and where that came from. Changes nothing. */
+function showRecapMode() {
+  let stored = null;
+  try {
+    stored = PropertiesService.getScriptProperties().getProperty("TEST_MODE");
+  } catch (err) { /* reported below as unreadable */ }
+
+  const mode = isTestMode_() ? "TEST" : "LIVE";
+  const source = (stored === "true" || stored === "false")
+    ? "Script Properties (survives a paste)"
+    : "the TEST_MODE constant in this file (run goLive to make it stick)";
+  Logger.log(mode + " — from " + source + ".");
+  Logger.log(isTestMode_()
+    ? "Only " + DAILY_RECAP_CONFIG.testRecipient + " is emailed."
+    : "All scheduled HCAs are emailed.");
+  return mode;
 }
 
 function readLastDigestRun_() {
@@ -1089,7 +1149,7 @@ function normalizeOutcome_(value) {
 function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, followUpsByHca) {
   const lines = [];
   lines.push("Recap digest for " + plan.dateLabel + " (" + plan.weekday + ")");
-  if (DAILY_RECAP_CONFIG.TEST_MODE) {
+  if (isTestMode_()) {
     lines.push("");
     lines.push("TEST MODE is on — tonight's recap went only to " + DAILY_RECAP_CONFIG.testRecipient + ",");
     lines.push("so replies from HCAs are not expected yet.");
@@ -3746,7 +3806,7 @@ function deleteDailyRecapTriggers_() {
 /* Sends nothing. Logs exactly who tonight's send would go to and why. */
 function previewDailyRecap() {
   const plan = buildTodayPlan_(new Date());
-  Logger.log("TEST_MODE: " + DAILY_RECAP_CONFIG.TEST_MODE);
+  Logger.log("Mode: " + (isTestMode_() ? "TEST" : "LIVE"));
   Logger.log("Date: " + plan.dateLabel + " (" + plan.weekday + ")");
   Logger.log("Exceptions sheet: " + (plan.exceptions.ok
     ? "OK, " + plan.exceptions.count + " row(s) for today"
