@@ -109,6 +109,36 @@ reconstruct leads that are already sitting in it untouched.
    field is a one-time dollar amount, so a monthly cannot be written into it
    directly.
 
+## What the ServiceTitan alerts can and cannot tell us
+
+Verified against real alert emails on 2026-07-30.
+
+| Alert | Carries the HCA? |
+|---|---|
+| `Booked Job Alert [Sales Quote]` | **No** |
+| `Sold Estimate Alert [Sales Quote]` | Yes — `Sold by` |
+
+A booked job has no advisor attached. The HCA is assigned later, so the alert
+that fires at booking time cannot say who will run the appointment.
+`apps-script/sold-job-tracker-sync.gs` already reflects this: it reads `Sold by`
+only from the Sold Estimate Alert, and `readBookedJobAlerts_` extracts no HCA
+because there is none to extract.
+
+Booked Job Alerts do carry: job number, date/time, customer name and link,
+address, and — depending on how the job was booked — either the Scheduling Pro
+questionnaire or a dispatch heading plus a `COW:` phone number and tech-flip
+qualifying answers. A phone number is not always present.
+
+Two consequences:
+
+1. The recap cannot be pre-filled per HCA from booking data, because the
+   day's bookings cannot be split by advisor.
+2. **The recap reply is the only place the HCA-to-customer mapping exists
+   before a sale.** That makes reconciliation run the other way: take the day's
+   booked Sales Quote jobs, match them against what reps reported, and treat
+   anything booked but unreported as an appointment nobody accounted for. That
+   works without the HCA ever appearing on the alert.
+
 ## Implementation
 
 `apps-script/daily-recap.gs` implements both jobs. Deploy it in a Google Apps
