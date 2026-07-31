@@ -1582,8 +1582,13 @@ function buildRecapApiPayload_(days, hcaFilter) {
     wanted = byEmail ? byEmail.name.toLowerCase() : "__no-such-hca__";
   }
 
-  const logRows = readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
-    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso)
+  /* Kept unfiltered as well as filtered. Deciding whether a booked appointment
+     went unreported has to consider every rep's answers — asking only about
+     Kyle would make everything Amber reported look unclaimed. */
+  const allLogRows = readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
+    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso);
+
+  const logRows = allLogRows
     .filter(r => !wanted || String(r[1]).toLowerCase() === wanted);
 
   const compRows = readSheetRows_(book.ss, cfg.complianceSheetName, COMPLIANCE_HEADERS.length)
@@ -1653,7 +1658,9 @@ function buildRecapApiPayload_(days, hcaFilter) {
   /* Reconciliation runs before the roster is frozen, because the rep who sold
      a job and never filed a single recap is precisely the one worth surfacing
      — and they have no rows to be found by. */
-  const recon = reconcileWithServiceTitan_(byName, ensure, wanted, days);
+  const recon = reconcileWithServiceTitan_(byName, ensure, wanted, days, {
+    allLogRows: allLogRows, fromIso: fromIso, toIso: toIso
+  });
 
   const hcas = Object.keys(byName).sort().map(name => {
     const h = byName[name];
@@ -1692,6 +1699,13 @@ function weekdayFromIso_(iso) {
  * status is worse than walking in with none, so the alerts are read back and
  * any drift is shown.
  */
+
+/* Dispatcher notes are shouted — "KEEP WITH JAY", "TECH LEAD CALEB". Distinct
+   from titleCase_, which only lifts the first character and is relied on
+   elsewhere for lead sources. */
+function properName_(v) {
+  return String(v || "").toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+}
 
 function roundCents_(n) {
   return isFinite(n) ? Math.round(n * 100) / 100 : n;
@@ -1820,15 +1834,18 @@ function namesMatch_(a, b) {
  * Install *scheduled* dates are deliberately absent: the two alerts carry sold
  * and completed, and nothing in between. That needs the COMBO LOG.
  */
-function reconcileWithServiceTitan_(byName, ensure, wanted, days) {
+function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
   const window = Math.max(1, Math.min(60, Number(days) || 14));
   const soldRes = readSoldAlerts_(window);
   const doneRes = readInstallCompletions_(window);
+  const bookedRes = readBookedJobAlerts_(ctx.fromIso, ctx.toIso, window);
 
   const status = {
     ok: soldRes.ok && doneRes.ok,
+    bookedOk: bookedRes.ok,
     soldAlertsRead: soldRes.alerts.length,
     completionAlertsRead: doneRes.completions.length,
+    bookedAlertsRead: bookedRes.booked.length,
     /* Said plainly so the 1:1 page never implies an install date it does not
        have. */
     note: "Sold and install-completed come from ServiceTitan alert emails. " +
@@ -1948,7 +1965,238 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days) {
     h.soldAmountNeedsReview = h.soldAlerts.some(s => s.multiEstimate);
   });
 
+  matchBookedToReplies_(byName, bookedRes.booked, ctx.allLogRows, status);
   return status;
+}
+
+/*
+ * Matches the booked appointment to what the rep said about it.
+ *
+ * The Booked Job Alert names no advisor — the assignment happens after the
+ * booking — so the recap reply is the only place the advisor-to-customer
+ * mapping exists before a sale. That makes this the one reconciliation that
+ * cannot run off ServiceTitan alone, and it is the only way to see an
+ * appointment that was run and did NOT sell: the sold tracker is built off
+ * Sold Estimate Alerts, so a booked job that never closed appears nowhere in
+ * it.
+ *
+ * Three outcomes:
+ *
+ *   matched     the rep's row gains the booking's context — job type, what the
+ *               customer said on the phone, how old the system is
+ *   unclaimed   booked, the day has passed, nobody reported it. Did it run?
+ *               Get reassigned? Cancel? Company-level, since no advisor is
+ *               attached to argue about
+ *   notBooked   reported with no Sales Quote booking behind it — a revisit or
+ *               self-generated lead, or a name that does not match
+ */
+function matchBookedToReplies_(byName, booked, allLogRows, status) {
+  const claimed = {};
+
+  /* Every reported appointment, across all reps, so a single-rep query does
+     not make everyone else's work look unclaimed. */
+  const reported = (allLogRows || []).map(r => ({
+    date: String(r[0]), hca: String(r[1]), customer: String(r[2] || "")
+  })).filter(r => r.customer);
+
+  const unclaimed = [];
+  booked.forEach(b => {
+    const hit = reported.filter(r =>
+      r.date === b.appointmentIso && namesMatch_(r.customer, b.customer))[0];
+
+    if (!hit) {
+      unclaimed.push({
+        customer: b.customer, jobNumber: b.jobNumber, jobType: b.jobType,
+        appointmentIso: b.appointmentIso, appointmentAt: b.appointmentAt,
+        /* Who to ask, when the dispatcher left a note. */
+        assignedHint: b.assignedHint, techLead: b.techLead,
+        sourceHint: b.sourceHint
+      });
+      return;
+    }
+
+    claimed[hit.hca + "|" + hit.date + "|" + normName_(hit.customer)] = true;
+
+    const h = byName[hit.hca];
+    if (!h) return;
+    const row = h.rows.filter(r =>
+      r.date === hit.date && namesMatch_(r.customer, b.customer))[0];
+    if (!row) return;
+
+    row.booked = {
+      jobNumber: b.jobNumber, jobType: b.jobType, appointmentAt: b.appointmentAt,
+      hoa: b.hoa, timeline: b.timeline, systemAge: b.systemAge,
+      techLead: b.techLead, sourceHint: b.sourceHint
+    };
+    /* The booking's own word on lead source against the rep's. Recorded, not
+       judged — a tech-flip booking can legitimately be reported as a revisit
+       if the rep had seen them before. */
+    if (b.sourceHint && row.source && normName_(b.sourceHint) !== normName_(row.source)) {
+      row.sourceHintDiffers = b.sourceHint;
+    }
+  });
+
+  Object.keys(byName).forEach(name => {
+    const h = byName[name];
+    h.bookedMatched = (h.rows || []).filter(r => r.booked).length;
+    /* Not a fault. A revisit or a self-generated lead has no Sales Quote
+       booking behind it, and neither does a customer whose name was typed
+       differently. Worth a glance, not a flag. */
+    h.reportedNotBooked = (h.rows || [])
+      .filter(r => !r.booked && r.customer)
+      .map(r => ({ date: r.date, customer: r.customer, source: r.source, outcome: r.outcome }));
+  });
+
+  unclaimed.sort((a, b) => String(b.appointmentIso).localeCompare(String(a.appointmentIso)));
+  status.unclaimedAppointments = unclaimed;
+  status.bookedMatched = Object.keys(claimed).length;
+  if (!status.bookedOk) {
+    status.bookedError = "Booked Job Alert search failed; unreported appointments are not shown.";
+  }
+}
+
+/*
+ * Booked Job Alert [Sales Quote] — the appointment before anyone runs it.
+ *
+ * The body is positional rather than labelled:
+ *
+ *   Booked Job Alert:
+ *   Sales Quote
+ *   Sales Quote - Cooling          <- job type
+ *   # 408119792                    <- job number
+ *   7/29 10:00 AM                  <- the APPOINTMENT, not the booking
+ *   Syed Rizvi                     <- customer
+ *   13604 43rd Avenue Southeast, Mill Creek, WA 98012 USA
+ *   KEEP WITH JAY - HE SOLD THEIR FURNACE IN 2023.
+ *   7/29 10-12 JDC Sales Consult - LEAD BY Dan K.
+ *   ...questionnaire...
+ *
+ * The alert fires when the job is booked, which can be weeks before the
+ * appointment — 8/10 and 8/12 appointments both alerted on 7/30. So the search
+ * reaches much further back than the report window and the filtering is done
+ * on the appointment date parsed out of the body.
+ */
+function readBookedJobAlerts_(fromIso, toIso, days) {
+  const out = [];
+  let threads = [];
+  /* Booked well ahead of the appointment, so the search window has to be much
+     wider than the window being reported on. */
+  const lookback = Math.max(30, Math.min(180, (Number(days) || 14) + 90));
+  try {
+    threads = GmailApp.search('from:alerts@servicetitan.com subject:"Booked Job Alert [Sales Quote]" ' +
+      "newer_than:" + lookback + "d", 0, 300);
+  } catch (err) {
+    Logger.log("Booked alert search failed: " + err);
+    return { ok: false, booked: out };
+  }
+
+  threads.forEach(t => t.getMessages().forEach(msg => {
+    if (String(msg.getSubject() || "").indexOf("Booked Job Alert") === -1) return;
+    const parsed = parseBookedAlert_(msg.getPlainBody(), msg.getDate());
+    if (!parsed || !parsed.customer) return;
+    if (parsed.appointmentIso < fromIso || parsed.appointmentIso > toIso) return;
+    out.push(parsed);
+  }));
+
+  /* The same job can alert more than once when an appointment is moved. */
+  const seen = {}, deduped = [];
+  out.forEach(b => {
+    const key = b.jobNumber || (normName_(b.customer) + "|" + b.appointmentIso);
+    if (seen[key]) return;
+    seen[key] = true;
+    deduped.push(b);
+  });
+  return { ok: true, booked: deduped };
+}
+
+function parseBookedAlert_(rawBody, received) {
+  const lines = String(rawBody || "").split(/\r?\n/).map(l => l.trim());
+  const body = String(rawBody || "");
+
+  let jobType = "", jobNumber = "", appointmentIso = "", appointmentAt = "", customer = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!jobType && /^Sales Quote\s*[-–—]\s*\S/.test(line)) {
+      jobType = line.replace(/^Sales Quote\s*[-–—]\s*/, "").trim();
+      continue;
+    }
+    if (!jobNumber) {
+      const m = line.match(/^#\s*(\d{4,})\s*$/);
+      if (m) { jobNumber = m[1]; continue; }
+    }
+    /* The date line is what anchors everything: the customer is the next
+       non-empty line after it. */
+    const when = line.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2}\s*[AP]M)\s*$/i);
+    if (when && !appointmentIso) {
+      const d = resolveAlertDate_(Number(when[1]), Number(when[2]), received);
+      if (!d) continue;
+      appointmentIso = d;
+      appointmentAt = when[1] + "/" + when[2] + " " + when[3];
+      for (let j = i + 1; j < lines.length; j++) {
+        if (!lines[j]) continue;
+        customer = lines[j].replace(/\(M\)\s*$/i, "").trim();
+        break;
+      }
+      break;
+    }
+  }
+  if (!appointmentIso) return null;
+
+  /* Dispatcher notes, not structured fields, but they are the only advisor
+     signal a booked alert ever carries. "KEEP WITH JAY", "KEEP ON JOE C".
+     Treated strictly as a hint — the recap reply remains the record of who
+     actually ran it. */
+  const keep = body.match(/\bKEEP\s+(?:WITH|ON)\s+([A-Za-z][A-Za-z.]*(?:\s+[A-Za-z][A-Za-z.]*)?)/i);
+
+  /* "TECH LEAD CALEB", "LEAD BY Dan K." — the technician who flipped it, NOT
+     the advisor. This is the booking's own word on lead source. */
+  const tech = body.match(/\b(?:TECH LEAD|LEAD BY)\s+([A-Za-z][A-Za-z.]*(?:\s+[A-Za-z][A-Za-z.]*)?)/i);
+  const viaPro = /Booked via Scheduling Pro/i.test(body);
+
+  return {
+    customer: customer,
+    jobNumber: jobNumber,
+    jobType: jobType,
+    appointmentIso: appointmentIso,
+    appointmentAt: appointmentAt,
+    assignedHint: keep ? properName_(keep[1].trim()) : "",
+    techLead: tech ? properName_(tech[1].trim()) : "",
+    /* What the booking implies the source was, for comparison with what the
+       rep reported. */
+    sourceHint: tech ? "Tech Flip" : (viaPro ? "Web" : ""),
+    hoa: (body.match(/HOA[^\n]*?\(([^)]*)\)/i) || [])[1] || "",
+    timeline: cleanValue_((body.match(/timeline[^\n?:]*[?:]\s*([^\n]*)/i) || [])[1] || ""),
+    /* Two shapes in the wild — "AGE 13yo" on its own line, and "Age of the
+       unit and location? AC 22YO located Right side of garage." Taking the
+       text after "AGE" caught the question itself, so the age is read as the
+       figure it is. */
+    systemAge: (body.match(/\b(\d{1,2})\s*(?:yo\b|yr\b|years?\s+old\b)/i) || [])[1] || "",
+    received: received
+  };
+}
+
+/*
+ * "7/29" carries no year. An appointment is booked forward, so it is on or
+ * after the alert — a December booking for a January job rolls to next year.
+ * A small backward tolerance covers same-day and rescheduled bookings.
+ */
+function resolveAlertDate_(month, day, received) {
+  if (!(month >= 1 && month <= 12 && day >= 1 && day <= 31)) return "";
+  const tz = DAILY_RECAP_CONFIG.timeZone;
+  const base = received instanceof Date ? received : new Date();
+  const year = Number(Utilities.formatDate(base, tz, "yyyy"));
+  const candidates = [year, year + 1, year - 1];
+  for (let i = 0; i < candidates.length; i++) {
+    const d = new Date(candidates[i], month - 1, day, 12, 0, 0);
+    if (isNaN(d.getTime())) continue;
+    if (d.getMonth() !== month - 1) continue;          // 2/30 and friends
+    const drift = (d.getTime() - base.getTime()) / 86400000;
+    if (drift >= -7 && drift <= 200) {
+      return Utilities.formatDate(d, tz, "yyyy-MM-dd");
+    }
+  }
+  return "";
 }
 
 function readSheetRows_(ss, name, width) {

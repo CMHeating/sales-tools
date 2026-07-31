@@ -638,6 +638,56 @@ function renderRecap(h, data){
     out.push('</ul>');
   }
 
+  /* Booked but never reported. Only a Sales Quote booking counts, and only
+     once the day has passed — this is "did anyone run it?", not a to-do list.
+     Company-wide, because the booking alert names no advisor; the dispatcher
+     note is the only clue and it is shown as one. */
+  const unclaimed = (data && data.reconciliation && data.reconciliation.unclaimedAppointments) || [];
+  const mine = unclaimed.filter(u => !u.assignedHint ||
+    (h.name || "").toLowerCase().indexOf(String(u.assignedHint).toLowerCase()) !== -1);
+  if(mine.length){
+    out.push('<div class="notice" style="margin-top:12px"><strong>Booked, no recap for it ('
+      + mine.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    mine.slice(0, 10).forEach(u => {
+      const bits = [esc(u.customer || "(unnamed)")];
+      if(u.appointmentAt) bits.push(esc(u.appointmentAt));
+      if(u.jobType) bits.push(esc(u.jobType));
+      if(u.assignedHint) bits.push("dispatch note: keep with " + esc(u.assignedHint));
+      else if(u.techLead) bits.push("tech lead " + esc(u.techLead));
+      out.push('<li>' + bits.join(" — ") + '</li>');
+    });
+    if(mine.length > 10) out.push('<li class="help">+' + (mine.length - 10) + ' more</li>');
+    out.push('</ul></div>');
+  }
+
+  /* Ran it, no Sales Quote booking behind it. Not a fault — a revisit or a
+     self-generated lead looks exactly like this — so it sits in plain text. */
+  const noBooking = h.reportedNotBooked || [];
+  if(noBooking.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Reported with no booked job ('
+      + noBooking.length + ')</strong> — revisits and self-generated leads look like this.</p>'
+      + '<ul style="margin:4px 0 0 18px">');
+    noBooking.slice(0, 8).forEach(n => out.push('<li>' + esc(n.customer)
+      + (n.source ? " — " + esc(n.source) : "") + '</li>'));
+    if(noBooking.length > 8) out.push('<li class="help">+' + (noBooking.length - 8) + ' more</li>');
+    out.push('</ul>');
+  }
+
+  /* The booking's own word on lead source against the rep's. */
+  const srcDiff = (h.rows || []).filter(r => r.sourceHintDiffers);
+  if(srcDiff.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Lead source worth a word ('
+      + srcDiff.length + ')</strong></p><ul style="margin:4px 0 0 18px">');
+    srcDiff.slice(0, 6).forEach(r => out.push('<li>' + esc(r.customer) + ' — reported '
+      + esc(r.source || "nothing") + ', booking looks like ' + esc(r.sourceHintDiffers) + '</li>'));
+    out.push('</ul>');
+  }
+
+  if(data && data.reconciliation && data.reconciliation.bookedOk === false){
+    out.push('<p class="help" style="margin-top:10px">Booked Job Alerts could not be read, '
+      + 'so unreported appointments are not shown.</p>');
+  }
+
   if(data && data.reconciliation && data.reconciliation.ok === false){
     out.push('<p class="help" style="margin-top:10px">ServiceTitan alerts could not be read, '
       + 'so sold and install status below may be out of date.</p>');
@@ -702,6 +752,22 @@ function renderRecap(h, data){
   if(awaiting.length){
     lines.push("", "Sold, no completion alert yet (install date: check COMBO LOG):");
     awaiting.slice(0, 8).forEach(s => lines.push("  - " + dealLine(s)));
+  }
+  if(mine.length){
+    lines.push("", "Booked with no recap for it:");
+    mine.slice(0, 10).forEach(u => lines.push("  - " + (u.customer || "(unnamed)")
+      + (u.appointmentAt ? " — " + u.appointmentAt : "")
+      + (u.assignedHint ? " (dispatch: keep with " + u.assignedHint + ")" : "")));
+  }
+  if(noBooking.length){
+    lines.push("", "Reported with no booked job (revisit / self-generated?):");
+    noBooking.slice(0, 8).forEach(n => lines.push("  - " + n.customer
+      + (n.source ? " — " + n.source : "")));
+  }
+  if(srcDiff.length){
+    lines.push("", "Lead source worth a word:");
+    srcDiff.slice(0, 6).forEach(r => lines.push("  - " + r.customer + " — reported "
+      + (r.source || "nothing") + ", booking looks like " + r.sourceHintDiffers));
   }
   if((h.objections || []).length){
     lines.push("", "Objections:");

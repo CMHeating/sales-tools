@@ -295,6 +295,51 @@ alerts carry sold and completed and nothing in between. Anything sold without a
 completion alert is listed as "sold, no completion alert yet" and points at the
 COMBO LOG, rather than implying no install is booked.
 
+### Matching the booked job to the reply
+
+`sold-job-tracker-sync.gs` builds everything off Sold Estimate Alerts — a
+booked job only ever attaches to a job that already sold, as `bookedContext`.
+So **an appointment that ran and did not sell appears nowhere in the sold
+tracker**, and the recap reply is the only record it happened at all.
+
+That is what this match is for. Per rep:
+
+| | |
+|---|---|
+| `rows[].booked` | job type, appointment time, HOA, timeline, system age — the customer's own words from the booking call |
+| `rows[].sourceHintDiffers` | the booking looks like a different lead source than the rep reported |
+| `reportedNotBooked` | ran it, no Sales Quote booking behind it — a revisit or self-generated lead, or a name typed differently |
+| `bookedMatched` | how many of the rep's rows tied back to a booking |
+
+And company-wide, on `reconciliation`:
+
+| | |
+|---|---|
+| `unclaimedAppointments` | booked, the day has passed, nobody reported it. Did it run? Get reassigned? Cancel? |
+
+Four things the alert body forces:
+
+- **It is positional, not labelled.** Job type, `# number`, appointment
+  date/time and customer each sit on their own line, in that order, with the
+  customer on the line after the date. Nothing is a `Field: value` pair.
+- **The date line is the appointment, not the booking.** Alerts fire when the
+  job is booked, which can be weeks ahead — 8/10 and 8/12 appointments both
+  alerted on 7/30. So the Gmail search reaches back 90 days further than the
+  report window and the filtering is done on the parsed appointment date.
+- **The year is never stated.** `7/29` alone. An appointment is booked forward,
+  so it resolves to the first year that puts it on or after the alert, with a
+  week of slack for same-day bookings and reschedules.
+- **The advisor is not a field, but the dispatcher often names one.** `KEEP
+  WITH JAY`, `KEEP ON JOE C` appear in free text. Read as `assignedHint` and
+  labelled as a dispatch note wherever shown — never treated as the advisor of
+  record. The recap reply remains that.
+
+`TECH LEAD CALEB` and `LEAD BY Dan K.` name the **technician who flipped the
+lead**, not the advisor — which makes them the booking's own word on lead
+source, compared against what the rep reported. Recorded, not judged: a
+tech-flip booking can legitimately be reported as a revisit if the rep had seen
+the customer before.
+
 ### Securing it
 
 The payload carries customer names, prices and objections. Set a Script
@@ -334,26 +379,32 @@ is matched back to a sold alert by customer name.
 **Neither alert carries a scheduled install date.** Sold and completed are all
 there is; the date the crew is booked for has to come from the COMBO LOG.
 
-A booked job has no advisor attached. The HCA is assigned later, so the alert
-that fires at booking time cannot say who will run the appointment.
-`apps-script/sold-job-tracker-sync.gs` already reflects this: it reads `Sold by`
-only from the Sold Estimate Alert, and `readBookedJobAlerts_` extracts no HCA
-because there is none to extract.
+A booked job has no advisor **field**. The HCA is assigned after booking, so
+the alert cannot state who will run the appointment.
+`apps-script/sold-job-tracker-sync.gs` reflects this: it reads `Sold by` only
+from the Sold Estimate Alert, and its `readBookedJobAlerts_` extracts no HCA.
 
-Booked Job Alerts do carry: job number, date/time, customer name and link,
-address, and — depending on how the job was booked — either the Scheduling Pro
-questionnaire or a dispatch heading plus a `COW:` phone number and tech-flip
-qualifying answers. A phone number is not always present.
+Rereading real bodies did turn up a partial signal that earlier notes had
+written off: the dispatcher heading frequently names one — `KEEP WITH JAY`,
+`KEEP ON JOE C`. It is free text and it is not always there, so it is carried
+as `assignedHint` and always displayed as a dispatch note. It narrows who to
+ask; it does not establish who ran the job.
+
+Booked Job Alerts carry: job type, job number, appointment date/time, customer
+name and link, address, and — depending on how the job was booked — either the
+Scheduling Pro questionnaire or a dispatch heading plus a `COW:` phone number
+and tech-flip qualifying answers. A phone number is not always present.
 
 Two consequences:
 
 1. The recap cannot be pre-filled per HCA from booking data, because the
-   day's bookings cannot be split by advisor.
+   day's bookings cannot be reliably split by advisor.
 2. **The recap reply is the only place the HCA-to-customer mapping exists
-   before a sale.** That makes reconciliation run the other way: take the day's
-   booked Sales Quote jobs, match them against what reps reported, and treat
-   anything booked but unreported as an appointment nobody accounted for. That
-   works without the HCA ever appearing on the alert.
+   before a sale.** So reconciliation runs the other way: take the day's booked
+   Sales Quote jobs, match them against what reps reported, and treat anything
+   booked but unreported as an appointment nobody accounted for. That works
+   without the HCA ever appearing on the alert. Implemented in
+   `matchBookedToReplies_` — see "Matching the booked job to the reply" above.
 
 ## Implementation
 
