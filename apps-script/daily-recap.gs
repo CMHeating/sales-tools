@@ -1571,7 +1571,16 @@ function buildRecapApiPayload_(days, hcaFilter) {
   const toIso = Utilities.formatDate(today, cfg.timeZone, "yyyy-MM-dd");
 
   const book = getLogSpreadsheet_();
-  const wanted = String(hcaFilter || "").trim().toLowerCase();
+
+  /* Accept an email as well as a name. The 1:1 scheduler calls one rep "Jay
+     Milo" where the recap roster has "Javierre Milo", so matching on name
+     alone would quietly return an empty result for him. Email is the one key
+     both sides already agree on. */
+  let wanted = String(hcaFilter || "").trim().toLowerCase();
+  if (wanted.indexOf("@") !== -1) {
+    const byEmail = RECAP_ROSTER.filter(h => h.email.toLowerCase() === wanted)[0];
+    wanted = byEmail ? byEmail.name.toLowerCase() : " no-such-hca";
+  }
 
   const logRows = readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
     .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso)

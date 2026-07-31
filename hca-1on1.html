@@ -125,6 +125,15 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
         <div id="slotMessage" class="help">Select an HCA to load slots.</div>
         <div id="slots" class="slot-grid"></div>
       </div>
+
+      <!-- Talking points from the daily recaps. Additive: if the recap API is
+           not configured or is unreachable, this stays hidden and booking is
+           entirely unaffected. -->
+      <div class="card hidden" id="recapCard">
+        <h2>Last 14 days <span id="recapWho" class="help" style="font-weight:400"></span></h2>
+        <div id="recapBody"></div>
+        <button class="btn secondary hidden" id="recapToNotes">Add these to the 1:1 notes</button>
+      </div>
     </section>
 
     <!-- HCA -->
@@ -147,6 +156,15 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
 
 <script>
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
+
+/* Daily recap log, for 1:1 talking points. This is a DIFFERENT Apps Script
+   project from the scheduler above — paste the /exec URL of the daily-recap
+   deployment here. Leave it blank and the recap card simply never appears;
+   the scheduler is unaffected either way.
+   RECAP_API_KEY must match the recapApiKey Script Property, if you set one. */
+const RECAP_API_URL = "";
+const RECAP_API_KEY = "";
+const RECAP_DAYS = 14;
 
 /* Must match HCA_1ON1_ADMINS in the Apps Script backend. */
 const ADMINS = [
@@ -195,6 +213,7 @@ function init(){
   qs("signOutBtn").addEventListener("click", signOut);
   qs("actorPin").addEventListener("keydown", e => { if(e.key === "Enter") signIn(); });
   qs("hcaSelect").addEventListener("change", loadForHca);
+  qs("recapToNotes").addEventListener("click", addRecapToNotes);
   qs("bookBtn").addEventListener("click", bookSlot);
   qs("cancelBtn").addEventListener("click", () => cancelBooking(qs("hcaSelect").value, selectedHcaSummary));
   qs("myCancelBtn").addEventListener("click", () => cancelBooking(identity.name, summaryFor(identity.name)));
@@ -350,6 +369,11 @@ async function loadForHca(){
   qs("statusBox").innerHTML = "";
 
   const name = qs("hcaSelect").value;
+
+  /* Deliberately not awaited. Talking points are useful but never worth
+     delaying — or risking — the slot load that is the point of this page. */
+  loadRecapFor(name);
+
   if(!name){ qs("slotMessage").textContent = "Select an HCA to load slots."; return; }
 
   if(currentPayload && !backendKnows(name)){
@@ -485,6 +509,105 @@ async function cancelBooking(hca, item){
 }
 
 /* ---------------- transport ---------------- */
+
+/* ---- 1:1 talking points from the daily recap log -------------------------
+   Entirely self-contained and fail-quiet. Any problem here hides the card and
+   leaves the scheduler exactly as it was. */
+
+let recapSummaryText = "";
+
+function hcaEmailFor(name){
+  const row = HCAS.find(h => h.name === name);
+  return row ? row.email : "";
+}
+
+async function loadRecapFor(name){
+  const card = qs("recapCard");
+  recapSummaryText = "";
+  hide("recapCard"); hide("recapToNotes");
+  if(!RECAP_API_URL || !name) return;
+
+  /* Query by email. The scheduler calls him "Jay Milo" and the recap roster
+     says "Javierre Milo"; the address is the only key both sides share. */
+  const email = hcaEmailFor(name);
+  if(!email) return;
+
+  try{
+    const params = new URLSearchParams({hca:email, days:String(RECAP_DAYS)});
+    if(RECAP_API_KEY) params.set("key", RECAP_API_KEY);
+    const res = await fetch(RECAP_API_URL + "?" + params.toString());
+    const data = await res.json();
+    if(!data || !data.ok) return;
+
+    const h = (data.hcas || [])[0];
+    qs("recapWho").textContent = "· " + name;
+    if(!h || !h.appointments){
+      qs("recapBody").innerHTML = '<p class="help">No recaps logged in the last ' + RECAP_DAYS + ' days.</p>';
+      show("recapCard");
+      return;
+    }
+    renderRecap(h);
+    show("recapCard"); show("recapToNotes");
+  }catch(e){
+    /* Silent by design: a recap outage must not look like a scheduler fault. */
+  }
+}
+
+function renderRecap(h){
+  const money = n => "$" + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const out = [];
+
+  const bits = [h.appointments + " appointment" + (h.appointments === 1 ? "" : "s")];
+  if(h.sold) bits.push(h.sold + " sold (" + h.closeRate + "%)");
+  if(h.offered && h.offered.oneTime) bits.push(money(h.offered.oneTime) + " offered");
+  if(h.offered && h.offered.monthly) bits.push(money(h.offered.monthly) + "/mo rental offered");
+  if(h.replyRate !== null && h.replyRate !== undefined) bits.push("reported " + h.replyRate + "% of days");
+  out.push('<p><strong>' + esc(bits.join(" · ")) + '</strong></p>');
+
+  /* Objections carry their customer, because "price" starts no conversation
+     and "Bob Roe, price" does. */
+  if((h.objections || []).length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Objections</strong></p><ul style="margin:4px 0 0 18px">');
+    h.objections.slice(0, 8).forEach(o => {
+      out.push('<li>' + esc(o.customer || "(unnamed)") + " — " + esc(o.objection) + '</li>');
+    });
+    if(h.objections.length > 8) out.push('<li class="help">+' + (h.objections.length - 8) + ' more</li>');
+    out.push('</ul>');
+  }
+
+  /* The ones that quietly die between 1:1s. */
+  if((h.undated || []).length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Open, no next step</strong></p><ul style="margin:4px 0 0 18px">');
+    h.undated.slice(0, 8).forEach(u => out.push('<li>' + esc(u.customer) + '</li>'));
+    out.push('</ul>');
+  }
+
+  if((h.followUps || []).length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Backlog work reported</strong></p><ul style="margin:4px 0 0 18px">');
+    h.followUps.slice(0, 5).forEach(f => out.push('<li>' + esc(f.date) + " — " + esc(f.text) + '</li>'));
+    out.push('</ul>');
+  }
+
+  qs("recapBody").innerHTML = out.join("");
+
+  const lines = ["Last " + RECAP_DAYS + " days: " + bits.join(" · ")];
+  if((h.objections || []).length){
+    lines.push("", "Objections:");
+    h.objections.slice(0, 8).forEach(o => lines.push("  - " + (o.customer || "(unnamed)") + " — " + o.objection));
+  }
+  if((h.undated || []).length){
+    lines.push("", "Open with no next step:");
+    h.undated.slice(0, 8).forEach(u => lines.push("  - " + u.customer));
+  }
+  recapSummaryText = lines.join("\n");
+}
+
+function addRecapToNotes(){
+  if(!recapSummaryText) return;
+  const box = qs("notesInput");
+  box.value = box.value.trim() ? box.value.trim() + "\n\n" + recapSummaryText : recapSummaryText;
+  box.focus();
+}
 
 async function api(params){
   const url = APP_SCRIPT_URL + "?" + new URLSearchParams(params).toString();
