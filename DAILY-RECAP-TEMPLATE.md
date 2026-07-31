@@ -70,6 +70,31 @@ they naturally would ("BETTER HP $18,500", "BEST DF $249/mo"). The collector
 keeps the raw text and additionally parses out a figure when one is present, so
 nothing is lost when a rep writes it a way the parser does not expect.
 
+## Morning nudge (7:00am / 8:00am Pacific, daily)
+
+Chases the *previous* day's recap. Anyone scheduled yesterday who never replied
+gets one reminder the next morning, timed against whether they are on shift
+when it lands:
+
+| Run | Goes to |
+|---|---|
+| 7:00am | outstanding reps who are **working today** |
+| 8:00am | outstanding reps who are **off today** |
+
+A 7am admin request on someone's day off sets the wrong tone in a process
+people are still forming a habit around, so the day-off group gets the extra
+hour. Nobody appears in both runs.
+
+The nudge threads onto the original conversation (`Re: Daily Recap — <that
+day>`), so a reply is still attributed to the night it answers. It carries the
+short template inline rather than telling reps to scroll for it.
+
+If the Gmail search that determines who already replied fails, every rep is
+treated as having replied and no nudge goes out. Nudging someone who did reply
+is worse than nudging nobody.
+
+Set `nudgeEnabled: false` to switch it off.
+
 ## Collect (8:15pm Pacific, daily)
 
 Search Gmail for replies to that evening's recap emails. Compile a digest

@@ -53,7 +53,14 @@ const DAILY_RECAP_CONFIG = {
   sendHour: 18,                     // 6:00pm Pacific
   collectHour: 20,                  // 8:15pm Pacific
   collectMinute: 15,
-  replyLookbackDays: 2
+  replyLookbackDays: 2,
+
+  /* Morning nudge for anyone who was scheduled yesterday and never replied.
+     Split by whether they are working the day the nudge goes out: people on
+     shift get it at 7, people on a day off get an extra hour. */
+  nudgeEnabled: true,
+  nudgeHourWorking: 7,
+  nudgeHourOff: 8
 };
 
 /*
@@ -200,6 +207,115 @@ function buildTestModeBody_(plan) {
   });
 
   return lines.join("\n");
+}
+
+/* ----------------------------------------------------------------- nudge */
+
+/*
+ * Two entry points because Apps Script triggers take no arguments. Both run
+ * the same logic; they differ only in whose day it is.
+ *
+ *   7am — people working today
+ *   8am — people off today, who get the extra hour
+ */
+function sendMorningNudgeWorkingToday() { return sendMorningNudge_(true); }
+function sendMorningNudgeOffToday() { return sendMorningNudge_(false); }
+
+/*
+ * Chases yesterday's recap, not today's. Anyone scheduled yesterday who never
+ * replied gets one reminder the following morning, timed against whether they
+ * are on shift when it lands.
+ */
+function sendMorningNudge_(workingToday) {
+  const cfg = DAILY_RECAP_CONFIG;
+  if (!cfg.nudgeEnabled) return { sent: 0, reason: "nudge disabled" };
+
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const past = buildTodayPlan_(yesterday);
+  if (!past.working.length) return { sent: 0, reason: "nobody was scheduled yesterday" };
+
+  const todayPlan = buildTodayPlan_(now);
+  const onShiftToday = {};
+  todayPlan.working.forEach(h => { onShiftToday[h.name] = true; });
+
+  const replied = repliedToRecap_(past.dateLabel);
+  const targets = past.working.filter(h =>
+    !replied[h.name] && (!!onShiftToday[h.name] === !!workingToday));
+
+  if (!targets.length) return { sent: 0, reason: "nobody to nudge" };
+
+  if (cfg.TEST_MODE) {
+    sendEmailSafe_({
+      to: [cfg.testRecipient],
+      subject: "[TEST] Recap nudge — " + past.dateLabel,
+      body: "TEST MODE — no HCA was contacted.\n\n" +
+        "Would nudge " + targets.length + " (" +
+        (workingToday ? "working today" : "off today") + "):\n" +
+        targets.map(h => "  - " + h.name + " <" + h.email + ">").join("\n") +
+        "\n\n" + new Array(70).join("=") + "\n\n" +
+        buildNudgeBody_(targets[0], past.dateLabel)
+    });
+    return { sent: 0, previewed: targets.length };
+  }
+
+  targets.forEach(hca => {
+    sendEmailSafe_({
+      to: [hca.email],
+      /* "Re:" on the original subject keeps this in the same conversation, so
+         a reply still carries yesterday's date and is attributed to the right
+         night by findRecapReplies_. */
+      subject: "Re: " + cfg.subjectPrefix + " — " + past.dateLabel,
+      body: buildNudgeBody_(hca, past.dateLabel)
+    });
+  });
+
+  Logger.log("Nudged " + targets.length + " (" +
+    (workingToday ? "working today" : "off today") + ") for " + past.dateLabel);
+  return { sent: targets.length };
+}
+
+/* Who already answered a given night's recap, by HCA name. */
+function repliedToRecap_(dateLabel) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const seen = {};
+  let threads = [];
+  try {
+    threads = GmailApp.search('subject:"' + cfg.subjectPrefix + '" newer_than:' +
+      cfg.replyLookbackDays + "d", 0, 100);
+  } catch (err) {
+    /* Without the search there is no way to tell who replied, and nudging
+       someone who did is worse than nudging nobody. */
+    Logger.log("Nudge reply-check failed, skipping nudge: " + err);
+    RECAP_ROSTER.forEach(h => { seen[h.name] = true; });
+    return seen;
+  }
+
+  threads.forEach(thread => {
+    thread.getMessages().forEach(msg => {
+      const from = String(msg.getFrom() || "").toLowerCase();
+      const hca = RECAP_ROSTER.filter(h => from.indexOf(h.email.toLowerCase()) !== -1)[0];
+      if (!hca) return;
+      if (String(msg.getSubject() || "").indexOf(dateLabel) === -1) return;
+      seen[hca.name] = true;
+    });
+  });
+  return seen;
+}
+
+function buildNudgeBody_(hca, dateLabel) {
+  return "Morning " + hca.first + ",\n\n" +
+    "I didn't get your recap for " + dateLabel + ". When you have a minute, reply with what you ran:\n\n" +
+    "Customer:\n" +
+    "Source (Web / Inbound / Tech Flip / Revisit):\n" +
+    "Outcome (Sold / Estimate / Follow-up):\n" +
+    "Offered (package + price):\n" +
+    "Water heater (Y/N + interest):\n" +
+    "Next follow-up:\n" +
+    "Objection (if not sold):\n\n" +
+    "Ran nothing? None is a fine answer.\n\n" +
+    "It's a two minute job, and it tells me where you're stuck so I can help on the deals worth saving.\n\n" +
+    "Geoff\n";
 }
 
 /* --------------------------------------------------------------- collect */
@@ -1189,14 +1305,27 @@ function installDailyRecapTriggers() {
     .inTimezone(cfg.timeZone)
     .create();
 
+  if (cfg.nudgeEnabled) {
+    ScriptApp.newTrigger("sendMorningNudgeWorkingToday")
+      .timeBased().everyDays(1).atHour(cfg.nudgeHourWorking)
+      .inTimezone(cfg.timeZone).create();
+
+    ScriptApp.newTrigger("sendMorningNudgeOffToday")
+      .timeBased().everyDays(1).atHour(cfg.nudgeHourOff)
+      .inTimezone(cfg.timeZone).create();
+  }
+
   Logger.log("Installed daily recap triggers (send " + cfg.sendHour + ":00, collect " +
-    cfg.collectHour + ":" + pad2_(cfg.collectMinute) + " " + cfg.timeZone + ").");
+    cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
+    (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
+      cfg.nudgeHourOff + ":00 off" : "") + " " + cfg.timeZone + ").");
 }
 
 function deleteDailyRecapTriggers_() {
   ScriptApp.getProjectTriggers().forEach(trigger => {
     const fn = trigger.getHandlerFunction();
-    if (fn === "sendDailyRecap" || fn === "collectRecapReplies") {
+    if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
+        fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday") {
       ScriptApp.deleteTrigger(trigger);
     }
   });
