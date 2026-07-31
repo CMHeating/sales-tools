@@ -596,6 +596,18 @@ function renderRecap(h, data){
     return line;
   };
 
+  /* A sale that came back off the board. Top of the card because it is the
+     one thing that reads as a win right up until you say it out loud. */
+  const cancelled = (h.soldAlerts || []).filter(s => s.cancelled);
+  if(cancelled.length){
+    out.push('<div class="notice error" style="margin-top:12px"><strong>Cancelled since the sale ('
+      + cancelled.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    cancelled.forEach(s => out.push('<li>' + esc(s.customer)
+      + (s.amount ? " — " + money(s.amount) : "")
+      + ' · ' + esc(String(s.statusLabel || "").replace(/^CANCELLED\s*/, "")) + '</li>'));
+    out.push('</ul></div>');
+  }
+
   const unreported = h.soldNotReported || [];
   if(unreported.length){
     out.push('<div class="notice error" style="margin-top:12px"><strong>Sold in ServiceTitan, never in a recap ('
@@ -628,7 +640,9 @@ function renderRecap(h, data){
   /* Sold, not yet installed. The scheduled date comes from the COMBO LOG —
      the alerts carry sold and completed and nothing between. A job sitting on
      a TBD sheet says so rather than looking like an oversight. */
-  const awaiting = (h.soldAlerts || []).filter(s => !s.installCompletedOn);
+  /* Cancelled jobs are not waiting on an install. Listing one here would put
+     it on the card twice and read as pipeline. */
+  const awaiting = (h.soldAlerts || []).filter(s => !s.installCompletedOn && !s.cancelled);
   if(awaiting.length){
     out.push('<p class="help" style="margin-top:10px"><strong>Sold, not yet installed ('
       + awaiting.length + ')</strong></p><ul style="margin:4px 0 0 18px">');
@@ -749,10 +763,50 @@ function renderRecap(h, data){
     out.push('<p class="help" style="margin-top:10px">Reported on all ' + h.daysScheduled + ' scheduled days.</p>');
   }
 
+  /* What people actually said about these homeowners by email. Often the most
+     useful thing about a deal is nowhere in ServiceTitan — it is Amy asking
+     for an install date and the rep answering. */
+  const withMail = [];
+  (h.rows || []).forEach(r => { if((r.emailNotes || []).length) withMail.push(r); });
+  (h.soldAlerts || []).forEach(s => {
+    if((s.emailNotes || []).length && !withMail.some(x => x.customer === s.customer)){
+      withMail.push(s);
+    }
+  });
+  if(withMail.length){
+    out.push('<p class="help" style="margin-top:14px"><strong>What has been said about these customers</strong></p>');
+    withMail.slice(0, 6).forEach(j => {
+      out.push('<div style="margin:8px 0 0 0;padding:10px 12px;background:rgba(0,0,0,.14);'
+        + 'border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+        + '<strong>' + esc(j.customer) + '</strong>');
+      j.emailNotes.slice(0, 3).forEach(n => {
+        out.push('<div class="help" style="margin-top:6px">'
+          + esc(n.date) + ' · ' + esc(n.from)
+          + (n.link ? ' · <a href="' + esc(n.link) + '" target="_blank" rel="noopener">open</a>' : '')
+          + '<br>' + esc(n.summary) + '</div>');
+      });
+      out.push('</div>');
+    });
+  }
+
   out.push(recapLogLink(data));
   qs("recapBody").innerHTML = out.join("");
 
   const lines = ["Last " + RECAP_DAYS + " days: " + bits.join(" · ")];
+  if(cancelled.length){
+    lines.push("", "CANCELLED SINCE THE SALE:");
+    cancelled.forEach(s => lines.push("  - " + s.customer
+      + (s.amount ? " — " + money(s.amount) : "") + " · "
+      + String(s.statusLabel || "").replace(/^CANCELLED\s*/, "")));
+  }
+  if(withMail.length){
+    lines.push("", "What has been said by email:");
+    withMail.slice(0, 6).forEach(j => {
+      lines.push("  " + j.customer + ":");
+      j.emailNotes.slice(0, 2).forEach(n =>
+        lines.push("    - " + n.date + " " + n.from + " — " + n.summary));
+    });
+  }
   if(unreported.length){
     lines.push("", "SOLD IN SERVICETITAN, NOT IN A RECAP:");
     unreported.forEach(s => lines.push("  - " + dealLine(s)));

@@ -58,6 +58,12 @@ const DAILY_RECAP_CONFIG = {
   jobStatusSheetName: "Job Status",
   jobStatusDays: 21,                // how far back each refresh reconciles
 
+  /* What people actually said about the homeowner by email, attached to the
+     job. Often the most useful thing about a deal is nowhere in ServiceTitan
+     — it is Amy asking for an install date and the rep answering. */
+  emailNotesSheetName: "Email Notes",
+  emailNoteLookbackDays: 60,
+
   /* COMBO LOG 2026 — the same sheet sold-job-tracker-sync.gs reads. It is the
      only source for a *scheduled* install date; the ServiceTitan alerts carry
      sold and completed and nothing in between. Blank disables the lookup and
@@ -1719,6 +1725,40 @@ function properName_(v) {
   return String(v || "").toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
 }
 
+/*
+ * The COMBO LOG writes reps in shouted shorthand — "JAY MILO", "JOE RUBLE",
+ * and on the cancelled tab just "JOE C" or "DAVIS". Comparing those to the
+ * recap roster's "Javierre Milo" and "Joseph Ruble" as plain strings flagged
+ * every one of their jobs as credited to someone else. Same mapping as
+ * sold-job-tracker-sync.gs.
+ */
+const COMBO_REP_ALIASES = {
+  "adam weberg": "Adam Weberg", "adam": "Adam Weberg",
+  "amber maddalena": "Amber Maddalena", "amber": "Amber Maddalena",
+  "chester granard": "Chester Granard", "chester": "Chester Granard",
+  "davis diosdado": "Davis Diosdado", "davis": "Davis Diosdado",
+  "javierre milo": "Javierre Milo", "jay milo": "Javierre Milo",
+  "jay": "Javierre Milo", "javierre": "Javierre Milo",
+  "joe chounramany": "Joe Chounramany", "joe c": "Joe Chounramany",
+  "joseph ruble": "Joseph Ruble", "joe ruble": "Joseph Ruble",
+  "joe r": "Joseph Ruble", "joseph": "Joseph Ruble",
+  "kyle mcalister": "Kyle McAlister", "kyle": "Kyle McAlister",
+  "samir khoury": "Samir Khoury", "samir": "Samir Khoury",
+  "trevor bohm": "Trevor Bohm", "trevor": "Trevor Bohm"
+};
+
+/* Returns the roster name for a COMBO LOG rep, or "" when it is somebody
+   outside sales — the log also carries plumbing and electrical consultants
+   (Daniel Hanyak, Evan Clements, Edgar Manzilla, Jack Nichols and others),
+   and those must never be read as an HCA mismatch. */
+function comboRepToRoster_(value) {
+  const key = normName_(value);
+  if (!key) return "";
+  if (COMBO_REP_ALIASES[key]) return COMBO_REP_ALIASES[key];
+  const hit = RECAP_ROSTER.filter(h => normName_(h.name) === key)[0];
+  return hit ? hit.name : "";
+}
+
 function roundCents_(n) {
   return isFinite(n) ? Math.round(n * 100) / 100 : n;
 }
@@ -1949,6 +1989,8 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
          sheet and then be scheduled without the TBD row being cleared. */
       const comboHits = comboRes.installs.filter(c => namesMatch_(c.customer, job.customer));
       const combo = comboHits.filter(c => c.installDate)[0] || comboHits[0] || null;
+      const cancelled = (comboRes.cancellations || [])
+        .filter(c => namesMatch_(c.customer, job.customer))[0] || null;
 
       const item = {
         customer: job.customer, jobNumber: job.jobNumber,
@@ -1975,15 +2017,23 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
         /* From the COMBO LOG, the only place a scheduled date exists. */
         installScheduledOn: combo ? combo.installDate : "",
         installTbd: combo ? !!combo.isTbd && !combo.installDate : false,
-        comboNotes: combo ? (combo.jobNotes || combo.permitNotes || "") : "",
-        /* The COMBO LOG names a sales rep too. Where it disagrees with who
-           reported the job, one of the two records is wrong. */
+        installCompletedPerCombo: combo ? !!combo.isCompleted : false,
+        /* On the TBD tab the "job completed" column holds the live action
+           note, which is usually the most current word on the job anywhere. */
+        comboNotes: combo ? (combo.jobCompleted || combo.jobNotes || combo.permitNotes || "") : "",
+        comboSheet: combo ? combo.sourceSheet : "",
+        /* A sale can come back off the board. The cancelled tab is the only
+           record of it, and without this the job reads SOLD forever. */
+        cancelledOn: cancelled ? cancelled.cancelledOn : "",
+        cancelledReason: cancelled ? cancelled.reason : "",
+        /* The COMBO LOG names a rep too. Only a mismatch between two people
+           who are both on the HCA roster means anything — the log also
+           carries plumbing and electrical consultants, and a blank or an
+           unrecognised name is not evidence of anything. */
         comboSalesRep: combo && combo.salesRep ? combo.salesRep : ""
       };
-      if (item.comboSalesRep && normName_(item.comboSalesRep) !== normName_(h.name) &&
-          normName_(item.comboSalesRep).length > 2) {
-        item.comboRepDiffers = item.comboSalesRep;
-      }
+      const comboRep = comboRepToRoster_(item.comboSalesRep);
+      if (comboRep && comboRep !== h.name) item.comboRepDiffers = comboRep;
 
       h.soldAlerts.push(item);
       if (!row) h.soldNotReported.push(item);
@@ -2305,6 +2355,7 @@ function applyJobStatus_(ss, byName, ensure, wanted, fromIso, toIso) {
       reportedOn: reported ? date : null,
       installScheduledOn: scheduled === "TBD" ? "" : scheduled,
       installTbd: scheduled === "TBD",
+      cancelled: /^CANCELLED/.test(label),
       installCompletedOn: String(r[JS.installCompleted] || ""),
       installDescription: String(r[JS.installDescription] || ""),
       comboRepDiffers: String(r[JS.comboRep] || ""),
@@ -2342,9 +2393,29 @@ function applyJobStatus_(ss, byName, ensure, wanted, fromIso, toIso) {
     }
   });
 
+  /* Email notes hang off the same date|HCA|customer key the job rows use. */
+  const notesByKey = {};
+  readSheetRows_(ss, cfg.emailNotesSheetName, EMAIL_NOTE_HEADERS.length)
+    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso)
+    .forEach(r => {
+      const key = String(r[8] || "");
+      if (!notesByKey[key]) notesByKey[key] = [];
+      notesByKey[key].push({
+        date: String(r[3] || ""), from: String(r[4] || ""),
+        subject: String(r[5] || ""), summary: String(r[6] || ""),
+        link: String(r[7] || "")
+      });
+    });
+
   Object.keys(byName).forEach(name => {
     const h = byName[name];
     if (!h.soldAlerts) resetJobFields_(h);
+    const attach = (date, customer, target) => {
+      const hit = notesByKey[recapRowKey_(date, name, customer)];
+      if (hit && hit.length) target.emailNotes = hit;
+    };
+    (h.rows || []).forEach(r => attach(r.date, r.customer, r));
+    h.soldAlerts.forEach(s => attach(s.soldOnIso, s.customer, s));
     h.soldPerServiceTitan = h.soldAlerts.length;
     h.soldAmountPerServiceTitan = roundCents_(h.soldAlerts.reduce(
       (t, s) => t + (isFinite(s.amount) && s.amount ? s.amount : 0), 0));
@@ -2450,12 +2521,63 @@ function refreshJobStatus() {
     { allLogRows: allLogRows, fromIso: fromIso, toIso: toIso });
 
   const written = writeJobStatus_(book.ss, byName, status, fromIso, toIso);
+  const notes = writeEmailNotes_(book.ss, byName, status, fromIso, toIso);
   PropertiesService.getScriptProperties()
     .setProperty("jobStatusRefreshedIso", new Date().toISOString());
 
   Logger.log("Job Status: " + written.rows + " rows, " +
-    written.needsAttention + " needing attention");
-  return { rows: written.rows, needsAttention: written.needsAttention, status: status };
+    written.needsAttention + " needing attention, " + notes.rows + " email notes");
+  return { rows: written.rows, needsAttention: written.needsAttention,
+           emailNotes: notes.rows, status: status };
+}
+
+/*
+ * One Gmail search per customer in the window, run here rather than per page
+ * load. Roughly one search per job twice a day, which is nothing next to
+ * doing it every time somebody opens a 1:1.
+ */
+function writeEmailNotes_(ss, byName, status, fromIso, toIso) {
+  const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.emailNotesSheetName, EMAIL_NOTE_HEADERS);
+  const stamp = new Date();
+  const rows = [];
+  const done = {};
+
+  const collect = (date, hcaName, customer) => {
+    const key = recapRowKey_(date, hcaName, customer);
+    if (done[key] || !customer) return;
+    done[key] = true;
+    readEmailNotes_(customer, DAILY_RECAP_CONFIG.emailNoteLookbackDays).forEach(n => {
+      rows.push([date, hcaName, customer, n.threadDate, n.from, n.subject,
+        n.summary, n.link, key]);
+    });
+  };
+
+  Object.keys(byName).sort().forEach(name => {
+    const h = byName[name];
+    (h.rows || []).forEach(r => collect(r.date, name, r.customer));
+    (h.soldNotReported || []).forEach(s => collect(s.soldOnIso || toIso, name, s.customer));
+  });
+  /* Unclaimed appointments too — an email may be the only thing that says
+     what happened to it. */
+  (status.unclaimedAppointments || []).forEach(u =>
+    collect(u.appointmentIso, "", u.customer));
+
+  const existing = readSheetRows_(ss, DAILY_RECAP_CONFIG.emailNotesSheetName, EMAIL_NOTE_HEADERS.length);
+  const kept = existing.filter(r => {
+    const d = String(r[0]);
+    return d && (d < fromIso || d > toIso);
+  });
+  const all = kept.concat(rows);
+  all.sort((a, b) => String(b[0]).localeCompare(String(a[0])) ||
+    String(b[3]).localeCompare(String(a[3])));
+
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, EMAIL_NOTE_HEADERS.length).clearContent();
+  }
+  if (all.length) {
+    sheet.getRange(2, 1, all.length, EMAIL_NOTE_HEADERS.length).setValues(all);
+  }
+  return { rows: all.length };
 }
 
 /*
@@ -2567,12 +2689,138 @@ function jobStatusLabel_(row, sold) {
     if (row.outcome === "SOLD") return "REPORTED SOLD — no ServiceTitan alert yet";
     return "OPEN — " + (row.outcome || "not given");
   }
+  /* Cancelled outranks everything. A job that came back off the board is not
+     sold, however many alerts fired for it. */
+  if (sold.cancelledOn) return "CANCELLED " + sold.cancelledOn +
+    (sold.cancelledReason ? " — " + sold.cancelledReason : "");
   if (sold.installCompletedOn) return "INSTALLED " + sold.installCompletedOn;
+  if (sold.installCompletedPerCombo && sold.installScheduledOn) {
+    return "INSTALLED " + sold.installScheduledOn + " — per the COMBO LOG";
+  }
   if (row.outcome !== "SOLD") return "STATUS DRIFT — reported " +
     String(row.outcome || "open").toLowerCase() + ", ServiceTitan says sold";
   if (sold.installScheduledOn) return "SOLD — install " + sold.installScheduledOn;
   if (sold.installTbd) return "SOLD — install TBD on the COMBO LOG";
-  return "SOLD — no install date on the COMBO LOG";
+  return "SOLD — no COMBO LOG row found";
+}
+
+const EMAIL_NOTE_HEADERS = [
+  "Job Date", "HCA", "Customer", "Thread Date", "From", "Subject", "Summary", "Link", "Key"
+];
+
+/*
+ * Everything said about a homeowner by email, attached to their job.
+ *
+ * The most useful thing about a deal is often nowhere in ServiceTitan. It is
+ * Amy asking "do we have a date for this customer?", Amber answering
+ * "commercial, waiting on permitting, tentatively 8.13 and 8.14", Sabrina
+ * adding "LEFT VM WITH CITY TO VERIFY". A 1:1 that knows that is a different
+ * conversation from one that does not.
+ *
+ * Rules that keep this useful rather than noisy:
+ *
+ *   - ServiceTitan alerts are excluded. They are the thing being reconciled,
+ *     not commentary on it, and they would drown everything else.
+ *   - The recap threads themselves are excluded, for the same reason.
+ *   - Only the sender's own words are kept, not the quoted chain, so a
+ *     ten-message thread does not repeat itself ten times.
+ *   - Short names are not searched alone. "Ray" or "Lin" would match half the
+ *     mailbox; a full-name search that finds nothing is better than a
+ *     one-word search that finds everything.
+ */
+function readEmailNotes_(customer, sinceDays) {
+  const name = String(customer || "").trim();
+  if (name.length < 4) return [];
+
+  const exclude = ' -from:alerts@servicetitan.com -subject:"Daily Recap"';
+  const window = " newer_than:" + Math.max(7, Math.min(180, sinceDays || 60)) + "d";
+
+  let threads = [];
+  try {
+    threads = GmailApp.search('"' + name.replace(/"/g, "") + '"' + exclude + window, 0, 8);
+    /* A full name often appears only as a surname in internal mail — "any
+       updates on Manrao?" — so fall back, but only to a token long enough to
+       be distinctive on its own. */
+    if (!threads.length) {
+      const tokens = name.split(/\s+/).filter(t => t.length >= 6 && !/^and$/i.test(t));
+      const distinctive = tokens[tokens.length - 1];
+      if (distinctive) {
+        threads = GmailApp.search('"' + distinctive + '"' + exclude + window, 0, 8);
+      }
+    }
+  } catch (err) {
+    Logger.log("Email note search failed for " + name + ": " + err);
+    return [];
+  }
+
+  const notes = [];
+  threads.forEach(thread => {
+    let messages = [];
+    try { messages = thread.getMessages(); } catch (err) { return; }
+    /* The last word on a thread is the one that matters at a 1:1. */
+    const msg = messages[messages.length - 1];
+    if (!msg) return;
+    const who = senderName_(msg.getFrom());
+    const summary = summariseEmail_(msg.getPlainBody(), who);
+    if (!summary) return;
+    notes.push({
+      threadDate: Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd"),
+      from: who,
+      /* "Re: FW: Sold Estimate Alert" needs every prefix off, not the first. */
+      subject: String(msg.getSubject() || "").replace(/^((re|fw|fwd)\s*:\s*)+/i, "").trim(),
+      summary: summary,
+      link: "https://mail.google.com/mail/u/0/#all/" + thread.getId(),
+      received: msg.getDate()
+    });
+  });
+
+  notes.sort((a, b) => b.received - a.received);
+  return notes.slice(0, 4);
+}
+
+/*
+ * The sender's own words, trimmed to something readable at a glance.
+ *
+ * Everyone at CM Heating signs with name, title, direct line, address. The
+ * signature has to be cut rather than filtered line by line: "Amber Maddalena"
+ * and "Comfort Advisor" are perfectly ordinary-looking lines, and only their
+ * position after the message gives them away. So the first signature marker
+ * ends the message, and nothing after it is kept.
+ */
+function summariseEmail_(body, senderName) {
+  const own = ownText_(body);
+  const who = normName_(senderName);
+  const out = [];
+
+  const linesAll = String(own || "").split(/\r?\n/).map(l => l.trim());
+  for (let i = 0; i < linesAll.length; i++) {
+    const line = linesAll[i];
+    if (!line) continue;
+
+    /* Signature starts here — stop, do not merely skip. */
+    if (who && normName_(line) === who) break;
+    if (line.length < 45 && /\b(advisor|manager|coordinator|consultant|supervisor|director|specialist|representative|technician)\s*$/i.test(line)) break;
+    if (/cmheating\.com|^www\.|\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/i.test(line)) break;
+    if (/^(warmest regards|regards|thank you|thanks|best|sincerely)[,!]?\s*$/i.test(line)) break;
+
+    /* Quote scaffolding, not signature — skip and keep reading. */
+    if (isSignOffLine_(line.toLowerCase())) continue;
+    if (/^(on .*wrote:|from:|sent:|to:|cc:|subject:)/i.test(line)) continue;
+    if (/^[-_=]{3,}$/.test(line)) continue;
+
+    out.push(line);
+    if (out.length >= 3) break;
+  }
+
+  const text = out.join(" ").replace(/\s+/g, " ").trim();
+  if (text.length <= 220) return text;
+  return text.slice(0, 217).replace(/\s+\S*$/, "") + "...";
+}
+
+function senderName_(from) {
+  const m = String(from || "").match(/^\s*"?([^"<]+?)"?\s*</);
+  if (m) return m[1].trim();
+  return String(from || "").replace(/@cmheating\.com/i, "").trim();
 }
 
 /* ---- COMBO LOG ------------------------------------------------------------
@@ -2587,32 +2835,64 @@ function jobStatusLabel_(row, sold) {
  */
 function readComboInstalls_() {
   const id = DAILY_RECAP_CONFIG.comboLogSpreadsheetId;
-  if (!id) return { ok: true, installs: [], skipped: "no COMBO LOG id configured" };
+  if (!id) return { ok: true, installs: [], cancellations: [], skipped: "no COMBO LOG id configured" };
 
   let ss;
   try {
     ss = SpreadsheetApp.openById(id);
   } catch (err) {
     Logger.log("COMBO LOG unreachable: " + err);
-    return { ok: false, installs: [] };
+    return { ok: false, installs: [], cancellations: [] };
   }
 
   const installs = [];
+  const cancellations = [];
   /* The COMBO LOG is edited by hand and carries tabs this code knows nothing
      about. One odd sheet must not take down the whole refresh, so each is
      read on its own. */
   ss.getSheets().forEach(sheet => {
    try {
     const name = sheet.getName();
-    const isTbd = /\bTBD\b/i.test(name);
     const last = sheet.getLastRow(), width = sheet.getLastColumn();
     if (last < 2 || width < 2) return;
 
     const values = sheet.getRange(1, 1, last, width).getValues();
     const header = values[0].map(h => String(h || "").trim().toUpperCase());
     const col = label => header.indexOf(label);
+
+    /* The cancelled tab is shaped differently — one CUSTOMER NAME column, a
+       REASON, and a CONSULTANT rather than a SALES REP. It is the only place
+       that records a sale coming back off the board, so a job that shows
+       SOLD forever is exactly what missing it produces. */
+    const iCancelled = col("DATE CANCELLED");
+    if (iCancelled !== -1 && col("CUSTOMER NAME") !== -1) {
+      for (let r = 1; r < values.length; r++) {
+        const row = values[r];
+        const who = String(row[col("CUSTOMER NAME")] || "").trim();
+        if (!who) continue;
+        const at = c => (c === -1 ? "" : String(row[c] || "").trim());
+        cancellations.push({
+          customer: who,
+          reason: at(col("REASON")),
+          consultant: at(col("CONSULTANT")),
+          department: at(col("DEPARTMENT")),
+          soldOn: comboDateIso_(row[col("DATE SOLD")]),
+          cancelledOn: comboDateIso_(row[iCancelled]),
+          refund: at(col("REFUND REQUESTED?")),
+          sourceSheet: name
+        });
+      }
+      return;
+    }
+
     const iLast = col("LAST"), iFirst = col("FIRST"), iDate = col("DATE");
     if (iLast === -1 && iFirst === -1) return;         // not a job sheet
+
+    /* Tabs are classified by name rather than hardcoded, because the log is
+       reorganised by hand. TBD holds jobs with no date yet — permits,
+       equipment, customer availability — which are the ones worth raising. */
+    const isTbd = /\bTBD\b/i.test(name);
+    const isCompleted = /COMPLET/i.test(name);
 
     for (let r = 1; r < values.length; r++) {
       const row = values[r];
@@ -2620,13 +2900,19 @@ function readComboInstalls_() {
       const surname = String(row[iLast] || "").trim();
       if (!first && !surname) continue;
       const at = c => (c === -1 ? "" : String(row[c] || "").trim());
+      const dated = iDate === -1 ? "" : comboDateIso_(row[iDate]);
       installs.push({
         customer: [first, surname].filter(Boolean).join(" "),
-        installDate: iDate === -1 ? "" : comboDateIso_(row[iDate]),
-        isTbd: isTbd,
+        installDate: dated,
+        /* A row can say TBD in its date cell on any tab. */
+        isTbd: isTbd || !dated,
+        isCompleted: isCompleted,
         salesRep: at(col("SALES REP")),
         jobNotes: at(col("JOB NOTES")),
         permitNotes: at(col("PERMIT NOTES")),
+        /* On the TBD tab this column is repurposed as a live action note —
+           "EMAILED JAY 7/29 AL", "AMBER IS WORKING ON THIS 7/29 AL" — which
+           is the most current word on the job anywhere. */
         jobCompleted: at(col("JOB COMPLETED")),
         sourceSheet: name
       });
@@ -2635,7 +2921,7 @@ function readComboInstalls_() {
     Logger.log("COMBO LOG sheet skipped: " + err);
    }
   });
-  return { ok: true, installs: installs };
+  return { ok: true, installs: installs, cancellations: cancellations };
 }
 
 function comboDateIso_(value) {

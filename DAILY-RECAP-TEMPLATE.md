@@ -206,12 +206,17 @@ reconstruct leads that are already sitting in it untouched.
 ## The pipeline
 
 ```
-Booked Job Alert ──┐
+Booked Job Alert ──┐   (the appointment being scheduled — not a sale)
 Sold Estimate Alert ┼─> name match against the recap replies ──> Job Status tab
-Completed Form Alert┤                                                  │
-COMBO LOG ─────────┘                                                   v
+Completed Form Alert┤                                          + Email Notes tab
+COMBO LOG ─────────┘                                                   │
+Internal email ────┘                                                   v
                                                            1:1 HCA scheduler
 ```
+
+A **Booked Job Alert is the scheduled-appointment alert**. It fires when a
+sales visit is put on the board and says nothing about whether anything sold.
+Nothing else in this pipeline records an appointment that ran and did not sell.
 
 `refreshJobStatus()` does every slow read — three Gmail searches and the COMBO
 LOG — and writes one reconciled row per job to the **Job Status** tab. It runs
@@ -238,6 +243,52 @@ which is the point of calling it a tracker. One row per job:
 
 A row with no HCA is a booked job nobody claimed; the alert names no advisor,
 so the dispatch note is the only clue and it sits in its own column.
+
+### The COMBO LOG's five tabs
+
+Verified against the live sheet on 2026-07-30. Tabs are classified by name
+pattern rather than hardcoded, because the log is reorganised by hand.
+
+| Tab | What it gives |
+|---|---|
+| `PENDING JOBS` | installed, still waiting on permits, duct cleaning or payment |
+| `TBD` | sold, no date yet. **`JOB COMPLETED` is repurposed here as a live action note** — `EMAILED JAY 7/29 AL`, `AMBER IS WORKING ON THIS 7/29 AL` — usually the most current word on the job anywhere |
+| completed | installed and done. Marks a job installed even when no Completed Form Alert was matched |
+| cancelled | `CUSTOMER NAME / REASON / CONSULTANT / DATE SOLD / DATE CANCELLED`. A different shape entirely, and **the only record of a sale coming back off the board** |
+| return trips | punch-list notes; skipped, it has neither shape |
+
+**Cancellations outrank everything.** Without that tab a job reads `SOLD`
+forever — `NICOLE SANCHEZ … CUSTOMER NOT APPROVED FOR FINANCING, sold 6/4,
+cancelled 6/5` would have sat in the numbers as a win.
+
+**Rep names are shouted shorthand.** The log writes `JAY MILO` and `JOE RUBLE`
+where the roster has `Javierre Milo` and `Joseph Ruble`, and the cancelled tab
+shortens further to `JOE C` and `DAVIS`. Comparing those as plain strings
+flagged every one of those reps' jobs as credited to somebody else, so
+`comboRepToRoster_` maps them. It returns nothing for names outside sales —
+the log also carries plumbing and electrical consultants (Daniel Hanyak, Evan
+Clements, Edgar Manzilla, Jack Nichols and others), and one of those in the
+`SALES REP` column is not evidence of a mismatch.
+
+### What has been said by email
+
+The most useful thing about a deal is often nowhere in ServiceTitan. It is Amy
+asking *"do we have a date for this customer?"*, Amber answering *"commercial,
+waiting on permitting, tentatively 8.13 and 8.14"*, Sabrina adding *"LEFT VM
+WITH CITY TO VERIFY"*. A 1:1 that knows that is a different conversation.
+
+`readEmailNotes_` searches Gmail per customer during the refresh and writes an
+**Email Notes** tab keyed to the same `date|HCA|customer` the jobs use. Four
+rules keep it useful rather than noisy:
+
+- ServiceTitan alerts and the recap threads are excluded — they are the thing
+  being reconciled, not commentary on it, and they would drown everything else.
+- Only the **last** message on a thread is taken. That is the current state.
+- Only the sender's own words, and the signature is **cut** rather than
+  filtered line by line: `Amber Maddalena` and `Comfort Advisor` are perfectly
+  ordinary-looking lines, and only their position gives them away.
+- Short names are never searched alone. A full-name search that finds nothing
+  beats a search for `Lin` that finds half the mailbox.
 
 The window is rewritten on each refresh rather than appended to, because a
 job's status genuinely changes — booked becomes sold becomes installed — and an
