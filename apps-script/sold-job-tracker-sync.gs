@@ -37,7 +37,13 @@ const SOLD_TRACKER_CONFIG = {
   emailNoteRefreshHours: 6,
   emailNoteMaxSearchesPerRun: 40,
   emailNoteThreadsPerJob: 8,
-  maxEmailNotesPerJob: 5
+  maxEmailNotesPerJob: 5,
+  /* Apps Script kills a script at six minutes. If that happened mid-search the
+     Firebase write would never run and the whole sync would be lost, not just
+     the notes — so searching stops well short and leaves the rest for the next
+     run. Measured from the start of the sync, not from the start of the notes
+     pass, because reading Gmail and the COMBO LOG has already spent time. */
+  emailNoteTimeBudgetMs: 150000
 };
 
 const HCA_CANONICAL = [
@@ -180,6 +186,15 @@ function previewSoldJobTracker() {
   return payload;
 }
 
+/* The Run dropdown in the Apps Script editor calls a function with no
+   arguments, so previewDealNotes("...") cannot be run from it. Put the name
+   here and run previewDealNotesForCustomer instead. */
+const PREVIEW_DEAL_CUSTOMER = "Jessiah Johnson";
+
+function previewDealNotesForCustomer() {
+  return previewDealNotes(PREVIEW_DEAL_CUSTOMER);
+}
+
 /*
  * Coordination notes and email updates for one customer, printed. Writes
  * nothing — for checking what the tracker will show before a full sync.
@@ -206,6 +221,25 @@ function previewDealNotes(customerName) {
   return out;
 }
 
+/*
+ * Hourly is the cadence this script is built around: the email-update budget
+ * spends 40 searches a run and relies on the next run picking up where it left
+ * off. On a daily trigger a few hundred jobs would take days to come round.
+ *
+ * Both installers delete the existing triggers first, so running the daily one
+ * on a project that is currently hourly quietly downgrades it. Use this one.
+ */
+function setupSoldTrackerHourlyTrigger() {
+  deleteSoldTrackerTriggers_();
+  ScriptApp.newTrigger("syncSoldJobTracker")
+    .timeBased()
+    .everyHours(1)
+    .create();
+  Logger.log("Sold tracker now syncs hourly.");
+}
+
+/* Kept for a project that genuinely wants one sync a day. Note that it
+   REPLACES an hourly trigger rather than adding to it. */
 function setupSoldTrackerDailyTrigger() {
   deleteSoldTrackerTriggers_();
   ScriptApp.newTrigger("syncSoldJobTracker")
@@ -214,6 +248,16 @@ function setupSoldTrackerDailyTrigger() {
     .atHour(6)
     .inTimezone(SOLD_TRACKER_CONFIG.timeZone)
     .create();
+  Logger.log("Sold tracker now syncs once a day at 6am. Email updates will " +
+    "take several days to cover every job at this cadence.");
+}
+
+/* What is actually installed right now, without changing anything. */
+function showSoldTrackerTriggers() {
+  const found = ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction());
+  Logger.log(found.length ? "Triggers installed: " + found.join(", ")
+                          : "No triggers installed — nothing is syncing on a schedule.");
+  return found;
 }
 
 function deleteSoldTrackerTriggers_() {
@@ -978,7 +1022,7 @@ const EMAIL_REFRESH_PRIORITY = {
 
 function attachEmailUpdates_(payload, previousById, now) {
   const cfg = SOLD_TRACKER_CONFIG;
-  const stats = { searched: 0, reused: 0, deferred: 0, disabled: false };
+  const stats = { searched: 0, reused: 0, deferred: 0, disabled: false, outOfTime: false };
 
   if (!cfg.emailNotesEnabled) {
     stats.disabled = true;
@@ -987,6 +1031,7 @@ function attachEmailUpdates_(payload, previousById, now) {
 
   const nowMs = now.getTime();
   const freshMs = cfg.emailNoteRefreshHours * 3600 * 1000;
+  const deadline = now.getTime() + cfg.emailNoteTimeBudgetMs;
 
   /* Carry everything forward first, so a job that never gets searched this run
      still shows whatever was found last time rather than going blank. */
@@ -1011,11 +1056,25 @@ function attachEmailUpdates_(payload, previousById, now) {
     if (checkedMs && (nowMs - checkedMs) < freshMs) { stats.reused++; return; }
     if (budget <= 0) { stats.deferred++; return; }
 
+    /* Out of time is the same outcome as out of budget: the job keeps whatever
+       it had and waits for the next run. Never let this pass be the reason the
+       sync fails to write. */
+    if (new Date().getTime() > deadline) {
+      stats.deferred++;
+      stats.outOfTime = true;
+      return;
+    }
+
     budget--;
     stats.searched++;
     job.emailUpdates = readDealEmailNotes_(job.customer, cfg.emailNoteLookbackDays);
     job.emailCheckedAt = isoDateTime_(now);
   });
+
+  if (stats.outOfTime) {
+    Logger.log("Email updates stopped early on time: " + stats.searched + " searched, " +
+      stats.deferred + " left for the next run.");
+  }
 
   /* An empty array round-trips through Firebase as a missing key, which would
      look identical to "never searched". Drop it and let emailCheckedAt say. */
