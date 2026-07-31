@@ -243,6 +243,43 @@ Objections travel with their customer and date rather than as bare strings,
 because "price" on its own starts no conversation while "Bob Roe, Tuesday,
 going over with wife" does.
 
+### Reconciling against ServiceTitan before the meeting
+
+A recap records what a rep believed at 6pm. By the 1:1 two days later the deal
+may have closed, or been installed. Walking in with the rep's stale status is
+worse than walking in with none, so `buildRecapApiPayload_` reads the alert
+emails back and reports the drift. Each rep gains:
+
+| | |
+|---|---|
+| `soldNotReported` | ServiceTitan says sold, no recap ever mentioned the customer |
+| `statusDrift` | recap said estimate or follow-up, ServiceTitan has since marked it sold |
+| `installed` | matched to a `Completed Form Alert [HVAC Sales]` — already in and done |
+| `soldAlerts` | every deduped sold alert, with `reportedOutcome` and `installCompletedOn` |
+| `soldPerServiceTitan`, `soldAmountPerServiceTitan` | against the rep's own reported `sold` |
+
+Three details that matter:
+
+- **Technicians raise the same alert.** The subject varies by business unit —
+  `[Sales Quote]` for advisors, `[HVAC Sales]` and `[HVAC COD Service]` for
+  technician-sold work — so filtering is done on `Sold by` against the roster,
+  not on the subject.
+- **One estimate can alert twice.** A revised price fires a second alert on the
+  same opportunity. The latest is kept as the live number and the earlier one is
+  retained as `revisedFrom`.
+- **A rep with no recap rows at all still appears** if he raised a sold alert.
+  That rep is the whole point of the exercise, and he has no rows to be found
+  by.
+
+If the Gmail search fails, `reconciliation.ok` comes back `false` with an
+`error`, the recap figures are unaffected, and the 1:1 card says the sold and
+install status may be stale rather than quietly showing none.
+
+**Install *scheduled* dates are not available from these alerts.** The two
+alerts carry sold and completed and nothing in between. Anything sold without a
+completion alert is listed as "sold, no completion alert yet" and points at the
+COMBO LOG, rather than implying no install is booked.
+
 ### Securing it
 
 The payload carries customer names, prices and objections. Set a Script
@@ -257,7 +294,30 @@ Verified against real alert emails on 2026-07-30.
 | Alert | Carries the HCA? |
 |---|---|
 | `Booked Job Alert [Sales Quote]` | **No** |
-| `Sold Estimate Alert [Sales Quote]` | Yes — `Sold by` |
+| `Sold Estimate Alert` | Yes — `Sold by` |
+| `Completed Form Alert [HVAC Sales]` | **No** — matched by customer name |
+
+`Sold Estimate Alert` is a line-per-field body:
+
+```
+Sold Estimate Alert:
+Name: *NEW* Supreme 25
+Estimate#: 408432504
+Opportunity#: 408010922
+Sold by: Javierre Milo
+Date: 7/30 8:15 AM
+Amount: $8,667.02
+Customer: Eileen Manrao
+Job#: 408010920
+```
+
+`Completed Form Alert [HVAC Sales]` is the install-finished signal and is not
+labelled the same way — its body opens with date, time, customer and address on
+one line, with `INSTALL DESCRIPTION:` further down. It names no advisor, so it
+is matched back to a sold alert by customer name.
+
+**Neither alert carries a scheduled install date.** Sold and completed are all
+there is; the date the crew is booked for has to come from the COMBO LOG.
 
 A booked job has no advisor attached. The HCA is assigned later, so the alert
 that fires at booking time cannot say who will run the appointment.
@@ -342,9 +402,21 @@ If the Exceptions sheet cannot be read, the send proceeds on base schedules
 alone and emails the manager a warning rather than silently assuming everyone
 is working.
 
-## Status as of 2026-07-30
+## Status as of 2026-07-31
 
-Not yet deployed. No recap email has ever been sent — a Gmail search across
-sent mail, the HCA addresses, and the distinctive template phrases returns
-nothing, and no matching scheduled task exists on the account. Nothing is
-flowing into the trackers from this path yet.
+The script is complete and tested; the Apps Script project is not yet deployed,
+so nothing is running on a schedule and nothing is flowing into the trackers
+from this path. Recap emails for the 30th and 31st went out by hand and replies
+are sitting in Gmail.
+
+Remaining, in order:
+
+1. Paste `apps-script/daily-recap.gs` into the project and run
+   `previewDailyRecap()`.
+2. Run `backfillRecapForDate("2026-07-30")` **before Saturday** — the reply
+   search looks back two days and Thursday's answers fall out of the window
+   after that.
+3. Set `TEST_MODE: false`, run `installDailyRecapTriggers()`.
+4. Deploy as a web app and paste the `/exec` URL into `RECAP_API_URL` in
+   `hca-1on1.html`. Until it is set, the recap card on the 1:1 page stays
+   hidden and the scheduler is unaffected.

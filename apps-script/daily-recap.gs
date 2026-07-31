@@ -1579,7 +1579,7 @@ function buildRecapApiPayload_(days, hcaFilter) {
   let wanted = String(hcaFilter || "").trim().toLowerCase();
   if (wanted.indexOf("@") !== -1) {
     const byEmail = RECAP_ROSTER.filter(h => h.email.toLowerCase() === wanted)[0];
-    wanted = byEmail ? byEmail.name.toLowerCase() : " no-such-hca";
+    wanted = byEmail ? byEmail.name.toLowerCase() : "__no-such-hca__";
   }
 
   const logRows = readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
@@ -1650,6 +1650,11 @@ function buildRecapApiPayload_(days, hcaFilter) {
     if (r[4]) h.followUps.push({ date: String(r[0]), text: String(r[4]) });
   });
 
+  /* Reconciliation runs before the roster is frozen, because the rep who sold
+     a job and never filed a single recap is precisely the one worth surfacing
+     — and they have no rows to be found by. */
+  const recon = reconcileWithServiceTitan_(byName, ensure, wanted, days);
+
   const hcas = Object.keys(byName).sort().map(name => {
     const h = byName[name];
     const sold = h.outcomes["SOLD"] || 0;
@@ -1668,6 +1673,7 @@ function buildRecapApiPayload_(days, hcaFilter) {
     logUrl: book.ss.getUrl(),
     logSheetName: cfg.logSheetName,
     complianceSheetName: cfg.complianceSheetName,
+    reconciliation: recon,
     hcas: hcas
   };
 }
@@ -1677,6 +1683,219 @@ function weekdayFromIso_(iso) {
   if (!m) return "";
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
   return isNaN(d.getTime()) ? "" : Utilities.formatDate(d, DAILY_RECAP_CONFIG.timeZone, "EEEE");
+}
+
+/* ---- reconciling the recap against ServiceTitan ---------------------------
+ *
+ * A recap records what a rep believed at 6pm. By the 1:1 two days later the
+ * deal may have closed, or been installed. Walking in with the rep's stale
+ * status is worse than walking in with none, so the alerts are read back and
+ * any drift is shown.
+ */
+
+function normName_(v) {
+  return String(v || "").toLowerCase().replace(/\(m\)/g, " ")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function parseAlertFields_(body) {
+  const out = {};
+  String(body || "").split(/\r?\n/).forEach(line => {
+    const m = line.match(/^\s*([A-Za-z#][A-Za-z #]*?)\s*:\s*(.+?)\s*$/);
+    if (m) out[m[1].toLowerCase().replace(/\s+/g, " ").trim()] = m[2];
+  });
+  return out;
+}
+
+/*
+ * Sold Estimate Alerts raised by someone on the HCA roster.
+ *
+ * The subject varies by business unit — [Sales Quote] for advisors, but also
+ * [HVAC Sales] and [HVAC COD Service] for technician-sold work. Filtering on
+ * "Sold by" against the roster is what reliably keeps technicians out.
+ */
+function readSoldAlerts_(days) {
+  const out = [];
+  let threads = [];
+  try {
+    threads = GmailApp.search('from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' +
+      Math.max(1, days) + "d", 0, 200);
+  } catch (err) {
+    Logger.log("Sold alert search failed: " + err);
+    return { ok: false, alerts: out };
+  }
+
+  threads.forEach(t => t.getMessages().forEach(msg => {
+    const f = parseAlertFields_(msg.getPlainBody());
+    const soldBy = f["sold by"] || "";
+    const hca = RECAP_ROSTER.filter(h => normName_(h.name) === normName_(soldBy))[0];
+    if (!hca) return;                                  // technician, not an HCA
+    out.push({
+      hca: hca.name,
+      customer: String(f["customer"] || "").trim(),
+      amount: parseDealAmount_(f["amount"] || "").amount,
+      name: f["name"] || "",
+      soldOn: f["date"] || "",
+      jobNumber: f["job#"] || f["job #"] || "",
+      received: msg.getDate()
+    });
+  }));
+  return { ok: true, alerts: out };
+}
+
+/*
+ * Completed Form Alert [HVAC Sales] is the install-finished signal. Its body
+ * opens with the date, time and customer before the address, rather than
+ * labelled fields.
+ */
+function readInstallCompletions_(days) {
+  const out = [];
+  let threads = [];
+  try {
+    threads = GmailApp.search('from:alerts@servicetitan.com subject:"Completed Form Alert" newer_than:' +
+      Math.max(1, days) + "d", 0, 200);
+  } catch (err) {
+    Logger.log("Completion alert search failed: " + err);
+    return { ok: false, completions: out };
+  }
+
+  threads.forEach(t => t.getMessages().forEach(msg => {
+    if (String(msg.getSubject() || "").indexOf("HVAC Sales") === -1) return;  // installs only
+    const body = String(msg.getPlainBody() || "");
+    const m = body.match(/^[ \t]*(\d{1,2}\/\d{1,2})\s+\d{1,2}:\d{2}\s*[AP]M\s+(.+?)\s+\d{2,}\s/m);
+    if (!m) return;
+    const desc = (body.match(/INSTALL DESCRIPTION:\s*(.+)/i) || [])[1] || "";
+    out.push({
+      customer: m[2].replace(/\(M\)\s*$/i, "").trim(),
+      installedOn: m[1],
+      description: String(desc).trim(),
+      received: msg.getDate()
+    });
+  }));
+  return { ok: true, completions: out };
+}
+
+/*
+ * Two customer names refer to the same job when they normalize equal, or when
+ * one is a fragment of the other. ServiceTitan writes "Eileen Manrao (M)" and
+ * a rep types "Eileen Manrao" or sometimes just "Manrao"; treating those as
+ * different people is what produces phantom "sold but never reported" rows.
+ * The length floor keeps a one-word name from matching half the roster.
+ */
+function namesMatch_(a, b) {
+  const x = normName_(a), y = normName_(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  if (x.length < 4 || y.length < 4) return false;
+  return x.indexOf(y) !== -1 || y.indexOf(x) !== -1;
+}
+
+/*
+ * Reconciles what the reps reported against what ServiceTitan actually
+ * recorded, and hangs the result off each HCA.
+ *
+ * Three things come out of it, in descending order of how much they matter in
+ * a 1:1:
+ *
+ *   soldNotReported — ServiceTitan says sold, the recap never mentioned the
+ *                     customer at all. The sale is real and the reporting is
+ *                     not.
+ *   statusDrift     — the recap said estimate/follow-up, ServiceTitan has since
+ *                     marked it sold. Nobody did anything wrong; the status is
+ *                     just stale, and walking in with it is worse than nothing.
+ *   installed       — the job is already in and done. Worth acknowledging
+ *                     rather than asking how the follow-up is going.
+ *
+ * Install *scheduled* dates are deliberately absent: the two alerts carry sold
+ * and completed, and nothing in between. That needs the COMBO LOG.
+ */
+function reconcileWithServiceTitan_(byName, ensure, wanted, days) {
+  const window = Math.max(1, Math.min(60, Number(days) || 14));
+  const soldRes = readSoldAlerts_(window);
+  const doneRes = readInstallCompletions_(window);
+
+  const status = {
+    ok: soldRes.ok && doneRes.ok,
+    soldAlertsRead: soldRes.alerts.length,
+    completionAlertsRead: doneRes.completions.length,
+    /* Said plainly so the 1:1 page never implies an install date it does not
+       have. */
+    note: "Sold and install-completed come from ServiceTitan alert emails. " +
+          "Scheduled install dates are not in these alerts — check the COMBO LOG."
+  };
+  if (!status.ok) {
+    status.error = "Gmail alert search failed; reconciliation is incomplete.";
+    return status;
+  }
+
+  /* Every rep who either filed a recap or raised a sold alert in the window,
+     honouring the same single-HCA filter the caller asked for. */
+  const names = {};
+  Object.keys(byName).forEach(n => { names[n] = true; });
+  soldRes.alerts.forEach(a => {
+    if (wanted && a.hca.toLowerCase() !== wanted) return;
+    names[a.hca] = true;
+  });
+
+  Object.keys(names).forEach(name => {
+    const h = ensure(name);
+    /* One estimate can alert more than once as the price is revised — Jay's
+       same opportunity fired on consecutive days at two different amounts.
+       The latest alert is the live number; the earlier ones are history. */
+    const mine = soldRes.alerts.filter(a => a.hca === h.name);
+    const byJob = {};
+    mine.forEach(a => {
+      const key = a.jobNumber || normName_(a.customer);
+      const prev = byJob[key];
+      if (!prev) { byJob[key] = a; return; }
+      if (a.received > prev.received) {
+        byJob[key] = a;
+        byJob[key].revisedFrom = prev.amount;
+      } else if (prev.revisedFrom == null) {
+        prev.revisedFrom = a.amount;
+      }
+    });
+
+    /* Not h.sold — that is already the count the rep reported, and the whole
+       point here is to be able to compare the two. */
+    h.soldAlerts = [];
+    h.statusDrift = [];
+    h.soldNotReported = [];
+    h.installed = [];
+
+    Object.keys(byJob).forEach(key => {
+      const a = byJob[key];
+      const row = h.rows.filter(r => namesMatch_(r.customer, a.customer))[0] || null;
+      const done = doneRes.completions.filter(c => namesMatch_(c.customer, a.customer))[0] || null;
+
+      const item = {
+        customer: a.customer, amount: a.amount, soldOn: a.soldOn,
+        estimateName: a.name, jobNumber: a.jobNumber,
+        revisedFrom: a.revisedFrom == null ? null : a.revisedFrom,
+        reportedOutcome: row ? row.outcome : null,
+        reportedOn: row ? row.date : null,
+        installCompletedOn: done ? done.installedOn : null,
+        installDescription: done ? done.description : ""
+      };
+
+      h.soldAlerts.push(item);
+      if (!row) h.soldNotReported.push(item);
+      else if (row.outcome !== "SOLD") h.statusDrift.push(item);
+      if (done) h.installed.push(item);
+    });
+
+    const order = (a, b) => String(b.soldOn).localeCompare(String(a.soldOn));
+    h.soldAlerts.sort(order);
+    h.statusDrift.sort(order);
+    h.soldNotReported.sort(order);
+    h.installed.sort(order);
+
+    h.soldPerServiceTitan = h.soldAlerts.length;
+    h.soldAmountPerServiceTitan = h.soldAlerts.reduce(
+      (t, s) => t + (isFinite(s.amount) && s.amount ? s.amount : 0), 0);
+  });
+
+  return status;
 }
 
 function readSheetRows_(ss, name, width) {
