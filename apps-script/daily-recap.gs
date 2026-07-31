@@ -1488,10 +1488,23 @@ function logRepliesByNight_(ss, replies) {
 }
 
 /*
- * Flips one compliance row from "No" to "Late". Returns true when a row was
- * actually changed, so the digest can say who moved rather than claiming a
- * change that did not happen. A rep already recorded as having replied is left
- * alone — a second message is not a second report.
+ * Brings one compliance row up to date with what the rep has actually said.
+ *
+ * Two separate things live in this row and they move independently:
+ *
+ *   Replied — only ever goes No -> Late. Someone already recorded as having
+ *     answered stays as they were; a later message is not a second report and
+ *     must not downgrade an on-time "Yes" to "Late".
+ *
+ *   Appointments Reported — always reconciled upward to the true count. This
+ *     is the case that caught us out live: Kyle asked a question in the
+ *     morning, which counted as a reply and wrote Yes with zero appointments,
+ *     then sent his real recap hours later. Returning early on "Yes" left the
+ *     count at zero forever while the log underneath held a real appointment,
+ *     so every rollup off this column quietly undercounted him.
+ *
+ * Upward only, because a later pass that parses fewer entries — a truncated
+ * body, a Gmail hiccup — must not erase a count that was right.
  */
 function markComplianceLate_(ss, isoDate, hcaName, entryCount, followUps) {
   const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.complianceSheetName, COMPLIANCE_HEADERS);
@@ -1508,19 +1521,34 @@ function markComplianceLate_(ss, isoDate, hcaName, entryCount, followUps) {
     if (rowIso !== isoDate) continue;
     if (String(values[i][1] || "").trim().toLowerCase() !== wantName) continue;
 
-    const replied = String(values[i][2] || "").trim().toLowerCase();
-    if (replied === "yes" || replied === "late") return false;
-
     const row = i + 2;
-    sheet.getRange(row, 3).setValue("Late");
-    sheet.getRange(row, 4).setValue(entryCount);
+    const replied = String(values[i][2] || "").trim().toLowerCase();
+    const alreadyAnswered = replied === "yes" || replied === "late";
+    let changed = false;
+
+    if (!alreadyAnswered) {
+      sheet.getRange(row, 3).setValue("Late");
+      changed = true;
+    }
+
+    const recorded = Number(values[i][3]);
+    const known = Number.isFinite(recorded) ? recorded : 0;
+    if (entryCount > known) {
+      sheet.getRange(row, 4).setValue(entryCount);
+      changed = true;
+    }
+
     if (followUps) {
       const existingFollowUps = String(values[i][4] || "").trim();
-      sheet.getRange(row, 5).setValue(
-        existingFollowUps ? existingFollowUps + "\n" + followUps : followUps);
+      if (existingFollowUps.indexOf(followUps) === -1) {
+        sheet.getRange(row, 5).setValue(
+          existingFollowUps ? existingFollowUps + "\n" + followUps : followUps);
+        changed = true;
+      }
     }
-    sheet.getRange(row, 6).setValue(new Date());
-    return true;
+
+    if (changed) sheet.getRange(row, 6).setValue(new Date());
+    return changed;
   }
   return false;
 }
