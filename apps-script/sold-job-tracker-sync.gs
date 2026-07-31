@@ -509,14 +509,25 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
   const tbdByKey = groupBy_(combo.tbdRows, "personKey");
 
   const jobs = soldAlerts.map(sold => {
-    const mainMatches = pickComboMatches_(sold, mainByKey[sold.personKey] || [], false);
-    const tbdMatches = pickComboMatches_(sold, tbdByKey[sold.personKey] || [], true);
-    const tbdDependencyMatches = pickTbdDependencyMatches_(sold, tbdByKey[sold.personKey] || []);
+    const mainResolved = resolveComboRows_(sold, mainByKey, combo.mainRows);
+    const tbdResolved = resolveComboRows_(sold, tbdByKey, combo.tbdRows);
+    const comboRows = mainResolved.rows.concat(tbdResolved.rows);
+
+    const mainMatches = pickComboMatches_(sold, mainResolved.rows, false);
+    const tbdMatches = pickComboMatches_(sold, tbdResolved.rows, true);
+    const tbdDependencyMatches = pickTbdDependencyMatches_(sold, tbdResolved.rows);
     const primaryCombo = tbdMatches[0] || mainMatches.find(row => row.department.toUpperCase() === "HVAC") || mainMatches[0] || null;
-    const booked = (bookedByKey[sold.personKey] || [])[0] || null;
-    const completed = (sold.jobNumber && completedByJob[sold.jobNumber] && completedByJob[sold.jobNumber][0]) || (completedByKey[sold.personKey] || [])[0] || null;
-    const relatedWork = buildRelatedWork_(sold, combo.mainRows.concat(combo.tbdRows), primaryCombo);
+    const booked = resolveAlertMatch_(sold, bookedByKey, bookedAlerts);
+    const completed = (sold.jobNumber && completedByJob[sold.jobNumber] && completedByJob[sold.jobNumber][0]) ||
+      resolveAlertMatch_(sold, completedByKey, completedAlerts);
+    const relatedWork = buildRelatedWork_(sold, comboRows, primaryCombo);
     const stage = determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatches);
+
+    // How the COMBO LOG row was found, so a spelling-driven match can be
+    // spot-checked rather than taken on faith.
+    const comboMatch = primaryCombo
+      ? (mainMatches.indexOf(primaryCombo) !== -1 ? mainResolved.method : tbdResolved.method)
+      : "none";
 
     return {
       id: sold.jobNumber || sold.estimateNumber || sold.messageId,
@@ -530,6 +541,8 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
       opportunityNumber: sold.opportunityNumber,
       jobNumber: sold.jobNumber,
       installDate: primaryCombo ? primaryCombo.installDate : null,
+      comboMatch,
+      comboCustomer: primaryCombo && comboMatch === "fuzzy" ? primaryCombo.customer : "",
       department: primaryCombo ? primaryCombo.department : "HVAC",
       jurisdiction: primaryCombo ? primaryCombo.jurisdiction : "",
       permitNotes: primaryCombo ? primaryCombo.permitNotes : "",
@@ -568,7 +581,9 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
     jobs: jobs.length,
     needsAttention: jobs.filter(job => job.stage === "SOLD_NEEDS_ATTENTION").length,
     active: jobs.filter(job => job.stage === "SOLD_ACTIVE" || job.stage === "SOLD_PENDING_MATCH").length,
-    done: jobs.filter(job => job.stage === "SOLD_DONE_FOLLOW_UP_LATER").length
+    done: jobs.filter(job => job.stage === "SOLD_DONE_FOLLOW_UP_LATER").length,
+    fuzzyComboMatches: jobs.filter(job => job.comboMatch === "fuzzy").length,
+    pendingComboMatch: jobs.filter(job => job.stage === "SOLD_PENDING_MATCH").length
   };
 
   return {
@@ -582,8 +597,6 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
 
 function pickTbdDependencyMatches_(sold, rows) {
   return rows.filter(row => {
-    if (row.personKey !== sold.personKey) return false;
-
     const rowHca = normalizeHca_(row.salesRep);
     const hcaMatch = !rowHca || rowHca === sold.hca;
 
@@ -618,7 +631,6 @@ function buildRelatedWork_(sold, rows, primaryCombo) {
   const soldDate = sold.soldDate ? new Date(sold.soldDate) : null;
 
   return rows.filter(row => {
-    if (row.personKey !== sold.personKey) return false;
     if (primaryCombo && row === primaryCombo) return false;
 
     // Include TBD dependency rows even without an install date.
@@ -809,7 +821,9 @@ function parseSheetDate_(value) {
     }
   }
 
-  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  /* The backslashes here were doubled, so this branch matched a literal "\d"
+     and never an actual date — an ISO cell fell through to `new Date(raw)`. */
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) return raw;
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -895,6 +909,183 @@ function personKeyFromParts_(first, last) {
   const f = firstWords[0] || "";
   const l = lastWords.length ? lastWords[lastWords.length - 1] : "";
   return l && f ? l + "|" + f : (l || f);
+}
+
+/* ---------------------------------------------------------------------------
+ * Fuzzy customer-name matching
+ *
+ * The COMBO LOG is typed by one set of hands, ServiceTitan alerts by another.
+ * The same homeowner arrives as "Michael McEachern" in one and
+ * "Michael Mc Eachern" in the other; as "Greg Anderson" and
+ * "ANDERSON, GREG 0000348"; as "Habtemariam" and "Habpemariam". An exact key
+ * misses every one of those and the job sits in PENDING COMBO LOG MATCH even
+ * though the install is scheduled.
+ *
+ * The rule: reduce both names to significant tokens, then require either two
+ * tokens that match — allowing a typo's worth of edit distance, scaled to how
+ * long the token is — or one substantial token when a side only offers one.
+ * A shared first name alone is never enough: "Sidney Abe" must not match
+ * "Sidney Johnson".
+ * ------------------------------------------------------------------------- */
+
+const NAME_STOPWORDS = ["M", "F", "MR", "MRS", "MS", "DR", "JR", "SR", "II", "III", "IV", "AND", "OR", "THE", "OF"];
+
+// Generic words that carry no identity of their own. Two different property
+// management companies both match on PROPERTY and MANAGEMENT; that pair must
+// not be enough to call them the same customer.
+const NAME_WEAK_TOKENS = [
+  "PROPERTY", "PROPERTIES", "MANAGEMENT", "MANAGMENT", "MGMT", "LLC", "INC",
+  "CORP", "CORPORATION", "COMPANY", "ASSOCIATION", "ASSOC", "HOA", "CHURCH",
+  "BAPTIST", "CENTER", "CENTRE", "SCHOOL", "RESTAURANT", "APARTMENTS", "APTS",
+  "CONDOMINIUM", "CONDO", "MINISTRIES", "HOLDINGS", "GROUP", "SERVICES",
+  "LLP", "TRUST", "FAMILY", "RESIDENCE"
+];
+
+// Name particles get glued to the word that follows so "MC EACHERN" and
+// "MCEACHERN" reduce to the same token instead of one side losing "MC" to the
+// short-word filter.
+const NAME_PARTICLE_RE = /\b(MC|MAC|VAN|VON|DE|DEL|DELA|LA|LE|DI|DA|ST)\s+(?=[A-Z])/g;
+
+function nameSignature_(value) {
+  const text = String(value === null || value === undefined ? "" : value)
+    .replace(/<https?:\/\/[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .toUpperCase()
+    .replace(/\([MF]\)/g, " ")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\b\d{3,}\b/g, " ")   // ServiceTitan customer numbers, street numbers
+    .trim()
+    .replace(NAME_PARTICLE_RE, "$1");
+
+  const tokens = [];
+  const weak = [];
+  text.split(/\s+/).filter(Boolean).forEach(word => {
+    if (word.length < 3) return;
+    if (/^\d+$/.test(word)) return;
+    if (NAME_STOPWORDS.indexOf(word) !== -1) return;
+    if (tokens.indexOf(word) !== -1) return;
+    tokens.push(word);
+    if (NAME_WEAK_TOKENS.indexOf(word) !== -1) weak.push(word);
+  });
+
+  return { tokens: tokens, weak: weak };
+}
+
+function levenshtein_(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  let prev = [];
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function nameTokensMatch_(a, b) {
+  if (a === b) return true;
+
+  const min = Math.min(a.length, b.length);
+  const max = Math.max(a.length, b.length);
+
+  // "EACHERN" inside "MCEACHERN", "JESSI" inside "JESSIAH". Only on tokens
+  // long enough that the overlap means something.
+  if (min >= 4 && (a.indexOf(b) !== -1 || b.indexOf(a) !== -1)) return true;
+
+  if (max - min > 2) return false;
+  const tolerance = max <= 4 ? 0 : (max <= 7 ? 1 : 2);
+  if (!tolerance) return false;
+  return levenshtein_(a, b) <= tolerance;
+}
+
+function fuzzyNameMatch_(sigA, sigB) {
+  if (!sigA || !sigB) return false;
+  if (!sigA.tokens.length || !sigB.tokens.length) return false;
+
+  const usedB = {};
+  let total = 0;
+  let strong = 0;
+
+  sigA.tokens.forEach(tokenA => {
+    for (let i = 0; i < sigB.tokens.length; i++) {
+      if (usedB[i]) continue;
+      if (!nameTokensMatch_(tokenA, sigB.tokens[i])) continue;
+      usedB[i] = true;
+      total++;
+      if (sigA.weak.indexOf(tokenA) === -1 && sigB.weak.indexOf(sigB.tokens[i]) === -1) strong++;
+      return;
+    }
+  });
+
+  if (!strong) return false;
+  if (total >= 2) return true;
+
+  // One match is only enough when a side offers nothing else — a COMBO LOG row
+  // carrying a surname and no first name, say — and the token is substantial.
+  const soloA = sigA.tokens.length === 1;
+  const soloB = sigB.tokens.length === 1;
+  if (!soloA && !soloB) return false;
+  const solo = soloA ? sigA.tokens[0] : sigB.tokens[0];
+  return solo.length >= 5;
+}
+
+function comboRowSignature_(row) {
+  if (!row.nameSignature) {
+    row.nameSignature = nameSignature_([row.first, row.last].filter(Boolean).join(" "));
+  }
+  return row.nameSignature;
+}
+
+/*
+ * Exact key first — it is right the overwhelming majority of the time and
+ * costs nothing. Only when it comes back empty do we scan the whole sheet
+ * looking for a near miss.
+ */
+function resolveComboRows_(sold, byKey, allRows) {
+  const exact = byKey[sold.personKey] || [];
+  if (exact.length) return { rows: exact, method: "exact" };
+
+  const signature = soldSignature_(sold);
+  if (!signature.tokens.length) return { rows: [], method: "none" };
+
+  const fuzzy = allRows.filter(row => fuzzyNameMatch_(signature, comboRowSignature_(row)));
+  return { rows: fuzzy, method: fuzzy.length ? "fuzzy" : "none" };
+}
+
+/*
+ * The Booked and Completed alerts come out of ServiceTitan the same way the
+ * Sold alert does, but a customer renamed between appointments — or entered as
+ * "LAST, FIRST" once — breaks the exact key just as easily.
+ */
+function resolveAlertMatch_(sold, byKey, allAlerts) {
+  const exact = byKey[sold.personKey] || [];
+  if (exact.length) return exact[0];
+
+  const signature = soldSignature_(sold);
+  if (!signature.tokens.length) return null;
+
+  for (let i = 0; i < allAlerts.length; i++) {
+    const alert = allAlerts[i];
+    if (!alert.nameSignature) alert.nameSignature = nameSignature_(alert.customer);
+    if (fuzzyNameMatch_(signature, alert.nameSignature)) return alert;
+  }
+  return null;
+}
+
+function soldSignature_(sold) {
+  if (!sold.nameSignature) sold.nameSignature = nameSignature_(sold.customer);
+  return sold.nameSignature;
 }
 
 function groupBy_(items, key) {

@@ -559,14 +559,27 @@ function runCollection_(when, isBackfill) {
   /* Logging runs before the digest so the digest can report what was written,
      and is wrapped so a spreadsheet problem degrades to "digest still sent,
      with the error stated" rather than losing the night's collection. */
-  let logResult = { ok: false, error: "", written: 0, skipped: 0, url: "", created: false };
+  let logResult = {
+    ok: false, error: "", written: 0, skipped: 0, url: "", created: false,
+    lateWritten: 0, lateUndated: 0, lateMarked: []
+  };
   try {
     const book = getLogSpreadsheet_();
     const wrote = appendRecapRows_(book.ss, plan, byHca);
     appendComplianceRows_(book.ss, plan, byHca, responded, followUpsByHca);
+
+    /* Late replies go in against their own night. Without this they reach the
+       digest and stop there, so a rep who answered after the cutoff still reads
+       as silent at the 1:1 two days later. */
+    const lateRes = late.length
+      ? logRepliesByNight_(book.ss, late)
+      : { written: 0, skipped: 0, undated: 0, marked: [] };
+
     logResult = {
-      ok: true, error: "", written: wrote.written, skipped: wrote.skipped,
-      url: book.ss.getUrl(), created: book.created
+      ok: true, error: "",
+      written: wrote.written + lateRes.written, skipped: wrote.skipped + lateRes.skipped,
+      url: book.ss.getUrl(), created: book.created,
+      lateWritten: lateRes.written, lateUndated: lateRes.undated, lateMarked: lateRes.marked
     };
   } catch (err) {
     logResult.error = err && err.message ? err.message : String(err);
@@ -603,7 +616,7 @@ function runCollection_(when, isBackfill) {
  * after the 8:15pm cutoff — so those come back flagged late, bounded to ones
  * that arrived since the previous digest run so they are reported exactly once.
  */
-function findRecapReplies_(dateLabel, sinceDate, lookbackDays) {
+function findRecapReplies_(dateLabel, sinceDate, lookbackDays, includeAllDates) {
   const cfg = DAILY_RECAP_CONFIG;
   const days = lookbackDays || cfg.replyLookbackDays;
   const query = 'subject:"' + cfg.subjectPrefix + '" newer_than:' + days + "d";
@@ -626,8 +639,14 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays) {
        the same way the morning run does. Reading it off the rep's own subject would
        lose a reply whenever their client rewrote it. */
     let threadIsTonight = false;
+    let threadDateLabel = "";
     messages.forEach(m => {
-      if (String(m.getSubject() || "").indexOf(dateLabel) !== -1) threadIsTonight = true;
+      const s = String(m.getSubject() || "");
+      if (s.indexOf(dateLabel) !== -1) threadIsTonight = true;
+      if (!threadDateLabel) {
+        const hit = s.match(/([A-Za-z]+day,\s+[A-Za-z]+\s+\d{1,2},\s+\d{4})/);
+        if (hit) threadDateLabel = hit[1];
+      }
     });
 
     messages.forEach(msg => {
@@ -638,7 +657,10 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays) {
       const subject = String(msg.getSubject() || "");
       const isTonight = threadIsTonight;
 
-      if (!isTonight) {
+      /* The sweep wants every reply in the window so it can file each one
+         against its own night; the nightly digest wants only what it has not
+         already reported. */
+      if (!isTonight && !includeAllDates) {
         if (!sinceDate) return;                       // no prior run recorded
         const received = msg.getDate();
         if (!received || received <= sinceDate) return;
@@ -657,6 +679,11 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays) {
         followUps: followUps,
         late: !isTonight,
         subject: subject,
+        /* Which night this reply answers. Read off the thread rather than the
+           rep's own subject, which their client may have rewritten, so the row
+           lands on the right date instead of today's. */
+        answersIso: isoFromDateLabel_(threadDateLabel || dateLabel),
+        answersLabel: threadDateLabel || dateLabel,
         note: (entries.length || followUps) ? "" : ownText_(raw)
       });
     });
@@ -1148,6 +1175,9 @@ function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, foll
         if (e.outcome !== "SOLD" && e.objection) lines.push("        Objection: " + e.objection);
       });
     });
+    lines.push("");
+    lines.push("These are logged against the night they answer, so the 1:1 page");
+    lines.push("sees them in the right place.");
   }
 
   if (!plan.exceptions.ok) {
@@ -1163,6 +1193,16 @@ function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, foll
       if (logResult.created) lines.push("Recap log created — this is day one.");
       lines.push(logResult.written + " row(s) written to the log" +
         (logResult.skipped ? ", " + logResult.skipped + " already recorded" : "") + ".");
+      if (logResult.lateWritten) {
+        lines.push("  of those, " + logResult.lateWritten + " backfilled from late replies.");
+      }
+      if (logResult.lateMarked && logResult.lateMarked.length) {
+        lines.push("  marked Late on the compliance tab: " + logResult.lateMarked.join(", ") + ".");
+      }
+      if (logResult.lateUndated) {
+        lines.push("  " + logResult.lateUndated + " late repl(ies) had no date on the thread " +
+          "and could not be filed — see the list above.");
+      }
       if (logResult.url) lines.push(logResult.url);
     } else {
       lines.push("Recap log NOT updated — the digest above is the only record of tonight.");
@@ -1263,6 +1303,147 @@ function appendComplianceRows_(ss, plan, byHca, responded, followUpsByHca) {
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, COMPLIANCE_HEADERS.length).setValues(rows);
   }
   return { written: rows.length };
+}
+
+/*
+ * Files every reply in the lookback window against the night it answers, and
+ * sends nothing.
+ *
+ * The nightly collection is a snapshot at 8:15pm. Reps answer at 9, at 11, the
+ * next morning from the truck. Until this ran hourly, all of that sat in Gmail
+ * until the next digest happened to notice it, and a 1:1 at 10am read a log
+ * that said the rep had reported nothing.
+ *
+ * Safe to run as often as you like: every write is keyed on date + HCA +
+ * customer and existing keys are read first, so a reply seen ten times lands
+ * once. It never emails, so it cannot double-nudge anyone either.
+ */
+function sweepRecapReplies() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const plan = buildTodayPlan_(new Date());
+  const res = findRecapReplies_(plan.dateLabel, null, cfg.replyLookbackDays, true);
+
+  if (!res.ok) {
+    Logger.log("Reply sweep skipped — Gmail search failed. Nothing written.");
+    return { ok: false, written: 0, skipped: 0, marked: [] };
+  }
+
+  let out = { ok: true, written: 0, skipped: 0, undated: 0, marked: [] };
+  try {
+    const book = getLogSpreadsheet_();
+    const logged = logRepliesByNight_(book.ss, res.replies);
+    out = {
+      ok: true, written: logged.written, skipped: logged.skipped,
+      undated: logged.undated, marked: logged.marked
+    };
+  } catch (err) {
+    Logger.log("Reply sweep could not write: " + (err && err.message ? err.message : String(err)));
+    return { ok: false, written: 0, skipped: 0, marked: [] };
+  }
+
+  Logger.log("Reply sweep: " + res.replies.length + " repl(ies) seen, " +
+    out.written + " new row(s) logged, " + out.skipped + " already there" +
+    (out.marked.length ? ", marked Late: " + out.marked.join(", ") : "") + ".");
+  return out;
+}
+
+const RECAP_MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+/* "Thursday, July 30, 2026" -> "2026-07-30". Returns "" on anything else so a
+   caller can tell a real date from a subject that lost its label. */
+function isoFromDateLabel_(label) {
+  const m = String(label || "").match(/([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})/);
+  if (!m) return "";
+  const month = RECAP_MONTH_NAMES.indexOf(m[1]);
+  if (month === -1) return "";
+  const day = Number(m[2]);
+  if (!(day >= 1 && day <= 31)) return "";
+  return m[3] + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+}
+
+/*
+ * A reply that arrives after its own night's digest still has to reach the log
+ * — the log is what the 1:1 page reads, and a rep who answered at 11pm should
+ * not show up at the 1:1 as having said nothing.
+ *
+ * The row goes against the night it answers, not the night we noticed it, and
+ * the Key column makes the write idempotent: the same reply seen by tonight's
+ * run and by a later backfill lands once.
+ *
+ * Compliance is updated in place rather than appended. The row for that night
+ * already exists and says "No"; it becomes "Late", which is the truth and is
+ * distinguishable from someone who answered on time.
+ */
+function logRepliesByNight_(ss, replies) {
+  const byDate = {};
+  replies.forEach(r => {
+    if (!r.answersIso) return;              // no date on the thread, nothing to key on
+    const bucket = byDate[r.answersIso] || (byDate[r.answersIso] = {});
+    const group = bucket[r.hca.name] || (bucket[r.hca.name] = { hca: r.hca, entries: [], followUps: "" });
+    group.entries = group.entries.concat(r.entries);
+    if (r.followUps) group.followUps = group.followUps ? group.followUps + "\n" + r.followUps : r.followUps;
+  });
+
+  let written = 0;
+  let skipped = 0;
+  let undated = replies.filter(r => !r.answersIso).length;
+  const marked = [];
+
+  Object.keys(byDate).sort().forEach(iso => {
+    const res = appendRecapRows_(ss, { isoDate: iso }, byDate[iso]);
+    written += res.written;
+    skipped += res.skipped;
+
+    Object.keys(byDate[iso]).forEach(name => {
+      const group = byDate[iso][name];
+      if (markComplianceLate_(ss, iso, name, group.entries.length, group.followUps)) {
+        marked.push(iso + " " + name);
+      }
+    });
+  });
+
+  return { written: written, skipped: skipped, undated: undated, marked: marked };
+}
+
+/*
+ * Flips one compliance row from "No" to "Late". Returns true when a row was
+ * actually changed, so the digest can say who moved rather than claiming a
+ * change that did not happen. A rep already recorded as having replied is left
+ * alone — a second message is not a second report.
+ */
+function markComplianceLate_(ss, isoDate, hcaName, entryCount, followUps) {
+  const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.complianceSheetName, COMPLIANCE_HEADERS);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return false;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, COMPLIANCE_HEADERS.length).getValues();
+  const wantName = String(hcaName).toLowerCase();
+
+  for (let i = 0; i < values.length; i++) {
+    const rowIso = values[i][0] instanceof Date
+      ? Utilities.formatDate(values[i][0], DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")
+      : String(values[i][0] || "").trim();
+    if (rowIso !== isoDate) continue;
+    if (String(values[i][1] || "").trim().toLowerCase() !== wantName) continue;
+
+    const replied = String(values[i][2] || "").trim().toLowerCase();
+    if (replied === "yes" || replied === "late") return false;
+
+    const row = i + 2;
+    sheet.getRange(row, 3).setValue("Late");
+    sheet.getRange(row, 4).setValue(entryCount);
+    if (followUps) {
+      const existingFollowUps = String(values[i][4] || "").trim();
+      sheet.getRange(row, 5).setValue(
+        existingFollowUps ? existingFollowUps + "\n" + followUps : followUps);
+    }
+    sheet.getRange(row, 6).setValue(new Date());
+    return true;
+  }
+  return false;
 }
 
 function recapRowKey_(isoDate, hcaName, customer) {
@@ -1932,18 +2113,145 @@ function readInstallCompletions_(days) {
 }
 
 /*
- * Two customer names refer to the same job when they normalize equal, or when
- * one is a fragment of the other. ServiceTitan writes "Eileen Manrao (M)" and
- * a rep types "Eileen Manrao" or sometimes just "Manrao"; treating those as
+ * Two customer names refer to the same job when they normalize equal, when one
+ * is a fragment of the other, or when they are the same name typed by two
+ * different people. ServiceTitan writes "Eileen Manrao (M)" and a rep types
+ * "Eileen Manrao" or sometimes just "Manrao"; the COMBO LOG has
+ * "ANDERSON, GREG 0000348" where the alert has "Greg Anderson", and
+ * "Habpemariam" where the alert has "Habtemariam". Treating any of those as
  * different people is what produces phantom "sold but never reported" rows.
- * The length floor keeps a one-word name from matching half the roster.
+ *
+ * Substring first because it is cheap and covers most of it, then the token
+ * matcher below for the spelling drift. A shared first name is never enough on
+ * its own — "Sidney Abe" must not match "Sidney Johnson".
  */
 function namesMatch_(a, b) {
   const x = normName_(a), y = normName_(b);
   if (!x || !y) return false;
   if (x === y) return true;
-  if (x.length < 4 || y.length < 4) return false;
-  return x.indexOf(y) !== -1 || y.indexOf(x) !== -1;
+  if (x.length >= 4 && y.length >= 4 && (x.indexOf(y) !== -1 || y.indexOf(x) !== -1)) return true;
+  return fuzzyNameMatch_(nameSignature_(a), nameSignature_(b));
+}
+
+/* ---------------------------------------------------------------------------
+ * Fuzzy customer-name matching.
+ *
+ * Kept byte-for-byte in step with the same block in sold-job-tracker-sync.gs.
+ * The two scripts are separate Apps Script projects and cannot import from one
+ * another, so this is duplicated on purpose — if you change one, change both,
+ * or the recap and the sold tracker will disagree about who a customer is.
+ * ------------------------------------------------------------------------- */
+
+const NAME_STOPWORDS = ["M", "F", "MR", "MRS", "MS", "DR", "JR", "SR", "II", "III", "IV", "AND", "OR", "THE", "OF"];
+
+// Generic words that carry no identity of their own. Two different property
+// management companies both match on PROPERTY and MANAGEMENT; that pair must
+// not be enough to call them the same customer.
+const NAME_WEAK_TOKENS = [
+  "PROPERTY", "PROPERTIES", "MANAGEMENT", "MANAGMENT", "MGMT", "LLC", "INC",
+  "CORP", "CORPORATION", "COMPANY", "ASSOCIATION", "ASSOC", "HOA", "CHURCH",
+  "BAPTIST", "CENTER", "CENTRE", "SCHOOL", "RESTAURANT", "APARTMENTS", "APTS",
+  "CONDOMINIUM", "CONDO", "MINISTRIES", "HOLDINGS", "GROUP", "SERVICES",
+  "LLP", "TRUST", "FAMILY", "RESIDENCE"
+];
+
+// Name particles get glued to the word that follows so "MC EACHERN" and
+// "MCEACHERN" reduce to the same token instead of one side losing "MC" to the
+// short-word filter.
+const NAME_PARTICLE_RE = /\b(MC|MAC|VAN|VON|DE|DEL|DELA|LA|LE|DI|DA|ST)\s+(?=[A-Z])/g;
+
+function nameSignature_(value) {
+  const text = String(value === null || value === undefined ? "" : value)
+    .replace(/<https?:\/\/[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .toUpperCase()
+    .replace(/\([MF]\)/g, " ")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\b\d{3,}\b/g, " ")   // ServiceTitan customer numbers, street numbers
+    .trim()
+    .replace(NAME_PARTICLE_RE, "$1");
+
+  const tokens = [];
+  const weak = [];
+  text.split(/\s+/).filter(Boolean).forEach(word => {
+    if (word.length < 3) return;
+    if (/^\d+$/.test(word)) return;
+    if (NAME_STOPWORDS.indexOf(word) !== -1) return;
+    if (tokens.indexOf(word) !== -1) return;
+    tokens.push(word);
+    if (NAME_WEAK_TOKENS.indexOf(word) !== -1) weak.push(word);
+  });
+
+  return { tokens: tokens, weak: weak };
+}
+
+function levenshtein_(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  let prev = [];
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function nameTokensMatch_(a, b) {
+  if (a === b) return true;
+
+  const min = Math.min(a.length, b.length);
+  const max = Math.max(a.length, b.length);
+
+  // "EACHERN" inside "MCEACHERN", "JESSI" inside "JESSIAH". Only on tokens
+  // long enough that the overlap means something.
+  if (min >= 4 && (a.indexOf(b) !== -1 || b.indexOf(a) !== -1)) return true;
+
+  if (max - min > 2) return false;
+  const tolerance = max <= 4 ? 0 : (max <= 7 ? 1 : 2);
+  if (!tolerance) return false;
+  return levenshtein_(a, b) <= tolerance;
+}
+
+function fuzzyNameMatch_(sigA, sigB) {
+  if (!sigA || !sigB) return false;
+  if (!sigA.tokens.length || !sigB.tokens.length) return false;
+
+  const usedB = {};
+  let total = 0;
+  let strong = 0;
+
+  sigA.tokens.forEach(tokenA => {
+    for (let i = 0; i < sigB.tokens.length; i++) {
+      if (usedB[i]) continue;
+      if (!nameTokensMatch_(tokenA, sigB.tokens[i])) continue;
+      usedB[i] = true;
+      total++;
+      if (sigA.weak.indexOf(tokenA) === -1 && sigB.weak.indexOf(sigB.tokens[i]) === -1) strong++;
+      return;
+    }
+  });
+
+  if (!strong) return false;
+  if (total >= 2) return true;
+
+  // One match is only enough when a side offers nothing else — a COMBO LOG row
+  // carrying a surname and no first name, say — and the token is substantial.
+  const soloA = sigA.tokens.length === 1;
+  const soloB = sigB.tokens.length === 1;
+  if (!soloA && !soloB) return false;
+  const solo = soloA ? sigA.tokens[0] : sigB.tokens[0];
+  return solo.length >= 5;
 }
 
 /*
@@ -3215,6 +3523,13 @@ function comboDateIso_(value) {
   }
   const text = String(value || "").trim();
   if (!text) return "";
+
+  /* A cell formatted as a date comes back as a Date and is handled above, but
+     a tab whose column was pasted as text hands back "2026-08-05". Reading that
+     as no date at all is what makes a scheduled install show as TBD. */
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return text;
+
   const m = text.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/);
   if (!m) return "";
   let year = m[3] ? Number(m[3]) : Number(Utilities.formatDate(new Date(),
@@ -3264,6 +3579,11 @@ function installDailyRecapTriggers() {
       .inTimezone(cfg.timeZone).create();
   }
 
+  /* Hourly, silent, idempotent. Puts an answer in the log within the hour it
+     arrives instead of waiting for the next digest. */
+  ScriptApp.newTrigger("sweepRecapReplies")
+    .timeBased().everyHours(1).create();
+
   /* Twice a day. Late evening picks up the night's replies against the day's
      alerts; late morning catches sales and installs that landed overnight, so
      a 1:1 at 10am is not reading yesterday's picture. */
@@ -3276,7 +3596,7 @@ function installDailyRecapTriggers() {
     cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
     (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
       cfg.nudgeHourOff + ":00 off" : "") +
-    ", job status 9:00 and 22:00 " + cfg.timeZone + ").");
+    ", reply sweep hourly, job status 9:00 and 22:00 " + cfg.timeZone + ").");
 }
 
 function deleteDailyRecapTriggers_() {
@@ -3284,7 +3604,7 @@ function deleteDailyRecapTriggers_() {
     const fn = trigger.getHandlerFunction();
     if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
         fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday" ||
-        fn === "refreshJobStatus") {
+        fn === "sweepRecapReplies" || fn === "refreshJobStatus") {
       ScriptApp.deleteTrigger(trigger);
     }
   });
