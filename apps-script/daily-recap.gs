@@ -292,12 +292,23 @@ function repliedToRecap_(dateLabel) {
   }
 
   threads.forEach(thread => {
-    thread.getMessages().forEach(msg => {
+    const messages = thread.getMessages();
+
+    /* Decide which night a thread belongs to from ANY message in it, then
+       credit every rep who wrote in that thread.
+       Matching on the rep's own subject instead would miss a genuine reply
+       whenever their client rewrote it, and chasing someone who already
+       reported costs more trust than skipping a nudge. */
+    let isThisNight = false;
+    messages.forEach(m => {
+      if (String(m.getSubject() || "").indexOf(dateLabel) !== -1) isThisNight = true;
+    });
+    if (!isThisNight) return;
+
+    messages.forEach(msg => {
       const from = String(msg.getFrom() || "").toLowerCase();
       const hca = RECAP_ROSTER.filter(h => from.indexOf(h.email.toLowerCase()) !== -1)[0];
-      if (!hca) return;
-      if (String(msg.getSubject() || "").indexOf(dateLabel) === -1) return;
-      seen[hca.name] = true;
+      if (hca) seen[hca.name] = true;
     });
   });
   return seen;

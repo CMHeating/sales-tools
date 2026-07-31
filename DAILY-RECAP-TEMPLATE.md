@@ -89,9 +89,18 @@ The nudge threads onto the original conversation (`Re: Daily Recap — <that
 day>`), so a reply is still attributed to the night it answers. It carries the
 short template inline rather than telling reps to scroll for it.
 
-If the Gmail search that determines who already replied fails, every rep is
-treated as having replied and no nudge goes out. Nudging someone who did reply
-is worse than nudging nobody.
+Nobody is nudged without checking first. Immediately before sending, the
+script reads that night's threads and drops anyone who already answered.
+
+Whether a rep replied is decided at thread level, not from the subject of
+their own message. Some clients rewrite the subject on a reply, and requiring
+it to carry the date would mark a rep who reported as outstanding and chase
+them. Any roster member who wrote in a thread belonging to that night counts
+as having replied; an unrelated thread from that rep does not.
+
+If the Gmail search fails outright, every rep is treated as having replied and
+no nudge goes out. Chasing someone who did reply costs more trust than missing
+a night.
 
 Set `nudgeEnabled: false` to switch it off.
 
