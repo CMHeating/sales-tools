@@ -25,7 +25,19 @@ const SOLD_TRACKER_CONFIG = {
   comboMatchWindowDays: 120,
   relatedWorkWindowDays: 60,
   bundleWindowDays: 30,
-  timeZone: "America/Los_Angeles"
+  timeZone: "America/Los_Angeles",
+
+  /* Email updates about a deal.
+     A Gmail search costs a round trip and there are a couple of hundred sold
+     jobs, so this is budgeted: results are cached in the payload itself and
+     carried forward, and only jobs whose notes have gone stale are searched
+     again — live jobs first. Set emailNotesEnabled false to turn it off. */
+  emailNotesEnabled: true,
+  emailNoteLookbackDays: 90,
+  emailNoteRefreshHours: 6,
+  emailNoteMaxSearchesPerRun: 40,
+  emailNoteThreadsPerJob: 8,
+  maxEmailNotesPerJob: 5
 };
 
 const HCA_CANONICAL = [
@@ -145,6 +157,13 @@ function syncSoldJobTracker() {
   const completedAlerts = readCompletedFormAlerts_();
   const combo = readComboLog_();
   const payload = buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, combo, startedAt);
+
+  /* Read before write: last run's payload is the cache the email budget works
+     against. Coordination notes need no cache — they come off the sheet. */
+  const previous = readSoldTrackerFromFirebase_();
+  const emailStats = attachEmailUpdates_(payload, previous, startedAt);
+  payload.sourceSummary.emailUpdates = emailStats;
+
   pushSoldTrackerToFirebase_(payload);
   Logger.log(JSON.stringify(payload.sourceSummary, null, 2));
   return payload.sourceSummary;
@@ -159,6 +178,32 @@ function previewSoldJobTracker() {
   const payload = buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, combo, startedAt);
   Logger.log(JSON.stringify(payload, null, 2));
   return payload;
+}
+
+/*
+ * Coordination notes and email updates for one customer, printed. Writes
+ * nothing — for checking what the tracker will show before a full sync.
+ */
+function previewDealNotes(customerName) {
+  const name = cleanText_(customerName);
+  if (!name) {
+    Logger.log('Call it with a name: previewDealNotes("Jessiah Johnson")');
+    return null;
+  }
+
+  const combo = readComboLog_();
+  const signature = nameSignature_(name);
+  const rows = combo.mainRows.concat(combo.tbdRows)
+    .filter(row => fuzzyNameMatch_(signature, comboRowSignature_(row)));
+
+  const out = {
+    customer: name,
+    comboRowsMatched: rows.length,
+    coordinationNotes: buildCoordinationNotes_(rows, rows[0] || null),
+    emailUpdates: readDealEmailNotes_(name, SOLD_TRACKER_CONFIG.emailNoteLookbackDays)
+  };
+  Logger.log(JSON.stringify(out, null, 2));
+  return out;
 }
 
 function setupSoldTrackerDailyTrigger() {
@@ -521,6 +566,7 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
     const completed = (sold.jobNumber && completedByJob[sold.jobNumber] && completedByJob[sold.jobNumber][0]) ||
       resolveAlertMatch_(sold, completedByKey, completedAlerts);
     const relatedWork = buildRelatedWork_(sold, comboRows, primaryCombo);
+    const coordinationNotes = buildCoordinationNotes_(comboRows, primaryCombo);
     const stage = determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatches);
 
     // How the COMBO LOG row was found, so a spelling-driven match can be
@@ -562,6 +608,7 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
         notes: booked.notes
       }) : {},
       relatedWork,
+      coordinationNotes,
       sourceRefs: {
         soldMessageId: sold.messageId,
         bookedMessageId: booked ? booked.messageId : "",
@@ -583,7 +630,8 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
     active: jobs.filter(job => job.stage === "SOLD_ACTIVE" || job.stage === "SOLD_PENDING_MATCH").length,
     done: jobs.filter(job => job.stage === "SOLD_DONE_FOLLOW_UP_LATER").length,
     fuzzyComboMatches: jobs.filter(job => job.comboMatch === "fuzzy").length,
-    pendingComboMatch: jobs.filter(job => job.stage === "SOLD_PENDING_MATCH").length
+    pendingComboMatch: jobs.filter(job => job.stage === "SOLD_PENDING_MATCH").length,
+    coordinationNotes: jobs.reduce((n, job) => n + (job.coordinationNotes || []).length, 0)
   };
 
   return {
@@ -627,6 +675,121 @@ function pickComboMatches_(sold, rows, isTbd) {
   });
 }
 
+/* ---------------------------------------------------------------------------
+ * Coordination notes
+ *
+ * The install coordinators work the COMBO LOG by hand — a permit note here, a
+ * payment note there, "EMAILED JAY 7/29 AL" in the JOB COMPLETED column of a
+ * TBD row. Until now the tracker showed a handful of those as chips and
+ * dropped the rest, so the HCA saw "no install date" without the sentence
+ * explaining why.
+ *
+ * Every note column on every matched row is collected instead, labelled with
+ * the column it came from and which sheet it was on, so a TBD electrical note
+ * is not mistaken for the HVAC row's.
+ * ------------------------------------------------------------------------- */
+
+const COORDINATION_NOTE_FIELDS = [
+  { key: "jobNotes", label: "Job notes" },
+  { key: "permitNotes", label: "Permit" },
+  { key: "paymentNotes", label: "Payment" },
+  { key: "paymentMethod", label: "Payment method" },
+  { key: "mechanical", label: "Mechanical permit" },
+  { key: "electrical", label: "Electrical permit" },
+  { key: "electricalRequested", label: "Electrical requested" },
+  { key: "ductCleaning", label: "Duct cleaning" },
+  { key: "registration", label: "Equipment registration" },
+  { key: "jobCompleted", label: "Job completed" }
+];
+
+/* All-caps words that show up at the end of a note and are not somebody's
+   initials. Without this list "PAID IN FULL PIF" reads as a note by "PIF". */
+const NOT_INITIALS = [
+  "TBD", "HOA", "PIF", "COD", "ACH", "EFT", "HVAC", "ELEC", "MECH", "WH",
+  "AC", "HP", "DF", "NA", "OK", "NO", "YES", "ASAP", "EOD", "AM", "PM",
+  "CC", "PO", "SO", "ETA", "RTU", "AHU", "DIY", "GC", "HO"
+];
+
+function isPlaceholderNote_(text) {
+  const t = cleanText_(text).toUpperCase();
+  if (!t) return true;
+  if (/^[-–—_.*x\s]+$/i.test(t)) return true;
+  return t === "N/A" || t === "NA" || t === "NONE" || t === "0";
+}
+
+/*
+ * The coordinators stamp their notes "EMAILED JAY 7/29 AL" — what happened,
+ * when, and who. Pulling the date and the initials out lets the tracker sort
+ * and attribute them; the note text is left whole either way, so nothing is
+ * lost if the convention was not followed.
+ */
+function parseNoteStamp_(text, contextIso) {
+  const raw = cleanText_(text);
+  const out = { date: "", initials: "" };
+
+  const date = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if (date) {
+    const month = Number(date[1]);
+    const day = Number(date[2]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      let year = date[3] ? Number(date[3]) : Number(String(contextIso || "").slice(0, 4));
+      if (!year) year = Number(Utilities.formatDate(new Date(), SOLD_TRACKER_CONFIG.timeZone, "yyyy"));
+      if (year < 100) year += 2000;
+      out.date = year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    }
+  }
+
+  /* Initials only at the very end, and only when there is a note in front of
+     them — a cell containing nothing but "AL" is not an attributed note. */
+  const tail = raw.match(/\s([A-Z]{2,3})[.\s]*$/);
+  if (tail && NOT_INITIALS.indexOf(tail[1]) === -1 && raw.split(/\s+/).length >= 3) {
+    out.initials = tail[1];
+  }
+  return out;
+}
+
+function buildCoordinationNotes_(rows, primaryCombo) {
+  const notes = [];
+  const seen = {};
+
+  (rows || []).forEach(row => {
+    COORDINATION_NOTE_FIELDS.forEach(field => {
+      const text = cleanText_(row[field.key]);
+      if (isPlaceholderNote_(text)) return;
+
+      /* On a TBD tab the JOB COMPLETED column is repurposed as a live action
+         note — "AMBER IS WORKING ON THIS 7/29 AL" — so labelling it
+         "Job completed" there would say the opposite of what it means. */
+      const label = (row.isTbd && field.key === "jobCompleted") ? "TBD status" : field.label;
+
+      const key = (label + "|" + row.sourceSheet + "|" + text).toUpperCase();
+      if (seen[key]) return;
+      seen[key] = true;
+
+      const stamp = parseNoteStamp_(text, row.installDate);
+      notes.push(compactObject_({
+        source: "COMBO LOG",
+        sheet: row.sourceSheet,
+        department: row.department,
+        label: label,
+        text: text,
+        on: stamp.date,
+        by: stamp.initials,
+        onPrimaryRow: primaryCombo && row === primaryCombo ? true : ""
+      }));
+    });
+  });
+
+  /* Dated notes first, newest first; undated ones keep sheet order behind them
+     rather than being sorted arbitrarily. */
+  return notes.sort((a, b) => {
+    if (a.on && b.on) return a.on < b.on ? 1 : (a.on > b.on ? -1 : 0);
+    if (a.on) return -1;
+    if (b.on) return 1;
+    return 0;
+  }).slice(0, 24);
+}
+
 function buildRelatedWork_(sold, rows, primaryCombo) {
   const soldDate = sold.soldDate ? new Date(sold.soldDate) : null;
 
@@ -667,6 +830,232 @@ function determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatch
 
   if (completed) return "SOLD_DONE_FOLLOW_UP_LATER";
   return "SOLD_PENDING_MATCH";
+}
+
+/* ---------------------------------------------------------------------------
+ * Email updates
+ *
+ * Everything said about a homeowner by email that is not a ServiceTitan alert
+ * — the coordinator chasing a panel upgrade, the HCA reporting the customer
+ * moved money around, the permit office reply. At the 1:1 that correspondence
+ * is the story of the deal, and it was previously only findable by searching
+ * Gmail by hand.
+ *
+ * The reader and summariser are deliberately the same shape as the ones in
+ * daily-recap.gs. Those live in a separate Apps Script project and cannot be
+ * imported; if the signature-trimming rules change in one, change both.
+ * ------------------------------------------------------------------------- */
+
+function readDealEmailNotes_(customer, sinceDays) {
+  const name = cleanText_(customer);
+  if (name.length < 4) return [];
+
+  const exclude = ' -from:' + SOLD_TRACKER_CONFIG.serviceTitanFrom + ' -subject:"Daily Recap"';
+  const window = " newer_than:" + Math.max(7, Math.min(180, sinceDays || 90)) + "d";
+  const cap = SOLD_TRACKER_CONFIG.emailNoteThreadsPerJob;
+
+  let threads = [];
+  try {
+    threads = GmailApp.search('"' + name.replace(/"/g, "") + '"' + exclude + window, 0, cap);
+    /* Internal mail usually says the surname only — "any update on Manrao?" —
+       so fall back, but only to a token distinctive enough to stand alone. */
+    if (!threads.length) {
+      const tokens = name.split(/\s+/).filter(t => t.length >= 6 && !/^and$/i.test(t));
+      const distinctive = tokens[tokens.length - 1];
+      if (distinctive) {
+        threads = GmailApp.search('"' + distinctive + '"' + exclude + window, 0, cap);
+      }
+    }
+  } catch (err) {
+    Logger.log("Email note search failed for " + name + ": " + err);
+    return [];
+  }
+
+  const notes = [];
+  threads.forEach(thread => {
+    let messages = [];
+    try { messages = thread.getMessages(); } catch (err) { return; }
+    /* The last word on a thread is the one that matters. */
+    const msg = messages[messages.length - 1];
+    if (!msg) return;
+
+    const who = emailSenderName_(msg.getFrom());
+    const summary = summariseDealEmail_(msg.getPlainBody(), who);
+    if (!summary) return;
+
+    notes.push({
+      on: Utilities.formatDate(msg.getDate(), SOLD_TRACKER_CONFIG.timeZone, "yyyy-MM-dd"),
+      from: who,
+      /* "Re: FW: Sold Estimate Alert" needs every prefix off, not just one. */
+      subject: String(msg.getSubject() || "").replace(/^((re|fw|fwd)\s*:\s*)+/i, "").trim(),
+      text: summary,
+      link: "https://mail.google.com/mail/u/0/#all/" + thread.getId(),
+      receivedMs: msg.getDate().getTime()
+    });
+  });
+
+  notes.sort((a, b) => b.receivedMs - a.receivedMs);
+  return notes.slice(0, SOLD_TRACKER_CONFIG.maxEmailNotesPerJob).map(n => {
+    delete n.receivedMs;
+    return n;
+  });
+}
+
+/*
+ * The sender's own words, trimmed to something readable at a glance.
+ *
+ * Everyone here signs with name, title, direct line, address. The signature
+ * has to be cut rather than filtered line by line: "Amber Maddalena" and
+ * "Comfort Advisor" are ordinary-looking lines and only their position gives
+ * them away. So the first signature marker ends the message and nothing after
+ * it is kept.
+ */
+function summariseDealEmail_(body, senderName) {
+  const own = emailOwnText_(body);
+  const who = cleanText_(senderName).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const out = [];
+
+  const lines = String(own || "").split(/\r?\n/).map(l => l.trim());
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+
+    /* Signature starts here — stop, do not merely skip. */
+    if (who && line.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === who) break;
+    if (line.length < 45 && /\b(advisor|manager|coordinator|consultant|supervisor|director|specialist|representative|technician)\s*$/i.test(line)) break;
+    if (/cmheating\.com|^www\.|\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/i.test(line)) break;
+    if (/^(warmest regards|regards|thank you|thanks|best|sincerely)[,!]?\s*$/i.test(line)) break;
+
+    /* Quote scaffolding, not signature — skip and keep reading. */
+    if (/^(on .*wrote:|from:|sent:|to:|cc:|subject:)/i.test(line)) continue;
+    if (/^(sent from my|get outlook)\b/i.test(line)) continue;
+    if (/^[-_=]{3,}$/.test(line)) continue;
+
+    out.push(line);
+    if (out.length >= 3) break;
+  }
+
+  const text = out.join(" ").replace(/\s+/g, " ").trim();
+  if (text.length <= 220) return text;
+  return text.slice(0, 217).replace(/\s+\S*$/, "") + "...";
+}
+
+/* Everything before the quoted original. */
+function emailOwnText_(body) {
+  const kept = [];
+  const lines = String(body || "").split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*>/.test(line)) break;
+    if (/^\s*On\s.+\swrote:\s*$/.test(line)) break;
+    if (/^\s*On\s.+<[^>]*$/.test(line)) break;
+    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(line)) break;
+    kept.push(line);
+  }
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function emailSenderName_(from) {
+  const m = String(from || "").match(/^\s*"?([^"<]+?)"?\s*</);
+  if (m) return m[1].trim();
+  return String(from || "").replace(/@cmheating\.com/i, "").trim();
+}
+
+/*
+ * Attaches email updates to the payload within a search budget.
+ *
+ * A Gmail search per job would be a couple of hundred round trips an hour, so
+ * the previous payload's notes are carried forward and only stale ones are
+ * searched again. Live jobs are refreshed before done ones, and oldest first,
+ * so the budget goes where someone is actually waiting on an answer.
+ */
+const EMAIL_REFRESH_PRIORITY = {
+  SOLD_NEEDS_ATTENTION: 0,
+  SOLD_PENDING_MATCH: 1,
+  SOLD_ACTIVE: 2,
+  SOLD_DONE_FOLLOW_UP_LATER: 3
+};
+
+function attachEmailUpdates_(payload, previousById, now) {
+  const cfg = SOLD_TRACKER_CONFIG;
+  const stats = { searched: 0, reused: 0, deferred: 0, disabled: false };
+
+  if (!cfg.emailNotesEnabled) {
+    stats.disabled = true;
+    return stats;
+  }
+
+  const nowMs = now.getTime();
+  const freshMs = cfg.emailNoteRefreshHours * 3600 * 1000;
+
+  /* Carry everything forward first, so a job that never gets searched this run
+     still shows whatever was found last time rather than going blank. */
+  payload.jobs.forEach(job => {
+    const prev = previousById[job.id];
+    if (prev && prev.emailUpdates) job.emailUpdates = prev.emailUpdates;
+    if (prev && prev.emailCheckedAt) job.emailCheckedAt = prev.emailCheckedAt;
+  });
+
+  const order = payload.jobs.slice().sort((a, b) => {
+    const pa = EMAIL_REFRESH_PRIORITY[a.stage], pb = EMAIL_REFRESH_PRIORITY[b.stage];
+    if (pa !== pb) return (pa === undefined ? 9 : pa) - (pb === undefined ? 9 : pb);
+    const ta = a.emailCheckedAt ? new Date(a.emailCheckedAt).getTime() : 0;
+    const tb = b.emailCheckedAt ? new Date(b.emailCheckedAt).getTime() : 0;
+    return ta - tb;
+  });
+
+  let budget = cfg.emailNoteMaxSearchesPerRun;
+
+  order.forEach(job => {
+    const checkedMs = job.emailCheckedAt ? new Date(job.emailCheckedAt).getTime() : 0;
+    if (checkedMs && (nowMs - checkedMs) < freshMs) { stats.reused++; return; }
+    if (budget <= 0) { stats.deferred++; return; }
+
+    budget--;
+    stats.searched++;
+    job.emailUpdates = readDealEmailNotes_(job.customer, cfg.emailNoteLookbackDays);
+    job.emailCheckedAt = isoDateTime_(now);
+  });
+
+  /* An empty array round-trips through Firebase as a missing key, which would
+     look identical to "never searched". Drop it and let emailCheckedAt say. */
+  payload.jobs.forEach(job => {
+    if (job.emailUpdates && !job.emailUpdates.length) delete job.emailUpdates;
+  });
+
+  return stats;
+}
+
+/*
+ * Last run's payload, used only as a cache for email updates. A failure here
+ * is not worth stopping a sync over — it just means every job looks unchecked
+ * and the budget starts from scratch.
+ */
+function readSoldTrackerFromFirebase_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const baseUrl = (props.getProperty("FIREBASE_DATABASE_URL") || "").replace(/\/$/, "");
+    if (!baseUrl) return {};
+
+    const explicitToken = props.getProperty("FIREBASE_AUTH_TOKEN") || "";
+    const authToken = explicitToken || getFirebaseAnonymousIdToken_();
+    const url = baseUrl + "/" + SOLD_TRACKER_CONFIG.firebasePath +
+      ".json?auth=" + encodeURIComponent(authToken);
+
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (response.getResponseCode() !== 200) return {};
+
+    const parsed = JSON.parse(response.getContentText() || "null");
+    const jobs = parsed && parsed.jobs;
+    const list = Array.isArray(jobs) ? jobs : (jobs ? Object.keys(jobs).map(k => jobs[k]) : []);
+
+    const byId = {};
+    list.forEach(job => { if (job && job.id) byId[job.id] = job; });
+    return byId;
+  } catch (err) {
+    Logger.log("Could not read the previous tracker payload: " + err);
+    return {};
+  }
 }
 
 function pushSoldTrackerToFirebase_(payload) {
