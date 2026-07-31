@@ -1508,6 +1508,153 @@ function sendEmailSafe_(message) {
   }
 }
 
+/* --------------------------------------------------------------------- api */
+
+/*
+ * Serves the recap log as JSON so the 1:1 prep tool can read it, the same way
+ * leaderboard.html already reads its aggregator.
+ *
+ *   ?hca=Kyle McAlister   one rep; omit for everyone
+ *   ?days=14              window, defaulting to the 14-day 1:1 cycle
+ *   ?key=...              required only once recapApiKey is set (see below)
+ *
+ * Deploy as a web app, execute as yourself, access "Anyone with the link".
+ *
+ * This carries customer names, prices and objections. Set a Script Property
+ * named recapApiKey and the endpoint will demand it; until you do it answers
+ * anyone who has the URL and says so in the payload.
+ */
+function doGet(e) {
+  const p = (e && e.parameter) ? e.parameter : {};
+  const configuredKey = readScriptProperty_("recapApiKey");
+
+  if (configuredKey && String(p.key || "") !== configuredKey) {
+    return jsonOut_({ ok: false, error: "unauthorized" });
+  }
+
+  try {
+    const days = Math.max(1, Math.min(120, Number(p.days) || 14));
+    const payload = buildRecapApiPayload_(days, p.hca || "");
+    if (!configuredKey) {
+      payload.unsecured = true;
+      payload.warning = "No recapApiKey set — anyone with this URL can read customer names and prices.";
+    }
+    return jsonOut_(payload);
+  } catch (err) {
+    return jsonOut_({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+}
+
+function jsonOut_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function readScriptProperty_(name) {
+  try {
+    return PropertiesService.getScriptProperties().getProperty(name) || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+/*
+ * Rolls the raw log into what a 1:1 actually needs. The summarising happens
+ * here rather than in the page so the brief stays a rendering job, and so the
+ * same numbers are available to anything else that asks.
+ */
+function buildRecapApiPayload_(days, hcaFilter) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const today = new Date();
+  const from = new Date(today.getTime() - (days - 1) * 86400000);
+  const fromIso = Utilities.formatDate(from, cfg.timeZone, "yyyy-MM-dd");
+  const toIso = Utilities.formatDate(today, cfg.timeZone, "yyyy-MM-dd");
+
+  const book = getLogSpreadsheet_();
+  const wanted = String(hcaFilter || "").trim().toLowerCase();
+
+  const logRows = readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
+    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso)
+    .filter(r => !wanted || String(r[1]).toLowerCase() === wanted);
+
+  const compRows = readSheetRows_(book.ss, cfg.complianceSheetName, COMPLIANCE_HEADERS.length)
+    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso)
+    .filter(r => !wanted || String(r[1]).toLowerCase() === wanted);
+
+  const byName = {};
+  const ensure = name => {
+    if (!byName[name]) {
+      byName[name] = {
+        name: name, appointments: 0, outcomes: {},
+        offered: { oneTime: 0, monthly: 0, noFigure: 0 },
+        objections: [], undated: [], waterHeaterPresented: 0,
+        followUps: [], daysScheduled: 0, daysReplied: 0, rows: []
+      };
+    }
+    return byName[name];
+  };
+
+  logRows.forEach(r => {
+    const h = ensure(String(r[1]));
+    const outcome = String(r[4] || "NOT GIVEN");
+    const amount = Number(r[6]);
+    const monthly = String(r[7]) === "Monthly";
+
+    h.appointments++;
+    h.outcomes[outcome] = (h.outcomes[outcome] || 0) + 1;
+    if (!isFinite(amount) || !r[6]) h.offered.noFigure++;
+    else if (monthly) h.offered.monthly += amount;
+    else h.offered.oneTime += amount;
+
+    if (/^y/i.test(String(r[8] || ""))) h.waterHeaterPresented++;
+
+    /* Objections are the point of a 1:1, so they travel with enough context to
+       open a conversation rather than as bare strings. */
+    if (outcome !== "SOLD" && r[10]) {
+      h.objections.push({ date: String(r[0]), customer: String(r[2] || ""), objection: String(r[10]) });
+    }
+    /* An open deal with no next step is the one that quietly dies. */
+    if (outcome !== "SOLD" && !String(r[9] || "").trim() && r[2]) {
+      h.undated.push({ date: String(r[0]), customer: String(r[2]) });
+    }
+
+    h.rows.push({
+      date: String(r[0]), customer: String(r[2] || ""), source: String(r[3] || ""),
+      outcome: outcome, offered: String(r[5] || ""),
+      amount: isFinite(amount) && r[6] !== "" ? amount : null,
+      unit: String(r[7] || ""), waterHeater: String(r[8] || ""),
+      nextFollowUp: String(r[9] || ""), objection: String(r[10] || "")
+    });
+  });
+
+  compRows.forEach(r => {
+    const h = ensure(String(r[1]));
+    h.daysScheduled++;
+    if (String(r[2]) === "Yes") h.daysReplied++;
+    if (r[4]) h.followUps.push({ date: String(r[0]), text: String(r[4]) });
+  });
+
+  const hcas = Object.keys(byName).sort().map(name => {
+    const h = byName[name];
+    const sold = h.outcomes["SOLD"] || 0;
+    h.sold = sold;
+    h.closeRate = h.appointments ? Math.round((sold / h.appointments) * 100) : null;
+    h.waterHeaterRate = h.appointments ? Math.round((h.waterHeaterPresented / h.appointments) * 100) : null;
+    h.replyRate = h.daysScheduled ? Math.round((h.daysReplied / h.daysScheduled) * 100) : null;
+    return h;
+  });
+
+  return { ok: true, generated: new Date().toISOString(), days: days, from: fromIso, to: toIso, hcas: hcas };
+}
+
+function readSheetRows_(ss, name, width) {
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) return [];
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  return sheet.getRange(2, 1, last - 1, width).getValues();
+}
+
 /* ---------------------------------------------------------------- triggers */
 
 function installDailyRecapTriggers() {

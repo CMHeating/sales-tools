@@ -203,6 +203,44 @@ reconstruct leads that are already sitting in it untouched.
    field is a one-time dollar amount, so a monthly cannot be written into it
    directly.
 
+## Feeding the 1:1 prep tool
+
+`doGet` serves the log as JSON, the same pattern `leaderboard.html` already
+uses for its aggregator. Deploy the script as a web app — execute as yourself,
+access "Anyone with the link".
+
+```
+?hca=Kyle McAlister    one rep; omit for everyone
+?days=14               window, defaulting to the 14-day 1:1 cycle
+?key=...               required once recapApiKey is set
+```
+
+The rolling-up happens server side, so the brief is a rendering job and the
+same figures are available to anything else that asks. Per rep, over the
+window:
+
+| | |
+|---|---|
+| `appointments`, `outcomes`, `closeRate` | volume and conversion |
+| `offered.oneTime` / `.monthly` / `.noFigure` | value, units kept apart |
+| `objections` | each with its date and customer — the 1:1 material |
+| `undated` | open deals with no next step, the ones that quietly die |
+| `waterHeaterRate` | attach rate |
+| `followUps` | backlog work reported |
+| `replyRate` | days scheduled against days answered |
+| `rows` | the raw appointments behind all of it |
+
+Objections travel with their customer and date rather than as bare strings,
+because "price" on its own starts no conversation while "Bob Roe, Tuesday,
+going over with wife" does.
+
+### Securing it
+
+The payload carries customer names, prices and objections. Set a Script
+Property named `recapApiKey` and the endpoint will demand a matching `key`
+parameter. Until that property exists it answers anyone holding the URL, and
+says so in the response via `unsecured: true` — visible rather than silent.
+
 ## What the ServiceTitan alerts can and cannot tell us
 
 Verified against real alert emails on 2026-07-30.
