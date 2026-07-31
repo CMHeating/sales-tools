@@ -127,6 +127,32 @@ grouped by HCA, tagged `[SOLD]` / `[ESTIMATE]` / `[FOLLOW-UP NEEDED]`, including
 lead source and the objection/holdback for anything not sold. Flag any HCA who
 was scheduled to work and did not reply.
 
+### Recovering a missed day
+
+The nightly collect only counts replies whose thread carries **that** day's
+date, and Gmail is only searched two days back. A night nobody collected is
+therefore not merely uncollected — it becomes unreachable once it falls out of
+that window.
+
+```
+backfillRecapForDate("2026-07-30")
+backfillYesterday()
+```
+
+Both run the full collection against a past day: replies parsed, rows written,
+compliance recorded, digest sent with a `Recap Backfill —` subject. Gmail is
+searched far enough back to actually contain that day rather than the usual two.
+
+Safe to run repeatedly — rows are keyed by date + HCA + customer, so a second
+pass writes nothing. A backfill deliberately does not read or advance the
+last-run marker, since that marker tracks the live nightly run and moving it
+would make genuinely late replies to other nights look already reported.
+
+Use it when the script was deployed after a night had already happened, a
+trigger failed, or replies arrived long after the log moved on. `Reply
+Compliance` is where a gap shows up: a date with no rows for people who were
+scheduled is a night that needs backfilling.
+
 ## Mapping onto the tracker lead schema
 
 Tracker leads (`const leads` in each `tracker-*.html`) use this shape:

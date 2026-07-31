@@ -460,11 +460,49 @@ function buildNudgeBody_(hca, dateLabel) {
 
 /* --------------------------------------------------------------- collect */
 
-function collectRecapReplies() {
+function collectRecapReplies() { return runCollection_(new Date(), false); }
+
+/*
+ * Collects and logs a day that was missed — the script was not deployed yet,
+ * a trigger failed, or the log had already moved on when the replies landed.
+ *
+ * Safe to run as often as you like. Rows are keyed by date + HCA + customer,
+ * so a second pass over the same day writes nothing.
+ *
+ *   backfillRecapForDate("2026-07-30")
+ *
+ * Gmail is searched far enough back to actually reach that day, rather than
+ * the two-day window a normal night uses.
+ */
+function backfillRecapForDate(isoDate) {
+  const m = String(isoDate || "").match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) throw new Error('Pass a date as "YYYY-MM-DD", e.g. backfillRecapForDate("2026-07-30")');
+  const when = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  if (isNaN(when.getTime())) throw new Error("Unrecognised date: " + isoDate);
+  return runCollection_(when, true);
+}
+
+/* Yesterday, for the common case of noticing the morning after. */
+function backfillYesterday() {
+  return runCollection_(new Date(new Date().getTime() - 24 * 60 * 60 * 1000), true);
+}
+
+function runCollection_(when, isBackfill) {
   const now = new Date();
-  const plan = buildTodayPlan_(now);
-  const lastRun = readLastDigestRun_();
-  const replies = findRecapReplies_(plan.dateLabel, lastRun).replies;
+  const plan = buildTodayPlan_(when);
+
+  /* A backfill must not consume or advance the last-run marker: that marker
+     tracks the live nightly run, and moving it would make genuinely late
+     replies to other nights look already-reported. */
+  const lastRun = isBackfill ? null : readLastDigestRun_();
+
+  /* Reach far enough back to actually contain the target day. */
+  const ageDays = Math.max(0, Math.round((now.getTime() - when.getTime()) / 86400000));
+  const lookback = isBackfill
+    ? Math.max(DAILY_RECAP_CONFIG.replyLookbackDays, ageDays + 2)
+    : DAILY_RECAP_CONFIG.replyLookbackDays;
+
+  const replies = findRecapReplies_(plan.dateLabel, lastRun, lookback).replies;
 
   const byHca = {};
   const late = [];
@@ -514,12 +552,13 @@ function collectRecapReplies() {
   sendEmailSafe_({
     to: [DAILY_RECAP_CONFIG.managerEmail],
     subject: (DAILY_RECAP_CONFIG.TEST_MODE ? "[TEST] " : "") +
-      "Recap Digest — " + plan.dateLabel,
+      (isBackfill ? "Recap Backfill — " : "Recap Digest — ") + plan.dateLabel,
     body: body
   });
 
-  writeLastDigestRun_(now);
-  Logger.log("Digest sent. " + Object.keys(byHca).length + " replied, " + missing.length +
+  if (!isBackfill) writeLastDigestRun_(now);
+  Logger.log((isBackfill ? "Backfill" : "Digest") + " for " + plan.dateLabel + ": " +
+    Object.keys(byHca).length + " replied, " + missing.length +
     " missing, " + late.length + " late, " + logResult.written + " row(s) logged.");
   return {
     replied: Object.keys(byHca).length, missing: missing.length,
@@ -539,9 +578,10 @@ function collectRecapReplies() {
  * after the 8:15pm cutoff — so those come back flagged late, bounded to ones
  * that arrived since the previous digest run so they are reported exactly once.
  */
-function findRecapReplies_(dateLabel, sinceDate) {
+function findRecapReplies_(dateLabel, sinceDate, lookbackDays) {
   const cfg = DAILY_RECAP_CONFIG;
-  const query = 'subject:"' + cfg.subjectPrefix + '" newer_than:' + cfg.replyLookbackDays + "d";
+  const days = lookbackDays || cfg.replyLookbackDays;
+  const query = 'subject:"' + cfg.subjectPrefix + '" newer_than:' + days + "d";
   const out = [];
 
   let threads = [];
