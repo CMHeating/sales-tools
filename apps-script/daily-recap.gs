@@ -344,7 +344,9 @@ function parseRecapReply_(rawBody) {
   let lastKey = null;
 
   const commit = () => {
-    if (current && (current.customer || current.outcome)) entries.push(finalizeEntry_(current));
+    if (current && (current.customer || current.outcome) && !isPlaceholderValue_(current.customer)) {
+      entries.push(finalizeEntry_(current));
+    }
     current = null;
     lastKey = null;
   };
@@ -357,10 +359,21 @@ function parseRecapReply_(rawBody) {
     const key = idx === -1 ? null : fieldKeyFor_(line.slice(0, idx).toLowerCase());
 
     if (key === null) {
+      /* A field label can arrive without its colon. The objection prompt ends
+         in "?" and reps retype or reflow it as "...completing the sale?" with
+         the answer beneath, which otherwise loses both the label and the
+         answer — and that prompt collects the most useful thing they write. */
+      const bare = fieldKeyFor_(trimmed.toLowerCase());
+      if (bare !== null && /[?:*]$/.test(trimmed)) {
+        if (bare === "dayFollowUps") { commit(); return; }
+        if (!current) { lastKey = null; return; }
+        lastKey = bare;
+        return;
+      }
+
       /* Mail clients hard-wrap long answers, so a line carrying no field label
          is the tail of the previous answer rather than noise. Without this the
-         wrapped remainder is lost — frequently the entire objection, which is
-         the longest thing a rep writes. */
+         wrapped remainder is lost. */
       if (current && lastKey && !isSignOffLine_(trimmed)) {
         current[lastKey] = (current[lastKey] + " " + trimmed).replace(/\s+/g, " ").trim();
       }
@@ -400,10 +413,16 @@ function parseRecapReply_(rawBody) {
   return dedupeEntries_(entries);
 }
 
-/* Sign-offs and the template's own trailing instructions sit right after the
-   last answer, where they would otherwise be swallowed as a continuation. */
+/*
+ * Lines that sit next to an answer but are not part of it: sign-offs, the
+ * template's own trailing instruction, and the headers reps add when they
+ * number their appointments ("Appointment 2"). Each would otherwise be
+ * swallowed onto the end of the answer above it.
+ */
 function isSignOffLine_(line) {
-  return /^(thanks|thank you|thx|regards|best|cheers|sincerely|sent from my|get outlook|repeat the block)\b/i.test(line);
+  const l = String(line || "").replace(/^\*+\s*/, "").trim();
+  if (/^appointment\s*#?\s*\d+\b/i.test(l)) return true;
+  return /^(thanks|thank you|thx|regards|best|cheers|sincerely|sent from my|get outlook|repeat the block)\b/i.test(l);
 }
 
 function fieldKeyFor_(label) {
@@ -428,6 +447,9 @@ function fieldKeyFor_(label) {
    before it is interpreted. "scheduleing pro make an" + "appoint" has to be
    whole before the lead source can be resolved. */
 function finalizeEntry_(entry) {
+  ["customer", "leadSource", "outcome", "deal", "waterHeater", "followUpDate", "objection"]
+    .forEach(k => { entry[k] = cleanValue_(entry[k]); });
+
   entry.leadSource = entry.leadSource ? normalizeLeadSource_(entry.leadSource) : "";
   entry.outcome = entry.outcome ? normalizeOutcome_(entry.outcome) : "";
   if (entry.deal) {
@@ -436,6 +458,34 @@ function finalizeEntry_(entry) {
     entry.dealIsMonthly = money.monthly;
   }
   return entry;
+}
+
+/*
+ * Strips the decoration reps' mail clients leave behind: bold asterisks that
+ * survive HTML-to-text conversion, and the square brackets of a fill-in-the-
+ * blank template. Left in place these reach the log and, worse, split the
+ * dedup key so "[Jane Doe]" and "Jane Doe" read as different customers.
+ */
+function cleanValue_(value) {
+  let v = String(value === null || value === undefined ? "" : value).trim();
+  v = v.replace(/^\*+\s*/, "").replace(/\s*\*+$/, "").trim();
+  v = v.replace(/^\[\s*/, "").replace(/\s*\]$/, "").trim();
+  return v;
+}
+
+/*
+ * True for an untouched template placeholder — "[CUSTOMER NAME 2]",
+ * "[OUTCOME 2]". Reps paste a two-appointment template and fill in one, and
+ * the leftover block would otherwise be logged as a real appointment.
+ *
+ * Requires an unbroken run of capitals so genuine short answers like "Y" and
+ * initials are not caught.
+ */
+function isPlaceholderValue_(value) {
+  const v = cleanValue_(value);
+  if (v.length < 4) return false;
+  if (/[a-z]/.test(v)) return false;
+  return /[A-Z]{3,}/.test(v);
 }
 
 /*
@@ -519,14 +569,41 @@ function parseDealAmount_(text) {
   const raw = String(text || "");
   const monthly = /\/\s*mo|\bper month\b|\bmonthly\b|\bmo\.\b/i.test(raw);
 
-  const match = raw.match(/\$?\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s*(k\b)?/i);
-  if (!match) return { amount: null, monthly: monthly };
+  /* Dollar-marked figures win. Equipment names are full of stray numbers —
+     "Silver 13 A/C package ... $14,000" and "Furnace-2 stage-$7300.00" both
+     yielded the model number instead of the price when the first number in the
+     line was taken. */
+  const dollars = raw.match(/\$\s*\d[\d,]*(?:\.\d+)?\s*k?/gi);
+  if (dollars && dollars.length) {
+    /* Reps quote multi-item deals on one line ("$7300.00 & ... $3450.00"), and
+       the figure worth recording is what was put in front of the customer in
+       total, so every dollar amount on the line is summed. */
+    let total = 0, any = false;
+    dollars.forEach(d => {
+      const m = d.match(/\$\s*(\d[\d,]*(?:\.\d+)?)\s*(k?)/i);
+      if (!m) return;
+      let n = Number(String(m[1]).replace(/,/g, ""));
+      if (!isFinite(n)) return;
+      if (m[2]) n = n * 1000;
+      total += n; any = true;
+    });
+    if (any) return { amount: total, monthly: monthly };
+  }
 
-  let n = Number(String(match[1]).replace(/,/g, ""));
-  if (!isFinite(n)) return { amount: null, monthly: monthly };
-  if (match[2]) n = n * 1000;                       // "18k" -> 18000
+  /* No dollar sign. A comma-grouped number is still clearly a price. */
+  let m = raw.match(/(\d{1,3}(?:,\d{3})+(?:\.\d+)?)/);
+  if (m) return { amount: Number(m[1].replace(/,/g, "")), monthly: monthly };
 
-  return { amount: n, monthly: monthly };
+  /* Bare number with a k suffix, e.g. "18k". */
+  m = raw.match(/\b(\d+(?:\.\d+)?)\s*k\b/i);
+  if (m) return { amount: Number(m[1]) * 1000, monthly: monthly };
+
+  /* A bare number only counts as a price when it is large enough to be one.
+     This is what keeps "2 stage" and "Silver 13" out of the totals. */
+  m = raw.match(/\b(\d{4,}(?:\.\d+)?)\b/);
+  if (m) return { amount: Number(m[1]), monthly: monthly };
+
+  return { amount: null, monthly: monthly };
 }
 
 /*
