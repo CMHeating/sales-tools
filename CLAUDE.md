@@ -23,9 +23,14 @@ These are non-negotiable and come from how the repo is actually maintained.
    something is broken and rewriting it.
 4. **Hosted logo, never base64:**
    `https://cmheating.github.io/sales-tools/cm-logo.webp`
-   (Some older files — `daily-brief.html`, `exec-summary.html`,
-   `hca-field-guide.html`, `system-overview.html` — still embed base64 images.
-   Don't add more; replace them opportunistically.)
+   The asset is committed at the repo root. `cm-logo.png` is the *same file*
+   under an older name — byte-identical, and actually WebP despite the
+   extension — kept because 18 files still point at it. Either URL works;
+   prefer `.webp` in new work.
+   The only remaining base64 images are the **nine photographs** in
+   `hca-field-guide.html`. Those are content, not the logo, and each would
+   need to be committed as its own asset — a separate job, not a find and
+   replace.
 5. **Google Apps Script: wrap URLs in single quotes.** A bare URL makes `//`
    parse as the start of a comment and silently breaks the script.
 6. **GitHub Pages → Apps Script fetches need `{ mode: 'no-cors' }`.**
