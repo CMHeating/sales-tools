@@ -160,6 +160,35 @@ created programmatically receive no connector access at all. Apps Script also
 reads the Exceptions sheet directly and runs its triggers in
 `America/Los_Angeles`, so there is no UTC/DST drift.
 
+### The recap log spreadsheet
+
+The first collect run creates the log, stores its id in Script Properties, and
+emails the link. Creating it from the script guarantees the script can write to
+it; a sheet made by hand and pasted into config is the usual source of
+permission trouble. Set `logSpreadsheetId` only to point at an existing log.
+
+| Tab | Contents |
+|---|---|
+| `Recap Log` | one row per appointment reported |
+| `Reply Compliance` | one row per scheduled HCA per day, replied Yes/No |
+| `Summary` | per-HCA rollup, outcomes, lead sources, missed days |
+
+One row per appointment is the grain worth keeping — anything coarser discards
+the detail the recap exists to collect. Reply Compliance is a separate tab
+because a non-reply has no appointment to attach to, and mixing the two would
+corrupt every count taken over the log.
+
+Writes are idempotent. Each row carries a key of date + HCA + customer, and
+existing keys are read before appending, because the collector runs nightly and
+can meet the same reply again through the late-reply path. A re-run adds
+nothing; a genuinely new appointment on the same day still appends.
+
+`Summary` is formulas rather than generated rows, so it recalculates by itself
+and cannot drift from the log. Clearing it does not touch the data underneath.
+
+If the spreadsheet cannot be written, the digest still goes out and says so
+explicitly rather than appearing to have logged the night.
+
 ### Schedule exception handling
 
 | Type | Effect |

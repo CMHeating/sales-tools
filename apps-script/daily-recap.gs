@@ -39,6 +39,17 @@ const DAILY_RECAP_CONFIG = {
   exceptionsSpreadsheetId: "1RIUfCH7ZXHfXiX1jjvCHuQp9pDWqpZB-IExpUBvGFzM",
   exceptionsSheetName: "",          // blank = first sheet
 
+  /* Leave logSpreadsheetId blank. The first collect run creates the sheet,
+     stores its id in Script Properties, and emails the link. Creating it from
+     the script guarantees the script can write to it — a sheet made by hand
+     and pasted in here is the usual source of permission trouble. Paste an id
+     only to point at an existing log. */
+  logSpreadsheetId: "",
+  logSpreadsheetTitle: "CM Heating — Daily Recap Log",
+  logSheetName: "Recap Log",
+  complianceSheetName: "Reply Compliance",
+  summarySheetName: "Summary",
+
   sendHour: 18,                     // 6:00pm Pacific
   collectHour: 20,                  // 8:15pm Pacific
   collectMinute: 15,
@@ -186,7 +197,24 @@ function collectRecapReplies() {
   Object.keys(byHca).forEach(n => { responded[n] = true; });
   const missing = plan.working.filter(h => !responded[h.name]);
 
-  const body = buildDigestBody_(plan, byHca, missing, late);
+  /* Logging runs before the digest so the digest can report what was written,
+     and is wrapped so a spreadsheet problem degrades to "digest still sent,
+     with the error stated" rather than losing the night's collection. */
+  let logResult = { ok: false, error: "", written: 0, skipped: 0, url: "", created: false };
+  try {
+    const book = getLogSpreadsheet_();
+    const wrote = appendRecapRows_(book.ss, plan, byHca);
+    appendComplianceRows_(book.ss, plan, byHca);
+    logResult = {
+      ok: true, error: "", written: wrote.written, skipped: wrote.skipped,
+      url: book.ss.getUrl(), created: book.created
+    };
+  } catch (err) {
+    logResult.error = err && err.message ? err.message : String(err);
+    Logger.log("Recap log write failed: " + logResult.error);
+  }
+
+  const body = buildDigestBody_(plan, byHca, missing, late, logResult);
   sendEmailSafe_({
     to: [DAILY_RECAP_CONFIG.managerEmail],
     subject: (DAILY_RECAP_CONFIG.TEST_MODE ? "[TEST] " : "") +
@@ -196,8 +224,11 @@ function collectRecapReplies() {
 
   writeLastDigestRun_(now);
   Logger.log("Digest sent. " + Object.keys(byHca).length + " replied, " + missing.length +
-    " missing, " + late.length + " late.");
-  return { replied: Object.keys(byHca).length, missing: missing.length, late: late.length };
+    " missing, " + late.length + " late, " + logResult.written + " row(s) logged.");
+  return {
+    replied: Object.keys(byHca).length, missing: missing.length,
+    late: late.length, logged: logResult.written
+  };
 }
 
 /*
@@ -463,7 +494,7 @@ function normalizeOutcome_(value) {
   return value.trim().toUpperCase();
 }
 
-function buildDigestBody_(plan, byHca, missing, late) {
+function buildDigestBody_(plan, byHca, missing, late, logResult) {
   const lines = [];
   lines.push("Recap digest for " + plan.dateLabel + " (" + plan.weekday + ")");
   if (DAILY_RECAP_CONFIG.TEST_MODE) {
@@ -534,7 +565,227 @@ function buildDigestBody_(plan, byHca, missing, late) {
     lines.push("Error: " + plan.exceptions.error);
   }
 
+  if (logResult) {
+    lines.push("");
+    if (logResult.ok) {
+      if (logResult.created) lines.push("Recap log created — this is day one.");
+      lines.push(logResult.written + " row(s) written to the log" +
+        (logResult.skipped ? ", " + logResult.skipped + " already recorded" : "") + ".");
+      if (logResult.url) lines.push(logResult.url);
+    } else {
+      lines.push("Recap log NOT updated — the digest above is the only record of tonight.");
+      lines.push("Error: " + logResult.error);
+    }
+  }
+
   return lines.join("\n");
+}
+
+/* ------------------------------------------------------------------- sheet */
+
+const RECAP_LOG_HEADERS = [
+  "Date", "HCA", "Customer", "Lead Source", "Outcome",
+  "Deal Offered", "Deal Amount", "Deal Unit",
+  "Water Heater", "Follow-up Date", "Objection",
+  "Logged At", "Key"
+];
+
+const COMPLIANCE_HEADERS = ["Date", "HCA", "Replied", "Appointments Reported", "Logged At"];
+
+/*
+ * One row per appointment, append-only. That grain is what makes the log
+ * pivotable later — anything coarser throws away the detail the recap exists
+ * to capture.
+ *
+ * The Key column is date + HCA + customer, and existing keys are read before
+ * writing. The collector runs nightly and can see the same reply again through
+ * the late-reply path, so writes have to be idempotent or the log silently
+ * inflates.
+ */
+function appendRecapRows_(ss, plan, byHca) {
+  const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.logSheetName, RECAP_LOG_HEADERS);
+  const existing = readExistingKeys_(sheet, RECAP_LOG_HEADERS.length);
+  const stamp = new Date();
+  const rows = [];
+  let skipped = 0;
+
+  Object.keys(byHca).sort().forEach(name => {
+    byHca[name].entries.forEach(e => {
+      const key = recapRowKey_(plan.isoDate, name, e.customer);
+      if (existing[key]) { skipped++; return; }
+      existing[key] = true;
+      rows.push([
+        plan.isoDate,
+        name,
+        e.customer || "",
+        e.leadSource || "",
+        e.outcome || "",
+        e.deal || "",
+        (e.dealAmount === null || e.dealAmount === undefined) ? "" : e.dealAmount,
+        e.deal ? (e.dealIsMonthly ? "Monthly" : "One-time") : "",
+        e.waterHeater || "",
+        e.followUpDate || "",
+        e.objection || "",
+        stamp,
+        key
+      ]);
+    });
+  });
+
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, RECAP_LOG_HEADERS.length).setValues(rows);
+  }
+  return { written: rows.length, skipped: skipped };
+}
+
+/*
+ * Who was scheduled and whether they answered, one row per HCA per day. Kept
+ * apart from the appointment log because a non-reply has no appointment to
+ * hang off, and mixing the two would corrupt every count taken over the log.
+ */
+function appendComplianceRows_(ss, plan, byHca) {
+  const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.complianceSheetName, COMPLIANCE_HEADERS);
+  const existing = readExistingKeys_(sheet, COMPLIANCE_HEADERS.length, 0, 1);
+  const stamp = new Date();
+  const rows = [];
+
+  plan.working.forEach(hca => {
+    const key = plan.isoDate + "|" + hca.name.toLowerCase();
+    if (existing[key]) return;
+    existing[key] = true;
+    const group = byHca[hca.name];
+    rows.push([
+      plan.isoDate,
+      hca.name,
+      group ? "Yes" : "No",
+      group ? group.entries.length : 0,
+      stamp
+    ]);
+  });
+
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, COMPLIANCE_HEADERS.length).setValues(rows);
+  }
+  return { written: rows.length };
+}
+
+function recapRowKey_(isoDate, hcaName, customer) {
+  const c = String(customer || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return isoDate + "|" + String(hcaName).toLowerCase() + "|" + c;
+}
+
+/* Reads keys already present so a re-run cannot double-write. Either the
+   dedicated Key column, or a composite of two columns when there is none. */
+function readExistingKeys_(sheet, width, colA, colB) {
+  const seen = {};
+  const last = sheet.getLastRow();
+  if (last < 2) return seen;
+
+  const values = sheet.getRange(2, 1, last - 1, width).getValues();
+  values.forEach(row => {
+    if (colA === undefined) {
+      const k = String(row[width - 1] || "").trim();
+      if (k) seen[k] = true;
+    } else {
+      const a = String(row[colA] || "").trim();
+      const b = String(row[colB] || "").trim().toLowerCase();
+      if (a && b) seen[a + "|" + b] = true;
+    }
+  });
+  return seen;
+}
+
+function ensureSheet_(ss, name, headers) {
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+      .setFontWeight("bold").setBackground("#1e293b").setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  return sheet;
+}
+
+/*
+ * Resolves the log spreadsheet, creating it the first time. The id lives in
+ * Script Properties rather than in this file so redeploying the script cannot
+ * orphan the existing log.
+ */
+function getLogSpreadsheet_() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const props = PropertiesService.getScriptProperties();
+  const id = cfg.logSpreadsheetId || props.getProperty("logSpreadsheetId");
+
+  if (id) {
+    try {
+      return { ss: SpreadsheetApp.openById(id), created: false };
+    } catch (err) {
+      Logger.log("Stored log spreadsheet unreachable, creating a new one: " + err);
+    }
+  }
+
+  const ss = SpreadsheetApp.create(cfg.logSpreadsheetTitle);
+  props.setProperty("logSpreadsheetId", ss.getId());
+
+  ensureSheet_(ss, cfg.logSheetName, RECAP_LOG_HEADERS);
+  ensureSheet_(ss, cfg.complianceSheetName, COMPLIANCE_HEADERS);
+  installSummaryFormulas_(ss);
+
+  /* A brand new spreadsheet still carries the default empty "Sheet1". */
+  const first = ss.getSheetByName("Sheet1");
+  if (first && ss.getSheets().length > 1) ss.deleteSheet(first);
+
+  sendEmailSafe_({
+    to: [cfg.managerEmail],
+    subject: "Daily Recap log created",
+    body: "The recap log spreadsheet has been created and will fill in from tonight:\n\n" +
+      ss.getUrl() + "\n\n" +
+      "Tabs:\n" +
+      "  " + cfg.logSheetName + " — one row per appointment reported\n" +
+      "  " + cfg.complianceSheetName + " — who was scheduled and whether they replied\n" +
+      "  " + cfg.summarySheetName + " — per-HCA rollup, formula-driven\n"
+  });
+
+  return { ss: ss, created: true };
+}
+
+/*
+ * The rollup is formulas rather than generated rows, so it recalculates on its
+ * own and cannot drift from the log. If someone clears it, the log underneath
+ * is untouched.
+ */
+function installSummaryFormulas_(ss) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const sheet = ensureSheet_(ss, cfg.summarySheetName, ["Per-HCA rollup"]);
+  const log = "'" + cfg.logSheetName + "'";
+  const comp = "'" + cfg.complianceSheetName + "'";
+
+  sheet.getRange("A1").setValue("Per-HCA rollup — all time").setFontWeight("bold");
+  sheet.getRange("A2").setFormula(
+    '=IFERROR(QUERY(' + log + '!A2:M, "select B, count(C), sum(G) where B is not null group by B label B \'HCA\', count(C) \'Appointments\', sum(G) \'Total Offered\'", 0), "No data yet")'
+  );
+
+  sheet.getRange("A12").setValue("Outcomes").setFontWeight("bold");
+  sheet.getRange("A13").setFormula(
+    '=IFERROR(QUERY(' + log + '!A2:M, "select E, count(C) where E is not null group by E label E \'Outcome\', count(C) \'Count\'", 0), "No data yet")'
+  );
+
+  sheet.getRange("E12").setValue("Lead sources").setFontWeight("bold");
+  sheet.getRange("E13").setFormula(
+    '=IFERROR(QUERY(' + log + '!A2:M, "select D, count(C) where D is not null group by D label D \'Lead Source\', count(C) \'Count\'", 0), "No data yet")'
+  );
+
+  sheet.getRange("A24").setValue("Reply rate by HCA").setFontWeight("bold");
+  sheet.getRange("A25").setFormula(
+    '=IFERROR(QUERY(' + comp + '!A2:E, "select B, count(C) where B is not null group by B label B \'HCA\', count(C) \'Days Scheduled\'", 0), "No data yet")'
+  );
+  sheet.getRange("D24").setValue("Days with no reply").setFontWeight("bold");
+  sheet.getRange("D25").setFormula(
+    '=IFERROR(QUERY(' + comp + '!A2:E, "select B, count(C) where C = \'No\' group by B label B \'HCA\', count(C) \'Missed\'", 0), "None")'
+  );
+
+  return sheet;
 }
 
 /* ------------------------------------------------------------- scheduling */
