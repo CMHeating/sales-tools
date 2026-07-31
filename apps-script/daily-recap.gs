@@ -124,16 +124,36 @@ function buildRecapBody_(hca, dateLabel) {
      codes, so nothing has to be looked up or remembered. The collector still
      accepts the old single letters — see normalizeLeadSource_/normalizeOutcome_
      — because reps who learned W/I/TF/R and S/E/F will keep typing them. */
+  /*
+   * Shaped by the first live night, when five reps produced five formats.
+   *
+   * Labels are short. The old objection prompt ran 73 characters, wrapped on
+   * every phone, and one rep retyped it without its trailing colon — losing
+   * both the prompt and the best answer of the night. Every label here fits on
+   * one line on a phone.
+   *
+   * Options stay inside the parentheses, before the colon. Anything after the
+   * colon is the answer, so options placed there would be captured as part of
+   * whatever the rep typed next.
+   *
+   * Plain hyphens, no em dashes: they survive every client's HTML-to-text
+   * conversion intact.
+   *
+   * A stated "None" path exists because a rep with no appointments abandoned
+   * the template entirely and wrote prose. Collectors still accept the older
+   * long labels, so replies in the previous format keep parsing.
+   */
   return "Hi " + hca.first + ",\n\n" +
-    "Please reply to this email with one block per appointment you ran today (" + dateLabel + ").\n\n" +
+    "One block per appointment you ran today (" + dateLabel + ").\n" +
+    "No appointments? Reply None and just fill in the last line.\n\n" +
     "Customer:\n" +
-    "Lead Source (Web / Inbound / Tech Flip / Revisit):\n" +
-    "Outcome (Sold / Estimate / Follow-up needed):\n" +
-    "What did you offer as a deal? (package/tier + price):\n" +
-    "Water Heater presented? (Y/N — interest level):\n" +
-    "Follow-up date (if not closed):\n" +
-    "If not sold — What is the objection or holdback from completing the sale?:\n\n" +
-    "Repeat the block if you ran more than one appointment.\n\n" +
+    "Source (Web / Inbound / Tech Flip / Revisit):\n" +
+    "Outcome (Sold / Estimate / Follow-up):\n" +
+    "Offered (package + price):\n" +
+    "Water heater (Y/N + interest):\n" +
+    "Next follow-up:\n" +
+    "Objection (if not sold):\n\n" +
+    "Ran more than one? Paste the block again below it.\n\n" +
     /* Day-level, so it sits outside the repeating block. A rep can work a full
        day on the existing backlog and run no appointments at all; without this
        their day reports as nothing. Deliberately avoids the word "customer",
@@ -432,13 +452,17 @@ function fieldKeyFor_(label) {
       label.indexOf("follow-ups on") !== -1 ||
       label.indexOf("follow ups on") !== -1) return "dayFollowUps";
   if (label.indexOf("customer") !== -1) return "customer";
-  if (label.indexOf("lead source") !== -1) return "leadSource";
-  /* Outcome is tested before the follow-up date because its own prompt now
-     spells out "Follow-up needed" and would otherwise match that branch. */
+  /* Both the short "Source" and the older "Lead Source". */
+  if (label.indexOf("source") !== -1) return "leadSource";
+  /* Outcome is tested before the follow-up branch because its own prompt lists
+     "Follow-up" as an option and would otherwise match there. */
   if (label.indexOf("outcome") !== -1) return "outcome";
   if (label.indexOf("water heater") !== -1) return "waterHeater";
-  if (label.indexOf("follow-up date") !== -1 || label.indexOf("follow up date") !== -1) return "followUpDate";
   if (label.indexOf("objection") !== -1 || label.indexOf("holdback") !== -1) return "objection";
+  /* Broad enough for "Next follow-up", "Follow-up date (if not closed)" and
+     plain "Follow-up". Safe here because the day-level section and Outcome
+     have both already been matched above. */
+  if (label.indexOf("follow-up") !== -1 || label.indexOf("follow up") !== -1) return "followUpDate";
   if (label.indexOf("deal") !== -1 || label.indexOf("offer") !== -1) return "deal";
   return null;
 }

@@ -15,32 +15,39 @@ Columns: Date, HCA Name, Type (Sick/Vacation/Swap), Notes
 
 ### Body
 
-Lead Source and Outcome list their options in full. Nothing has to be looked
-up or remembered, and there is no separate legend to keep in sync.
-
 ```
 Customer:
-Lead Source (Web / Inbound / Tech Flip / Revisit):
-Outcome (Sold / Estimate / Follow-up needed):
-What did you offer as a deal? (package/tier + price):
-Water Heater presented? (Y/N — interest level):
-Follow-up date (if not closed):
-If not sold — What is the objection or holdback from completing the sale?:
+Source (Web / Inbound / Tech Flip / Revisit):
+Outcome (Sold / Estimate / Follow-up):
+Offered (package + price):
+Water heater (Y/N + interest):
+Next follow-up:
+Objection (if not sold):
 
-Repeat the block if you ran more than one appointment.
+Ran more than one? Paste the block again below it.
 
 Follow-ups on older leads today (who + what happened):
 ```
 
-One block per appointment run that day. Reps repeat the block if they ran
-more than one.
+Shaped by the first live night, when five reps produced five different
+formats. Every rule here answers something that actually went wrong:
 
-The follow-up line is day-level and deliberately sits outside the repeating
-block. A rep can spend a whole day working the existing backlog and run no
-appointments at all — on the first live night one did exactly that — and
-without this their day reports as nothing. Its label avoids the word
-"customer", which the appointment block already claims as a field label, and
-is matched ahead of "Follow-up date" so the two never collide.
+- **Labels are short.** The previous objection prompt ran 73 characters,
+  wrapped on every phone, and one rep retyped it without its trailing colon —
+  losing the prompt and the best answer of the night. Every label now fits one
+  phone line.
+- **Options live inside the parentheses, before the colon.** Everything after
+  the colon is the answer, so options placed there get captured as part of
+  whatever the rep types next.
+- **Plain hyphens, no em dashes.** They survive every client's HTML-to-text
+  conversion unchanged.
+- **A stated `None` path.** A rep with no appointments abandoned the template
+  and wrote prose. `None` plus the follow-ups line is now an explicit answer.
+- **No placeholder blocks.** A rep pasted a two-block template, filled one, and
+  left `[CUSTOMER NAME 2]` behind, which logged as a real appointment.
+
+The collector still accepts the older long labels, so replies written in the
+previous format keep parsing.
 
 ### Accepted values
 
