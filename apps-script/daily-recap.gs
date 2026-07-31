@@ -1597,7 +1597,7 @@ function buildRecapApiPayload_(days, hcaFilter) {
         name: name, appointments: 0, outcomes: {},
         offered: { oneTime: 0, monthly: 0, noFigure: 0 },
         objections: [], undated: [], waterHeaterPresented: 0,
-        followUps: [], daysScheduled: 0, daysReplied: 0, rows: []
+        followUps: [], daysScheduled: 0, daysReplied: 0, missedDays: [], rows: []
       };
     }
     return byName[name];
@@ -1639,7 +1639,14 @@ function buildRecapApiPayload_(days, hcaFilter) {
   compRows.forEach(r => {
     const h = ensure(String(r[1]));
     h.daysScheduled++;
-    if (String(r[2]) === "Yes") h.daysReplied++;
+    if (String(r[2]) === "Yes") {
+      h.daysReplied++;
+    } else {
+      /* The dates themselves, not just a percentage. "Reported 80% of days"
+         is not something you can raise in a 1:1; "you missed Tuesday and
+         Thursday" is. */
+      h.missedDays.push({ date: String(r[0]), weekday: weekdayFromIso_(String(r[0])) });
+    }
     if (r[4]) h.followUps.push({ date: String(r[0]), text: String(r[4]) });
   });
 
@@ -1653,7 +1660,23 @@ function buildRecapApiPayload_(days, hcaFilter) {
     return h;
   });
 
-  return { ok: true, generated: new Date().toISOString(), days: days, from: fromIso, to: toIso, hcas: hcas };
+  return {
+    ok: true, generated: new Date().toISOString(), days: days,
+    from: fromIso, to: toIso,
+    /* So the 1:1 page can link straight to the full record rather than
+       reproducing it. */
+    logUrl: book.ss.getUrl(),
+    logSheetName: cfg.logSheetName,
+    complianceSheetName: cfg.complianceSheetName,
+    hcas: hcas
+  };
+}
+
+function weekdayFromIso_(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return "";
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  return isNaN(d.getTime()) ? "" : Utilities.formatDate(d, DAILY_RECAP_CONFIG.timeZone, "EEEE");
 }
 
 function readSheetRows_(ss, name, width) {

@@ -541,19 +541,31 @@ async function loadRecapFor(name){
 
     const h = (data.hcas || [])[0];
     qs("recapWho").textContent = "· " + name;
-    if(!h || !h.appointments){
-      qs("recapBody").innerHTML = '<p class="help">No recaps logged in the last ' + RECAP_DAYS + ' days.</p>';
+
+    /* A rep with nothing logged is not the same as a rep with nothing to
+       report — if they were scheduled and never answered, that is the
+       conversation. */
+    if(!h || (!h.appointments && !(h.missedDays || []).length)){
+      qs("recapBody").innerHTML = '<p class="help">No recaps logged in the last ' + RECAP_DAYS + ' days.</p>'
+        + recapLogLink(data);
       show("recapCard");
       return;
     }
-    renderRecap(h);
+    renderRecap(h, data);
     show("recapCard"); show("recapToNotes");
   }catch(e){
     /* Silent by design: a recap outage must not look like a scheduler fault. */
   }
 }
 
-function renderRecap(h){
+function recapLogLink(data){
+  if(!data || !data.logUrl) return "";
+  return '<p class="help" style="margin-top:12px">'
+    + '<a href="' + esc(data.logUrl) + '" target="_blank" rel="noopener">Open the daily recap log</a>'
+    + ' — every response, by day.</p>';
+}
+
+function renderRecap(h, data){
   const money = n => "$" + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const out = [];
 
@@ -588,6 +600,21 @@ function renderRecap(h){
     out.push('</ul>');
   }
 
+  /* Named days rather than a percentage. This is the part that turns into an
+     actual sentence in the meeting. */
+  const missed = h.missedDays || [];
+  if(missed.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Missed recaps ('
+      + missed.length + ' of ' + h.daysScheduled + ' scheduled)</strong></p>');
+    out.push('<ul style="margin:4px 0 0 18px">');
+    missed.slice(0, 10).forEach(m => out.push('<li>' + esc(m.weekday || "") + " " + esc(m.date) + '</li>'));
+    if(missed.length > 10) out.push('<li class="help">+' + (missed.length - 10) + ' more</li>');
+    out.push('</ul>');
+  } else if(h.daysScheduled){
+    out.push('<p class="help" style="margin-top:10px">Reported on all ' + h.daysScheduled + ' scheduled days.</p>');
+  }
+
+  out.push(recapLogLink(data));
   qs("recapBody").innerHTML = out.join("");
 
   const lines = ["Last " + RECAP_DAYS + " days: " + bits.join(" · ")];
@@ -599,6 +626,13 @@ function renderRecap(h){
     lines.push("", "Open with no next step:");
     h.undated.slice(0, 8).forEach(u => lines.push("  - " + u.customer));
   }
+  if(missed.length){
+    lines.push("", "Missed recaps (" + missed.length + " of " + h.daysScheduled + "):");
+    missed.slice(0, 10).forEach(m => lines.push("  - " + (m.weekday ? m.weekday + " " : "") + m.date));
+  }
+  /* The link rides along into the calendar invite, so the full record is one
+     tap away during the meeting. */
+  if(data && data.logUrl) lines.push("", "Full recap log: " + data.logUrl);
   recapSummaryText = lines.join("\n");
 }
 

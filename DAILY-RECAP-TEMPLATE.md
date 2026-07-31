@@ -228,7 +228,16 @@ window:
 | `waterHeaterRate` | attach rate |
 | `followUps` | backlog work reported |
 | `replyRate` | days scheduled against days answered |
+| `missedDays` | the actual dates missed, with weekday |
 | `rows` | the raw appointments behind all of it |
+
+`missedDays` names the days rather than only reporting a percentage. "Reported
+80% of days" is not something you can raise in a 1:1; "you missed Tuesday and
+Friday" is.
+
+The payload also carries `logUrl`, so the 1:1 page can link straight to the
+spreadsheet instead of reproducing it, and that link travels into the notes and
+therefore into the calendar invite.
 
 Objections travel with their customer and date rather than as bare strings,
 because "price" on its own starts no conversation while "Bob Roe, Tuesday,
