@@ -70,39 +70,46 @@ they naturally would ("BETTER HP $18,500", "BEST DF $249/mo"). The collector
 keeps the raw text and additionally parses out a figure when one is present, so
 nothing is lost when a rep writes it a way the parser does not expect.
 
-## Morning nudge (7:00am / 8:00am Pacific, daily)
+## Morning follow-up (7:00am / 8:00am Pacific, daily)
 
-Chases the *previous* day's recap. Anyone scheduled yesterday who never replied
-gets one reminder the next morning, timed against whether they are on shift
-when it lands:
+One pass over the previous day's recap, doing two things from a single Gmail
+read so the two halves can never disagree about who replied:
+
+| | |
+|---|---|
+| replied | a short acknowledgement, so reporting visibly lands |
+| no reply | one nudge |
+
+Acknowledging matters more than it looks. A rep who reports into silence stops
+reporting, and that costs a whole night's data rather than one field of it.
+
+Timing follows whether the rep is on shift the morning it arrives:
 
 | Run | Goes to |
 |---|---|
-| 7:00am | outstanding reps who are **working today** |
-| 8:00am | outstanding reps who are **off today** |
+| 7:00am | reps **working today** — thanked or nudged |
+| 8:00am | reps **off today** — thanked or nudged |
 
 A 7am admin request on someone's day off sets the wrong tone in a process
 people are still forming a habit around, so the day-off group gets the extra
-hour. Nobody appears in both runs.
+hour. The groups are disjoint; nobody appears in both.
 
-The nudge threads onto the original conversation (`Re: Daily Recap — <that
-day>`), so a reply is still attributed to the night it answers. It carries the
-short template inline rather than telling reps to scroll for it.
+Both messages thread onto the original conversation (`Re: Daily Recap — <that
+day>`), so any reply is still attributed to the night it answers.
 
-Nobody is nudged without checking first. Immediately before sending, the
-script reads that night's threads and drops anyone who already answered.
+The acknowledgement is deliberately factual — it confirms the report landed,
+counts the appointments, and offers help while anything is still open. It does
+not comment on specific deals, because putting an opinion about a customer in
+the manager's voice is his call, not the script's.
 
-Whether a rep replied is decided at thread level, not from the subject of
-their own message. Some clients rewrite the subject on a reply, and requiring
-it to carry the date would mark a rep who reported as outstanding and chase
-them. Any roster member who wrote in a thread belonging to that night counts
-as having replied; an unrelated thread from that rep does not.
+Whether a rep replied is decided at thread level, not from the subject of their
+own message. Some clients rewrite the subject on a reply, and requiring it to
+carry the date would mark a rep who reported as outstanding and chase them.
 
-If the Gmail search fails outright, every rep is treated as having replied and
-no nudge goes out. Chasing someone who did reply costs more trust than missing
-a night.
+If the Gmail read fails, nothing is sent at all. Chasing someone who replied
+and thanking someone who did not are both worse than silence.
 
-Set `nudgeEnabled: false` to switch it off.
+Set `nudgeEnabled: false` to switch the whole morning pass off.
 
 ## Collect (8:15pm Pacific, daily)
 

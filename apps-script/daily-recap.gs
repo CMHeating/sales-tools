@@ -218,48 +218,83 @@ function buildTestModeBody_(plan) {
  *   7am — people working today
  *   8am — people off today, who get the extra hour
  */
-function sendMorningNudgeWorkingToday() { return sendMorningNudge_(true); }
-function sendMorningNudgeOffToday() { return sendMorningNudge_(false); }
+function sendMorningNudgeWorkingToday() { return runMorningFollowUp_(true); }
+function sendMorningNudgeOffToday() { return runMorningFollowUp_(false); }
 
 /*
- * Chases yesterday's recap, not today's. Anyone scheduled yesterday who never
- * replied gets one reminder the following morning, timed against whether they
- * are on shift when it lands.
+ * The morning pass over yesterday's recap. One Gmail read drives both halves,
+ * so the acknowledgement and the chase can never disagree about who replied:
+ *
+ *   replied     -> a short acknowledgement, so reporting visibly lands
+ *   no reply    -> one nudge
+ *
+ * Acknowledging matters more than it looks. A rep who reports into silence
+ * stops reporting, and that costs the whole night's data rather than one
+ * field of it.
  */
-function sendMorningNudge_(workingToday) {
+function runMorningFollowUp_(workingToday) {
   const cfg = DAILY_RECAP_CONFIG;
-  if (!cfg.nudgeEnabled) return { sent: 0, reason: "nudge disabled" };
+  if (!cfg.nudgeEnabled) return { acked: 0, nudged: 0, reason: "disabled" };
 
   const now = new Date();
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const past = buildTodayPlan_(yesterday);
-  if (!past.working.length) return { sent: 0, reason: "nobody was scheduled yesterday" };
+  if (!past.working.length) return { acked: 0, nudged: 0, reason: "nobody was scheduled yesterday" };
+
+  const found = findRecapReplies_(past.dateLabel, null);
+  if (!found.ok) {
+    /* Without a reliable read there is no safe move: chasing someone who
+       replied and thanking someone who did not are both worse than silence. */
+    Logger.log("Morning follow-up skipped — reply search failed.");
+    return { acked: 0, nudged: 0, reason: "reply search failed" };
+  }
+
+  const byHca = {};
+  found.replies.forEach(r => {
+    if (!byHca[r.hca.name]) byHca[r.hca.name] = { hca: r.hca, entries: [], followUps: "" };
+    byHca[r.hca.name].entries = byHca[r.hca.name].entries.concat(r.entries);
+    if (r.followUps) {
+      byHca[r.hca.name].followUps = byHca[r.hca.name].followUps
+        ? byHca[r.hca.name].followUps + "\n" + r.followUps
+        : r.followUps;
+    }
+  });
 
   const todayPlan = buildTodayPlan_(now);
   const onShiftToday = {};
   todayPlan.working.forEach(h => { onShiftToday[h.name] = true; });
 
-  const replied = repliedToRecap_(past.dateLabel);
-  const targets = past.working.filter(h =>
-    !replied[h.name] && (!!onShiftToday[h.name] === !!workingToday));
-
-  if (!targets.length) return { sent: 0, reason: "nobody to nudge" };
+  const inScope = past.working.filter(h => !!onShiftToday[h.name] === !!workingToday);
+  const toAck = inScope.filter(h => byHca[h.name]);
+  const toNudge = inScope.filter(h => !byHca[h.name]);
 
   if (cfg.TEST_MODE) {
     sendEmailSafe_({
       to: [cfg.testRecipient],
-      subject: "[TEST] Recap nudge — " + past.dateLabel,
+      subject: "[TEST] Recap morning follow-up — " + past.dateLabel,
       body: "TEST MODE — no HCA was contacted.\n\n" +
-        "Would nudge " + targets.length + " (" +
-        (workingToday ? "working today" : "off today") + "):\n" +
-        targets.map(h => "  - " + h.name + " <" + h.email + ">").join("\n") +
-        "\n\n" + new Array(70).join("=") + "\n\n" +
-        buildNudgeBody_(targets[0], past.dateLabel)
+        "Group: " + (workingToday ? "working today" : "off today") + "\n\n" +
+        "Would thank " + toAck.length + ":\n" +
+        (toAck.map(h => "  - " + h.name).join("\n") || "  (none)") + "\n\n" +
+        "Would nudge " + toNudge.length + ":\n" +
+        (toNudge.map(h => "  - " + h.name).join("\n") || "  (none)") + "\n\n" +
+        new Array(70).join("=") + "\n\n" +
+        (toAck.length ? buildAckBody_(toAck[0], past.dateLabel, byHca[toAck[0].name]) + "\n" +
+          new Array(70).join("-") + "\n\n" : "") +
+        (toNudge.length ? buildNudgeBody_(toNudge[0], past.dateLabel) : "")
     });
-    return { sent: 0, previewed: targets.length };
+    return { acked: 0, nudged: 0, previewed: toAck.length + toNudge.length };
   }
 
-  targets.forEach(hca => {
+  toAck.forEach(hca => {
+    sendEmailSafe_({
+      to: [hca.email],
+      subject: "Re: " + cfg.subjectPrefix + " — " + past.dateLabel,
+      body: buildAckBody_(hca, past.dateLabel, byHca[hca.name])
+    });
+  });
+
+  toNudge.forEach(hca => {
     sendEmailSafe_({
       to: [hca.email],
       /* "Re:" on the original subject keeps this in the same conversation, so
@@ -270,48 +305,37 @@ function sendMorningNudge_(workingToday) {
     });
   });
 
-  Logger.log("Nudged " + targets.length + " (" +
-    (workingToday ? "working today" : "off today") + ") for " + past.dateLabel);
-  return { sent: targets.length };
+  Logger.log("Morning follow-up (" + (workingToday ? "working" : "off") + "): " +
+    toAck.length + " thanked, " + toNudge.length + " nudged, for " + past.dateLabel);
+  return { acked: toAck.length, nudged: toNudge.length };
 }
 
-/* Who already answered a given night's recap, by HCA name. */
-function repliedToRecap_(dateLabel) {
-  const cfg = DAILY_RECAP_CONFIG;
-  const seen = {};
-  let threads = [];
-  try {
-    threads = GmailApp.search('subject:"' + cfg.subjectPrefix + '" newer_than:' +
-      cfg.replyLookbackDays + "d", 0, 100);
-  } catch (err) {
-    /* Without the search there is no way to tell who replied, and nudging
-       someone who did is worse than nudging nobody. */
-    Logger.log("Nudge reply-check failed, skipping nudge: " + err);
-    RECAP_ROSTER.forEach(h => { seen[h.name] = true; });
-    return seen;
+/*
+ * Deliberately factual. It confirms the report landed and offers help; it does
+ * not editorialise about the deals, because putting opinions in Geoff's voice
+ * about a specific customer is his call to make, not the script's.
+ */
+function buildAckBody_(hca, dateLabel, group) {
+  const entries = (group && group.entries) || [];
+  const open = entries.filter(e => e.outcome !== "SOLD");
+
+  let what;
+  if (entries.length) {
+    what = entries.length + " appointment" + (entries.length === 1 ? "" : "s");
+  } else if (group && group.followUps) {
+    what = "your follow-ups";
+  } else {
+    what = "your recap";
   }
 
-  threads.forEach(thread => {
-    const messages = thread.getMessages();
+  let body = "Morning " + hca.first + ",\n\n" +
+    "Got " + what + " for " + dateLabel + " — thanks for sending it.\n";
 
-    /* Decide which night a thread belongs to from ANY message in it, then
-       credit every rep who wrote in that thread.
-       Matching on the rep's own subject instead would miss a genuine reply
-       whenever their client rewrote it, and chasing someone who already
-       reported costs more trust than skipping a nudge. */
-    let isThisNight = false;
-    messages.forEach(m => {
-      if (String(m.getSubject() || "").indexOf(dateLabel) !== -1) isThisNight = true;
-    });
-    if (!isThisNight) return;
+  if (open.length) {
+    body += "\nShout if you want a hand on any of the ones still open.\n";
+  }
 
-    messages.forEach(msg => {
-      const from = String(msg.getFrom() || "").toLowerCase();
-      const hca = RECAP_ROSTER.filter(h => from.indexOf(h.email.toLowerCase()) !== -1)[0];
-      if (hca) seen[hca.name] = true;
-    });
-  });
-  return seen;
+  return body + "\nGeoff\n";
 }
 
 function buildNudgeBody_(hca, dateLabel) {
@@ -335,7 +359,7 @@ function collectRecapReplies() {
   const now = new Date();
   const plan = buildTodayPlan_(now);
   const lastRun = readLastDigestRun_();
-  const replies = findRecapReplies_(plan.dateLabel, lastRun);
+  const replies = findRecapReplies_(plan.dateLabel, lastRun).replies;
 
   const byHca = {};
   const late = [];
@@ -419,18 +443,30 @@ function findRecapReplies_(dateLabel, sinceDate) {
   try {
     threads = GmailApp.search(query, 0, 100);
   } catch (err) {
+    /* ok:false so callers can tell "nobody replied" apart from "we could not
+       find out". The morning run must never chase people on a failed read. */
     Logger.log("Recap reply search failed: " + (err && err.message ? err.message : String(err)));
-    return out;
+    return { ok: false, replies: out };
   }
 
   threads.forEach(thread => {
-    thread.getMessages().forEach(msg => {
+    const messages = thread.getMessages();
+
+    /* Which night this thread belongs to is decided from any message in it,
+       the same way the morning run does. Reading it off the rep's own subject would
+       lose a reply whenever their client rewrote it. */
+    let threadIsTonight = false;
+    messages.forEach(m => {
+      if (String(m.getSubject() || "").indexOf(dateLabel) !== -1) threadIsTonight = true;
+    });
+
+    messages.forEach(msg => {
       const from = String(msg.getFrom() || "").toLowerCase();
       const hca = RECAP_ROSTER.filter(h => from.indexOf(h.email.toLowerCase()) !== -1)[0];
       if (!hca) return;
 
       const subject = String(msg.getSubject() || "");
-      const isTonight = subject.indexOf(dateLabel) !== -1;
+      const isTonight = threadIsTonight;
 
       if (!isTonight) {
         if (!sinceDate) return;                       // no prior run recorded
@@ -456,7 +492,7 @@ function findRecapReplies_(dateLabel, sinceDate) {
     });
   });
 
-  return out;
+  return { ok: true, replies: out };
 }
 
 function readLastDigestRun_() {
