@@ -1291,6 +1291,76 @@ function readExistingKeys_(sheet, width, colA, colB) {
   return seen;
 }
 
+/*
+ * Column widths, wrapping and number formats, reapplied on every refresh.
+ *
+ * Not cosmetic. The first live log rendered the Date column at default width,
+ * so every row read "2026" — the one column you scan first, unreadable. Long
+ * free-text fields (Deal Offered, Objection, what the rep actually said) were
+ * clipped at the cell edge, which is exactly the content the recap exists to
+ * capture.
+ *
+ * Reapplied rather than set once at creation so it survives anyone dragging a
+ * column, and so tabs added later pick it up without a migration.
+ */
+const SHEET_LAYOUTS = {
+  "Recap Log": {
+    widths: [95, 140, 190, 100, 150, 280, 110, 90, 180, 160, 340, 140, 0],
+    wrap: [5, 8, 10],                 // Deal Offered, Water Heater, Objection
+    money: [6],
+    hide: [12]                        // Key — machine-only
+  },
+  "Follow-Ups": {
+    widths: [95, 130, 140, 190, 150, 260, 110, 340, 140, 95, 90, 200, 0],
+    wrap: [7, 11],
+    money: [6],
+    hide: [12]
+  },
+  "Reply Compliance": {
+    widths: [95, 140, 80, 110, 380, 140],
+    wrap: [4], money: [], hide: []
+  },
+  "Email Notes": {
+    widths: [95, 130, 190, 105, 150, 240, 460, 90, 0],
+    wrap: [6], money: [], hide: [8]
+  },
+  "Job Status": {
+    widths: [95, 130, 190, 85, 150, 130, 110, 120, 130, 120, 130, 90, 130,
+             70, 110, 90, 85, 170, 120, 120, 120, 240, 130, 300, 300, 140, 0],
+    wrap: [21, 23, 24],
+    money: [14], hide: [26]
+  }
+};
+
+function applySheetLayout_(ss, name) {
+  const layout = SHEET_LAYOUTS[name];
+  const sheet = ss.getSheetByName(name);
+  if (!layout || !sheet) return;
+  try {
+    const lastRow = Math.max(sheet.getLastRow(), 2);
+    layout.widths.forEach((w, i) => {
+      if (w === 0) { sheet.hideColumns(i + 1); return; }
+      sheet.setColumnWidth(i + 1, w);
+    });
+    (layout.wrap || []).forEach(i => {
+      sheet.getRange(2, i + 1, lastRow - 1, 1).setWrap(true).setVerticalAlignment("top");
+    });
+    (layout.money || []).forEach(i => {
+      sheet.getRange(2, i + 1, lastRow - 1, 1).setNumberFormat('$#,##0');
+    });
+    sheet.setFrozenRows(1);
+    /* Banded rows make a wide sheet scannable across, which is how anyone
+       actually reads a row here. */
+    if (!sheet.getBandings().length && lastRow > 1) {
+      sheet.getRange(1, 1, lastRow, layout.widths.length)
+        .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false);
+    }
+  } catch (err) {
+    /* Formatting must never cost a refresh its data. */
+    Logger.log("Layout skipped for " + name + ": " + err);
+  }
+}
+
 function ensureSheet_(ss, name, headers) {
   let sheet = ss.getSheetByName(name);
   if (!sheet) {
@@ -2557,6 +2627,9 @@ function refreshJobStatus() {
   const written = writeJobStatus_(book.ss, byName, status, fromIso, toIso);
   const notes = writeEmailNotes_(book.ss, byName, status, fromIso, toIso);
   const work = writeFollowUps_(book.ss, allLogRows, status, toIso);
+  [cfg.logSheetName, cfg.complianceSheetName, cfg.followUpsSheetName,
+   cfg.jobStatusSheetName, cfg.emailNotesSheetName].forEach(n => applySheetLayout_(book.ss, n));
+
   PropertiesService.getScriptProperties()
     .setProperty("jobStatusRefreshedIso", new Date().toISOString());
 
