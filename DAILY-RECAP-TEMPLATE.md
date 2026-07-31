@@ -252,24 +252,39 @@ emails back and reports the drift. Each rep gains:
 
 | | |
 |---|---|
-| `soldNotReported` | ServiceTitan says sold, no recap ever mentioned the customer |
+| `soldNotReported` | ServiceTitan says sold, no recap ever mentioned the customer — a prompt to ask, not an accusation |
 | `statusDrift` | recap said estimate or follow-up, ServiceTitan has since marked it sold |
 | `installed` | matched to a `Completed Form Alert [HVAC Sales]` — already in and done |
 | `soldAlerts` | every deduped sold alert, with `reportedOutcome` and `installCompletedOn` |
 | `soldPerServiceTitan`, `soldAmountPerServiceTitan` | against the rep's own reported `sold` |
 
-Three details that matter:
+Four details that matter:
 
 - **Technicians raise the same alert.** The subject varies by business unit —
   `[Sales Quote]` for advisors, `[HVAC Sales]` and `[HVAC COD Service]` for
   technician-sold work — so filtering is done on `Sold by` against the roster,
   not on the subject.
-- **One estimate can alert twice.** A revised price fires a second alert on the
-  same opportunity. The latest is kept as the live number and the earlier one is
-  retained as `revisedFrom`.
+- **One job can raise several sold alerts, and the alert does not say which
+  kind.** Both of these are real, from the same week:
+
+  | Customer | Estimates | What it is |
+  |---|---|---|
+  | Greg Anderson | `$12,325.60` Mitsubishi 2-zone, `$348.13` Kumo cloud | system + accessory, **both** sold |
+  | Eileen Manrao | `$9,350.00` Supreme 25 (7/29), `$8,667.02` \*NEW\* Supreme 25 (7/30) | almost certainly **one** deal repriced |
+
+  Nothing in the alert distinguishes them. So estimates are grouped by job and
+  every line is kept; a job with more than one is marked `multiEstimate` and
+  the total is presented as needing a look. Picking one and calling the other a
+  revision would have silently discarded $12,325.60 of Greg Anderson's sale.
+  The same estimate number alerting twice *is* deduped — that one really is a
+  duplicate.
 - **A rep with no recap rows at all still appears** if he raised a sold alert.
   That rep is the whole point of the exercise, and he has no rows to be found
   by.
+- **Only sales-unit completions count as installs.** `Completed Form Alert`
+  also fires for `[HVAC COD Service]`, `[Fireplace COD Service]` and
+  `[HVAC Maintenance Plan]`. A service call on a customer who also bought must
+  not read as "installed", so the subject has to contain `Sales`.
 
 If the Gmail search fails, `reconciliation.ok` comes back `false` with an
 `error`, the recap figures are unaffected, and the 1:1 card says the sold and

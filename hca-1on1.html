@@ -583,9 +583,17 @@ function renderRecap(h, data){
   const dealLine = s => {
     const parts = [s.customer || "(unnamed)"];
     if(s.amount) parts.push(money(s.amount));
-    if(s.revisedFrom) parts.push("revised from " + money(s.revisedFrom));
     if(s.soldOn) parts.push("sold " + s.soldOn);
-    return parts.join(" — ");
+    let line = parts.join(" — ");
+    /* Several estimates on one job could be a system plus an accessory, or the
+       same deal repriced. The alerts do not say which, so the lines are shown
+       and the total is not asserted. */
+    if(s.multiEstimate){
+      line += " · " + s.estimates.length + " estimates ("
+        + s.estimates.map(e => money(e.amount) + (e.soldOn ? " " + e.soldOn : "")).join(", ")
+        + ") — verify the total";
+    }
+    return line;
   };
 
   const unreported = h.soldNotReported || [];

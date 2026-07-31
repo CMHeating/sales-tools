@@ -1693,6 +1693,10 @@ function weekdayFromIso_(iso) {
  * any drift is shown.
  */
 
+function roundCents_(n) {
+  return isFinite(n) ? Math.round(n * 100) / 100 : n;
+}
+
 function normName_(v) {
   return String(v || "").toLowerCase().replace(/\(m\)/g, " ")
     .replace(/[^a-z0-9]+/g, " ").trim();
@@ -1737,6 +1741,8 @@ function readSoldAlerts_(days) {
       name: f["name"] || "",
       soldOn: f["date"] || "",
       jobNumber: f["job#"] || f["job #"] || "",
+      estimateNumber: f["estimate#"] || f["estimate #"] || "",
+      opportunityNumber: f["opportunity#"] || f["opportunity #"] || "",
       received: msg.getDate()
     });
   }));
@@ -1760,7 +1766,12 @@ function readInstallCompletions_(days) {
   }
 
   threads.forEach(t => t.getMessages().forEach(msg => {
-    if (String(msg.getSubject() || "").indexOf("HVAC Sales") === -1) return;  // installs only
+    /* Installs only. Completed Form Alerts also fire for [HVAC COD Service],
+       [Fireplace COD Service] and [HVAC Maintenance Plan] — service calls, not
+       installs, and counting one as "installed" would be worse than missing
+       it. Matching on "Sales" rather than "HVAC Sales" so a fireplace or other
+       sales business unit is picked up if one exists. */
+    if (String(msg.getSubject() || "").indexOf("Sales") === -1) return;
     const body = String(msg.getPlainBody() || "");
     const m = body.match(/^[ \t]*(\d{1,2}\/\d{1,2})\s+\d{1,2}:\d{2}\s*[AP]M\s+(.+?)\s+\d{2,}\s/m);
     if (!m) return;
@@ -1839,21 +1850,45 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days) {
 
   Object.keys(names).forEach(name => {
     const h = ensure(name);
-    /* One estimate can alert more than once as the price is revised — Jay's
-       same opportunity fired on consecutive days at two different amounts.
-       The latest alert is the live number; the earlier ones are history. */
+
+    /* One job can raise several Sold Estimate Alerts, and the alerts do not
+       say which kind you are looking at. Both of these are real:
+
+         Greg Anderson    Family Comfort #1 Mitsubishi  $12,325.60
+         Greg Anderson    Kumo cloud                       $348.13
+           — a system and an accessory. Both sold. The job is worth the sum.
+
+         Eileen Manrao    Supreme 25                    $9,350.00   (7/29)
+         Eileen Manrao    *NEW* Supreme 25              $8,667.02   (7/30)
+           — almost certainly one deal repriced. The job is worth the later
+             figure, not both.
+
+       Nothing in the alert distinguishes them. So estimates are grouped by
+       job and every line is kept: picking one and calling the other a
+       revision would assert a judgement the data cannot support, and would
+       have silently thrown away $12,325.60 of Greg Anderson. A job carrying
+       more than one estimate is flagged instead, so the total is presented as
+       needing a look rather than as a fact. */
     const mine = soldRes.alerts.filter(a => a.hca === h.name);
     const byJob = {};
     mine.forEach(a => {
       const key = a.jobNumber || normName_(a.customer);
-      const prev = byJob[key];
-      if (!prev) { byJob[key] = a; return; }
-      if (a.received > prev.received) {
-        byJob[key] = a;
-        byJob[key].revisedFrom = prev.amount;
-      } else if (prev.revisedFrom == null) {
-        prev.revisedFrom = a.amount;
+      if (!byJob[key]) {
+        byJob[key] = { customer: a.customer, jobNumber: a.jobNumber, estimates: [] };
       }
+      /* The same estimate can alert twice; that one really is a duplicate. */
+      const seen = byJob[key].estimates.filter(e =>
+        e.estimateNumber && e.estimateNumber === a.estimateNumber)[0];
+      if (seen) {
+        if (a.received > seen.received) {
+          seen.amount = a.amount; seen.soldOn = a.soldOn; seen.received = a.received;
+        }
+        return;
+      }
+      byJob[key].estimates.push({
+        estimateNumber: a.estimateNumber, name: a.name,
+        amount: a.amount, soldOn: a.soldOn, received: a.received
+      });
     });
 
     /* Not h.sold — that is already the count the rep reported, and the whole
@@ -1864,14 +1899,30 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days) {
     h.installed = [];
 
     Object.keys(byJob).forEach(key => {
-      const a = byJob[key];
-      const row = h.rows.filter(r => namesMatch_(r.customer, a.customer))[0] || null;
-      const done = doneRes.completions.filter(c => namesMatch_(c.customer, a.customer))[0] || null;
+      const job = byJob[key];
+      job.estimates.sort((x, y) => x.received - y.received);
+
+      const row = h.rows.filter(r => namesMatch_(r.customer, job.customer))[0] || null;
+      const done = doneRes.completions.filter(c => namesMatch_(c.customer, job.customer))[0] || null;
+      const last = job.estimates[job.estimates.length - 1] || {};
 
       const item = {
-        customer: a.customer, amount: a.amount, soldOn: a.soldOn,
-        estimateName: a.name, jobNumber: a.jobNumber,
-        revisedFrom: a.revisedFrom == null ? null : a.revisedFrom,
+        customer: job.customer, jobNumber: job.jobNumber,
+        /* Every line, so the reader can tell an add-on from a reprice. */
+        estimates: job.estimates.map(e => ({
+          estimateNumber: e.estimateNumber, name: e.name,
+          amount: e.amount, soldOn: e.soldOn
+        })),
+        /* Rounded to cents: summing 12000 and 348.13 in binary floating point
+           lands on 12348.129999999997, and a price is not a place to show
+           that. */
+        amount: roundCents_(job.estimates.reduce(
+          (t, e) => t + (isFinite(e.amount) && e.amount ? e.amount : 0), 0)),
+        /* True when the total is a guess: several estimates on one job could
+           be add-ons to be summed, or the same deal repriced. */
+        multiEstimate: job.estimates.length > 1,
+        soldOn: last.soldOn || "",
+        estimateName: last.name || "",
         reportedOutcome: row ? row.outcome : null,
         reportedOn: row ? row.date : null,
         installCompletedOn: done ? done.installedOn : null,
@@ -1891,8 +1942,10 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days) {
     h.installed.sort(order);
 
     h.soldPerServiceTitan = h.soldAlerts.length;
-    h.soldAmountPerServiceTitan = h.soldAlerts.reduce(
-      (t, s) => t + (isFinite(s.amount) && s.amount ? s.amount : 0), 0);
+    h.soldAmountPerServiceTitan = roundCents_(h.soldAlerts.reduce(
+      (t, s) => t + (isFinite(s.amount) && s.amount ? s.amount : 0), 0));
+    /* So the figure is never presented as settled when it is not. */
+    h.soldAmountNeedsReview = h.soldAlerts.some(s => s.multiEstimate);
   });
 
   return status;
