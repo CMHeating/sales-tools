@@ -625,17 +625,35 @@ function renderRecap(h, data){
     out.push('</ul></div>');
   }
 
-  /* Sold but not yet installed: the alerts carry sold and completed and
-     nothing between, so the scheduled date has to come from the COMBO LOG.
-     Saying so beats implying there is no install booked. */
+  /* Sold, not yet installed. The scheduled date comes from the COMBO LOG —
+     the alerts carry sold and completed and nothing between. A job sitting on
+     a TBD sheet says so rather than looking like an oversight. */
   const awaiting = (h.soldAlerts || []).filter(s => !s.installCompletedOn);
   if(awaiting.length){
-    out.push('<p class="help" style="margin-top:10px"><strong>Sold, no completion alert yet ('
-      + awaiting.length + ')</strong> — install dates are not in the alerts; check the COMBO LOG.</p>'
-      + '<ul style="margin:4px 0 0 18px">');
-    awaiting.slice(0, 8).forEach(s => out.push('<li>' + esc(dealLine(s)) + '</li>'));
+    out.push('<p class="help" style="margin-top:10px"><strong>Sold, not yet installed ('
+      + awaiting.length + ')</strong></p><ul style="margin:4px 0 0 18px">');
+    awaiting.slice(0, 8).forEach(s => {
+      let when;
+      if(s.installScheduledOn) when = "install " + esc(s.installScheduledOn);
+      else if(s.installTbd) when = "install TBD on the COMBO LOG";
+      else when = "no COMBO LOG row found";
+      let line = esc(dealLine(s)) + " · " + when;
+      if(s.comboNotes) line += " · " + esc(s.comboNotes);
+      out.push('<li>' + line + '</li>');
+    });
     if(awaiting.length > 8) out.push('<li class="help">+' + (awaiting.length - 8) + ' more</li>');
     out.push('</ul>');
+  }
+
+  /* The COMBO LOG names a sales rep. Where it disagrees with who reported the
+     job, one of the two records is wrong and someone's number is off. */
+  const repDiff = (h.soldAlerts || []).filter(s => s.comboRepDiffers);
+  if(repDiff.length){
+    out.push('<div class="notice" style="margin-top:12px"><strong>COMBO LOG credits a different rep ('
+      + repDiff.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    repDiff.forEach(s => out.push('<li>' + esc(s.customer) + ' — ServiceTitan says '
+      + esc(h.name) + ', COMBO LOG says ' + esc(s.comboRepDiffers) + '</li>'));
+    out.push('</ul></div>');
   }
 
   /* Booked but never reported. Only a Sales Quote booking counts, and only
@@ -750,8 +768,15 @@ function renderRecap(h, data){
       + " — completed " + (s.installCompletedOn || "?")));
   }
   if(awaiting.length){
-    lines.push("", "Sold, no completion alert yet (install date: check COMBO LOG):");
-    awaiting.slice(0, 8).forEach(s => lines.push("  - " + dealLine(s)));
+    lines.push("", "Sold, not yet installed:");
+    awaiting.slice(0, 8).forEach(s => lines.push("  - " + dealLine(s) + " · "
+      + (s.installScheduledOn ? "install " + s.installScheduledOn
+        : s.installTbd ? "install TBD on the COMBO LOG" : "no COMBO LOG row found")));
+  }
+  if(repDiff.length){
+    lines.push("", "COMBO LOG credits a different rep:");
+    repDiff.forEach(s => lines.push("  - " + s.customer + " — ServiceTitan says "
+      + h.name + ", COMBO LOG says " + s.comboRepDiffers));
   }
   if(mine.length){
     lines.push("", "Booked with no recap for it:");

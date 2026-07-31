@@ -50,6 +50,20 @@ const DAILY_RECAP_CONFIG = {
   complianceSheetName: "Reply Compliance",
   summarySheetName: "Summary",
 
+  /* The reconciled view: one row per job, whether or not a rep reported it.
+     Written on a schedule by refreshJobStatus(), read by the 1:1 scheduler.
+     The page does not search Gmail — three searches over hundreds of threads
+     on every page load would be slow, would burn quota, and would give a
+     different answer each time it ran. */
+  jobStatusSheetName: "Job Status",
+  jobStatusDays: 21,                // how far back each refresh reconciles
+
+  /* COMBO LOG 2026 — the same sheet sold-job-tracker-sync.gs reads. It is the
+     only source for a *scheduled* install date; the ServiceTitan alerts carry
+     sold and completed and nothing in between. Blank disables the lookup and
+     scheduled dates simply come back empty. */
+  comboLogSpreadsheetId: "16Z-PK7d2Y6MvNHM1vqZ6y0JsezITQG6fYnawomYl46c",
+
   sendHour: 18,                     // 6:00pm Pacific
   collectHour: 20,                  // 8:15pm Pacific
   collectMinute: 15,
@@ -1655,12 +1669,10 @@ function buildRecapApiPayload_(days, hcaFilter) {
     if (r[4]) h.followUps.push({ date: String(r[0]), text: String(r[4]) });
   });
 
-  /* Reconciliation runs before the roster is frozen, because the rep who sold
-     a job and never filed a single recap is precisely the one worth surfacing
-     — and they have no rows to be found by. */
-  const recon = reconcileWithServiceTitan_(byName, ensure, wanted, days, {
-    allLogRows: allLogRows, fromIso: fromIso, toIso: toIso
-  });
+  /* Read from the Job Status tab, which refreshJobStatus() maintains. No
+     Gmail here: the page must not depend on three searches over hundreds of
+     threads completing inside a request. */
+  const recon = applyJobStatus_(book.ss, byName, ensure, wanted, fromIso, toIso);
 
   const hcas = Object.keys(byName).sort().map(name => {
     const h = byName[name];
@@ -1748,8 +1760,12 @@ function readSoldAlerts_(days) {
     const soldBy = f["sold by"] || "";
     const hca = RECAP_ROSTER.filter(h => normName_(h.name) === normName_(soldBy))[0];
     if (!hca) return;                                  // technician, not an HCA
+    /* "7/30 8:15 AM" carries no year; the tracker needs a sortable date. */
+    const md = String(f["date"] || "").match(/^(\d{1,2})\/(\d{1,2})/);
     out.push({
       hca: hca.name,
+      soldOnIso: md ? resolveAlertDate_(Number(md[1]), Number(md[2]), msg.getDate())
+                    : Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd"),
       customer: String(f["customer"] || "").trim(),
       amount: parseDealAmount_(f["amount"] || "").amount,
       name: f["name"] || "",
@@ -1839,18 +1855,24 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
   const soldRes = readSoldAlerts_(window);
   const doneRes = readInstallCompletions_(window);
   const bookedRes = readBookedJobAlerts_(ctx.fromIso, ctx.toIso, window);
+  const comboRes = readComboInstalls_();
 
   const status = {
     ok: soldRes.ok && doneRes.ok,
     bookedOk: bookedRes.ok,
+    comboOk: comboRes.ok,
     soldAlertsRead: soldRes.alerts.length,
     completionAlertsRead: doneRes.completions.length,
     bookedAlertsRead: bookedRes.booked.length,
+    comboRowsRead: comboRes.installs.length,
     /* Said plainly so the 1:1 page never implies an install date it does not
        have. */
-    note: "Sold and install-completed come from ServiceTitan alert emails. " +
-          "Scheduled install dates are not in these alerts — check the COMBO LOG."
+    note: "Sold and install-completed come from ServiceTitan alert emails; " +
+          "scheduled install dates come from the COMBO LOG."
   };
+  if (!comboRes.ok) {
+    status.comboError = "COMBO LOG unreachable; scheduled install dates are missing.";
+  }
   if (!status.ok) {
     status.error = "Gmail alert search failed; reconciliation is incomplete.";
     return status;
@@ -1904,7 +1926,7 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
       }
       byJob[key].estimates.push({
         estimateNumber: a.estimateNumber, name: a.name,
-        amount: a.amount, soldOn: a.soldOn, received: a.received
+        amount: a.amount, soldOn: a.soldOn, soldOnIso: a.soldOnIso, received: a.received
       });
     });
 
@@ -1923,8 +1945,14 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
       const done = doneRes.completions.filter(c => namesMatch_(c.customer, job.customer))[0] || null;
       const last = job.estimates[job.estimates.length - 1] || {};
 
+      /* A dated COMBO LOG row beats an undated one — a job can sit on a TBD
+         sheet and then be scheduled without the TBD row being cleared. */
+      const comboHits = comboRes.installs.filter(c => namesMatch_(c.customer, job.customer));
+      const combo = comboHits.filter(c => c.installDate)[0] || comboHits[0] || null;
+
       const item = {
         customer: job.customer, jobNumber: job.jobNumber,
+        soldOnIso: last.soldOnIso || "",
         /* Every line, so the reader can tell an add-on from a reprice. */
         estimates: job.estimates.map(e => ({
           estimateNumber: e.estimateNumber, name: e.name,
@@ -1943,8 +1971,19 @@ function reconcileWithServiceTitan_(byName, ensure, wanted, days, ctx) {
         reportedOutcome: row ? row.outcome : null,
         reportedOn: row ? row.date : null,
         installCompletedOn: done ? done.installedOn : null,
-        installDescription: done ? done.description : ""
+        installDescription: done ? done.description : "",
+        /* From the COMBO LOG, the only place a scheduled date exists. */
+        installScheduledOn: combo ? combo.installDate : "",
+        installTbd: combo ? !!combo.isTbd && !combo.installDate : false,
+        comboNotes: combo ? (combo.jobNotes || combo.permitNotes || "") : "",
+        /* The COMBO LOG names a sales rep too. Where it disagrees with who
+           reported the job, one of the two records is wrong. */
+        comboSalesRep: combo && combo.salesRep ? combo.salesRep : ""
       };
+      if (item.comboSalesRep && normName_(item.comboSalesRep) !== normName_(h.name) &&
+          normName_(item.comboSalesRep).length > 2) {
+        item.comboRepDiffers = item.comboSalesRep;
+      }
 
       h.soldAlerts.push(item);
       if (!row) h.soldNotReported.push(item);
@@ -2199,6 +2238,422 @@ function resolveAlertDate_(month, day, received) {
   return "";
 }
 
+/*
+ * Rebuilds the reconciliation from the Job Status tab for the 1:1 page.
+ *
+ * The tab is the contract between the scheduled refresh and the page: the
+ * refresh does the slow work once, this reads it. If the tab has never been
+ * written the page simply shows the recap without ServiceTitan context, and
+ * says so, rather than blocking on a Gmail search.
+ */
+function applyJobStatus_(ss, byName, ensure, wanted, fromIso, toIso) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const refreshedIso = readScriptProperty_("jobStatusRefreshedIso") || "";
+  const rows = readSheetRows_(ss, cfg.jobStatusSheetName, JOB_STATUS_HEADERS.length)
+    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso);
+
+  const status = {
+    ok: rows.length > 0,
+    source: "Job Status tab",
+    refreshed: refreshedIso,
+    rowsRead: rows.length,
+    unclaimedAppointments: [],
+    note: "Sold and install-completed come from ServiceTitan alert emails; " +
+          "scheduled install dates come from the COMBO LOG."
+  };
+  if (!rows.length) {
+    status.error = "Job Status has not been built yet — run refreshJobStatus().";
+    Object.keys(byName).forEach(n => resetJobFields_(byName[n]));
+    return status;
+  }
+
+  Object.keys(byName).forEach(n => resetJobFields_(byName[n]));
+
+  rows.forEach(r => {
+    const date = String(r[JS.date]);
+    const hcaName = String(r[JS.hca] || ""), customer = String(r[JS.customer] || "");
+    const reported = String(r[JS.reported]) === "Yes";
+    const sold = String(r[JS.sold]) === "Yes";
+    const label = String(r[JS.status] || "");
+
+    /* No HCA on the row means a booked job nobody claimed. */
+    if (!hcaName) {
+      status.unclaimedAppointments.push({
+        customer: customer, appointmentIso: date,
+        appointmentAt: String(r[JS.appointment] || ""),
+        jobNumber: String(r[JS.jobNumber] || ""), jobType: String(r[JS.jobType] || ""),
+        sourceHint: String(r[JS.sourceBooked] || ""),
+        assignedHint: String(r[JS.dispatch] || "")
+      });
+      return;
+    }
+    if (wanted && hcaName.toLowerCase() !== wanted) return;
+
+    /* ensure() may mint a rep who filed no recap at all — exactly the one this
+       is here to surface — so the job fields have to be initialised on the way
+       in, not only for reps already known. */
+    const h = ensure(hcaName);
+    if (!h.soldAlerts) resetJobFields_(h);
+    const scheduled = String(r[JS.installScheduled] || "");
+    const item = {
+      customer: customer, jobNumber: String(r[JS.jobNumber] || ""),
+      amount: Number(r[JS.amount]) || null, soldOn: String(r[JS.soldOn] || ""),
+      soldOnIso: date,
+      estimates: decodeEstimates_(r[JS.estimateDetail]),
+      multiEstimate: String(r[JS.needsReview]) === "Review",
+      reportedOutcome: reported ? String(r[JS.outcome] || "") : null,
+      reportedOn: reported ? date : null,
+      installScheduledOn: scheduled === "TBD" ? "" : scheduled,
+      installTbd: scheduled === "TBD",
+      installCompletedOn: String(r[JS.installCompleted] || ""),
+      installDescription: String(r[JS.installDescription] || ""),
+      comboRepDiffers: String(r[JS.comboRep] || ""),
+      comboNotes: String(r[JS.notes] || ""),
+      statusLabel: label
+    };
+
+    if (reported) {
+      const row = (h.rows || []).filter(x => x.date === date && namesMatch_(x.customer, customer))[0];
+      if (row) {
+        if (r[JS.jobNumber] || r[JS.appointment]) {
+          row.booked = {
+            jobNumber: String(r[JS.jobNumber] || ""),
+            appointmentAt: String(r[JS.appointment] || ""),
+            jobType: String(r[JS.jobType] || ""),
+            sourceHint: String(r[JS.sourceBooked] || ""),
+            assignedHint: String(r[JS.dispatch] || ""),
+            systemAge: String(r[JS.systemAge] || ""),
+            timeline: String(r[JS.timeline] || "")
+          };
+          const booked = String(r[JS.sourceBooked] || ""), said = String(r[JS.sourceReported] || "");
+          if (booked && said && normName_(booked) !== normName_(said)) {
+            row.sourceHintDiffers = booked;
+          }
+        }
+        row.statusLabel = label;
+      }
+    }
+
+    if (sold) {
+      h.soldAlerts.push(item);
+      if (!reported) h.soldNotReported.push(item);
+      else if (item.reportedOutcome !== "SOLD") h.statusDrift.push(item);
+      if (item.installCompletedOn) h.installed.push(item);
+    }
+  });
+
+  Object.keys(byName).forEach(name => {
+    const h = byName[name];
+    if (!h.soldAlerts) resetJobFields_(h);
+    h.soldPerServiceTitan = h.soldAlerts.length;
+    h.soldAmountPerServiceTitan = roundCents_(h.soldAlerts.reduce(
+      (t, s) => t + (isFinite(s.amount) && s.amount ? s.amount : 0), 0));
+    h.soldAmountNeedsReview = h.soldAlerts.some(s => s.multiEstimate);
+    h.bookedMatched = (h.rows || []).filter(r => r.booked).length;
+    h.reportedNotBooked = (h.rows || [])
+      .filter(r => !r.booked && r.customer)
+      .map(r => ({ date: r.date, customer: r.customer, source: r.source, outcome: r.outcome }));
+  });
+
+  status.unclaimedAppointments.sort((a, b) =>
+    String(b.appointmentIso).localeCompare(String(a.appointmentIso)));
+  return status;
+}
+
+function resetJobFields_(h) {
+  h.soldAlerts = []; h.statusDrift = []; h.soldNotReported = []; h.installed = [];
+  h.reportedNotBooked = []; h.bookedMatched = 0;
+  h.soldPerServiceTitan = 0; h.soldAmountPerServiceTitan = 0;
+  h.soldAmountNeedsReview = false;
+}
+
+const JOB_STATUS_HEADERS = [
+  "Date", "HCA", "Customer", "Reported", "Outcome Reported", "Lead Source Reported",
+  "Booked Job#", "Appointment", "Job Type", "Lead Source (Booked)", "Dispatch Note",
+  "System Age", "Timeline",
+  "Sold", "Sold Amount", "Sold On", "Estimates", "Estimate Detail", "Amount Needs Review",
+  "Install Scheduled", "Install Completed", "Install Description",
+  "COMBO Sales Rep", "Notes",
+  "Status", "Updated At", "Key"
+];
+
+/* Column indices, named because a 27-wide row addressed by number is a bug
+   waiting to happen. */
+const JS = {
+  date: 0, hca: 1, customer: 2, reported: 3, outcome: 4, sourceReported: 5,
+  jobNumber: 6, appointment: 7, jobType: 8, sourceBooked: 9, dispatch: 10,
+  systemAge: 11, timeline: 12,
+  sold: 13, amount: 14, soldOn: 15, estimateCount: 16, estimateDetail: 17,
+  needsReview: 18, installScheduled: 19, installCompleted: 20, installDescription: 21,
+  comboRep: 22, notes: 23, status: 24, updatedAt: 25, key: 26
+};
+
+/* "12000@7/30 | 348.13@7/31" — enough to show the lines behind a multi-estimate
+   job without a second sheet. */
+function encodeEstimates_(estimates) {
+  return (estimates || []).map(e =>
+    (e.amount === null || e.amount === undefined ? "" : e.amount) + "@" + (e.soldOn || "")
+  ).join(" | ");
+}
+
+function decodeEstimates_(text) {
+  return String(text || "").split("|").map(part => {
+    const bits = part.split("@");
+    const amount = Number(String(bits[0] || "").trim());
+    return { amount: isFinite(amount) && bits[0].trim() !== "" ? amount : null,
+             soldOn: String(bits[1] || "").trim() };
+  }).filter(e => e.amount !== null || e.soldOn);
+}
+
+/*
+ * The reconciled view, written to the tracker on a schedule.
+ *
+ *   booked alert  ─┐
+ *   sold alert    ─┼─> name match against the recap replies ─> Job Status tab
+ *   COMBO LOG     ─┘                                              │
+ *                                                                 v
+ *                                                        1:1 HCA scheduler
+ *
+ * Doing the Gmail and COMBO LOG reads here rather than inside doGet matters:
+ * three searches over hundreds of threads on every page load would be slow,
+ * would burn quota, and would give a different answer each time. This runs
+ * after the nightly collect and again mid-morning, and the page reads a sheet.
+ *
+ * It also puts the whole reconciliation somewhere a person can look at it,
+ * which is the point of calling it a tracker.
+ */
+function refreshJobStatus() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const days = cfg.jobStatusDays;
+  const today = new Date();
+  const fromIso = Utilities.formatDate(new Date(today.getTime() - (days - 1) * 86400000),
+    cfg.timeZone, "yyyy-MM-dd");
+  const toIso = Utilities.formatDate(today, cfg.timeZone, "yyyy-MM-dd");
+
+  const book = getLogSpreadsheet_();
+  const allLogRows = readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
+    .filter(r => String(r[0]) >= fromIso && String(r[0]) <= toIso);
+
+  const byName = {};
+  const ensure = name => {
+    if (!byName[name]) byName[name] = { name: name, rows: [] };
+    return byName[name];
+  };
+  allLogRows.forEach(r => {
+    ensure(String(r[1])).rows.push({
+      date: String(r[0]), customer: String(r[2] || ""), source: String(r[3] || ""),
+      outcome: String(r[4] || "NOT GIVEN")
+    });
+  });
+
+  const status = reconcileWithServiceTitan_(byName, ensure, "", days,
+    { allLogRows: allLogRows, fromIso: fromIso, toIso: toIso });
+
+  const written = writeJobStatus_(book.ss, byName, status, fromIso, toIso);
+  PropertiesService.getScriptProperties()
+    .setProperty("jobStatusRefreshedIso", new Date().toISOString());
+
+  Logger.log("Job Status: " + written.rows + " rows, " +
+    written.needsAttention + " needing attention");
+  return { rows: written.rows, needsAttention: written.needsAttention, status: status };
+}
+
+/*
+ * Rewrites the window rather than appending. A job's status genuinely changes
+ * — booked becomes sold becomes installed — so an append-only log would fill
+ * with contradictory rows about the same job. Rows outside the window are left
+ * untouched, so history survives.
+ */
+function writeJobStatus_(ss, byName, status, fromIso, toIso) {
+  const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.jobStatusSheetName, JOB_STATUS_HEADERS);
+  const stamp = new Date();
+  const rows = [];
+  const seen = {};
+
+  const push = row => {
+    const key = row[JS.key];
+    if (seen[key]) return;
+    seen[key] = true;
+    rows.push(row);
+  };
+
+  Object.keys(byName).sort().forEach(name => {
+    const h = byName[name];
+    const soldFor = c => (h.soldAlerts || []).filter(s => namesMatch_(s.customer, c))[0] || null;
+
+    (h.rows || []).forEach(r => {
+      const s = soldFor(r.customer);
+      const b = r.booked || {};
+      push([
+        r.date, name, r.customer, "Yes", r.outcome, r.source,
+        b.jobNumber || "", b.appointmentAt || "", b.jobType || "",
+        b.sourceHint || "", b.assignedHint || "", b.systemAge || "", b.timeline || "",
+        s ? "Yes" : "", s && s.amount ? s.amount : "", s ? s.soldOn : "",
+        s && s.estimates ? s.estimates.length : "",
+        s ? encodeEstimates_(s.estimates) : "",
+        s && s.multiEstimate ? "Review" : "",
+        s ? (s.installScheduledOn || (s.installTbd ? "TBD" : "")) : "",
+        s ? (s.installCompletedOn || "") : "",
+        s ? (s.installDescription || "") : "",
+        s && s.comboRepDiffers ? s.comboRepDiffers : "",
+        s ? (s.comboNotes || "") : "",
+        jobStatusLabel_(r, s), stamp,
+        recapRowKey_(r.date, name, r.customer)
+      ]);
+    });
+
+    /* Sold with no recap row at all. */
+    (h.soldNotReported || []).forEach(s => {
+      const date = s.soldOnIso || s.reportedOn || toIso;
+      push([
+        date, name, s.customer, "No", "", "",
+        "", "", "", "", "", "", "",
+        "Yes", s.amount || "", s.soldOn || "",
+        s.estimates ? s.estimates.length : "", encodeEstimates_(s.estimates),
+        s.multiEstimate ? "Review" : "",
+        s.installScheduledOn || (s.installTbd ? "TBD" : ""), s.installCompletedOn || "",
+        s.installDescription || "",
+        s.comboRepDiffers || "", s.comboNotes || "",
+        "NEEDS ATTENTION — sold, never reported", stamp,
+        recapRowKey_(date, name, s.customer)
+      ]);
+    });
+  });
+
+  /* Booked, the day has passed, nobody reported it. No HCA, because the alert
+     names none — the dispatch note is the only clue and it goes in its column. */
+  (status.unclaimedAppointments || []).forEach(u => {
+    push([
+      u.appointmentIso, "", u.customer, "No", "", "",
+      u.jobNumber || "", u.appointmentAt || "", u.jobType || "",
+      u.sourceHint || "", u.assignedHint || "", "", "",
+      "", "", "", "", "", "",
+      "", "", "", "", "",
+      "UNCLAIMED — booked, no recap", stamp,
+      recapRowKey_(u.appointmentIso, "", u.customer)
+    ]);
+  });
+
+  /* Replace only the window. Anything older stays where it is. */
+  const existing = readSheetRows_(ss, DAILY_RECAP_CONFIG.jobStatusSheetName, JOB_STATUS_HEADERS.length);
+  const kept = existing.filter(r => {
+    const d = String(r[0]);
+    return d && (d < fromIso || d > toIso);
+  });
+
+  const all = kept.concat(rows);
+  all.sort((a, b) => String(b[0]).localeCompare(String(a[0])) ||
+    String(a[1]).localeCompare(String(b[1])));
+
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, JOB_STATUS_HEADERS.length).clearContent();
+  }
+  if (all.length) {
+    sheet.getRange(2, 1, all.length, JOB_STATUS_HEADERS.length).setValues(all);
+  }
+
+  return {
+    rows: all.length,
+    needsAttention: rows.filter(r => /NEEDS ATTENTION|UNCLAIMED/.test(String(r[JS.status]))).length
+  };
+}
+
+/*
+ * The one-line answer to "where does this job actually stand", using the same
+ * vocabulary as the sold tracker so the two read alike.
+ */
+function jobStatusLabel_(row, sold) {
+  if (!sold) {
+    if (row.outcome === "SOLD") return "REPORTED SOLD — no ServiceTitan alert yet";
+    return "OPEN — " + (row.outcome || "not given");
+  }
+  if (sold.installCompletedOn) return "INSTALLED " + sold.installCompletedOn;
+  if (row.outcome !== "SOLD") return "STATUS DRIFT — reported " +
+    String(row.outcome || "open").toLowerCase() + ", ServiceTitan says sold";
+  if (sold.installScheduledOn) return "SOLD — install " + sold.installScheduledOn;
+  if (sold.installTbd) return "SOLD — install TBD on the COMBO LOG";
+  return "SOLD — no install date on the COMBO LOG";
+}
+
+/* ---- COMBO LOG ------------------------------------------------------------
+ *
+ * The one place a *scheduled* install date exists. sold-job-tracker-sync.gs
+ * already reads this sheet the same way; the logic is duplicated rather than
+ * shared because the two scripts are separate Apps Script projects.
+ *
+ * A sheet whose name contains TBD holds jobs with no date yet — permits,
+ * equipment, customer availability. Those are exactly the ones worth raising,
+ * so they are kept and marked rather than dropped.
+ */
+function readComboInstalls_() {
+  const id = DAILY_RECAP_CONFIG.comboLogSpreadsheetId;
+  if (!id) return { ok: true, installs: [], skipped: "no COMBO LOG id configured" };
+
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(id);
+  } catch (err) {
+    Logger.log("COMBO LOG unreachable: " + err);
+    return { ok: false, installs: [] };
+  }
+
+  const installs = [];
+  /* The COMBO LOG is edited by hand and carries tabs this code knows nothing
+     about. One odd sheet must not take down the whole refresh, so each is
+     read on its own. */
+  ss.getSheets().forEach(sheet => {
+   try {
+    const name = sheet.getName();
+    const isTbd = /\bTBD\b/i.test(name);
+    const last = sheet.getLastRow(), width = sheet.getLastColumn();
+    if (last < 2 || width < 2) return;
+
+    const values = sheet.getRange(1, 1, last, width).getValues();
+    const header = values[0].map(h => String(h || "").trim().toUpperCase());
+    const col = label => header.indexOf(label);
+    const iLast = col("LAST"), iFirst = col("FIRST"), iDate = col("DATE");
+    if (iLast === -1 && iFirst === -1) return;         // not a job sheet
+
+    for (let r = 1; r < values.length; r++) {
+      const row = values[r];
+      const first = String(row[iFirst] || "").trim();
+      const surname = String(row[iLast] || "").trim();
+      if (!first && !surname) continue;
+      const at = c => (c === -1 ? "" : String(row[c] || "").trim());
+      installs.push({
+        customer: [first, surname].filter(Boolean).join(" "),
+        installDate: iDate === -1 ? "" : comboDateIso_(row[iDate]),
+        isTbd: isTbd,
+        salesRep: at(col("SALES REP")),
+        jobNotes: at(col("JOB NOTES")),
+        permitNotes: at(col("PERMIT NOTES")),
+        jobCompleted: at(col("JOB COMPLETED")),
+        sourceSheet: name
+      });
+    }
+   } catch (err) {
+    Logger.log("COMBO LOG sheet skipped: " + err);
+   }
+  });
+  return { ok: true, installs: installs };
+}
+
+function comboDateIso_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+  }
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const m = text.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/);
+  if (!m) return "";
+  let year = m[3] ? Number(m[3]) : Number(Utilities.formatDate(new Date(),
+    DAILY_RECAP_CONFIG.timeZone, "yyyy"));
+  if (year < 100) year += 2000;
+  const d = new Date(year, Number(m[1]) - 1, Number(m[2]), 12, 0, 0);
+  if (isNaN(d.getTime()) || d.getMonth() !== Number(m[1]) - 1) return "";
+  return Utilities.formatDate(d, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+}
+
 function readSheetRows_(ss, name, width) {
   const sheet = ss.getSheetByName(name);
   if (!sheet) return [];
@@ -2238,17 +2693,27 @@ function installDailyRecapTriggers() {
       .inTimezone(cfg.timeZone).create();
   }
 
+  /* Twice a day. Late evening picks up the night's replies against the day's
+     alerts; late morning catches sales and installs that landed overnight, so
+     a 1:1 at 10am is not reading yesterday's picture. */
+  ScriptApp.newTrigger("refreshJobStatus")
+    .timeBased().everyDays(1).atHour(22).inTimezone(cfg.timeZone).create();
+  ScriptApp.newTrigger("refreshJobStatus")
+    .timeBased().everyDays(1).atHour(9).inTimezone(cfg.timeZone).create();
+
   Logger.log("Installed daily recap triggers (send " + cfg.sendHour + ":00, collect " +
     cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
     (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
-      cfg.nudgeHourOff + ":00 off" : "") + " " + cfg.timeZone + ").");
+      cfg.nudgeHourOff + ":00 off" : "") +
+    ", job status 9:00 and 22:00 " + cfg.timeZone + ").");
 }
 
 function deleteDailyRecapTriggers_() {
   ScriptApp.getProjectTriggers().forEach(trigger => {
     const fn = trigger.getHandlerFunction();
     if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
-        fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday") {
+        fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday" ||
+        fn === "refreshJobStatus") {
       ScriptApp.deleteTrigger(trigger);
     }
   });

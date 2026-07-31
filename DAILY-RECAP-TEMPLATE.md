@@ -203,6 +203,50 @@ reconstruct leads that are already sitting in it untouched.
    field is a one-time dollar amount, so a monthly cannot be written into it
    directly.
 
+## The pipeline
+
+```
+Booked Job Alert ──┐
+Sold Estimate Alert ┼─> name match against the recap replies ──> Job Status tab
+Completed Form Alert┤                                                  │
+COMBO LOG ─────────┘                                                   v
+                                                           1:1 HCA scheduler
+```
+
+`refreshJobStatus()` does every slow read — three Gmail searches and the COMBO
+LOG — and writes one reconciled row per job to the **Job Status** tab. It runs
+at 09:00 and 22:00 Pacific: late evening against the night's replies, mid
+morning so a 10am 1:1 is not reading yesterday's picture.
+
+`doGet` then reads that tab and nothing else. Putting the reads behind the
+schedule rather than inside the request matters three ways: the page is not
+waiting on hundreds of threads, the Gmail quota is spent twice a day instead of
+per page load, and two people opening the same 1:1 see the same numbers.
+
+It also means the whole reconciliation sits somewhere a person can look at it,
+which is the point of calling it a tracker. One row per job:
+
+| | |
+|---|---|
+| `Reported` | did any rep's recap mention this customer that day |
+| `Booked Job#` … `Timeline` | what the booking said, including the customer's own words |
+| `Sold` … `Amount Needs Review` | what ServiceTitan recorded, with the estimate lines behind it |
+| `Install Scheduled` | from the COMBO LOG. `TBD` means it is on a TBD sheet, not that it was forgotten |
+| `Install Completed` | from the Completed Form Alert |
+| `COMBO Sales Rep` | filled only when the COMBO LOG credits someone other than the reporting rep |
+| `Status` | the one-line answer — `SOLD — install 8/5`, `STATUS DRIFT — reported estimate, ServiceTitan says sold`, `UNCLAIMED — booked, no recap` |
+
+A row with no HCA is a booked job nobody claimed; the alert names no advisor,
+so the dispatch note is the only clue and it sits in its own column.
+
+The window is rewritten on each refresh rather than appended to, because a
+job's status genuinely changes — booked becomes sold becomes installed — and an
+append-only log would fill with contradictory rows about the same job. Rows
+outside the window are left alone, so history survives.
+
+If the tab has never been built the page shows the recap without ServiceTitan
+context and says `run refreshJobStatus()`, rather than blocking on a search.
+
 ## Feeding the 1:1 prep tool
 
 `doGet` serves the log as JSON, the same pattern `leaderboard.html` already
@@ -377,7 +421,10 @@ one line, with `INSTALL DESCRIPTION:` further down. It names no advisor, so it
 is matched back to a sold alert by customer name.
 
 **Neither alert carries a scheduled install date.** Sold and completed are all
-there is; the date the crew is booked for has to come from the COMBO LOG.
+there is; the date the crew is booked for comes from the COMBO LOG, which
+`readComboInstalls_` reads directly — the same sheet
+`sold-job-tracker-sync.gs` uses, read the same way. The logic is duplicated
+rather than shared because the two scripts are separate Apps Script projects.
 
 A booked job has no advisor **field**. The HCA is assigned after booking, so
 the alert cannot state who will run the appointment.
@@ -468,21 +515,21 @@ If the Exceptions sheet cannot be read, the send proceeds on base schedules
 alone and emails the manager a warning rather than silently assuming everyone
 is working.
 
-## Status as of 2026-07-31
+## Status as of Thursday 2026-07-30
 
 The script is complete and tested; the Apps Script project is not yet deployed,
 so nothing is running on a schedule and nothing is flowing into the trackers
-from this path. Recap emails for the 30th and 31st went out by hand and replies
-are sitting in Gmail.
+from this path. The 7/30 recap went out by hand — the first one ever sent — and
+replies are sitting in Gmail.
 
 Remaining, in order:
 
 1. Paste `apps-script/daily-recap.gs` into the project and run
    `previewDailyRecap()`.
-2. Run `backfillRecapForDate("2026-07-30")` **before Saturday** — the reply
-   search looks back two days and Thursday's answers fall out of the window
-   after that.
-3. Set `TEST_MODE: false`, run `installDailyRecapTriggers()`.
-4. Deploy as a web app and paste the `/exec` URL into `RECAP_API_URL` in
+2. Run `backfillRecapForDate("2026-07-30")` to capture tonight's replies. The
+   reply search looks back two days, so this has until Saturday.
+3. Run `refreshJobStatus()` once by hand to build the Job Status tab.
+4. Set `TEST_MODE: false`, run `installDailyRecapTriggers()`.
+5. Deploy as a web app and paste the `/exec` URL into `RECAP_API_URL` in
    `hca-1on1.html`. Until it is set, the recap card on the 1:1 page stays
    hidden and the scheduler is unaffected.
