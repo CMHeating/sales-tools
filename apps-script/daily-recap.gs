@@ -187,14 +187,23 @@ function collectRecapReplies() {
 
   const byHca = {};
   const late = [];
+  const responded = {};      // replied at all, whether or not anything parsed
+  const notesOnly = {};      // replied, but reported no appointments
+
   replies.forEach(r => {
     if (r.late) { late.push(r); return; }
+    responded[r.hca.name] = true;
+    if (!r.entries.length) {
+      if (r.note && !notesOnly[r.hca.name]) notesOnly[r.hca.name] = { hca: r.hca, note: r.note };
+      return;
+    }
+    delete notesOnly[r.hca.name];
     if (!byHca[r.hca.name]) byHca[r.hca.name] = { hca: r.hca, entries: [] };
     byHca[r.hca.name].entries = byHca[r.hca.name].entries.concat(r.entries);
   });
 
-  const responded = {};
-  Object.keys(byHca).forEach(n => { responded[n] = true; });
+  /* Silence only. Someone who replied to say they ran nothing has reported,
+     and grouping them with people who ignored the email misrepresents them. */
   const missing = plan.working.filter(h => !responded[h.name]);
 
   /* Logging runs before the digest so the digest can report what was written,
@@ -204,7 +213,7 @@ function collectRecapReplies() {
   try {
     const book = getLogSpreadsheet_();
     const wrote = appendRecapRows_(book.ss, plan, byHca);
-    appendComplianceRows_(book.ss, plan, byHca);
+    appendComplianceRows_(book.ss, plan, byHca, responded);
     logResult = {
       ok: true, error: "", written: wrote.written, skipped: wrote.skipped,
       url: book.ss.getUrl(), created: book.created
@@ -214,7 +223,7 @@ function collectRecapReplies() {
     Logger.log("Recap log write failed: " + logResult.error);
   }
 
-  const body = buildDigestBody_(plan, byHca, missing, late, logResult);
+  const body = buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly);
   sendEmailSafe_({
     to: [DAILY_RECAP_CONFIG.managerEmail],
     subject: (DAILY_RECAP_CONFIG.TEST_MODE ? "[TEST] " : "") +
@@ -271,10 +280,19 @@ function findRecapReplies_(dateLabel, sinceDate) {
         if (!received || received <= sinceDate) return;
       }
 
-      const entries = parseRecapReply_(msg.getPlainBody());
-      if (entries.length) {
-        out.push({ hca: hca, entries: entries, late: !isTonight, subject: subject });
-      }
+      /* Replies with nothing parseable are kept too. A rep who answers to say
+         they ran no appointments has reported; dropping them here would list
+         them alongside people who never replied at all. Their own words are
+         carried through so the free-text answer is not lost. */
+      const raw = msg.getPlainBody();
+      const entries = parseRecapReply_(raw);
+      out.push({
+        hca: hca,
+        entries: entries,
+        late: !isTonight,
+        subject: subject,
+        note: entries.length ? "" : ownText_(raw)
+      });
     });
   });
 
@@ -461,6 +479,25 @@ function parseDealAmount_(text) {
  * blank template that comes back in the quote contributes nothing. Answers
  * typed above the quote and answers typed inside it both parse.
  */
+/*
+ * Just the rep's own words — everything before the quoted original. Used when
+ * a reply parses to no appointments, so a free-text answer ("no appointments,
+ * 3 follow-ups") still reaches the digest instead of vanishing.
+ */
+function ownText_(body) {
+  const kept = [];
+  const lines = String(body || "").split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*>/.test(line)) break;
+    if (/^\s*On\s.+\swrote:\s*$/.test(line)) break;
+    if (/^\s*On\s.+<[^>]*$/.test(line)) break;
+    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(line)) break;
+    kept.push(line);
+  }
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function stripQuoted_(body) {
   const kept = [];
   String(body || "").split(/\r?\n/).forEach(line => {
@@ -494,7 +531,7 @@ function normalizeOutcome_(value) {
   return value.trim().toUpperCase();
 }
 
-function buildDigestBody_(plan, byHca, missing, late, logResult) {
+function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly) {
   const lines = [];
   lines.push("Recap digest for " + plan.dateLabel + " (" + plan.weekday + ")");
   if (DAILY_RECAP_CONFIG.TEST_MODE) {
@@ -536,12 +573,28 @@ function buildDigestBody_(plan, byHca, missing, late, logResult) {
     });
   }
 
+  const noteNames = notesOnly ? Object.keys(notesOnly).sort() : [];
+  if (noteNames.length) {
+    lines.push(new Array(60).join("-"));
+    lines.push("Replied, no appointments reported (" + noteNames.length + "):");
+    noteNames.forEach(name => {
+      lines.push("");
+      lines.push("  " + name + " —");
+      String(notesOnly[name].note).split(/\r?\n/).forEach(l => lines.push("      " + l));
+    });
+    lines.push("");
+  }
+
   lines.push(new Array(60).join("="));
   if (missing.length) {
     lines.push("Scheduled today but no reply (" + missing.length + "):");
     missing.forEach(h => lines.push("  - " + h.name));
   } else if (plan.working.length) {
     lines.push("All " + plan.working.length + " scheduled HCAs replied.");
+  }
+  if (missing.length && noteNames.length) {
+    lines.push("(Those above did not reply at all. The " + noteNames.length +
+      " listed as reporting no appointments did reply.)");
   }
 
   if (late && late.length) {
@@ -643,7 +696,7 @@ function appendRecapRows_(ss, plan, byHca) {
  * apart from the appointment log because a non-reply has no appointment to
  * hang off, and mixing the two would corrupt every count taken over the log.
  */
-function appendComplianceRows_(ss, plan, byHca) {
+function appendComplianceRows_(ss, plan, byHca, responded) {
   const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.complianceSheetName, COMPLIANCE_HEADERS);
   const existing = readExistingKeys_(sheet, COMPLIANCE_HEADERS.length, 0, 1);
   const stamp = new Date();
@@ -654,10 +707,13 @@ function appendComplianceRows_(ss, plan, byHca) {
     if (existing[key]) return;
     existing[key] = true;
     const group = byHca[hca.name];
+    /* Replied is about whether they answered, not whether they had anything to
+       report. A rep with no appointments still replied. */
+    const didReply = responded ? !!responded[hca.name] : !!group;
     rows.push([
       plan.isoDate,
       hca.name,
-      group ? "Yes" : "No",
+      didReply ? "Yes" : "No",
       group ? group.entries.length : 0,
       stamp
     ]);
