@@ -873,8 +873,70 @@ function writeLastDigestRun_(when) {
  * original recap email is stripped first so the blank template does not get
  * parsed back as an empty entry.
  */
+/* The seven prompts, in the order the template prints them. Reps who answer by
+   number are answering these positions. */
+const TEMPLATE_FIELD_ORDER = [
+  "Customer",
+  "Source (Web / Inbound / Tech Flip / Revisit)",
+  "Outcome (Sold / Estimate / Follow-up)",
+  "Offered (package + price)",
+  "Water heater (Y/N + interest)",
+  "Next follow-up",
+  "Objection (if not sold)"
+];
+
+/*
+ * Turns a numbered answer back into the labelled form the parser reads.
+ *
+ * Joseph answers like this:
+ *
+ *   1-Customer-Lei Huang
+ *   2-Web
+ *   3-Follow up
+ *   4-Offered 15 & 16 SEER AmSt hp's ...
+ *
+ * which is the template's seven prompts answered by position. Every line of it
+ * parsed to nothing, so a real appointment and seven follow-ups vanished. Reps
+ * are not going to stop doing this, and it is a perfectly reasonable way to
+ * answer a numbered list, so the parser meets them where they are.
+ *
+ * Deliberately conservative: it only engages when at least three lines start
+ * with distinct numbers in 1..7 and a separator, which no prose does by
+ * accident. A digit followed by a space — "2 stage furnace" — is not a numbered
+ * answer and is left alone.
+ */
+function normalizeNumberedReply_(body) {
+  const lines = String(body || "").split(/\r?\n/);
+  const seen = {};
+  let hits = 0;
+
+  lines.forEach(line => {
+    const m = line.match(/^\s*([1-7])\s*[-–.):]\s*\S/);
+    if (m && !seen[m[1]]) { seen[m[1]] = true; hits++; }
+  });
+  if (hits < 3) return body;
+
+  return lines.map(line => {
+    const m = line.match(/^\s*([1-7])\s*[-–.):]\s*(.*)$/);
+    if (!m) return line;
+
+    const label = TEMPLATE_FIELD_ORDER[Number(m[1]) - 1];
+    let value = m[2].trim();
+
+    /* "1-Customer-Lei Huang" repeats the label; "2-Web" does not. Strip it only
+       when it is really there, or the customer becomes "Customer-Lei Huang". */
+    const firstWord = (label.split(" ")[0] || "").toLowerCase();
+    const repeated = value.match(/^([A-Za-z][A-Za-z ]{0,20}?)\s*[-–:]\s*(.*)$/);
+    if (repeated && repeated[1].trim().toLowerCase().indexOf(firstWord) === 0) {
+      value = repeated[2].trim();
+    }
+
+    return label + ": " + value;
+  }).join("\n");
+}
+
 function parseRecapReply_(rawBody) {
-  const body = stripQuoted_(String(rawBody || ""));
+  const body = normalizeNumberedReply_(stripQuoted_(String(rawBody || "")));
   const entries = [];
   let current = null;
   let lastKey = null;
@@ -985,7 +1047,12 @@ function fieldKeyFor_(label) {
      and it must not fall through to the follow-up DATE branch. */
   if (label.indexOf("older lead") !== -1 ||
       label.indexOf("follow-ups on") !== -1 ||
-      label.indexOf("follow ups on") !== -1) return "dayFollowUps";
+      label.indexOf("follow ups on") !== -1 ||
+      /* Reps shorten the prompt to "Follow-ups today" and head their list with
+         it. Plural is what separates this from the per-appointment
+         "Next follow-up", so match only the plural form. */
+      label.indexOf("follow-ups today") !== -1 ||
+      label.indexOf("follow ups today") !== -1) return "dayFollowUps";
   if (label.indexOf("customer") !== -1) return "customer";
   /* Both the short "Source" and the older "Lead Source". */
   if (label.indexOf("source") !== -1) return "leadSource";
@@ -1092,6 +1159,15 @@ function parseFollowUps_(rawBody) {
       if (rest) collected.push(rest);
       continue;
     }
+
+    /* The header can arrive with no colon at all — "Follow-ups today…" over a
+       dashed list. Without this the whole list is read as ordinary prose and
+       thrown away, which is where Joseph's seven follow-ups went. */
+    if (!inSection) {
+      const bare = trimmed.replace(/[…:.\s]+$/, "").toLowerCase();
+      if (bare && fieldKeyFor_(bare) === "dayFollowUps") { inSection = true; continue; }
+    }
+
     if (!inSection) continue;
     if (key !== null) break;                       // another labelled field ends it
     if (isSignOffLine_(trimmed)) break;
@@ -1104,7 +1180,33 @@ function parseFollowUps_(rawBody) {
     collected.push(trimmed);
   }
 
-  return collected.join("\n").replace(/\n{2,}/g, "\n").trim();
+  return trimTrailingSignature_(collected).join("\n").replace(/\n{2,}/g, "\n").trim();
+}
+
+/*
+ * Drops a name signed at the bottom of a bulleted list — "Joe R" under seven
+ * dashed follow-ups. It is not a sign-off phrase, so isSignOffLine_ lets it
+ * through, and it ends up in the Follow-Ups column where it reads as an eighth
+ * item.
+ *
+ * Only fires on a list that is actually bulleted, and only on trailing lines
+ * that are not. A rep who writes their follow-ups without dashes keeps every
+ * line, because there nothing distinguishes a name from an entry.
+ */
+function trimTrailingSignature_(lines) {
+  const bulleted = lines.filter(l => /^[-–•*]/.test(l)).length;
+  if (bulleted < 2) return lines;
+
+  const out = lines.slice();
+  while (out.length) {
+    const last = String(out[out.length - 1] || "").trim();
+    if (!last) { out.pop(); continue; }
+    const looksLikeName = !/^[-–•*]/.test(last) && last.length <= 24 &&
+      !/\d/.test(last) && last.split(/\s+/).length <= 3 && /^[A-Za-z][A-Za-z.\s]*$/.test(last);
+    if (!looksLikeName) break;
+    out.pop();
+  }
+  return out;
 }
 
 /* Whether anything has actually been recorded against an entry yet. */
@@ -1133,7 +1235,11 @@ function blankEntry_() {
  */
 function parseDealAmount_(text) {
   const raw = String(text || "");
-  const monthly = /\/\s*mo|\bper month\b|\bmonthly\b|\bmo\.\b/i.test(raw);
+  /* "a month" and "/month" are as common as "/mo" — Joseph's "$253.99 a month
+     for the hvac and hwt combo" was being summed as a one-time $253.99, which
+     is not slightly wrong but wrong by two orders of magnitude in the Total
+     Offered column. */
+  const monthly = /\/\s*mo|\ba\s+month\b|\bper month\b|\bmonthly\b|\bmo\.\b|\/\s*month\b|\bmonth\b\s*$/i.test(raw);
 
   /* Dollar-marked figures win. Equipment names are full of stray numbers —
      "Silver 13 A/C package ... $14,000" and "Furnace-2 stage-$7300.00" both
