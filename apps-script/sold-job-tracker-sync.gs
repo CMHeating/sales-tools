@@ -412,6 +412,8 @@ function collapseDuplicateSoldAlerts_(rows) {
       clusters.push({
         key,
         latestDate: row.soldDate || row.emailDate,
+        /* The day it first sold, which is not the same thing. */
+        firstDate: row.soldDate || row.emailDate,
         item: row,
         count: 1,
         refs: row.messageId ? [row.messageId] : []
@@ -428,11 +430,32 @@ function collapseDuplicateSoldAlerts_(rows) {
       cluster.item = row;
     }
 
+    const firstSoFar = new Date(cluster.firstDate);
+    if (!Number.isNaN(rowDate.getTime()) && (Number.isNaN(firstSoFar.getTime()) || rowDate < firstSoFar)) {
+      cluster.firstDate = row.soldDate || row.emailDate;
+    }
+
     cluster.item.duplicateSoldAlertCount = cluster.count;
     cluster.item.duplicateSoldAlertRefs = cluster.refs;
   });
 
-  return clusters.map(cluster => cluster.item);
+  /*
+   * The latest alert wins on detail — a re-issued estimate carries the
+   * corrected figures — but the sale is dated from the FIRST alert, because
+   * that is the day it sold.
+   *
+   * Bruce Chhay sold Thursday at 4:45pm and the estimate was re-issued Friday
+   * at 6:35am. Taking the later date moved a Thursday sale into Friday's
+   * numbers, and there is no way to notice that from the tracker: one alert,
+   * one card, wrong day. Anyone counting "how many sold today" was over by one.
+   */
+  return clusters.map(cluster => {
+    if (cluster.count > 1 && cluster.firstDate && cluster.firstDate !== cluster.item.soldDate) {
+      cluster.item.resoldAlertDate = cluster.item.soldDate;   // kept for the audit trail
+      cluster.item.soldDate = cluster.firstDate;
+    }
+    return cluster.item;
+  });
 }
 
 function normalizeDuplicateText_(value) {
