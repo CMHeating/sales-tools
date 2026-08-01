@@ -238,18 +238,24 @@ function setupSoldTrackerHourlyTrigger() {
   Logger.log("Sold tracker now syncs hourly.");
 }
 
-/* Kept for a project that genuinely wants one sync a day. Note that it
-   REPLACES an hourly trigger rather than adding to it. */
+/*
+ * Historical name, hourly behaviour — deliberately.
+ *
+ * The deployed project has carried this name pointing at an hourly install for
+ * a while, and it is the name in anyone's muscle memory. Making it mean "daily"
+ * here would turn the obvious button into the one that quietly cuts the sync to
+ * a twenty-fourth of its cadence, with nothing to show for it until someone
+ * noticed the tracker going stale days later. It delegates instead.
+ */
 function setupSoldTrackerDailyTrigger() {
-  deleteSoldTrackerTriggers_();
-  ScriptApp.newTrigger("syncSoldJobTracker")
-    .timeBased()
-    .everyDays(1)
-    .atHour(6)
-    .inTimezone(SOLD_TRACKER_CONFIG.timeZone)
-    .create();
-  Logger.log("Sold tracker now syncs once a day at 6am. Email updates will " +
-    "take several days to cover every job at this cadence.");
+  Logger.log("Note: this installs the HOURLY trigger — the name is historical.");
+  return setupSoldTrackerHourlyTrigger();
+}
+
+/* Private alias kept so the name that exists in the deployed project still
+   resolves if anything calls it. */
+function setupSoldTrackerHourlyTrigger_() {
+  return setupSoldTrackerHourlyTrigger();
 }
 
 /* What is actually installed right now, without changing anything. */

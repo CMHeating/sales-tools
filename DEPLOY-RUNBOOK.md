@@ -126,10 +126,21 @@ Different project. Nothing here is urgent.
 Run → showSoldTrackerTriggers
 ```
 
-**Do not run `setupSoldTrackerDailyTrigger`.** It deletes existing triggers
-first, and this project syncs hourly. Running it drops you to once a day, at
-which cadence the email-update budget takes days to cover every job. If you
-need to install or repair the trigger, use `setupSoldTrackerHourlyTrigger`.
+Expect `Triggers installed: syncSoldJobTracker`.
+
+Hourly is the cadence this is built around — the email-update budget spends 40
+searches a run and relies on the next run continuing where it stopped.
+
+All three installers — `setupSoldTrackerHourlyTrigger`,
+`setupSoldTrackerDailyTrigger` and the private `setupSoldTrackerHourlyTrigger_`
+that exists in the deployed project — install **hourly**. The "daily" name is
+historical and kept only because it is the one in muscle memory; making it
+actually mean daily would turn the familiar button into the one that quietly
+cuts the sync to a twenty-fourth of its cadence. There is no wrong one to
+press.
+
+Each replaces the existing trigger rather than adding to it, so running one
+twice cannot leave you syncing twice an hour.
 
 ### B3. Preview one customer
 
