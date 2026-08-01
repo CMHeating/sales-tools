@@ -90,7 +90,9 @@ const DAILY_RECAP_CONFIG = {
      shift get it at 7, people on a day off get an extra hour. */
   nudgeEnabled: true,
   nudgeHourWorking: 7,
-  nudgeHourOff: 8
+  nudgeHourOff: 8,
+  /* After both nudge rounds, so a recap that came in at 7:30 is counted. */
+  morningBriefHour: 9
 };
 
 /*
@@ -2551,6 +2553,184 @@ function parseAlertFields_(body) {
  * [HVAC Sales] and [HVAC COD Service] for technician-sold work. Filtering on
  * "Sold by" against the roster is what reliably keeps technicians out.
  */
+/* ---------------------------------------------------------------------------
+ * Morning sales brief
+ *
+ * Yesterday's sales, and — the part nobody can get from a spreadsheet — how
+ * many closed on the day's own consult rather than on a lead worked from
+ * earlier.
+ *
+ * The honest limit is stated in the email itself. A Sold Estimate Alert names
+ * the rep, so the sold list is solid. Nothing in email says who ran which
+ * consult: the Booked Job Alert carries the CSR's initials, not the HCA's. So
+ * the same-day split can only be worked out for reps who filed a recap, and the
+ * rest are reported as unknown rather than assumed to be prior-consult closes.
+ *
+ * That distinction is the whole point. On 2026-07-31 six of nine consults went
+ * unreported, two of them sales — a brief that quietly counted "not reported"
+ * as "prior consult" would have said zero same-day closes on a day that had at
+ * least one.
+ * ------------------------------------------------------------------------- */
+
+function sendMorningSalesBrief() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const now = new Date();
+  const yIso = Utilities.formatDate(new Date(now.getTime() - 86400000), cfg.timeZone, "yyyy-MM-dd");
+  const yLabel = Utilities.formatDate(new Date(now.getTime() - 86400000), cfg.timeZone, "EEEE, MMMM d, yyyy");
+
+  const brief = buildMorningSalesBrief_(yIso, yLabel);
+  sendEmailSafe_({
+    to: [cfg.managerEmail],
+    subject: (isTestMode_() ? "[TEST] " : "") + "Sales brief — " + yLabel,
+    body: brief.body
+  });
+  Logger.log(brief.body);
+  return brief;
+}
+
+/* Same brief, printed and not sent. */
+function previewMorningSalesBrief() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const now = new Date();
+  const yIso = Utilities.formatDate(new Date(now.getTime() - 86400000), cfg.timeZone, "yyyy-MM-dd");
+  const yLabel = Utilities.formatDate(new Date(now.getTime() - 86400000), cfg.timeZone, "EEEE, MMMM d, yyyy");
+  const brief = buildMorningSalesBrief_(yIso, yLabel);
+  Logger.log(brief.body);
+  return brief;
+}
+
+/*
+ * A re-issued estimate arrives as a second alert with new estimate and
+ * opportunity numbers. Collapsed on rep + customer + amount, keeping the
+ * EARLIEST date, because that is the day it sold — the later alert would
+ * otherwise push a Thursday sale into Friday's count.
+ */
+function collapseResoldAlerts_(alerts) {
+  const byKey = {};
+  alerts.forEach(a => {
+    const key = normName_(a.hca) + "|" + normName_(a.customer) + "|" +
+      (a.amount === null || a.amount === undefined ? "" : a.amount);
+    const seen = byKey[key];
+    if (!seen) { byKey[key] = a; return; }
+    seen.resold = true;
+    if (a.soldOnIso && (!seen.soldOnIso || a.soldOnIso < seen.soldOnIso)) seen.soldOnIso = a.soldOnIso;
+  });
+  return Object.keys(byKey).map(k => byKey[k]);
+}
+
+function buildMorningSalesBrief_(yIso, yLabel) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const lines = [];
+  const warnings = [];
+
+  const soldRes = readSoldAlerts_(4);
+  if (!soldRes.ok) warnings.push("ServiceTitan sold alerts could not be read — the sold list below is incomplete.");
+  const sold = collapseResoldAlerts_(soldRes.alerts).filter(a => a.soldOnIso === yIso);
+
+  /* What each rep said they ran, and who said nothing. */
+  let reported = {};      // hca -> [{customer, outcome}]
+  let repliedBy = {};     // hca -> "Yes" | "Late" | "No"
+  let scheduled = [];
+  try {
+    const book = getLogSpreadsheet_();
+    readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length)
+      .filter(r => String(r[0]) === yIso)
+      .forEach(r => {
+        const name = String(r[1]);
+        (reported[name] = reported[name] || []).push({
+          customer: String(r[2] || ""), outcome: String(r[4] || "")
+        });
+      });
+    readSheetRows_(book.ss, cfg.complianceSheetName, COMPLIANCE_HEADERS.length)
+      .filter(r => String(r[0]) === yIso)
+      .forEach(r => {
+        scheduled.push(String(r[1]));
+        repliedBy[String(r[1])] = String(r[2] || "");
+      });
+  } catch (err) {
+    warnings.push("The recap log could not be read, so the same-day split is unavailable: " + err);
+  }
+
+  /* Classify each sale. "Unknown" is a real answer here and is never quietly
+     folded into "prior consult". */
+  const sameDay = [], prior = [], unknown = [];
+  sold.forEach(s => {
+    const rows = reported[s.hca] || [];
+    const ranIt = rows.filter(r => namesMatch_(r.customer, s.customer))[0];
+    if (ranIt) { sameDay.push(s); return; }
+    const replied = String(repliedBy[s.hca] || "").toLowerCase();
+    if (replied === "yes" || replied === "late") prior.push(s);
+    else unknown.push(s);
+  });
+
+  const money = n => (n === null || n === undefined) ? "" : "$" + formatMoney_(n);
+  const total = sold.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+
+  lines.push("Sales brief — " + yLabel);
+  lines.push(new Array(60).join("="));
+  lines.push("");
+  lines.push(sold.length + " sold" + (total ? "   " + money(total) + " total" : ""));
+  lines.push("   " + sameDay.length + " closed on the day's own consult");
+  lines.push("   " + prior.length + " from a lead worked earlier");
+  if (unknown.length) lines.push("   " + unknown.length + " unknown — that rep filed no recap");
+  lines.push("");
+
+  const listSales = (title, items, note) => {
+    if (!items.length) return;
+    lines.push(title + " (" + items.length + ")");
+    if (note) lines.push("  " + note);
+    items.forEach(s => {
+      lines.push("  " + s.hca + " — " + (s.customer || "(no customer named)") +
+        (s.amount ? "   " + money(s.amount) : "") + (s.resold ? "   [estimate re-issued]" : ""));
+      if (s.name) lines.push("      " + s.name);
+    });
+    lines.push("");
+  };
+
+  listSales("CLOSED ON THE DAY", sameDay);
+  listSales("FROM AN EARLIER LEAD", prior);
+  listSales("SPLIT UNKNOWN", unknown,
+    "sold, but this rep filed no recap, so there is no way to tell whether they ran it that day.");
+
+  if (!sold.length) lines.push("No HCA sales recorded for " + yLabel + ".");
+
+  /* Consults, from what was reported. Never presented as the full day. */
+  lines.push(new Array(60).join("-"));
+  const reportedCount = Object.keys(reported).reduce((n, k) => n + reported[k].length, 0);
+  lines.push("Consults reported: " + reportedCount);
+  Object.keys(reported).sort().forEach(name => {
+    lines.push("  " + name);
+    reported[name].forEach(r => lines.push("      " + (r.customer || "(unnamed)") + " — " + (r.outcome || "no outcome")));
+  });
+
+  const silent = scheduled.filter(n => {
+    const v = String(repliedBy[n] || "").toLowerCase();
+    return v !== "yes" && v !== "late";
+  });
+  if (silent.length) {
+    lines.push("");
+    lines.push("NOT REPORTED (" + silent.length + "): " + silent.join(", "));
+    lines.push("Anything they ran is missing from the figures above, sales included.");
+    lines.push("The ServiceTitan dispatch board for " + yLabel + " is the only place");
+    lines.push("that shows what they actually ran.");
+  } else if (scheduled.length) {
+    lines.push("");
+    lines.push("Everyone scheduled reported. The consult count above is the whole day.");
+  }
+
+  if (warnings.length) {
+    lines.push("");
+    lines.push(new Array(60).join("-"));
+    warnings.forEach(w => lines.push("! " + w));
+  }
+
+  return {
+    body: lines.join("\n"),
+    sold: sold.length, sameDay: sameDay.length, prior: prior.length,
+    unknown: unknown.length, total: total, notReported: silent
+  };
+}
+
 function readSoldAlerts_(days) {
   const out = [];
   let threads = [];
@@ -4098,6 +4278,11 @@ function installDailyRecapTriggers() {
   ScriptApp.newTrigger("sweepRecapReplies")
     .timeBased().everyHours(1).create();
 
+  /* After both nudge rounds, so a recap filed at 7:30 is counted. */
+  ScriptApp.newTrigger("sendMorningSalesBrief")
+    .timeBased().everyDays(1).atHour(cfg.morningBriefHour)
+    .inTimezone(cfg.timeZone).create();
+
   /* Twice a day. Late evening picks up the night's replies against the day's
      alerts; late morning catches sales and installs that landed overnight, so
      a 1:1 at 10am is not reading yesterday's picture. */
@@ -4110,7 +4295,8 @@ function installDailyRecapTriggers() {
     cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
     (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
       cfg.nudgeHourOff + ":00 off" : "") +
-    ", reply sweep hourly, job status 9:00 and 22:00 " + cfg.timeZone + ").");
+    ", reply sweep hourly, sales brief " + cfg.morningBriefHour + ":00" +
+    ", job status 9:00 and 22:00 " + cfg.timeZone + ").");
 }
 
 function deleteDailyRecapTriggers_() {
@@ -4118,7 +4304,8 @@ function deleteDailyRecapTriggers_() {
     const fn = trigger.getHandlerFunction();
     if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
         fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday" ||
-        fn === "sweepRecapReplies" || fn === "refreshJobStatus") {
+        fn === "sweepRecapReplies" || fn === "sendMorningSalesBrief" ||
+        fn === "refreshJobStatus") {
       ScriptApp.deleteTrigger(trigger);
     }
   });

@@ -89,7 +89,18 @@ The log **must** contain `reply sweep hourly`. If it says only
 `job status 9:00 and 22:00`, the paste did not take — go back to A1.
 
 Installs: send 18:00, collect 20:15, nudge 07:00 working / 08:00 off,
-**reply sweep hourly**, job status 09:00 and 22:00.
+**reply sweep hourly**, **sales brief 09:00**, job status 09:00 and 22:00.
+
+The sales brief emails yesterday's sales split into closed-on-the-day,
+from-an-earlier-lead, and **unknown** — the last being sales by a rep who filed
+no recap, where there is no way to tell. It never folds unknown into either of
+the other two. It runs at 09:00 rather than earlier so a recap filed after the
+07:00 nudge is counted. `previewMorningSalesBrief` prints it without sending.
+
+The brief can only see consults that were reported. When someone has not
+reported it says so, names them, and points at the ServiceTitan dispatch board —
+which is the only place that shows what was actually run, and is not readable
+from email.
 
 ### A6. Catch up on late replies
 
