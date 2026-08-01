@@ -690,6 +690,21 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays, includeAllDates) 
     return { ok: false, replies: out };
   }
 
+  /* Which nights were asked about at all. Needed to tell a genuine late reply
+     from one sent to the wrong thread — see suspectWrongThread_. */
+  const nightsAsked = {};
+  threads.forEach(thread => {
+    let msgs = [];
+    try { msgs = thread.getMessages(); } catch (err) { return; }
+    msgs.forEach(m => {
+      const hit = String(m.getSubject() || "").match(/([A-Za-z]+day,\s+[A-Za-z]+\s+\d{1,2},\s+\d{4})/);
+      if (hit) {
+        const iso = isoFromDateLabel_(hit[1]);
+        if (iso) nightsAsked[iso] = true;
+      }
+    });
+  });
+
   threads.forEach(thread => {
     const messages = thread.getMessages();
 
@@ -742,6 +757,11 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays, includeAllDates) 
            lands on the right date instead of today's. */
         answersIso: isoFromDateLabel_(threadDateLabel || dateLabel),
         answersLabel: threadDateLabel || dateLabel,
+        receivedIso: Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd"),
+        receivedAt: Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "EEE h:mm a"),
+        /* Reported, never acted on — see suspectWrongThread_. */
+        suspectDate: suspectWrongThread_(
+          isoFromDateLabel_(threadDateLabel || dateLabel), msg.getDate(), nightsAsked),
         note: (entries.length || followUps) ? "" : ownText_(raw)
       });
     });
@@ -898,6 +918,44 @@ function showPausedHcas() {
   });
   Logger.log("Run resumeHcaNow with PAUSE_HCA_NAME set to put someone back.");
   return names;
+}
+
+/*
+ * True when a reply looks like it went to the wrong email, without claiming it
+ * did.
+ *
+ * Reps answer by scrolling to a recap in their inbox and hitting reply, and the
+ * one they land on is not always the newest. Adam ran Taylor Pearson on Friday
+ * afternoon and reported it at 9:45pm — on Thursday's thread. The subject is
+ * the only date signal there is, so the row files against Thursday: it inflates
+ * one night and hollows out the next, and nothing about the entry looks wrong.
+ *
+ * What separates that from an ordinary late reply is WHEN it arrived. Answering
+ * Thursday's recap on Friday morning is normal and happens most days. Answering
+ * it on Friday *night*, after Friday's own recap has gone out, means a fresher
+ * email was sitting there unanswered — which is the shape of a misfire.
+ *
+ * So all four must hold:
+ *   - the reply names a night, and
+ *   - it arrived on a later day than that night, and
+ *   - it arrived at or after the hour that day's own recap goes out, and
+ *   - that day was itself asked about, so a fresher email really did exist.
+ *
+ * Deliberately only a flag. A genuine late reply is indistinguishable from a
+ * misdirected one at the level of content, and moving somebody's data on a
+ * guess is worse than printing a line asking a human to look.
+ */
+function suspectWrongThread_(answersIso, received, nightsAsked) {
+  if (!answersIso || !received) return false;
+
+  const cfg = DAILY_RECAP_CONFIG;
+  const receivedIso = Utilities.formatDate(received, cfg.timeZone, "yyyy-MM-dd");
+  if (receivedIso <= answersIso) return false;
+
+  const hour = Number(Utilities.formatDate(received, cfg.timeZone, "H"));
+  if (!(hour >= cfg.sendHour)) return false;
+
+  return !!(nightsAsked && nightsAsked[receivedIso]);
 }
 
 function readLastDigestRun_() {
@@ -1527,6 +1585,21 @@ function buildDigestBody_(plan, byHca, missing, late, logResult, notesOnly, foll
     lines.push("");
     lines.push("These are logged against the night they answer, so the 1:1 page");
     lines.push("sees them in the right place.");
+
+    const suspect = late.filter(r => r.suspectDate);
+    if (suspect.length) {
+      lines.push("");
+      lines.push("CHECK THE DATE ON THESE (" + suspect.length + ") —");
+      lines.push("each arrived after that evening's own recap had gone out, so a newer");
+      lines.push("email was sitting unanswered. Likely a reply to the wrong one.");
+      lines.push("Nothing has been moved; the rows are filed as the subject says.");
+      suspect.forEach(r => {
+        lines.push("");
+        lines.push("  " + r.hca.name + " — filed against " + r.answersLabel);
+        lines.push("      arrived " + r.receivedAt + " on " + r.receivedIso);
+        r.entries.forEach(e => lines.push("      " + (e.customer || "(unnamed)")));
+      });
+    }
   }
 
   if (!plan.exceptions.ok) {
@@ -1707,10 +1780,18 @@ function sweepRecapReplies() {
     }
   }
 
+  const suspect = res.replies.filter(r => r.suspectDate);
+  suspect.forEach(r => Logger.log(
+    "CHECK THE DATE — " + r.hca.name + " filed against " + r.answersLabel +
+    " but replied " + r.receivedAt + " on " + r.receivedIso + ", after that " +
+    "evening's own recap went out. Nothing moved."));
+
   Logger.log("Reply sweep: " + res.replies.length + " repl(ies) seen, " +
     out.written + " new row(s) logged, " + out.skipped + " already there" +
     (out.marked.length ? ", marked Late: " + out.marked.join(", ") : "") +
+    (suspect.length ? ", " + suspect.length + " to date-check" : "") +
     (out.reconciled ? ", Job Status rebuilt" : "") + ".");
+  out.suspectDates = suspect.map(r => r.hca.name + " -> " + r.answersLabel);
   return out;
 }
 
