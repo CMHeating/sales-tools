@@ -1,13 +1,12 @@
 {
   "name": "cmh-guard",
   "displayName": "CM Heating Repo Guard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Blocks edits to generated files and frozen snapshots, keeps secret literals out of committed files, and flags stale builds. Driven by a per-repo .claude/guard.json; inert without one.",
   "author": {
     "name": "CM Heating",
     "url": "https://github.com/CMHeating"
   },
   "repository": "https://github.com/CMHeating/sales-tools",
-  "keywords": ["hooks", "guard", "safety", "generated-files", "secrets"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["hooks", "guard", "safety", "generated-files", "secrets"]
 }
