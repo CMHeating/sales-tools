@@ -977,7 +977,7 @@ function parseRecapReply_(rawBody) {
       /* Mail clients hard-wrap long answers, so a line carrying no field label
          is the tail of the previous answer rather than noise. Without this the
          wrapped remainder is lost. */
-      if (current && lastKey && !isSignOffLine_(trimmed)) {
+      if (current && lastKey && !isSignOffLine_(trimmed) && !looksLikeTemplatePrompt_(trimmed)) {
         current[lastKey] = (current[lastKey] + " " + trimmed).replace(/\s+/g, " ").trim();
       }
       return;
@@ -1036,6 +1036,41 @@ function parseRecapReply_(rawBody) {
  * number their appointments ("Appointment 2"). Each would otherwise be
  * swallowed onto the end of the answer above it.
  */
+/*
+ * True for a line that is part of the template's own wording rather than an
+ * answer.
+ *
+ * The blank template comes back quoted underneath a reply, and mail clients
+ * reflow its longest prompt — "If not sold — What is the objection or holdback
+ * from completing the sale?:" — across two lines. The tail carries no colon, so
+ * it read as the wrapped continuation of the previous answer and produced a
+ * phantom appointment with no customer and a prompt for a follow-up date. Two
+ * of those reached the live log before this was spotted.
+ *
+ * Matched on distinctive prompt wording, not on shape: no rep answers a
+ * question with the question.
+ */
+function looksLikeTemplatePrompt_(line) {
+  const l = String(line || "").toLowerCase().trim();
+
+  /* The other half of a reflowed prompt — "the sale?:" is what is left of the
+     objection question once the client has wrapped it. A short line ending in a
+     colon is a label tail, never an answer. This is only reached after the
+     parser has already failed to read the line as a real field, so it cannot
+     swallow a legitimate one. */
+  if (/^[a-z0-9\s'’—-]{0,30}\??:$/.test(l)) return true;
+
+  return /\bif not sold\b/.test(l) ||
+    /what is the objection/.test(l) ||
+    /holdback from completing/.test(l) ||
+    /interest level/.test(l) ||
+    /package\s*[\/+]\s*tier|package \+ price/.test(l) ||
+    /\bif not closed\b/.test(l) ||
+    /one block per appointment/.test(l) ||
+    /(repeat|paste) the block/.test(l) ||
+    /who \+ what happened/.test(l);
+}
+
 function isSignOffLine_(line) {
   const l = String(line || "").replace(/^\*+\s*/, "").trim();
   if (/^appointment\s*#?\s*\d+\b/i.test(l)) return true;
