@@ -753,6 +753,101 @@ function showRecapMode() {
   return mode;
 }
 
+/* ---------------------------------------------------------------------------
+ * Pausing someone
+ *
+ * For an open-ended absence — parental leave, a secondment, someone off "a week
+ * or so" with no return date. The Schedule Exceptions sheet is the right tool
+ * for a known set of dates; it needs a row per day, which is the wrong shape
+ * when nobody knows how many days there are.
+ *
+ * Like TEST_MODE, this lives in Script Properties rather than in the roster
+ * above, for the same reason: this file gets pasted whole over the live project
+ * and anything written in the source is undone by the next update. A paused rep
+ * would quietly start getting recaps again, or a returning one would stay
+ * paused, and either way nobody would notice for days.
+ * ------------------------------------------------------------------------- */
+
+const PAUSED_HCAS_PROPERTY = "pausedHcas";
+
+/* The Run dropdown calls functions with no arguments, so the name to pause
+   goes here and you run pauseHcaNow / resumeHcaNow beside it. */
+const PAUSE_HCA_NAME = "Trevor Bohm";
+const PAUSE_HCA_REASON = "Off for a week or so";
+
+function readPausedHcas_() {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty(PAUSED_HCAS_PROPERTY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
+  } catch (err) {
+    /* Unreadable means nobody is paused, which sends an email too many rather
+       than too few. A missing recap is invisible; an extra one gets answered. */
+    Logger.log("Could not read the paused list, treating everyone as active: " + err);
+    return {};
+  }
+}
+
+function writePausedHcas_(map) {
+  PropertiesService.getScriptProperties()
+    .setProperty(PAUSED_HCAS_PROPERTY, JSON.stringify(map || {}));
+}
+
+function pauseHca_(name, reason) {
+  const known = RECAP_ROSTER.filter(h => normName_(h.name) === normName_(name))[0];
+  if (!known) {
+    Logger.log("No HCA called '" + name + "' on the roster. Nothing changed. Roster is: " +
+      RECAP_ROSTER.map(h => h.name).join(", "));
+    return null;
+  }
+  const map = readPausedHcas_();
+  map[known.name.toLowerCase()] = cleanReason_(reason);
+  writePausedHcas_(map);
+  Logger.log(known.name + " paused — no recap, no nudge, and not counted as missing. " +
+    "Run resumeHcaNow to put them back.");
+  return known.name;
+}
+
+function resumeHca_(name) {
+  const known = RECAP_ROSTER.filter(h => normName_(h.name) === normName_(name))[0];
+  const key = (known ? known.name : String(name || "")).toLowerCase();
+  const map = readPausedHcas_();
+  if (!map[key]) {
+    Logger.log((known ? known.name : name) + " was not paused. Nothing changed.");
+    return null;
+  }
+  delete map[key];
+  writePausedHcas_(map);
+  Logger.log((known ? known.name : name) + " is back on the roster from the next send.");
+  return known ? known.name : name;
+}
+
+function cleanReason_(reason) {
+  const text = String(reason || "").replace(/\s+/g, " ").trim();
+  return text || "no reason given";
+}
+
+/* Edit PAUSE_HCA_NAME above, then run one of these. */
+function pauseHcaNow() { return pauseHca_(PAUSE_HCA_NAME, PAUSE_HCA_REASON); }
+function resumeHcaNow() { return resumeHca_(PAUSE_HCA_NAME); }
+
+/* Who is paused right now. Changes nothing. */
+function showPausedHcas() {
+  const map = readPausedHcas_();
+  const names = Object.keys(map);
+  if (!names.length) {
+    Logger.log("Nobody is paused — all " + RECAP_ROSTER.length + " HCAs are active.");
+    return [];
+  }
+  names.forEach(k => {
+    const hca = RECAP_ROSTER.filter(h => h.name.toLowerCase() === k)[0];
+    Logger.log("PAUSED: " + (hca ? hca.name : k) + " — " + map[k]);
+  });
+  Logger.log("Run resumeHcaNow with PAUSE_HCA_NAME set to put someone back.");
+  return names;
+}
+
 function readLastDigestRun_() {
   try {
     const raw = PropertiesService.getScriptProperties().getProperty("lastDigestRunIso");
@@ -1860,6 +1955,7 @@ function buildTodayPlan_(now) {
   const isoDate = Utilities.formatDate(now, cfg.timeZone, "yyyy-MM-dd");
 
   const exceptions = readExceptionsForDate_(isoDate);
+  const paused = readPausedHcas_();
   const working = [];
   const skipped = [];
 
@@ -1867,6 +1963,14 @@ function buildTodayPlan_(now) {
     const ex = exceptions.byName[hca.name.toLowerCase()];
     const scheduled = hca.days.indexOf(weekday) !== -1;
     const type = ex ? String(ex.type || "").trim().toLowerCase() : "";
+
+    /* Checked before anything else: a pause is a standing decision about a
+       person and outranks whatever a single day's exception row says. */
+    const pause = paused[hca.name.toLowerCase()];
+    if (pause) {
+      skipped.push({ name: hca.name, reason: "Paused" + (pause ? " — " + pause : "") });
+      return;
+    }
 
     if (type === "sick" || type === "vacation") {
       skipped.push({ name: hca.name, reason: titleCase_(type) + (ex.notes ? " — " + ex.notes : "") });
