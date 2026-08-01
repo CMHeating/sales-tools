@@ -5,13 +5,10 @@
     "name": "CM Heating",
     "url": "https://github.com/CMHeating"
   },
-  "metadata": {
-    "pluginRoot": "./plugins"
-  },
   "plugins": [
     {
       "name": "cmh-guard",
-      "source": "./cmh-guard",
+      "source": "./plugins/cmh-guard",
       "description": "Blocks edits to generated files and frozen snapshots, keeps secret literals out of committed files, and flags stale builds. Driven by a per-repo .claude/guard.json; inert without one.",
       "version": "1.0.0",
       "category": "safety"
