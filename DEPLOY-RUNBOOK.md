@@ -112,6 +112,16 @@ Files any reply that arrived after its night's collection, against the night it
 answers. Sends nothing. Safe to run repeatedly — writes are keyed on
 date + HCA + customer.
 
+A `CHECK THE DATE` line in the log means a reply looks like it went to the wrong
+recap — it answers an older night but arrived after a newer recap had already
+gone out, so a fresher email was sitting there unanswered. Adam's Taylor Pearson
+row is the case this was built from: run Friday afternoon, reported 9:45pm
+Friday, on Thursday's thread. **Nothing is moved.** The row files as the subject
+says and the flag asks a human to look, because a genuine late reply reads
+identically. Same list appears in the nightly digest under
+`CHECK THE DATE ON THESE`. To act on one, edit the Recap Log row's Date and Key
+by hand.
+
 ### A7. Check tomorrow before it happens
 
 ```
