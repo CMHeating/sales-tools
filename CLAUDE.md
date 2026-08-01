@@ -136,10 +136,10 @@ The Leaderboard and Install Availability tools use Firebase JS SDK v10 loaded vi
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project has a knowledge graph (god nodes, community structure, cross-file relationships), but it is **not stored in the repo**. Graphs live under `~/dev/graphs/` and are registered with graphify globally — this repo maps to the HCA graph (`~/dev/graphs/hca/graphify-out/`). `graphify-out/` is gitignored, so never gate graphify use on an in-repo `graphify-out/graph.json`; that path is intentionally absent.
 
 Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- First check the CLI is available: `command -v graphify`. Remote/web sessions usually don't have it — fall back to normal search and say so, rather than reporting the graph as missing.
+- When it is available, for codebase questions first run `graphify query "<question>"` — the global registration resolves this repo to its graph. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than the full report or raw grep output.
+- The wiki (`wiki/index.md`) and `GRAPH_REPORT.md` live under the registered graph directory, not the repo. Use the wiki for broad navigation; read GRAPH_REPORT.md only for architecture review or when query/path/explain don't surface enough context.
+- After modifying code, run `graphify update .` from the repo root to keep the registered graph current (AST-only, no API cost).
