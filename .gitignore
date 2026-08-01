@@ -9,6 +9,11 @@ install-auth-users.spark.private.json
 firebase.hosting-install-only.json
 firebase.database-spark-only.json
 
+# Deploy staging directory. The Hosting deploy recipe in
+# INSTALL-AVAILABILITY-SECURITY.md rebuilds this with rm -rf on every deploy,
+# so nothing in it may be tracked — anything tracked here gets destroyed.
+firebase-hosting-install/
+
 # Logs
 logs
 *.log
