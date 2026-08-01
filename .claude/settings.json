@@ -1,11 +1,18 @@
 {
   "enabledPlugins": {
+    "cmh-guard@cmh-tools": true,
     "superpowers@superpowers-marketplace": true,
     "obsidian@obsidian-skills": true,
     "andrej-karpathy-skills@karpathy-skills": true,
     "watch@claude-video": true
   },
   "extraKnownMarketplaces": {
+    "cmh-tools": {
+      "source": {
+        "source": "github",
+        "repo": "CMHeating/sales-tools"
+      }
+    },
     "superpowers-marketplace": {
       "source": {
         "source": "github",

@@ -1,0 +1,55 @@
+{
+  "generated": [
+    {
+      "path": "install-availability-secure.html",
+      "what": "the Firebase Hosting production build",
+      "from": "install-availability.html (or scripts/install-availability-users.spark.js for the roster)",
+      "build": "node scripts/build-install-availability-spark.js",
+      "docs": "CLAUDE.md > Install Availability Build Pipeline"
+    },
+    {
+      "path": "database.install-availability.spark.rules.json",
+      "what": "the Firebase Realtime Database rules",
+      "from": "scripts/install-availability-users.spark.js",
+      "build": "node scripts/build-install-availability-spark.js",
+      "docs": "CLAUDE.md > Install Availability Build Pipeline"
+    }
+  ],
+
+  "frozen": [
+    {
+      "glob": "*.before-*.html",
+      "reason": "a .before-*.html recovery snapshot — an intentional restore point, kept frozen at the state it captured",
+      "allowCreate": true,
+      "docs": "CLAUDE.md > Backup File Convention"
+    }
+  ],
+
+  "secretPatterns": [
+    {
+      "name": "Install Availability PIN literals",
+      "declaration": "(?:ADMIN_PINS|HCA_PINS|PIN_MAP)\\s*=\\s*\\{",
+      "value": "\"\\d{4,12}\"\\s*:\\s*\"",
+      "window": 2000,
+      "allow": ["*.private.*"],
+      "hint": "PINs belong in pin-config.private.json (gitignored) and are injected by the build. Leave ADMIN_PINS/HCA_PINS empty in committed source.",
+      "docs": "INSTALL-AVAILABILITY-SECURITY.md"
+    }
+  ],
+
+  "rebuild": [
+    {
+      "glob": "install-availability.html",
+      "build": "node scripts/build-install-availability-spark.js",
+      "stale": ["install-availability-secure.html", "database.install-availability.spark.rules.json"],
+      "docs": "INSTALL-AVAILABILITY-SECURITY.md"
+    },
+    {
+      "glob": "scripts/install-availability-users.spark.js",
+      "build": "node scripts/build-install-availability-spark.js",
+      "stale": ["install-availability-secure.html", "database.install-availability.spark.rules.json"],
+      "note": "Roster changes also change the database rules, so redeploy those too.",
+      "docs": "INSTALL-AVAILABILITY-SECURITY.md"
+    }
+  ]
+}
