@@ -113,12 +113,39 @@ const RECAP_ROSTER = [
 
 /* ------------------------------------------------------------------ send */
 
-function sendDailyRecap() {
+const LAST_SEND_PROPERTY = "lastRecapSendIso";
+
+/*
+ * Sends tonight's recap, once.
+ *
+ * The second guard is there because this function sits in the Run dropdown
+ * next to the read-only ones, sends the moment it is called, and cannot be
+ * taken back — Gmail has no recall and Apps Script bypasses Undo Send. All six
+ * HCAs got a duplicate on the first evening it went live, from exactly that.
+ *
+ * A day that has already had a real send is refused. The trigger fires once, so
+ * this only ever catches a second call. forceSendDailyRecap is the way past it,
+ * named so that using it is a decision rather than an accident.
+ */
+function sendDailyRecap() { return sendDailyRecap_(false); }
+
+/* Sends even if today already had one. For a genuine re-send — the night the
+   6pm run went out in test mode and nobody was contacted, say. */
+function forceSendDailyRecap() { return sendDailyRecap_(true); }
+
+function sendDailyRecap_(force) {
   const now = new Date();
   const plan = buildTodayPlan_(now);
 
   if (!plan.working.length) {
     Logger.log("No HCAs scheduled for " + plan.dateLabel + ". Nothing sent.");
+    return plan;
+  }
+
+  if (!force && !isTestMode_() && lastRealSendIso_() === plan.isoDate) {
+    Logger.log("ALREADY SENT today (" + plan.dateLabel + ") — nothing sent, nobody " +
+      "was emailed twice.\nRun forceSendDailyRecap if you really do want a second " +
+      "copy, or previewDailyRecap to see the roster without sending.");
     return plan;
   }
 
@@ -152,8 +179,31 @@ function sendDailyRecap() {
     });
   }
 
+  /* Recorded after the send, so a run that threw partway does not lock the day
+     out. Recorded only for a real send — a test-mode preview contacts nobody
+     and must not block the real one. */
+  writeLastRealSend_(plan.isoDate);
+
   Logger.log("Sent recap to " + plan.working.length + " HCA(s) for " + plan.dateLabel);
   return plan;
+}
+
+function lastRealSendIso_() {
+  try {
+    return PropertiesService.getScriptProperties().getProperty(LAST_SEND_PROPERTY) || "";
+  } catch (err) {
+    /* Unreadable means we cannot prove today was already sent. Send — a missing
+       recap is invisible, a duplicate is merely annoying. */
+    return "";
+  }
+}
+
+function writeLastRealSend_(isoDate) {
+  try {
+    PropertiesService.getScriptProperties().setProperty(LAST_SEND_PROPERTY, isoDate);
+  } catch (err) {
+    Logger.log("Could not record the send date: " + (err && err.message ? err.message : String(err)));
+  }
 }
 
 function buildRecapBody_(hca, dateLabel) {

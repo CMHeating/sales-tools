@@ -229,10 +229,14 @@ Next morning, in order of what each proves:
 
 ## If something looks wrong
 
+- `previewDailyRecap` — tonight's roster and the exact email each person would
+  get. **Use this, never `sendDailyRecap`, to check a change.** `sendDailyRecap`
+  sends the moment it is called and cannot be taken back: Gmail has no recall
+  and Apps Script bypasses Undo Send. A second call on a day that already sent
+  is now refused, but the first one is on you.
 - `showRecapMode` — live or test, and where that came from
 - `showPausedHcas` — who is off the send
 - `showSoldTrackerTriggers` — what is actually scheduled
-- `previewDailyRecap` — tonight's roster, sends nothing
 - `previewDealNotesForCustomer` — one customer's notes, writes nothing
 
 All five are read-only. None of them send, write, or change a schedule.
