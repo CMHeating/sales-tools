@@ -1,0 +1,246 @@
+# Deploy Runbook — Daily Recap & Sold Job Tracker
+
+Written 2026-07-31. Follow top to bottom; the order matters in a few places and
+those are called out.
+
+Two **separate** Apps Script projects. Both define `doGet`. Pasting one over the
+other breaks whichever it replaced — this has already happened once. Before any
+paste, read the code on screen and confirm which project you are in:
+
+| Project | Confirm you see | Never paste |
+|---|---|---|
+| **HCA Daily Recap** (`0730daily-recaps.gs`) | `DAILY_RECAP_CONFIG`, `RECAP_ROSTER` | the sold tracker |
+| **Sold Job Tracker Sync** | `SOLD_TRACKER_CONFIG`, `syncSoldJobTracker` | the recap |
+| **1:1 Scheduler** | calendar/booking code | either of the above |
+
+The live 1:1 Scheduler has diverged from the copy in this repo (1,200+ lines
+live vs 556 committed). **Do not restore it from git** — that would delete
+working code. Leave it alone.
+
+Source for every paste: GitHub → the file → **Raw** → `Ctrl+A`, `Ctrl+C`.
+Check the branch selector reads `claude/cm-heating-sales-handoff-bgczid`.
+
+---
+
+## Part A — HCA Daily Recap
+
+Do this first. Until step A2, the 6pm send contacts nobody.
+
+### A1. Paste
+
+`apps-script/daily-recap.gs` → `Ctrl+A`, `Ctrl+V`, `Ctrl+S`.
+
+This discards the one-off `fileLateRepliesNow` and `fixKylesCount` functions.
+That is correct — their work is already done and the fixed
+`markComplianceLate_` handles that case permanently.
+
+No authorization prompt should appear. If Google asks you to authorize, you are
+in the wrong project.
+
+### A2. Go live — do not skip
+
+```
+Run → goLive
+Run → showRecapMode
+```
+
+Must read: `LIVE — from Script Properties (survives a paste)`.
+
+`TEST_MODE` in the file ships as `true` so a new project is safe by default.
+`goLive` stores the real setting outside the file, so future pastes cannot
+revert it. Skipping this is what caused Friday's send to reach nobody.
+
+### A3. Pause Trevor
+
+Near the top of the file:
+
+```javascript
+const PAUSE_HCA_NAME = "Trevor Bohm";
+const PAUSE_HCA_REASON = "Off for a week or so";
+```
+
+```
+Ctrl+S
+Run → pauseHcaNow
+Run → showPausedHcas
+```
+
+Must read: `PAUSED: Trevor Bohm — Off for a week or so`.
+
+To bring him back: same two constants, `Run → resumeHcaNow`.
+
+### A4. Build the Today tab
+
+```
+Run → installLiveTabs
+```
+
+Adds a **Today** tab to the recap log: today and yesterday's appointments, who
+has answered, who still owes one, who came in late. All formulas — it updates
+itself, nothing needs to run. Leave it open on a second monitor.
+
+### A5. Install triggers
+
+```
+Run → installDailyRecapTriggers
+```
+
+The log **must** contain `reply sweep hourly`. If it says only
+`job status 9:00 and 22:00`, the paste did not take — go back to A1.
+
+Installs: send 18:00, collect 20:15, nudge 07:00 working / 08:00 off,
+**reply sweep hourly**, job status 09:00 and 22:00.
+
+### A6. Catch up on late replies
+
+```
+Run → sweepRecapReplies
+```
+
+Files any reply that arrived after its night's collection, against the night it
+answers. Sends nothing. Safe to run repeatedly — writes are keyed on
+date + HCA + customer.
+
+### A7. Check tomorrow before it happens
+
+```
+Run → previewDailyRecap
+```
+
+Sends nothing. Confirm the roster is who you expect and that Trevor shows under
+Skipped as `Paused`.
+
+---
+
+## Part B — Sold Job Tracker Sync
+
+Different project. Nothing here is urgent.
+
+### B1. Paste
+
+`apps-script/sold-job-tracker-sync.gs` → `Ctrl+A`, `Ctrl+V`, `Ctrl+S`.
+
+### B2. See what is scheduled — changes nothing
+
+```
+Run → showSoldTrackerTriggers
+```
+
+**Do not run `setupSoldTrackerDailyTrigger`.** It deletes existing triggers
+first, and this project syncs hourly. Running it drops you to once a day, at
+which cadence the email-update budget takes days to cover every job. If you
+need to install or repair the trigger, use `setupSoldTrackerHourlyTrigger`.
+
+### B3. Preview one customer
+
+Near the top:
+
+```javascript
+const PREVIEW_DEAL_CUSTOMER = "Jessiah Johnson";
+```
+
+```
+Run → previewDealNotesForCustomer
+```
+
+Prints the COMBO LOG coordination notes and email updates for that one
+customer. Writes nothing. `comboRowsMatched: 0` means they genuinely are not on
+the log; empty `emailUpdates` means no non-alert email mentions them in 90 days.
+Neither is an error.
+
+### B4. Full sync
+
+```
+Run → syncSoldJobTracker
+```
+
+Takes 1–3 minutes. In the summary look for:
+
+```
+"coordinationNotes": <hundreds>,
+"emailUpdates": { "searched": 40, "deferred": <many>, "outOfTime": false }
+```
+
+A large `deferred` on the **first** run is correct — the cache is empty, so it
+spends its 40-search budget and leaves the rest for the next hourly run.
+Coordination notes are complete immediately; they come off the sheet with no
+budget.
+
+If `"outOfTime": true`, the searches are slower than sized for — say so and the
+budget gets lowered.
+
+---
+
+## Part C — Web pages
+
+### C1. Sold tracker page
+
+`sold-job-tracker.html` → paste into GitHub → commit.
+
+Adds the **Notes & updates** section, and a `COMBO LOG spelling` chip that shows
+when a job was matched by fuzzy name rather than exactly — so a spelling-driven
+match can be checked rather than trusted.
+
+Committing to the branch does **not** publish it. GitHub Pages serves `main`.
+Either paste into the file on `main`, or merge the branch.
+
+### C2. Recap web app — needed by the 1:1 page
+
+In the **HCA Daily Recap** project:
+
+```
+Deploy → New deployment → type: Web app
+  Execute as:      Me
+  Who has access:  Anyone
+→ Deploy → copy the /exec URL
+```
+
+Then in `hca-1on1.html` line ~165:
+
+```javascript
+const RECAP_API_URL = "";   // ← paste the /exec URL between the quotes
+```
+
+Until this is filled in, the 1:1 page cannot read any recap data.
+
+A deployment serves a **pinned version**. Editing the code afterwards does not
+change what the deployment serves — you must redeploy. That is also why editing
+the script cannot break a live endpoint by accident.
+
+Note the exception to the repo's usual `{ mode: 'no-cors' }` rule: that applies
+to fire-and-forget calls where the answer is not read. This one reads JSON back,
+so it must be a normal `fetch` — `no-cors` would make the response unreadable.
+`Who has access: Anyone` is what makes that work; set to "Anyone with Google
+account" the page gets a login redirect instead of data.
+
+---
+
+## Verify it is actually working
+
+Next morning, in order of what each proves:
+
+1. **Recap log → Today tab** — yesterday's appointments listed, and anyone who
+   answered late showing under *Answered late*. Proves the sweep is running.
+2. **Reply Compliance** — no row still saying `No` for someone who has visibly
+   replied in Gmail. Proves attribution by night is working.
+3. **Sold tracker page** — cards carry a *Notes & updates* section, and
+   "Last sync" is within the hour. Proves Part B.
+4. **Job Status tab** — rebuilt after a late reply, not only at 09:00/22:00.
+
+## If something looks wrong
+
+- `showRecapMode` — live or test, and where that came from
+- `showPausedHcas` — who is off the send
+- `showSoldTrackerTriggers` — what is actually scheduled
+- `previewDailyRecap` — tonight's roster, sends nothing
+- `previewDealNotesForCustomer` — one customer's notes, writes nothing
+
+All five are read-only. None of them send, write, or change a schedule.
+
+## Known gaps
+
+- The Job Status tab has no tech-lead column, so a tech flip carries the fact
+  but not the technician's name.
+- Nothing yet distinguishes "ran nothing and said so" from "replied without
+  reporting". Both show as 0 appointments. Amber and Trevor are the first kind;
+  it has not yet caused a wrong decision.
