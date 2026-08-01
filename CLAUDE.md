@@ -126,7 +126,9 @@ Many `.before-xxx.html` files exist as named snapshots before significant change
 
 ## HCA Roster
 
-Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Javierre Milo), Joe Chounramany, Joseph Ruble, Kyle McAlister, Samir Khoury, Trevor Bohm.
+Adam Weberg, Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Javierre Milo), Joe Chounramany, Joseph Ruble, Kyle McAlister, Samir Khoury, Trevor Bohm.
+
+Adam is the newest HCA: he has no `tracker-adam.html` yet (each tracker needs its own Apps Script deployment — `index.html` deliberately shows him as "No jobs yet" until one exists), and the data-regenerated tools (`daily-brief.html`, `exec-summary.html`) pick him up on their next refresh. Do not hand-add him to those; `daily-brief.html`'s dropdown crashes on an HCA with no generated card.
 
 ## Design Patterns
 
