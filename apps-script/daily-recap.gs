@@ -1288,18 +1288,20 @@ function dedupeEntries_(entries) {
  * whole day, not a property of any single appointment.
  */
 function parseFollowUps_(rawBody) {
-  const lines = stripQuoted_(String(rawBody || "")).split(/\r?\n/);
+  const lines = splitQuoted_(String(rawBody || ""));
   const collected = [];
   let inSection = false;
+  let startedQuoted = false;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i].text;
     const trimmed = line.trim();
     const idx = line.indexOf(":");
     const key = idx === -1 ? null : fieldKeyFor_(line.slice(0, idx).toLowerCase());
 
     if (key === "dayFollowUps") {
       inSection = true;
+      startedQuoted = lines[i].quoted;
       const rest = line.slice(idx + 1).trim();
       if (rest) collected.push(rest);
       continue;
@@ -1310,10 +1312,19 @@ function parseFollowUps_(rawBody) {
        thrown away, which is where Joseph's seven follow-ups went. */
     if (!inSection) {
       const bare = trimmed.replace(/[…:.\s]+$/, "").toLowerCase();
-      if (bare && fieldKeyFor_(bare) === "dayFollowUps") { inSection = true; continue; }
+      if (bare && fieldKeyFor_(bare) === "dayFollowUps") {
+        inSection = true;
+        startedQuoted = lines[i].quoted;
+        continue;
+      }
     }
 
     if (!inSection) continue;
+    /* A list written above the quote ends where the quote begins. A list typed
+       *inside* the quoted template — answering on the label line, the way Adam
+       does from his iPad — is exempt, because there the quote is where the
+       answer lives. */
+    if (!startedQuoted && lines[i].quoted) break;
     if (key !== null) break;                       // another labelled field ends it
     if (isSignOffLine_(trimmed)) break;
     if (!trimmed) {
@@ -1459,17 +1470,48 @@ function ownText_(body) {
   return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function stripQuoted_(body) {
-  const kept = [];
-  String(body || "").split(/\r?\n/).forEach(line => {
+/*
+ * Every line un-prefixed, paired with whether it arrived inside the quoted
+ * original. Callers that only want the text use stripQuoted_; parseFollowUps_
+ * needs the quoted flag to know where a rep's own words stop.
+ *
+ * Attribution lines are dropped, including the wrapped form Gmail produces
+ * when the sender line runs long:
+ *
+ *   On Sat, Aug 1, 2026, 6:05 PM CM Heating Sales Operations <
+ *   geoffrey.simons@cmheating.com> wrote:
+ *
+ * Neither half matches the single-line patterns, so both used to survive into
+ * whatever section was open. Samir's four follow-ups came back with that
+ * attribution and the first two lines of our own template stapled to the end.
+ */
+function splitQuoted_(body) {
+  const out = [];
+  const lines = String(body || "").split(/\r?\n/);
+  let dangling = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const quoted = /^\s*>/.test(line);
     const bare = line.replace(/^\s*(?:>\s?)+/, "");
-    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(bare)) return;
-    if (/^\s*wrote:\s*$/i.test(bare)) return;
-    if (/^\s*On\s.+<[^>]+@[^>]+>\s*$/.test(bare)) return;
-    if (/^\s*On\s.+\swrote:\s*$/.test(bare)) return;
-    kept.push(bare);
-  });
-  return kept.join("\n");
+
+    if (dangling) {
+      dangling = false;
+      if (/^\s*[^\s<>]+@[^\s<>]+>\s*wrote:\s*$/i.test(bare)) continue;
+    }
+    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(bare)) continue;
+    if (/^\s*wrote:\s*$/i.test(bare)) continue;
+    if (/^\s*On\s.+<[^>]+@[^>]+>\s*$/.test(bare)) continue;
+    if (/^\s*On\s.+\swrote:\s*$/.test(bare)) continue;
+    if (/^\s*On\s.+<\s*$/.test(bare)) { dangling = true; continue; }
+
+    out.push({ text: bare, quoted: quoted });
+  }
+  return out;
+}
+
+function stripQuoted_(body) {
+  return splitQuoted_(body).map(l => l.text).join("\n");
 }
 
 function normalizeLeadSource_(value) {
