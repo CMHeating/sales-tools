@@ -150,19 +150,20 @@ by hand.
 
 ### A6b. Point Job Status at the BI leads export — optional
 
-Save the Power BI **All Leads** export into Drive as a **Google Sheet** (File →
-Save as Google Sheets). SpreadsheetApp cannot open an .xlsx, and converting one
-in script needs the Advanced Drive Service enabled, which this deliberately
-avoids.
+Drop the Power BI **All Leads** export in Drive. Either a Google Sheet or the
+raw `.xlsx` works — an `.xlsx` is converted automatically on the way in and the
+temporary copy is binned afterwards, so there is nothing to remember each
+morning.
 
-The id is the middle of the Sheet's URL:
+The id is the middle of the Drive URL:
 
 ```
-docs.google.com/spreadsheets/d/1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww/edit
-                                └──────────── this part ─────────────────┘
+drive.google.com/file/d/16L_ii7sc5Vf369RXzvfca9WuvG92WbEb/view
+                        └──────────── this part ────────┘
 ```
 
-Then in the **SETTINGS YOU EDIT** block at the top of the file (~line 72):
+Already filled in with the July export. Swap the id when a newer one lands.
+In the **SETTINGS YOU EDIT** block at the top of the file (~line 73):
 
 ```javascript
 const BI_LEADS_SHEET_ID = "";   // ← the Sheet's id
@@ -170,6 +171,9 @@ const BI_LEADS_TAB = "";        // blank = first tab
 ```
 
 Leave it blank and Job Status behaves exactly as before.
+
+The first run will ask Google to re-authorize — converting an `.xlsx` needs
+Drive access the script has not used before. Approve it once.
 
 What it adds is the **HCA column on UNCLAIMED rows**. A ServiceTitan Booked Job
 Alert names no advisor — assignment happens after the alert fires — so those

@@ -61,15 +61,16 @@ const GROWTH_SHEET_OVERWRITE = false;
 
 /* Paste the id of the BI "All Leads" export, saved into Drive as a GOOGLE
    SHEET. Blank disables the lookup and Job Status behaves exactly as before.
-   It must be a Sheet, not the .xlsx: SpreadsheetApp cannot open an Office
-   file, and converting one in script needs the Advanced Drive Service turned
-   on — a setup step worth avoiding for something that has to work at 6am.
-   File -> Save as Google Sheets, then take the id out of the URL:
+   Either a Google Sheet or the raw .xlsx Power BI produces — an .xlsx is
+   converted automatically on the way in and the temporary copy is binned
+   afterwards, so there is nothing to remember each morning.
+   The id is the middle of the Drive URL:
+     drive.google.com/file/d/<THIS PART>/view
      docs.google.com/spreadsheets/d/<THIS PART>/edit
    What it buys: a name on the UNCLAIMED rows. A Booked Job Alert names no
    advisor, so those rows say a consult went unreported without saying by
    whom. BI's TechName fills it. */
-const BI_LEADS_SHEET_ID = "";
+const BI_LEADS_SHEET_ID = "16L_ii7sc5Vf369RXzvfca9WuvG92WbEb";   // All Leads MTD July 2026.xlsx
 const BI_LEADS_TAB = "";
 
 /* --- auditSoldAppointments (read-only, run by hand) ------------------- */
@@ -4942,13 +4943,57 @@ function writeEmailNotes_(ss, byName, status, fromIso, toIso) {
  * Returns {} on any problem. This is an enrichment: it must never be able to
  * take Job Status down with it.
  */
+/*
+ * Opens the export whether it is a Google Sheet or the raw .xlsx that Power BI
+ * actually produces.
+ *
+ * SpreadsheetApp cannot open an Office file. Asking for a manual
+ * File -> Save as Google Sheets would be one more thing to remember every
+ * morning, and the morning is exactly when nobody wants to remember anything —
+ * so an .xlsx is converted here instead, by asking Drive for a copy in Sheets
+ * format. That is a plain REST call with the script's own token rather than
+ * the Advanced Drive Service, so there is no service to enable first.
+ *
+ * The copy is temporary and gets trashed by the caller. Returns
+ * { ss, tempId } — tempId is "" when the file was already a Sheet.
+ */
+function openBiLeadsBook_(id) {
+  try {
+    return { ss: SpreadsheetApp.openById(id), tempId: "" };
+  } catch (err) {
+    /* Not a Sheet. Convert a throwaway copy. */
+    const res = UrlFetchApp.fetch(
+      "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(id) + "/copy",
+      {
+        method: "post",
+        contentType: "application/json",
+        headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+        payload: JSON.stringify({
+          name: "TEMP BI leads conversion — safe to delete",
+          mimeType: "application/vnd.google-apps.spreadsheet"
+        }),
+        muteHttpExceptions: true
+      });
+    if (res.getResponseCode() >= 300) {
+      throw new Error("Drive would not convert the file (" + res.getResponseCode() + "). " +
+        "If it is an .xlsx, check the script has Drive access; if it is not a " +
+        "spreadsheet at all, check the id.");
+    }
+    const copyId = JSON.parse(res.getContentText()).id;
+    return { ss: SpreadsheetApp.openById(copyId), tempId: copyId };
+  }
+}
+
 function readBiLeads_() {
   if (!BI_LEADS_SHEET_ID) return {};
   const out = { byJob: {}, byCustomerDate: {}, rows: 0 };
+  let temp = "";
   try {
-    const ss = SpreadsheetApp.openById(BI_LEADS_SHEET_ID);
+    const opened = openBiLeadsBook_(BI_LEADS_SHEET_ID);
+    const ss = opened.ss;
+    temp = opened.tempId;
     const sheet = BI_LEADS_TAB ? ss.getSheetByName(BI_LEADS_TAB) : ss.getSheets()[0];
-    if (!sheet || sheet.getLastRow() < 2) return {};
+    if (!sheet || sheet.getLastRow() < 2) { trashBiTemp_(temp); return {}; }
 
     const grid = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
     const head = {};
@@ -4963,7 +5008,7 @@ function readBiLeads_() {
     const cCust = col("customer.name", "customer");
     const cAppt = col("lastapptdate", "appointment date", "est");
     const cStat = col("jobstatus", "job status");
-    if (cJob === -1 && cCust === -1) return {};
+    if (cJob === -1 && cCust === -1) { trashBiTemp_(temp); return {}; }
 
     const iso = v => v instanceof Date
       ? Utilities.formatDate(v, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")
@@ -4990,9 +5035,23 @@ function readBiLeads_() {
   } catch (err) {
     Logger.log("BI leads lookup unavailable, Job Status built without it: " +
       (err && err.message ? err.message : String(err)));
+    trashBiTemp_(temp);
     return {};
   }
+  trashBiTemp_(temp);
   return out;
+}
+
+/* The converted copy is scratch. Failing to bin it would leave a new file in
+   Drive every time Job Status refreshes, which is twice a day forever. */
+function trashBiTemp_(id) {
+  if (!id) return;
+  try {
+    DriveApp.getFileById(id).setTrashed(true);
+  } catch (err) {
+    Logger.log("Left a temp BI conversion behind in Drive (" + id + "): " +
+      (err && err.message ? err.message : String(err)));
+  }
 }
 
 /* Job number first — exact. Then customer plus the day, then customer alone. */
