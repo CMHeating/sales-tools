@@ -1467,7 +1467,18 @@ function ownText_(body) {
     if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(line)) break;
     kept.push(line);
   }
+  /* "Sent from my iPad" is not an answer. Adam's replies are two lines, one of
+     which is always that, and it used to ride into the Follow-ups column. */
+  while (kept.length && (!kept[kept.length - 1].trim() || isSignOffLine_(kept[kept.length - 1]))) {
+    kept.pop();
+  }
   return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/* A reply whose whole content is "None" — the count already says that, so it
+   is not worth a line in the Follow-ups column. */
+function isBareNone_(text) {
+  return /^(none|none\s*ran|no\s*appointments?|n\/a|na)[.!]?$/i.test(String(text || "").trim());
 }
 
 /*
@@ -1874,7 +1885,14 @@ function logRepliesByNight_(ss, replies) {
     const bucket = byDate[r.answersIso] || (byDate[r.answersIso] = {});
     const group = bucket[r.hca.name] || (bucket[r.hca.name] = { hca: r.hca, entries: [], followUps: "" });
     group.entries = group.entries.concat(r.entries);
-    if (r.followUps) group.followUps = group.followUps ? group.followUps + "\n" + r.followUps : r.followUps;
+    /* A rep who answers in prose rather than under the follow-ups header still
+       said something. findRecapReplies_ only sets note when there were no
+       entries and no follow-ups, so this cannot displace a real answer —
+       without it Joseph's "None, picked up check from Sara Conroy" reached the
+       digest and then died there, leaving the sheet blank. */
+    const note = isBareNone_(r.note) ? "" : r.note;
+    const text = r.followUps || note || "";
+    if (text) group.followUps = group.followUps ? group.followUps + "\n" + text : text;
   });
 
   let written = 0;
