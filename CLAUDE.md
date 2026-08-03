@@ -164,6 +164,20 @@ Ten HCAs. Adam Weberg, Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Ja
 
 Note the two names that differ between systems: the scheduler says **Jay Milo**, ServiceTitan and the recap roster say **Javierre Milo**; the COMBO LOG says **JOE RUBLE** where the roster says **Joseph Ruble**. Match on email where possible.
 
+Two crews, confirmed 2026-08-03:
+
+| Crew | Days | Who |
+|---|---|---|
+| Sunday–Thursday | Sun Mon Tue Wed Thu | Amber, Chester, Davis |
+| Tuesday–Saturday | Tue Wed Thu Fri Sat | Adam, Jay, Joe C, Joseph, Kyle, Samir |
+| Trevor Bohm | Mon Wed Thu Sat — off Tue, Fri, Sun | currently on personal leave |
+
+These live in `RECAP_ROSTER` in `apps-script/daily-recap.gs` and are not
+cosmetic: `buildTodayPlan_` reads them to decide who gets the 6am recap and,
+the next morning, who gets chased for not answering. A wrong day emails
+somebody on their day off and then records them as delinquent for ignoring it.
+Change them here and in the roster together.
+
 ## Design Patterns
 
 **Most tools are light** — slate backgrounds (`#f1f5f9`, `#f8fafc`, `#f0f4f8`), dark text, professional rather than emoji-heavy. All the trackers, `daily-brief.html`, `exec-summary.html`, `hca-schedule.html` and `install-availability.html` follow this.
