@@ -2758,16 +2758,62 @@ function previewMorningSalesBrief() {
  * otherwise push a Thursday sale into Friday's count.
  */
 function collapseResoldAlerts_(alerts) {
-  const byKey = {};
-  alerts.forEach(a => {
-    const key = normName_(a.hca) + "|" + normName_(a.customer) + "|" +
-      (a.amount === null || a.amount === undefined ? "" : a.amount);
-    const seen = byKey[key];
-    if (!seen) { byKey[key] = a; return; }
-    seen.resold = true;
-    if (a.soldOnIso && (!seen.soldOnIso || a.soldOnIso < seen.soldOnIso)) seen.soldOnIso = a.soldOnIso;
+  /*
+   * Two alerts are the same sale if they share an opportunity, OR if the same
+   * rep sold the same customer for the same amount. Neither test alone is
+   * enough, and both misses are real:
+   *
+   *   Caroline Boisvert — one opportunity (408120596), two estimates two hours
+   *     apart at $16,459.07 then $16,756.07. Same sale, different money, so a
+   *     key built on the amount counts it twice.
+   *   Bruce Chhay — the same amount re-issued the next morning under a NEW
+   *     opportunity number. Same sale, different opportunity, so a key built
+   *     on the opportunity counts it twice.
+   *
+   * So alerts are grouped by either match and the groups merged. The kept row
+   * takes the EARLIEST date, because that is the day it sold, and the LATEST
+   * detail, because a re-issue supersedes the estimate it replaced.
+   */
+  const parent = alerts.map((a, i) => i);
+  const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  const firstSeen = {};
+  const link = (key, i) => {
+    if (!key) return;
+    if (firstSeen[key] === undefined) { firstSeen[key] = i; return; }
+    const a = find(firstSeen[key]), b = find(i);
+    if (a !== b) parent[b] = a;
+  };
+
+  alerts.forEach((a, i) => {
+    /* The customer rides along in the opportunity key too. An opportunity
+       belongs to one customer, so this changes nothing on sound data — it just
+       means a stray or reused number can never merge two people's sales, which
+       is a far worse error than failing to merge one. */
+    if (a.opportunityNumber) link("opp|" + a.opportunityNumber + "|" + normName_(a.customer), i);
+    link("who|" + normName_(a.hca) + "|" + normName_(a.customer) + "|" +
+      (a.amount === null || a.amount === undefined ? "" : a.amount), i);
   });
-  return Object.keys(byKey).map(k => byKey[k]);
+
+  const groups = {};
+  alerts.forEach((a, i) => {
+    const root = find(i);
+    (groups[root] = groups[root] || []).push(a);
+  });
+
+  return Object.keys(groups).map(root => {
+    const members = groups[root];
+    if (members.length === 1) return members[0];
+    /* Ordered by when the alert arrived — the alert's own "8/1 12:51 PM" has no
+       year and cannot order two days apart. */
+    const ordered = members.slice().sort((x, y) =>
+      (x.received && y.received) ? x.received - y.received : 0);
+    const kept = ordered[ordered.length - 1];
+    kept.resold = true;
+    ordered.forEach(m => {
+      if (m.soldOnIso && (!kept.soldOnIso || m.soldOnIso < kept.soldOnIso)) kept.soldOnIso = m.soldOnIso;
+    });
+    return kept;
+  });
 }
 
 function buildMorningSalesBrief_(yIso, yLabel) {
