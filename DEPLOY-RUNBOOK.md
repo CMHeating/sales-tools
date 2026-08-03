@@ -242,6 +242,18 @@ flags three things you cannot see by looking at the sheet:
   printed like any other, marked `[HIDDEN]`.
 - **Tabs the writer would refuse** — no FM Budget anchor, or no column for the
   tab's own day.
+- **Formulas in a tab's own day column.** The writer treats a formula as
+  somebody's calculation and never overwrites it, so that row never fills in no
+  matter how often it runs. The Weekend tab's Sunday revenue cells held
+  `=AI("Fill an appropriate value…")` — a generated guess in a figure that goes
+  to Paul, and one the script could not have replaced.
+- **A day column that is only part filled.** A day that was actually recorded
+  fills the whole column; a handful of cells with the rest empty is carry-over
+  from whatever the tab was copied from. Those few survive the next run while
+  the empty ones fill in around them, and the tab then looks complete.
+
+A day column that is *fully* filled is not flagged — that is a recorded day and
+the writer refusing to rewrite it is the guard working.
 
 It ends with a TO FIX list. An empty one means every tab is sound.
 

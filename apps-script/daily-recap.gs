@@ -4080,7 +4080,8 @@ function auditGrowthSheet() {
       dayCols.map(d => (d.letter + new Array(20).join(" ")).slice(0, 18)).join("") +
       mtdLetter + " (MTD)");
 
-    const strayDays = {}, strayFormulas = [];
+    const strayDays = {}, strayFormulas = [], willSkip = [], truncated = [];
+    const ownFilled = [], ownEmpty = [];
     GROWTH_ROWS.forEach(spec => {
       const row = rows[spec.key];
       if (!row) { out.push("  ! row not found: " + spec.label); return; }
@@ -4091,15 +4092,43 @@ function auditGrowthSheet() {
         const v = (grid[r] || [])[c];
         return (v === "" || v === null || v === undefined) ? "-" : String(v);
       };
+      /* Truncating a formula is how "=AI(" went unread the first time this
+         ran. The table still has to line up, so a clipped cell is marked and
+         printed in full underneath rather than quietly cut. */
+      const fit = (s, a1) => {
+        if (s.length <= 17) return (s + new Array(20).join(" ")).slice(0, 18);
+        truncated.push("      " + a1 + "  " + s);
+        return s.slice(0, 16) + "… ";
+      };
       const line = ["  " + ((spec.label + " (" + row + ")") + new Array(32).join(" ")).slice(0, 28)];
       dayCols.forEach(d => {
-        line.push((show(d.c) + new Array(20).join(" ")).slice(0, 18));
+        line.push(fit(show(d.c), d.letter + row));
         const v = (grid[r] || [])[d.c];
-        if (!ownDays[d.day] && v !== "" && v !== null && v !== undefined) {
-          strayDays[d.letter + ' "' + d.header + '"'] = true;
+        const f = (forms[r] || [])[d.c];
+        const filled = v !== "" && v !== null && v !== undefined;
+        if (!ownDays[d.day]) {
+          if (filled) strayDays[d.letter + ' "' + d.header + '"'] = true;
+          return;
         }
+        /* This tab's own day column, which is where its numbers go.
+           A FORMULA here is a permanent problem: the writer treats it as
+           somebody's calculation and skips it for good, so that row never
+           fills in no matter how many times it runs.
+           A VALUE here is usually not a problem at all — a day already
+           recorded is supposed to have values, and the writer refusing to
+           rewrite it is the guard working. What IS a problem is a column
+           that is only PARTLY filled, which no recorded day ever produces:
+           it means a few cells were carried over from whatever the tab was
+           copied from, and those few will survive the next run while the
+           rest of the column updates around them. That is judged below,
+           once the whole column has been read. */
+        if (f) willSkip.push("      " + d.letter + row + "  " + spec.label + "   " + f);
+        else if (filled) ownFilled.push({ a1: d.letter + row, label: spec.label, value: v });
+        else ownEmpty.push(d.letter + row);
       });
-      line.push(show(mtdCol));
+      const mtdText = show(mtdCol);
+      line.push(mtdText.length <= 40 ? mtdText : mtdText.slice(0, 39) + "…");
+      if (mtdText.length > 40) truncated.push("      " + mtdLetter + row + "  " + mtdText);
       out.push(line.join(""));
 
       /* An MTD formula that reads any column other than MTD is reading the
@@ -4111,6 +4140,12 @@ function auditGrowthSheet() {
           "   " + mf + "   reads " + used.join(", "));
       }
     });
+
+    if (truncated.length) {
+      out.push("");
+      out.push("  cells too long to fit above, in full:");
+      truncated.forEach(t => out.push(t));
+    }
 
     const stray = Object.keys(strayDays);
     if (stray.length) {
@@ -4128,6 +4163,36 @@ function auditGrowthSheet() {
         " cells and they will follow the month total the script writes.");
       findings.push(name + ": " + strayFormulas.length + " MTD formula(s) read the day columns");
     }
+    if (willSkip.length) {
+      out.push("");
+      out.push("  ! Formulas in this tab's OWN day column — the writer skips these for good:");
+      willSkip.forEach(f => out.push(f));
+      out.push("    A formula is treated as somebody's calculation and never overwritten, so");
+      out.push("    these cells will stay as they are while every cell around them updates.");
+      out.push("    Clear them if the script is meant to fill that row.");
+      findings.push(name + ": " + willSkip.length + " formula(s) in its own day column, never written");
+    }
+    /* A day column is either recorded or waiting. Anything in between is
+       carry-over from whatever the tab was copied from — and it is the
+       dangerous shape, because those few cells survive the next run while
+       everything around them updates, and the tab then looks complete. */
+    if (ownFilled.length && ownEmpty.length) {
+      out.push("");
+      out.push("  ! This tab's OWN day column is only part filled — " + ownFilled.length +
+        " cell(s) hold a value, " + ownEmpty.length + " are empty.");
+      ownFilled.forEach(f => out.push("      " + f.a1 + "  " + f.label +
+        "   holds " + JSON.stringify(f.value)));
+      out.push("    A day that was actually recorded fills the whole column, so this is");
+      out.push("    carry-over. The writer refuses a cell that already holds something, so");
+      out.push("    these will keep their current value while the empty ones fill in around");
+      out.push("    them. Clear them before the next run for this tab.");
+      findings.push(name + ": own day column part filled — " +
+        ownFilled.map(f => f.a1).join(", ") + " are carry-over");
+    } else if (ownFilled.length) {
+      out.push("");
+      out.push("  (own day column is fully recorded — the writer will leave it alone, which");
+      out.push("   is the guard working, not a problem)");
+    }
   });
 
   out.push("");
@@ -4136,8 +4201,8 @@ function auditGrowthSheet() {
     out.push("TO FIX:");
     findings.forEach(f => out.push("  - " + f));
   } else {
-    out.push("Nothing to fix. Every tab has its own day column, no leftover data,");
-    out.push("and every MTD formula reads only the MTD column.");
+    out.push("Nothing to fix. Every tab has a clear column for its own day, no leftover");
+    out.push("data elsewhere, and no MTD formula reading the day columns.");
   }
 
   Logger.log(out.join("\n"));
