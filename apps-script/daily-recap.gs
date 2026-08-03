@@ -3289,9 +3289,24 @@ function diagnoseSoldReport() {
 /* Blank = yesterday. Set to "2026-08-01" to redo a specific day. */
 const GROWTH_SHEET_DATE = "";
 
-/* CM Growth Daily Sales. Blank tab = the first sheet in the workbook. */
+/* CM Growth Daily Sales — the exec summary Paul reads.
+   Blank tab = routed from the date: Sat and Sun both land on "Weekend", every
+   other day on its own name. Set it to force one tab. */
 const GROWTH_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
 const GROWTH_SHEET_TAB = "";
+
+/*
+ * A tab is named for the day it COVERS, not the morning it is presented. So
+ * Monday morning you open Weekend; Tuesday morning you open Monday. Naming
+ * them by presentation day was the other option and it puts every tab a day
+ * out from the date being discussed, which is the kind of off-by-one nobody
+ * notices until a number is wrong in front of Paul.
+ */
+function growthTabFor_(iso) {
+  const day = Utilities.formatDate(
+    new Date(Date.parse(iso + "T12:00:00Z")), DAILY_RECAP_CONFIG.timeZone, "EEEE");
+  return (day === "Saturday" || day === "Sunday") ? "Weekend" : day;
+}
 /* Guard rail. Leave false and a day that already has numbers is refused rather
    than rewritten, so running for the wrong date cannot quietly erase a column
    somebody filled in by hand. */
@@ -3339,16 +3354,26 @@ function planGrowthSheetWrite_(iso) {
   const day = Utilities.formatDate(
     new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE").slice(0, 3);
 
+  const wantTab = GROWTH_SHEET_TAB || growthTabFor_(iso);
   let ss, sheet;
   try {
     ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
-    sheet = GROWTH_SHEET_TAB ? ss.getSheetByName(GROWTH_SHEET_TAB) : ss.getSheets()[0];
+    sheet = ss.getSheetByName(wantTab);
+    /* Before the six tabs exist there is one sheet holding everything, and
+       falling back to it beats refusing to run at all. */
+    if (!sheet && ss.getSheets().length === 1) sheet = ss.getSheets()[0];
   } catch (err) {
     return { ok: false, problems: ["Could not open the growth sheet: " +
       (err && err.message ? err.message : String(err)) +
       "  (an .xlsx cannot be opened this way — it has to be saved as a Google Sheet)"] };
   }
-  if (!sheet) return { ok: false, problems: ["No sheet named " + GROWTH_SHEET_TAB + "."] };
+  if (!sheet) {
+    return { ok: false, problems: [
+      'No tab named "' + wantTab + '".',
+      "Tabs on this workbook: " + ss.getSheets().map(s => s.getName()).join(", "),
+      "A tab is named for the day it covers — Sat and Sun both go on Weekend."
+    ] };
+  }
 
   const grid = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), 40),
     Math.min(sheet.getLastColumn(), 20)).getValues();
