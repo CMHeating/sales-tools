@@ -3047,7 +3047,13 @@ function buildMorningSalesBrief_(yIso, yLabel) {
   lines.push("Sales brief — " + yLabel);
   lines.push(new Array(60).join("="));
   lines.push("");
-  lines.push(sold.length + " sold" + (total ? "   " + money(total) + " total" : ""));
+  /* PRE-TAX. These amounts come off the ServiceTitan Sold Estimate Alert,
+     which quotes before tax. The FM budget on the growth sheet includes tax,
+     so the two are not comparable — around Everett that is roughly a 10% gap,
+     which on a $2.58M target reads as a quarter of a million of shortfall
+     that is not real. Labelled rather than adjusted: guessing a rate would be
+     worse than saying which number this is. BI is the tax-inclusive source. */
+  lines.push(sold.length + " sold" + (total ? "   " + money(total) + " total (pre-tax)" : ""));
   lines.push("   " + sameDay.length + " closed on the day's own consult");
   lines.push("   " + prior.length + " from a lead worked earlier");
   if (unknown.length) lines.push("   " + unknown.length + " unknown — that rep filed no recap");
@@ -3592,7 +3598,10 @@ function growthSheetDay() {
   out.push("  HVAC Tech Flip Deals    " + tf(deals));
   out.push("  HVAC Tech Flip L2C %    " + rate(tf(deals), tf(leads)));
   out.push("  NPS Sales Overall       (not in any system here — yours to fill)");
-  out.push("  HVAC Rev                $" + formatMoney_(revenue));
+  /* Pre-tax — see the note in buildMorningSalesBrief_. The sheet's own budget
+     row includes tax, so this figure is NOT comparable to it until BI supplies
+     the tax-inclusive number. */
+  out.push("  HVAC Rev                $" + formatMoney_(revenue) + "   (PRE-TAX — budget includes tax)");
   out.push("  HVAC AVG Ticket         " +
     (alerts.length ? "$" + formatMoney_(revenue / alerts.length) : "—"));
 
@@ -3817,7 +3826,7 @@ function previewSoldReport() {
   const p = buildSoldReportPayload_("", "");
   const pct = n => p.totals.total ? " (" + Math.round(n * 100 / p.totals.total) + "%)" : "";
   Logger.log("Sold report " + p.fromIso + " to " + p.toIso +
-    "\n  total sold:  " + p.totals.total + "   $" + formatMoney_(p.totals.amount) +
+    "\n  total sold:  " + p.totals.total + "   $" + formatMoney_(p.totals.amount) + " (pre-tax)" +
     "\n  same day:    " + p.totals.sameDay + pct(p.totals.sameDay) +
     "\n  prior lead:  " + p.totals.prior + pct(p.totals.prior) +
     "\n  unknown:     " + p.totals.unknown + pct(p.totals.unknown) +

@@ -140,6 +140,20 @@ body {
   color: var(--muted);
   margin-top: 8px;
 }
+/* The alert amounts are pre-tax and the growth sheet's budget is not, so the
+   figure is labelled rather than silently compared. */
+.tax-note {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-left: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
 .split-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -332,7 +346,7 @@ td.name { font-weight: 600; }
   earlier. <strong>Unknown</strong> means they filed no recap for that date, so nobody can say
   which it was. Unknown is never counted as either of the other two.
   <br><br>
-  Sales come from ServiceTitan Sold Estimate Alerts; the split comes from the daily recap log.
+  Sales come from ServiceTitan Sold Estimate Alerts, which quote <strong>pre-tax</strong> — the growth sheet's FM budget includes tax, so the two are not directly comparable. The split comes from the daily recap log.
   A rep who does not report makes their own sales unknown, not absent — the totals are still right.
 </div>
 
@@ -454,7 +468,8 @@ function render(d) {
   out.push('<div class="headline">');
   out.push('<div class="total-n">' + t.total + '</div>');
   out.push('<div class="total-label">sold in this range</div>');
-  out.push('<div class="total-money">' + money(t.amount) + '</div>');
+  out.push('<div class="total-money">' + money(t.amount) +
+    '<span class="tax-note">pre-tax</span></div>');
   out.push('<div class="bar">' +
     '<span class="same" style="width:' + w(t.sameDay) + '%"></span>' +
     '<span class="prior" style="width:' + w(t.prior) + '%"></span>' +
