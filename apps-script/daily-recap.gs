@@ -3286,6 +3286,178 @@ function diagnoseSoldReport() {
   return { threads: threads.length, messages: messages, inRange: inRange };
 }
 
+/* The month the audit covers. Change these two and run auditSoldAppointments. */
+const AUDIT_FROM_ISO = "2026-07-01";
+const AUDIT_TO_ISO   = "2026-07-31";
+
+/*
+ * Can a sale be traced back to the appointment that produced it?
+ *
+ * The sold report's same-day split comes from the recap log, which only exists
+ * from July 30 and only holds what a rep chose to report. ServiceTitan knows
+ * the appointment date for every booked consult whether anyone answered an
+ * email or not, so joining the two would give a split that does not depend on
+ * reply rates and could be computed backwards over any month.
+ *
+ * That is only worth building if the join actually lands. This measures it and
+ * builds nothing: how many sales find their appointment, by which key, and how
+ * long the gap is. Read-only — no sheet, no email, no state.
+ *
+ * Same visit is a BAND, not equality. The alert's date is when the estimate
+ * was MARKED sold, which lags the close: a rep who shakes hands at 4pm often
+ * marks it the next morning. Brandon Adame and Nicholas Jamison were both 7/7
+ * appointments marked sold 7/8. Strict equality would call those follow-ups.
+ *
+ * Revisits are handled by taking the EARLIEST appointment for that customer,
+ * not the most recent — otherwise a second visit three weeks in scores as a
+ * same-day close, which is precisely backwards.
+ */
+function auditSoldAppointments() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const fromIso = AUDIT_FROM_ISO, toIso = AUDIT_TO_ISO;
+  const out = [];
+  const started = Date.now();
+
+  const spanDays = Math.round(
+    (Date.parse(toIso + "T12:00:00Z") - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 1;
+  const todayIso = Utilities.formatDate(new Date(), cfg.timeZone, "yyyy-MM-dd");
+  const soldLookback = Math.round(
+    (Date.parse(todayIso + "T12:00:00Z") - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 3;
+
+  out.push("Sold -> appointment audit, " + fromIso + " to " + toIso);
+  out.push("");
+
+  const soldRes = readSoldAlerts_(Math.max(1, Math.min(300, soldLookback)));
+  if (!soldRes.ok) { Logger.log("Sold alert search failed. Nothing measured."); return { ok: false }; }
+  const sales = collapseResoldAlerts_(soldRes.alerts)
+    .filter(a => a.soldOnIso && a.soldOnIso >= fromIso && a.soldOnIso <= toIso);
+
+  /* Appointments can precede the sale by months, so the appointment window
+     reaches far further back than the sales window. */
+  const apptFrom = Utilities.formatDate(
+    new Date(Date.parse(fromIso + "T12:00:00Z") - 150 * 86400000), cfg.timeZone, "yyyy-MM-dd");
+  const bookedRes = readBookedJobAlerts_(apptFrom, toIso, spanDays + 150);
+  if (!bookedRes.ok) out.push("! Booked alert search failed — every sale will look unmatched.");
+  const booked = bookedRes.booked || [];
+
+  out.push("sales in range (after collapse): " + sales.length);
+  out.push("appointments indexed:            " + booked.length +
+    "   (" + apptFrom + " to " + toIso + ")");
+  if (booked.length >= 300) {
+    out.push("! 300 is the search cap — the appointment index may be truncated,");
+    out.push("  which would show up as sales that cannot be matched.");
+  }
+  out.push("");
+
+  /* Two indexes: the exact one, and the one that survives a spelling. */
+  const byJob = {}, byName = {};
+  booked.forEach(b => {
+    if (b.jobNumber) byJob[b.jobNumber] = b;
+    const key = normName_(b.customer);
+    if (key) (byName[key] = byName[key] || []).push(b);
+  });
+
+  const earliestFor = (b, soldIso) => {
+    const list = byName[normName_(b.customer)] || [b];
+    let best = "";
+    list.forEach(x => {
+      if (!x.appointmentIso || x.appointmentIso > soldIso) return;
+      if (!best || x.appointmentIso < best) best = x.appointmentIso;
+    });
+    return best || b.appointmentIso;
+  };
+
+  const byMethod = { job: 0, opportunity: 0, name: 0, none: 0 };
+  const gaps = [];
+  const unmatched = [];
+
+  sales.forEach(s => {
+    let hit = null, how = "";
+    if (s.jobNumber && byJob[s.jobNumber]) { hit = byJob[s.jobNumber]; how = "job"; }
+    if (!hit && s.opportunityNumber) {
+      /* Every pair checked by hand had job = opportunity - 2. */
+      const guess = String(Number(s.opportunityNumber) - 2);
+      if (byJob[guess] && nameTokensOverlap_(byJob[guess].customer, s.customer)) {
+        hit = byJob[guess]; how = "opportunity";
+      }
+    }
+    if (!hit) {
+      const list = byName[normName_(s.customer)] || [];
+      const before = list.filter(x => x.appointmentIso && x.appointmentIso <= s.soldOnIso);
+      if (before.length) { hit = before[0]; how = "name"; }
+    }
+    if (!hit) { byMethod.none++; unmatched.push(s); return; }
+
+    byMethod[how]++;
+    const appt = earliestFor(hit, s.soldOnIso);
+    const days = Math.round(
+      (Date.parse(s.soldOnIso + "T12:00:00Z") - Date.parse(appt + "T12:00:00Z")) / 86400000);
+    gaps.push({ days: days, s: s, appt: appt, how: how });
+  });
+
+  const matched = gaps.length;
+  const pct = n => sales.length ? Math.round(n * 100 / sales.length) + "%" : "0%";
+  out.push("matched by job number:    " + byMethod.job + "  " + pct(byMethod.job));
+  out.push("matched by opportunity:   " + byMethod.opportunity + "  " + pct(byMethod.opportunity));
+  out.push("matched by customer name: " + byMethod.name + "  " + pct(byMethod.name));
+  out.push("no appointment found:     " + byMethod.none + "  " + pct(byMethod.none));
+  out.push("");
+  out.push("MATCH RATE: " + matched + "/" + sales.length + " = " + pct(matched));
+  out.push("");
+
+  if (matched) {
+    const band = { "0": 0, "1": 0, "2-6": 0, "7-13": 0, "14+": 0, "before": 0 };
+    gaps.forEach(g => {
+      if (g.days < 0) band["before"]++;
+      else if (g.days === 0) band["0"]++;
+      else if (g.days === 1) band["1"]++;
+      else if (g.days <= 6) band["2-6"]++;
+      else if (g.days <= 13) band["7-13"]++;
+      else band["14+"]++;
+    });
+    out.push("days from FIRST appointment to sold-marking:");
+    ["0", "1", "2-6", "7-13", "14+"].forEach(k =>
+      out.push("  " + (k + "      ").slice(0, 6) + " days : " + band[k]));
+    if (band["before"]) {
+      out.push("  sold BEFORE any appointment : " + band["before"] + "   <- should be 0, look at these");
+    }
+    const same = band["0"] + band["1"];
+    out.push("");
+    out.push("  same visit (0-1 days): " + same + "/" + matched +
+      " = " + Math.round(same * 100 / matched) + "%");
+    out.push("  follow-up close (2+):  " + (matched - same) + "/" + matched +
+      " = " + Math.round((matched - same) * 100 / matched) + "%");
+    out.push("");
+    out.push("longest gaps:");
+    gaps.slice().sort((a, b) => b.days - a.days).slice(0, 8).forEach(g =>
+      out.push("  " + (g.days + "   ").slice(0, 4) + "d  " + g.appt + " -> " + g.s.soldOnIso +
+        "  " + g.s.hca + " — " + g.s.customer));
+  }
+
+  if (unmatched.length) {
+    out.push("");
+    out.push("no appointment found (" + unmatched.length + ") — expect phone closes and");
+    out.push("anything booked before the appointment window:");
+    unmatched.slice(0, 25).forEach(s =>
+      out.push("  " + s.soldOnIso + "  " + s.hca + " — " + (s.customer || "(unnamed)")));
+    if (unmatched.length > 25) out.push("  ... and " + (unmatched.length - 25) + " more");
+  }
+
+  out.push("");
+  out.push("took " + Math.round((Date.now() - started) / 1000) + "s");
+  Logger.log(out.join("\n"));
+  return { sales: sales.length, matched: matched, byMethod: byMethod };
+}
+
+/* Any shared surname-or-forename token. Loose on purpose — it only ever
+   confirms a numeric key that already matched, never makes a match alone. */
+function nameTokensOverlap_(a, b) {
+  const ta = normName_(a).split(" ").filter(t => t.length > 2);
+  const tb = normName_(b).split(" ").filter(t => t.length > 2);
+  if (!ta.length || !tb.length) return false;
+  return ta.some(t => tb.indexOf(t) !== -1);
+}
+
 /* The report printed to the log, so it can be checked without deploying. */
 function previewSoldReport() {
   const p = buildSoldReportPayload_("", "");
