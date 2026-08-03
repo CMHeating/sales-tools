@@ -188,6 +188,60 @@ Three columns are appended to the right of Key — BI Rep, BI Lead Type, BI Job
 Status. Appended, not inserted, so nothing that relies on existing column
 positions moves.
 
+### A6c. Fill the CM Growth Daily Sales sheet
+
+```
+Run → previewGrowthSheetWrite     ← shows what it would do, writes nothing
+Run → writeGrowthSheetDay         ← commits
+```
+
+One run fills two columns on one tab: **yesterday's day column** and the **MTD
+column** beside it.
+
+Which tab is worked out from the date, and a tab is named for the day it
+**covers**, not the morning you open it. So Monday morning it writes Weekend;
+Tuesday morning it writes Monday. Saturday and Sunday both live on Weekend.
+
+Day-column headers can read either way — `Sat` and `Sun` on the Weekend tab,
+`Monday` through `Friday` spelled out on the others. Both are matched. If a tab
+has no column for its day the run refuses and names what it looked for; add the
+header and run it again.
+
+**MTD is recomputed from the recap log and the sold alerts, not summed off the
+six tabs.** The tabs are overwritten every week, so a sum of them would reset
+the month every Monday. It also means a typo in a daily cell stays a typo in
+that cell instead of propagating into the figure that goes to Paul.
+
+Two different write rules, on purpose:
+
+| Column | If it already has a value | If it holds a formula |
+|---|---|---|
+| the day | refused, unless `GROWTH_SHEET_OVERWRITE = true` | left alone |
+| MTD | replaced — a running total is meant to be | left alone |
+
+Leaving MTD formulas alone is now the right answer rather than a compromise.
+The L2C and AVG Ticket cells in that column divide one MTD cell by another, so
+once the counts and revenue underneath are written they recompute to the month
+figure themselves. **Check that once**: a formula pointing at the *day* columns
+instead will keep showing the week and nothing will flag it. The preview prints
+every formula it skipped so you can read them in one pass.
+
+MTD is written to the same tab as the day column, covering the 1st of the month
+through that day — so each tab's MTD is correct for the morning you open it.
+
+To redo an old day, set `GROWTH_SHEET_DATE = "2026-08-01"` — but note this
+rewinds MTD to what it was on that date too. Put it back to blank afterwards.
+
+`growthSheetMonthToDate` prints the month with a by-day breakdown and writes
+nothing. `writeGrowthSheetMtd` writes only the MTD column, for when the day
+column is already right.
+
+NPS is never written. It comes from a survey this script cannot see, and a zero
+there would read as a real score.
+
+**HVAC Rev is pre-tax.** The sheet's own FM Budget row includes tax, so the two
+are not comparable until BI supplies a tax-inclusive number.
+
 ### A7. Check tomorrow before it happens
 
 ```

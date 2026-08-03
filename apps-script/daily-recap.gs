@@ -43,7 +43,10 @@ const PAUSE_HCA_REASON = "Off for a week or so";
 /* --- CM Growth Daily Sales — the exec summary Paul reads --------------- */
 
 /* Which day growthSheetDay / writeGrowthSheetDay fill in.
-   Blank = yesterday. Set "2026-08-01" to redo one specific day. */
+   Blank = yesterday. Set "2026-08-01" to redo one specific day.
+   The MTD column is always the 1st of that day's month through that day, so
+   redoing an old day also rewinds MTD to what it was then — put this back to
+   blank afterwards. */
 const GROWTH_SHEET_DATE = "";
 
 /* The workbook. Blank tab = routed from the date — Saturday and Sunday both
@@ -52,9 +55,11 @@ const GROWTH_SHEET_DATE = "";
 const GROWTH_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
 const GROWTH_SHEET_TAB = "";
 
-/* Guard rail. Leave false and a day that already has numbers is refused
-   rather than rewritten, so running for the wrong date cannot quietly erase a
-   column somebody filled in by hand. */
+/* Guard rail on the DAY column. Leave false and a day that already has numbers
+   is refused rather than rewritten, so running for the wrong date cannot
+   quietly erase a column somebody filled in by hand.
+   The MTD column is not covered by this — a running total is meant to be
+   replaced every morning, and protecting it is how it ends up a week behind. */
 const GROWTH_SHEET_OVERWRITE = false;
 
 /* --- Power BI All Leads export ---------------------------------------- */
@@ -3401,8 +3406,20 @@ function growthLabelKey_(v) {
 function planGrowthSheetWrite_(iso) {
   const cfg = DAILY_RECAP_CONFIG;
   const problems = [];
-  const day = Utilities.formatDate(
-    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE").slice(0, 3);
+  /* Both spellings, because the sheet uses both: the Weekend tab heads its two
+     columns "Sat" and "Sun" while every weekday tab is headed with the full
+     name — "Monday", not "Mon". Matching only the abbreviation is what made
+     the first weekday run refuse; matching only the full name would break the
+     weekend. Accept either and let the duplicate check below catch a tab that
+     somehow carries both. */
+  const dayFull = Utilities.formatDate(
+    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE");
+  const dayAbbr = dayFull.slice(0, 3);
+  const day = dayFull;
+  const isDayHeader = v => {
+    const k = growthLabelKey_(v);
+    return k === dayFull.toLowerCase() || k === dayAbbr.toLowerCase();
+  };
 
   const wantTab = GROWTH_SHEET_TAB || growthTabFor_(iso);
   let ss, sheet;
@@ -3432,18 +3449,21 @@ function planGrowthSheetWrite_(iso) {
   let headerRow = -1, col = -1, matches = 0;
   for (let r = 0; r < grid.length && headerRow === -1; r++) {
     for (let c = 0; c < grid[r].length; c++) {
-      if (growthLabelKey_(grid[r][c]) === day.toLowerCase()) { headerRow = r; col = c; matches++; }
+      if (isDayHeader(grid[r][c])) { headerRow = r; col = c; matches++; }
     }
   }
   for (let c = 0; col !== -1 && c < grid[headerRow].length; c++) {
-    if (c !== col && growthLabelKey_(grid[headerRow][c]) === day.toLowerCase()) matches++;
+    if (c !== col && isDayHeader(grid[headerRow][c])) matches++;
   }
 
   if (col === -1) {
-    problems.push('No column headed "' + day + '" on this sheet.');
-    problems.push('Add ' + day + ' as a header in the day row, then run this again.');
+    problems.push('No column headed "' + dayFull + '" or "' + dayAbbr + '" on tab "' +
+      sheet.getName() + '".');
+    problems.push("Headers seen: " + (grid[0] || [])
+      .map((_, c) => grid.map(r => r[c]).filter(String)[0]).filter(String).join(" | "));
+    problems.push("Add " + dayFull + " as a header in the day row, then run this again.");
   } else if (matches > 1) {
-    problems.push('More than one column is headed "' + day + '" — refusing to guess.');
+    problems.push('More than one column is headed "' + dayFull + '" — refusing to guess.');
   } else {
     const header = growthLabelKey_(grid[headerRow][col]);
     if (header === "mtd" || header.indexOf("budget") !== -1) {
@@ -3452,7 +3472,22 @@ function planGrowthSheetWrite_(iso) {
   }
   if (problems.length) return { ok: false, problems: problems };
 
-  /* Row per metric, by label. */
+  const rows = growthRowsFor_(grid);
+  const missing = GROWTH_ROWS.filter(s => !rows[s.key]).map(s => s.label);
+  if (missing.length) problems.push("Rows not found: " + missing.join(", "));
+
+  return {
+    ok: !problems.length, problems: problems, sheet: sheet,
+    sheetName: sheet.getName(), day: grid[headerRow] ? grid[headerRow][col] : dayFull,
+    col: col + 1, colLetter: growthColLetter_(col + 1),
+    headerRow: headerRow + 1, rows: rows
+  };
+}
+
+/* Row number (1-based) per metric, found by its label in the sheet — never by
+   counting down from the top, because a row inserted above would then shift
+   every number one metric out of place without anything looking wrong. */
+function growthRowsFor_(grid) {
   const rows = {};
   GROWTH_ROWS.forEach(spec => {
     for (let r = 0; r < grid.length; r++) {
@@ -3461,12 +3496,45 @@ function planGrowthSheetWrite_(iso) {
       }
     }
   });
+  return rows;
+}
+
+/*
+ * Where the month-to-date column is on a tab, and which rows to fill.
+ *
+ * "MTD" appears TWICE in the header row — once over the label column and once
+ * over the running total — so matching the word is not enough to tell them
+ * apart. The one we want is the column immediately before FM Budget, and that
+ * is how it is found: locate FM Budget, step back one, and refuse unless that
+ * column really is headed MTD. Getting this wrong writes the month's totals
+ * over the targets, which is the one mistake nobody would spot.
+ */
+function planGrowthMtdWrite_(sheet) {
+  const grid = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), 40),
+    Math.min(sheet.getLastColumn(), 20)).getValues();
+
+  let headerRow = -1, budgetCol = -1;
+  for (let r = 0; r < grid.length && headerRow === -1; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (growthLabelKey_(grid[r][c]).indexOf("budget") !== -1) { headerRow = r; budgetCol = c; break; }
+    }
+  }
+  if (headerRow === -1) {
+    return { ok: false, problems: ['No "FM Budget" header on tab "' + sheet.getName() +
+      '", so there is no way to tell which MTD column is the running total.'] };
+  }
+  const col = budgetCol - 1;
+  if (col < 0 || growthLabelKey_(grid[headerRow][col]) !== "mtd") {
+    return { ok: false, problems: ['The column before FM Budget on tab "' + sheet.getName() +
+      '" is ' + JSON.stringify(grid[headerRow][col]) + ', not MTD. Refusing to guess.'] };
+  }
+
+  const rows = growthRowsFor_(grid);
   const missing = GROWTH_ROWS.filter(s => !rows[s.key]).map(s => s.label);
-  if (missing.length) problems.push("Rows not found: " + missing.join(", "));
+  if (missing.length) return { ok: false, problems: ["Rows not found: " + missing.join(", ")] };
 
   return {
-    ok: !problems.length, problems: problems, sheet: sheet,
-    sheetName: sheet.getName(), day: day,
+    ok: true, problems: [], sheet: sheet, sheetName: sheet.getName(),
     col: col + 1, colLetter: growthColLetter_(col + 1),
     headerRow: headerRow + 1, rows: rows
   };
@@ -3481,17 +3549,24 @@ function growthColLetter_(n) {
 /* What writeGrowthSheetDay would do. Writes nothing. */
 function previewGrowthSheetWrite() { return growthSheetWrite_(false); }
 
-/* Fills the day's column. Refuses rather than overwrite, unless
-   GROWTH_SHEET_OVERWRITE is true. */
+/* Fills the day's column AND the MTD column beside it. The day column refuses
+   rather than overwrite unless GROWTH_SHEET_OVERWRITE is true; MTD is always
+   replaced, because a running total is meant to be. */
 function writeGrowthSheetDay() { return growthSheetWrite_(true); }
 
+/* Just the MTD column, if the day column is already right and only the month
+   total needs catching up. */
+function previewGrowthSheetMtd() { return growthMtdWrite_(false); }
+function writeGrowthSheetMtd() { return growthMtdWrite_(true); }
+
 function growthSheetWrite_(commit) {
-  const day = growthSheetDay();               // also prints the numbers
-  const plan = planGrowthSheetWrite_(day.iso);
+  const iso = growthTargetIso_();
+  const day = growthReport_(iso, null);        // also prints the numbers
+  const plan = planGrowthSheetWrite_(iso);
   const out = [];
   out.push("");
   out.push(new Array(58).join("="));
-  out.push((commit ? "WRITE" : "PREVIEW — nothing will be written") + " — " + day.iso);
+  out.push((commit ? "WRITE" : "PREVIEW — nothing will be written") + " — " + iso);
 
   if (!plan.ok) {
     plan.problems.forEach(p => out.push("  ! " + p));
@@ -3502,16 +3577,7 @@ function growthSheetWrite_(commit) {
   out.push("  sheet: " + plan.sheetName + "   column " + plan.colLetter +
     ' (headed "' + plan.day + '")');
 
-  const values = {
-    marketedLeads: day.marketedLeads,
-    marketedDeals: day.marketedDeals,
-    marketedRate: day.marketedLeads ? day.marketedDeals / day.marketedLeads : 0,
-    techFlipLeads: day.techFlipLeads,
-    techFlipDeals: day.techFlipDeals,
-    techFlipRate: day.techFlipLeads ? day.techFlipDeals / day.techFlipLeads : 0,
-    revenue: day.revenue,
-    avgTicket: day.sales ? day.revenue / day.sales : 0
-  };
+  const values = growthValuesFrom_(day);
 
   const blocked = [];
   const planned = [];
@@ -3553,7 +3619,120 @@ function growthSheetWrite_(commit) {
   }
 
   Logger.log(out.join("\n"));
-  return { ok: true, written: commit ? planned.length : 0, planned: planned.length, blocked: blocked.length };
+
+  /* The MTD column on the same tab, in the same run. The whole reason the day
+     column exists is to roll up, and a day written without its month rolled
+     forward is a tab that disagrees with itself. */
+  const mtd = growthMtdOn_(plan.sheet, iso, commit);
+
+  return {
+    ok: true, written: commit ? planned.length : 0,
+    planned: planned.length, blocked: blocked.length,
+    mtd: mtd
+  };
+}
+
+function growthMtdWrite_(commit) {
+  const iso = growthTargetIso_();
+  const wantTab = GROWTH_SHEET_TAB || growthTabFor_(iso);
+  let ss, sheet;
+  try {
+    ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+    sheet = ss.getSheetByName(wantTab);
+    if (!sheet && ss.getSheets().length === 1) sheet = ss.getSheets()[0];
+  } catch (err) {
+    Logger.log("Could not open the growth sheet: " + (err && err.message ? err.message : String(err)));
+    return { ok: false };
+  }
+  if (!sheet) {
+    Logger.log('No tab named "' + wantTab + '". Tabs: ' +
+      ss.getSheets().map(s => s.getName()).join(", "));
+    return { ok: false };
+  }
+  return growthMtdOn_(sheet, iso, commit);
+}
+
+/*
+ * Writes month-start-through-toIso into the tab's MTD column.
+ *
+ * Two rules that differ from the day column, both deliberate:
+ *
+ * MTD is replaced, not protected. The day column is guarded because writing it
+ * twice means somebody ran for the wrong date and a hand-typed number is about
+ * to vanish. MTD is the opposite — it is stale by definition the moment the
+ * next day lands, and refusing to rewrite it is how it ends up a week behind.
+ *
+ * Formulas are left alone, and that is now the RIGHT answer rather than a
+ * compromise. The rate and average-ticket cells in that column already divide
+ * one MTD cell by another, so once the counts and revenue underneath them are
+ * written the formulas recompute to the correct month figure on their own.
+ * Replacing them with a flat number would work once and then never update.
+ */
+function growthMtdOn_(sheet, toIso, commit) {
+  const fromIso = toIso.slice(0, 8) + "01";
+  const out = [];
+  out.push("");
+  out.push(new Array(58).join("="));
+  out.push((commit ? "WRITE" : "PREVIEW — nothing will be written") +
+    " MTD — " + fromIso + " through " + toIso);
+
+  const plan = planGrowthMtdWrite_(sheet);
+  if (!plan.ok) {
+    plan.problems.forEach(p => out.push("  ! " + p));
+    Logger.log(out.join("\n"));
+    return { ok: false, problems: plan.problems };
+  }
+
+  const m = computeGrowthMetrics_(fromIso, toIso);
+  const values = growthValuesFrom_(m);
+
+  out.push("  sheet: " + plan.sheetName + "   column " + plan.colLetter + " (MTD)");
+  out.push("  " + m.recapRows + " consult(s) and " + m.alertList.length +
+    " sold alert(s) across " + Object.keys(m.byDay).length + " day(s) of the month.");
+
+  const planned = [], derived = [];
+  GROWTH_ROWS.forEach(spec => {
+    const row = plan.rows[spec.key];
+    const cell = plan.sheet.getRange(row, plan.col);
+    const a1 = plan.colLetter + row;
+    const formula = String(cell.getFormula() || "");
+    if (formula) {
+      derived.push("  = " + a1 + "  " + (spec.label + "                       ").slice(0, 23) +
+        formula + "   (left alone — it recomputes from the cells above)");
+      return;
+    }
+    planned.push({ a1: a1, row: row, label: spec.label,
+      was: cell.getValue(), value: values[spec.key] });
+  });
+
+  planned.forEach(p => out.push("  " + p.a1 + "  " +
+    (p.label + "                       ").slice(0, 23) +
+    JSON.stringify(p.value) +
+    (p.was === "" || p.was === null || p.was === undefined
+      ? "" : "   (was " + JSON.stringify(p.was) + ")")));
+  derived.forEach(d => out.push(d));
+
+  if (commit && planned.length) {
+    planned.forEach(p => plan.sheet.getRange(p.row, plan.col).setValue(p.value));
+    out.push("  wrote " + planned.length + " MTD cell(s).");
+  } else if (commit) {
+    out.push("  nothing to write — every MTD cell in that column holds a formula.");
+  } else {
+    out.push("  (run writeGrowthSheetMtd to commit, or writeGrowthSheetDay to do both)");
+  }
+
+  /* A formula that divides by a cell this script does not fill will still read
+     wrong afterwards, and the only way to know is to look at it once. */
+  if (derived.length) {
+    out.push("  Check those formulas once: they should divide one MTD cell by");
+    out.push("  another in the SAME column. A formula pointing at the day columns");
+    out.push("  will keep showing the week, not the month.");
+  }
+
+  Logger.log(out.join("\n"));
+  return { ok: true, fromIso: fromIso, toIso: toIso,
+    written: commit ? planned.length : 0, planned: planned.length,
+    derived: derived.length, metrics: values };
 }
 
 /*
@@ -3576,30 +3755,152 @@ function growthSheetWrite_(commit) {
  * and the sheet's one row hides that; the total to type is given, with its
  * parts underneath.
  */
-function growthSheetDay() {
+function growthSheetDay() { return growthReport_(growthTargetIso_(), null); }
+
+/* The date the day column is for. Blank setting = yesterday, because the run
+   happens the morning after the day it reports. */
+function growthTargetIso_() {
   const cfg = DAILY_RECAP_CONFIG;
-  let iso = String(GROWTH_SHEET_DATE || "").trim();
-  if (!iso) {
-    iso = Utilities.formatDate(new Date(Date.now() - 86400000), cfg.timeZone, "yyyy-MM-dd");
-  }
+  const iso = String(GROWTH_SHEET_DATE || "").trim();
+  return iso || Utilities.formatDate(new Date(Date.now() - 86400000), cfg.timeZone, "yyyy-MM-dd");
+}
+
+/*
+ * Month to date, through the same day the day column reports.
+ *
+ * Computed from the recap log and the sold alerts over the whole range, NOT by
+ * adding up the six daily tabs. Two reasons. The tabs are overwritten every
+ * week, so a sum of them resets to week one every Monday and the month
+ * silently restarts. And a sum of six cells carries every typo in them
+ * forward into the figure that goes to Paul, with nothing in between to catch
+ * it — recomputing from source means a bad daily cell stays a bad daily cell.
+ */
+function growthSheetMonthToDate() {
+  const iso = growthTargetIso_();
+  return growthReport_(iso, iso.slice(0, 8) + "01");
+}
+
+/*
+ * One report, for one day or for a range. fromIso null means "just that day".
+ *
+ * Sharing the code path is the point: the day column and the MTD column have
+ * to agree about what counts as a lead, what a revisit does, and where a
+ * revisit close lands. Two implementations of those rules would drift, and the
+ * drift would show up as an MTD that does not equal the sum of the days.
+ */
+function growthReport_(toIso, fromIso) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const isRange = !!fromIso && fromIso !== toIso;
+  const from = fromIso || toIso;
+
   const label = Utilities.formatDate(
-    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE, MMMM d, yyyy");
+    new Date(Date.parse(toIso + "T12:00:00Z")), cfg.timeZone, "EEEE, MMMM d, yyyy");
 
   const out = [];
-  out.push("Growth sheet — " + label + "  (" + iso + ")");
+  out.push(isRange
+    ? "Growth sheet MTD — " + from + " through " + toIso + "  (" + label + ")"
+    : "Growth sheet — " + label + "  (" + toIso + ")");
   out.push(new Array(58).join("="));
 
-  /* Consults and their outcomes come off the recap log, because the source —
-     the whole point of the split — exists nowhere else. */
-  const leads = {}, deals = {};
+  const m = computeGrowthMetrics_(from, toIso);
+  const rate = (d, l) => l ? Math.round(d * 1000 / l) / 10 + "%" : (d ? "—  (" + d + " sold, 0 leads)" : "0%");
+
+  out.push("");
+  out.push("  HVAC Marketed Leads     " + m.marketedLeads);
+  out.push("  HVAC Marketed Deals     " + m.marketedDeals);
+  out.push("  Marketed L2C %          " + rate(m.marketedDeals, m.marketedLeads));
+  out.push("  HVAC Tech Flip Leads    " + m.techFlipLeads);
+  out.push("  HVAC Tech Flip Deals    " + m.techFlipDeals);
+  out.push("  HVAC Tech Flip L2C %    " + rate(m.techFlipDeals, m.techFlipLeads));
+  out.push("  NPS Sales Overall       (not in any system here — yours to fill)");
+  /* Pre-tax — see the note in buildMorningSalesBrief_. The sheet's own budget
+     row includes tax, so this figure is NOT comparable to it until BI supplies
+     the tax-inclusive number. */
+  out.push("  HVAC Rev                $" + formatMoney_(m.revenue) + "   (PRE-TAX — budget includes tax)");
+  out.push("  HVAC AVG Ticket         " +
+    (m.sales ? "$" + formatMoney_(m.revenue / m.sales) : "—"));
+
+  out.push("");
+  out.push(new Array(58).join("-"));
+  out.push("what went into Marketed, so you can split it differently:");
+  Object.keys(m.parts).sort().forEach(s =>
+    out.push("  " + (s + "                    ").slice(0, 20) +
+      "leads " + (m.leads[s] || 0) + "   deals " + (m.deals[s] || 0)));
+  if (m.revisitDeals) {
+    out.push("  " + ("revisit closes" + "                    ").slice(0, 20) +
+      "leads -   deals " + m.revisitDeals + "   (counted as a deal, not a lead)");
+  }
+  if (!Object.keys(m.parts).length && !m.revisitDeals) out.push("  (nothing)");
+
+  if (isRange) {
+    out.push("");
+    out.push("by day:");
+    const days = Object.keys(m.byDay).sort();
+    if (!days.length) out.push("  (nothing in range)");
+    days.forEach(d => {
+      const b = m.byDay[d];
+      out.push("  " + d + "  " +
+        Utilities.formatDate(new Date(Date.parse(d + "T12:00:00Z")), cfg.timeZone, "EEE") +
+        "   consults " + b.recapRows + "   sold " + b.alerts +
+        "   $" + formatMoney_(b.revenue));
+    });
+  }
+
+  out.push("");
+  out.push("consults reported: " + m.recapRows + "   sold alerts: " + m.alertList.length);
+  m.alertList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
+    (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
+
+  /* The two sources must agree on how many sold. When they do not, the recap
+     is the incomplete one — it only holds what somebody reported. */
+  if (m.recapSold !== m.alertList.length) {
+    out.push("");
+    out.push("! " + m.recapSold + " sale(s) reported in recaps, " + m.alertList.length +
+      " sold alert(s) from ServiceTitan.");
+    out.push("  The deal rows above come from recaps, so a sale nobody reported is");
+    out.push("  missing from them — but its money IS in HVAC Rev. Check the list above.");
+  }
+  if (m.readFailed) {
+    out.push("");
+    out.push("! The recap log could not be read, so leads and deals are all zero: " + m.readFailed);
+  }
+  if (!m.soldOk) {
+    out.push("");
+    out.push("! Sold alerts could not be read, so revenue is understated.");
+  }
+
+  Logger.log(out.join("\n"));
+  return Object.assign({ iso: toIso, fromIso: from, isRange: isRange }, m);
+}
+
+/*
+ * Leads, deals and revenue between two dates, inclusive.
+ *
+ * Consults and their sources come off the recap log, because the source — the
+ * whole point of the marketed / tech-flip split — exists nowhere else. Revenue
+ * only exists on the ServiceTitan alerts.
+ *
+ * Leads exclude revisits. A revisit is a return to a lead already counted the
+ * day it first came in, so counting it again inflates leads and drags L2C%
+ * down on exactly the days a rep rescued something. It still counts as a DEAL
+ * if it sold — closing a revisit is the whole point of going back — and it
+ * lands in Marketed, because the lead it came from was marketed when it first
+ * arrived.
+ */
+function computeGrowthMetrics_(fromIso, toIso) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const leads = {}, deals = {}, byDay = {};
+  const dayOf = d => (byDay[d] = byDay[d] || { recapRows: 0, alerts: 0, revenue: 0 });
   let recapRows = 0, readFailed = "";
+
   try {
     const book = getLogSpreadsheet_();
     readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length).forEach(r => {
       const rowIso = r[0] instanceof Date
         ? Utilities.formatDate(r[0], cfg.timeZone, "yyyy-MM-dd") : String(r[0] || "").trim();
-      if (rowIso !== iso) return;
+      if (!rowIso || rowIso < fromIso || rowIso > toIso) return;
       recapRows++;
+      dayOf(rowIso).recapRows++;
       const src = normalizeLeadSource_(String(r[3] || "")) || "(no source given)";
       const sold = String(r[4] || "").toUpperCase().indexOf("SOLD") !== -1;
       if (src !== "Revisit") leads[src] = (leads[src] || 0) + 1;
@@ -3609,81 +3910,55 @@ function growthSheetDay() {
     readFailed = err && err.message ? err.message : String(err);
   }
 
-  /* Revenue only exists on the alerts. */
-  const soldRes = readSoldAlerts_(Math.max(2, Math.min(60,
-    Math.round((Date.now() - Date.parse(iso + "T12:00:00Z")) / 86400000) + 3)));
-  const alerts = soldRes.ok
-    ? collapseResoldAlerts_(soldRes.alerts).filter(a => a.soldOnIso === iso) : [];
-  const revenue = alerts.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+  const soldRes = readSoldAlerts_(Math.max(2, Math.min(120,
+    Math.round((Date.now() - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 3)));
+  const alertList = soldRes.ok
+    ? collapseResoldAlerts_(soldRes.alerts)
+        .filter(a => a.soldOnIso && a.soldOnIso >= fromIso && a.soldOnIso <= toIso)
+        .sort((a, b) => a.soldOnIso < b.soldOnIso ? -1 : 1)
+    : [];
+  alertList.forEach(a => {
+    const d = dayOf(a.soldOnIso);
+    d.alerts++;
+    d.revenue += (Number(a.amount) || 0);
+  });
+  const revenue = alertList.reduce((s, a) => s + (Number(a.amount) || 0), 0);
 
-  const tf = k => (k["Tech Flip"] || 0);
-  const marketedParts = k => Object.keys(k).filter(s => s !== "Tech Flip" && s !== "Revisit");
-  const marketedTotal = k => marketedParts(k).reduce((n, s) => n + k[s], 0);
+  const isMarketed = s => s !== "Tech Flip" && s !== "Revisit";
+  const marketedTotal = k => Object.keys(k).filter(isMarketed).reduce((n, s) => n + k[s], 0);
   const revisitDeals = deals["Revisit"] || 0;
 
-  /* Revisit closes belong in a deal row. Marketed is where they sit, because
-     the lead they came from was marketed when it first arrived. */
-  const mDeals = marketedTotal(deals) + revisitDeals;
-  const mLeads = marketedTotal(leads);
-  const rate = (d, l) => l ? Math.round(d * 1000 / l) / 10 + "%" : (d ? "—  (" + d + " sold, 0 leads)" : "0%");
-
-  out.push("");
-  out.push("  HVAC Marketed Leads     " + mLeads);
-  out.push("  HVAC Marketed Deals     " + mDeals);
-  out.push("  Marketed L2C %          " + rate(mDeals, mLeads));
-  out.push("  HVAC Tech Flip Leads    " + tf(leads));
-  out.push("  HVAC Tech Flip Deals    " + tf(deals));
-  out.push("  HVAC Tech Flip L2C %    " + rate(tf(deals), tf(leads)));
-  out.push("  NPS Sales Overall       (not in any system here — yours to fill)");
-  /* Pre-tax — see the note in buildMorningSalesBrief_. The sheet's own budget
-     row includes tax, so this figure is NOT comparable to it until BI supplies
-     the tax-inclusive number. */
-  out.push("  HVAC Rev                $" + formatMoney_(revenue) + "   (PRE-TAX — budget includes tax)");
-  out.push("  HVAC AVG Ticket         " +
-    (alerts.length ? "$" + formatMoney_(revenue / alerts.length) : "—"));
-
-  out.push("");
-  out.push(new Array(58).join("-"));
-  out.push("what went into Marketed, so you can split it differently:");
   const parts = {};
-  marketedParts(leads).forEach(s => { parts[s] = true; });
-  marketedParts(deals).forEach(s => { parts[s] = true; });
-  Object.keys(parts).sort().forEach(s =>
-    out.push("  " + (s + "                    ").slice(0, 20) +
-      "leads " + (leads[s] || 0) + "   deals " + (deals[s] || 0)));
-  if (revisitDeals) {
-    out.push("  " + ("revisit closes" + "                    ").slice(0, 20) +
-      "leads -   deals " + revisitDeals + "   (counted as a deal, not a lead)");
-  }
-  if (!Object.keys(parts).length && !revisitDeals) out.push("  (nothing)");
+  Object.keys(leads).filter(isMarketed).forEach(s => { parts[s] = true; });
+  Object.keys(deals).filter(isMarketed).forEach(s => { parts[s] = true; });
 
-  out.push("");
-  out.push("consults reported: " + recapRows + "   sold alerts: " + alerts.length);
-  alerts.forEach(a => out.push("    " + a.hca + " — " + (a.customer || "?") +
-    "  $" + formatMoney_(a.amount || 0)));
+  return {
+    marketedLeads: marketedTotal(leads),
+    marketedDeals: marketedTotal(deals) + revisitDeals,
+    techFlipLeads: leads["Tech Flip"] || 0,
+    techFlipDeals: deals["Tech Flip"] || 0,
+    revenue: revenue,
+    sales: alertList.length,
+    leads: leads, deals: deals, parts: parts, revisitDeals: revisitDeals,
+    byDay: byDay, alertList: alertList,
+    recapRows: recapRows,
+    recapSold: Object.keys(deals).reduce((n, s) => n + deals[s], 0),
+    readFailed: readFailed, soldOk: !!soldRes.ok
+  };
+}
 
-  /* The two sources must agree on how many sold. When they do not, the recap
-     is the incomplete one — it only holds what somebody reported. */
-  const recapSold = Object.keys(deals).reduce((n, s) => n + deals[s], 0);
-  if (recapSold !== alerts.length) {
-    out.push("");
-    out.push("! " + recapSold + " sale(s) reported in recaps, " + alerts.length +
-      " sold alert(s) from ServiceTitan.");
-    out.push("  The deal rows above come from recaps, so a sale nobody reported is");
-    out.push("  missing from them — but its money IS in HVAC Rev. Check the list above.");
-  }
-  if (readFailed) {
-    out.push("");
-    out.push("! The recap log could not be read, so leads and deals are all zero: " + readFailed);
-  }
-  if (!soldRes.ok) {
-    out.push("");
-    out.push("! Sold alerts could not be read, so revenue is understated.");
-  }
-
-  Logger.log(out.join("\n"));
-  return { iso: iso, marketedLeads: mLeads, marketedDeals: mDeals,
-    techFlipLeads: tf(leads), techFlipDeals: tf(deals), revenue: revenue, sales: alerts.length };
+/* The eight cell values, derived the same way wherever they are written. */
+function growthValuesFrom_(m) {
+  return {
+    marketedLeads: m.marketedLeads,
+    marketedDeals: m.marketedDeals,
+    marketedRate: m.marketedLeads ? m.marketedDeals / m.marketedLeads : 0,
+    techFlipLeads: m.techFlipLeads,
+    techFlipDeals: m.techFlipDeals,
+    techFlipRate: m.techFlipLeads ? m.techFlipDeals / m.techFlipLeads : 0,
+    revenue: m.revenue,
+    avgTicket: m.sales ? m.revenue / m.sales : 0
+  };
 }
 
 /*
