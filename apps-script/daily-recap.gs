@@ -80,15 +80,30 @@ const DAILY_RECAP_CONFIG = {
      scheduled dates simply come back empty. */
   comboLogSpreadsheetId: "16Z-PK7d2Y6MvNHM1vqZ6y0JsezITQG6fYnawomYl46c",
 
-  sendHour: 18,                     // 6:00pm Pacific
+  /* 6:00am. The recap goes out before the first appointment rather than after
+     the last one, so a rep can answer a block as they leave each driveway
+     instead of reconstructing the whole day at 8pm. Replies arriving in
+     pieces cost nothing: rows are keyed on date + HCA + customer, so three
+     messages across a day merge into one clean set. */
+  sendHour: 6,
   collectHour: 20,                  // 8:15pm Pacific
   collectMinute: 15,
   replyLookbackDays: 2,
 
-  /* Morning nudge for anyone who was scheduled yesterday and never replied.
-     Split by whether they are working the day the nudge goes out: people on
-     shift get it at 7, people on a day off get an extra hour. */
-  nudgeEnabled: true,
+  /* Deliberately NOT sendHour. suspectWrongThread_ flags a reply that answers
+     an older night and arrived once a fresher recap was already sitting in the
+     inbox. With a 6pm send that was the same threshold; with a 6am send a
+     fresher email exists from breakfast onward, and every ordinary
+     next-morning reply would flag. Kyle answering Saturday's recap at 8:18am
+     Sunday is normal and must stay quiet. Holding this at 6pm keeps the flag
+     meaning "they had all day to use today's email and used an old one". */
+  suspectAfterHour: 18,
+
+  /* The chase for anyone who owed yesterday and never replied now rides along
+     inside the 6am email rather than arriving separately an hour later — see
+     buildRecapBody_. Set nudgeEnabled true to also install the old standalone
+     nudge triggers; the functions still work and are useful for a one-off. */
+  nudgeEnabled: false,
   nudgeHourWorking: 7,
   nudgeHourOff: 8,
   /* After both nudge rounds, so a recap that came in at 7:30 is counted. */
@@ -162,11 +177,12 @@ function sendDailyRecap_(force) {
     return plan;
   }
 
+  const owedBy = whoStillOwesYesterday_(now);
   plan.working.forEach(hca => {
     sendEmailSafe_({
       to: [hca.email],
       subject: DAILY_RECAP_CONFIG.subjectPrefix + " — " + plan.dateLabel,
-      body: buildRecapBody_(hca, plan.dateLabel)
+      body: buildRecapBody_(hca, plan.dateLabel, owedBy[hca.name] || "")
     });
   });
 
@@ -190,6 +206,40 @@ function sendDailyRecap_(force) {
   return plan;
 }
 
+/*
+ * HCA name -> the label of yesterday, for anyone who was scheduled yesterday
+ * and has still said nothing. Everyone else is absent from the map.
+ *
+ * One Gmail read at send time. It replaces the standalone 7am/8am nudge: with
+ * the recap arriving at 6am, a separate chase an hour later is a second email
+ * saying almost the same thing.
+ *
+ * Errs toward silence. If the search fails or yesterday cannot be built, this
+ * returns nothing and the recap goes out clean — telling someone they missed a
+ * day they actually filed is worse than not mentioning it, because it teaches
+ * them the reminders are wrong and can be ignored.
+ */
+function whoStillOwesYesterday_(now) {
+  const out = {};
+  try {
+    const yesterday = new Date(now.getTime() - 86400000);
+    const past = buildTodayPlan_(yesterday);
+    if (!past.working.length) return out;
+
+    const found = findRecapReplies_(past.dateLabel, null);
+    if (!found.ok) return out;
+
+    const replied = {};
+    found.replies.forEach(r => { replied[r.hca.name] = true; });
+    past.working.forEach(h => { if (!replied[h.name]) out[h.name] = past.dateLabel; });
+  } catch (err) {
+    Logger.log("Could not work out who owes yesterday, sending without it: " +
+      (err && err.message ? err.message : String(err)));
+    return {};
+  }
+  return out;
+}
+
 function lastRealSendIso_() {
   try {
     return PropertiesService.getScriptProperties().getProperty(LAST_SEND_PROPERTY) || "";
@@ -208,7 +258,7 @@ function writeLastRealSend_(isoDate) {
   }
 }
 
-function buildRecapBody_(hca, dateLabel) {
+function buildRecapBody_(hca, dateLabel, owed) {
   /* Lead Source and Outcome list their options in full rather than as letter
      codes, so nothing has to be looked up or remembered. The collector still
      accepts the old single letters — see normalizeLeadSource_/normalizeOutcome_
@@ -232,9 +282,27 @@ function buildRecapBody_(hca, dateLabel) {
    * the template entirely and wrote prose. Collectors still accept the older
    * long labels, so replies in the previous format keep parsing.
    */
+  /*
+   * owed is the label of a day this rep never filed. It appears as a pointer
+   * back to that day's own email, NOT as a second blank template.
+   *
+   * That is not a style choice. A reply to THIS message carries today's
+   * subject line, and the subject is the only thing that dates a reply. Put
+   * yesterday's template in here and yesterday's appointments log against
+   * today — silently, and in a way that looks perfectly correct in the sheet.
+   * Sending them back to the original thread is the only version that files
+   * to the right day.
+   */
+  const chase = owed
+    ? "You haven't filed " + owed + " yet. That email is still in your inbox —\n" +
+      "reply to that one, not this one, so it lands on the right day.\n\n"
+    : "";
+
   return "Hi " + hca.first + ",\n\n" +
-    "One block per appointment you ran today (" + dateLabel + ").\n" +
-    "No appointments? Reply None and just fill in the last line.\n\n" +
+    chase +
+    "Reply as you finish each appointment today (" + dateLabel + ").\n" +
+    "One block each, as many as you run. No need to wait for the end of the day.\n" +
+    "Nothing on today? Reply None and just fill in the last line.\n\n" +
     "Customer:\n" +
     "Source (Web / Inbound / Tech Flip / Revisit):\n" +
     "Outcome (Sold / Estimate / Follow-up):\n" +
@@ -242,7 +310,7 @@ function buildRecapBody_(hca, dateLabel) {
     "Water heater (Y/N + interest):\n" +
     "Next follow-up:\n" +
     "Objection (if not sold):\n\n" +
-    "Ran more than one? Paste the block again below it.\n\n" +
+    "Sending them one at a time? Just send this block again for the next one.\n\n" +
     /* Day-level, so it sits outside the repeating block. A rep can work a full
        day on the existing backlog and run no appointments at all; without this
        their day reports as nothing. Deliberately avoids the word "customer",
@@ -953,7 +1021,7 @@ function suspectWrongThread_(answersIso, received, nightsAsked) {
   if (receivedIso <= answersIso) return false;
 
   const hour = Number(Utilities.formatDate(received, cfg.timeZone, "H"));
-  if (!(hour >= cfg.sendHour)) return false;
+  if (!(hour >= cfg.suspectAfterHour)) return false;
 
   return !!(nightsAsked && nightsAsked[receivedIso]);
 }
@@ -3041,6 +3109,78 @@ function buildSoldReportPayload_(fromIso, toIso) {
   };
 }
 
+/*
+ * Why the sold report says what it says. Reads nothing but Gmail, writes
+ * nothing, sends nothing.
+ *
+ * Every stage prints its own count, so a zero can be traced to the stage that
+ * produced it instead of guessed at: the search itself, the roster filter that
+ * drops technicians, the date parsed out of the alert body, or the range
+ * filter. The report gives one number and no way to see which of those four
+ * emptied it.
+ */
+function diagnoseSoldReport() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const todayIso = Utilities.formatDate(new Date(), cfg.timeZone, "yyyy-MM-dd");
+  const fromIso = todayIso.slice(0, 8) + "01";
+  const spanDays = Math.round(
+    (Date.parse(todayIso + "T12:00:00Z") - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 1;
+  const days = Math.max(1, Math.min(200, spanDays + 3));
+  const out = [];
+
+  out.push("today " + todayIso + ", range " + fromIso + " to " + todayIso +
+    " (" + spanDays + " days), Gmail lookback newer_than:" + days + "d");
+
+  const query = 'from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' + days + "d";
+  out.push("query: " + query);
+
+  let threads = [];
+  try {
+    threads = GmailApp.search(query, 0, 200);
+  } catch (err) {
+    out.push("SEARCH FAILED: " + (err && err.message ? err.message : String(err)));
+    Logger.log(out.join("\n"));
+    return { ok: false };
+  }
+  out.push("threads returned: " + threads.length);
+
+  let messages = 0, parsed = 0, notHca = 0, noDate = 0, inRange = 0;
+  const seenNames = {};
+  threads.forEach(t => t.getMessages().forEach(msg => {
+    messages++;
+    const f = parseAlertFields_(msg.getPlainBody());
+    const soldBy = f["sold by"] || "";
+    if (!soldBy) return;
+    parsed++;
+    const hca = RECAP_ROSTER.filter(h => normName_(h.name) === normName_(soldBy))[0];
+    if (!hca) { notHca++; seenNames[soldBy] = (seenNames[soldBy] || 0) + 1; return; }
+    const md = String(f["date"] || "").match(/^(\d{1,2})\/(\d{1,2})/);
+    const iso = md ? resolveAlertDate_(Number(md[1]), Number(md[2]), msg.getDate())
+                   : Utilities.formatDate(msg.getDate(), cfg.timeZone, "yyyy-MM-dd");
+    if (!iso) { noDate++; out.push("  no date: " + soldBy + " / " + (f["customer"] || "?") +
+      "  raw date field: " + JSON.stringify(f["date"])); return; }
+    const within = iso >= fromIso && iso <= todayIso;
+    if (within) inRange++;
+    out.push("  " + (within ? "IN  " : "out ") + iso + "  " + hca.name +
+      " — " + (f["customer"] || "?") + "  " + (f["amount"] || ""));
+  }));
+
+  out.push("messages: " + messages + ", had a 'Sold by' line: " + parsed +
+    ", not an HCA: " + notHca + ", unparseable date: " + noDate + ", in range: " + inRange);
+  const others = Object.keys(seenNames);
+  if (others.length) out.push("non-HCA sellers seen (correctly ignored): " +
+    others.map(n => n + " x" + seenNames[n]).join(", "));
+  if (!inRange) {
+    out.push("");
+    out.push("NOTHING IN RANGE. If 'threads returned' is 0 the search is the problem;");
+    out.push("if messages were seen but all say 'out', the alert dates fall outside the");
+    out.push("month-to-date window; if all were 'not an HCA' the roster names disagree");
+    out.push("with what ServiceTitan puts in 'Sold by'.");
+  }
+  Logger.log(out.join("\n"));
+  return { threads: threads.length, messages: messages, inRange: inRange };
+}
+
 /* The report printed to the log, so it can be checked without deploying. */
 function previewSoldReport() {
   const p = buildSoldReportPayload_("", "");
@@ -4603,7 +4743,7 @@ function installDailyRecapTriggers() {
   ScriptApp.newTrigger("sweepRecapReplies")
     .timeBased().everyHours(1).create();
 
-  /* After both nudge rounds, so a recap filed at 7:30 is counted. */
+  /* Late enough that a rep who answers first thing is already counted. */
   ScriptApp.newTrigger("sendMorningSalesBrief")
     .timeBased().everyDays(1).atHour(cfg.morningBriefHour)
     .inTimezone(cfg.timeZone).create();
@@ -4619,7 +4759,7 @@ function installDailyRecapTriggers() {
   Logger.log("Installed daily recap triggers (send " + cfg.sendHour + ":00, collect " +
     cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
     (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
-      cfg.nudgeHourOff + ":00 off" : "") +
+      cfg.nudgeHourOff + ":00 off" : ", chase folded into the " + cfg.sendHour + ":00 send") +
     ", reply sweep hourly, sales brief " + cfg.morningBriefHour + ":00" +
     ", job status 9:00 and 22:00 " + cfg.timeZone + ").");
 }

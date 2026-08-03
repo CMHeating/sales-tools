@@ -88,8 +88,20 @@ Run → installDailyRecapTriggers
 The log **must** contain `reply sweep hourly`. If it says only
 `job status 9:00 and 22:00`, the paste did not take — go back to A1.
 
-Installs: send 18:00, collect 20:15, nudge 07:00 working / 08:00 off,
-**reply sweep hourly**, **sales brief 09:00**, job status 09:00 and 22:00.
+Installs: **send 06:00**, collect 20:15, **reply sweep hourly**,
+**sales brief 09:00**, job status 09:00 and 22:00.
+
+The recap goes out at 6am, before the first appointment, and asks for one block
+per appointment *as they finish it* rather than a reconstruction of the whole
+day at 8pm. Partial replies cost nothing — rows are keyed on date + HCA +
+customer, so three messages across a day merge into one clean set.
+
+The old standalone 07:00/08:00 nudge is off (`nudgeEnabled: false`). Anyone who
+never filed yesterday gets that chase folded into the top of their 6am email,
+pointing them back at the original thread — **not** a second blank template,
+because a reply here would carry today's subject and file yesterday's
+appointments against today. `sendMorningNudgeWorkingToday` still works if you
+want to fire a chase by hand.
 
 The sales brief emails yesterday's sales split into closed-on-the-day,
 from-an-earlier-lead, and **unknown** — the last being sales by a rep who filed
