@@ -3286,6 +3286,328 @@ function diagnoseSoldReport() {
   return { threads: threads.length, messages: messages, inRange: inRange };
 }
 
+/* Blank = yesterday. Set to "2026-08-01" to redo a specific day. */
+const GROWTH_SHEET_DATE = "";
+
+/* CM Growth Daily Sales. Blank tab = the first sheet in the workbook. */
+const GROWTH_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
+const GROWTH_SHEET_TAB = "";
+/* Guard rail. Leave false and a day that already has numbers is refused rather
+   than rewritten, so running for the wrong date cannot quietly erase a column
+   somebody filled in by hand. */
+const GROWTH_SHEET_OVERWRITE = false;
+
+/* The label in column B for each row we know how to fill. Matching is on a
+   normalised form because the sheet says "HVAC Tech Filp Deals" and
+   "HVAC tech Flip L2C %", and those typos are not ours to correct — they may
+   be what somebody's own formula points at. */
+const GROWTH_ROWS = [
+  { key: "marketedLeads", label: "hvac marketed leads" },
+  { key: "marketedDeals", label: "hvac marketed deals" },
+  { key: "marketedRate", label: "marketed l2c" },
+  { key: "techFlipLeads", label: "hvac tech flip leads" },
+  { key: "techFlipDeals", label: "hvac tech flip deals" },
+  { key: "techFlipRate", label: "hvac tech flip l2c" },
+  { key: "revenue", label: "hvac rev" },
+  { key: "avgTicket", label: "hvac avg ticket" }
+  /* NPS is deliberately absent. It comes from a survey this script cannot
+     see, and a zero written there would read as a real score. */
+];
+
+function growthLabelKey_(v) {
+  return String(v || "").toLowerCase()
+    .replace(/filp/g, "flip")                 // the sheet's own typo
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+
+/*
+ * Locates the day's column and the rows to fill, and checks it is safe to
+ * write. Returns a plan; writes nothing. writeGrowthSheetDay runs this first
+ * and refuses on any problem it reports.
+ *
+ * The danger here is geometry, not arithmetic. MTD sits in the column
+ * immediately after the day columns and FM Budget after that, so an
+ * off-by-one silently overwrites either the month's running total or the
+ * targets. Hence: the column is found by matching the weekday name written in
+ * the header row, never by counting, and a header that reads MTD or Budget is
+ * refused outright.
+ */
+function planGrowthSheetWrite_(iso) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const problems = [];
+  const day = Utilities.formatDate(
+    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE").slice(0, 3);
+
+  let ss, sheet;
+  try {
+    ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+    sheet = GROWTH_SHEET_TAB ? ss.getSheetByName(GROWTH_SHEET_TAB) : ss.getSheets()[0];
+  } catch (err) {
+    return { ok: false, problems: ["Could not open the growth sheet: " +
+      (err && err.message ? err.message : String(err)) +
+      "  (an .xlsx cannot be opened this way — it has to be saved as a Google Sheet)"] };
+  }
+  if (!sheet) return { ok: false, problems: ["No sheet named " + GROWTH_SHEET_TAB + "."] };
+
+  const grid = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), 40),
+    Math.min(sheet.getLastColumn(), 20)).getValues();
+
+  /* The header row is the one carrying the day names. */
+  let headerRow = -1, col = -1, matches = 0;
+  for (let r = 0; r < grid.length && headerRow === -1; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (growthLabelKey_(grid[r][c]) === day.toLowerCase()) { headerRow = r; col = c; matches++; }
+    }
+  }
+  for (let c = 0; col !== -1 && c < grid[headerRow].length; c++) {
+    if (c !== col && growthLabelKey_(grid[headerRow][c]) === day.toLowerCase()) matches++;
+  }
+
+  if (col === -1) {
+    problems.push('No column headed "' + day + '" on this sheet.');
+    problems.push('Add ' + day + ' as a header in the day row, then run this again.');
+  } else if (matches > 1) {
+    problems.push('More than one column is headed "' + day + '" — refusing to guess.');
+  } else {
+    const header = growthLabelKey_(grid[headerRow][col]);
+    if (header === "mtd" || header.indexOf("budget") !== -1) {
+      problems.push("That column is " + grid[headerRow][col] + ", not a day. Refusing.");
+    }
+  }
+  if (problems.length) return { ok: false, problems: problems };
+
+  /* Row per metric, by label. */
+  const rows = {};
+  GROWTH_ROWS.forEach(spec => {
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        if (growthLabelKey_(grid[r][c]) === spec.label) { rows[spec.key] = r + 1; return; }
+      }
+    }
+  });
+  const missing = GROWTH_ROWS.filter(s => !rows[s.key]).map(s => s.label);
+  if (missing.length) problems.push("Rows not found: " + missing.join(", "));
+
+  return {
+    ok: !problems.length, problems: problems, sheet: sheet,
+    sheetName: sheet.getName(), day: day,
+    col: col + 1, colLetter: growthColLetter_(col + 1),
+    headerRow: headerRow + 1, rows: rows
+  };
+}
+
+function growthColLetter_(n) {
+  let s = "";
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; }
+  return s;
+}
+
+/* What writeGrowthSheetDay would do. Writes nothing. */
+function previewGrowthSheetWrite() { return growthSheetWrite_(false); }
+
+/* Fills the day's column. Refuses rather than overwrite, unless
+   GROWTH_SHEET_OVERWRITE is true. */
+function writeGrowthSheetDay() { return growthSheetWrite_(true); }
+
+function growthSheetWrite_(commit) {
+  const day = growthSheetDay();               // also prints the numbers
+  const plan = planGrowthSheetWrite_(day.iso);
+  const out = [];
+  out.push("");
+  out.push(new Array(58).join("="));
+  out.push((commit ? "WRITE" : "PREVIEW — nothing will be written") + " — " + day.iso);
+
+  if (!plan.ok) {
+    plan.problems.forEach(p => out.push("  ! " + p));
+    Logger.log(out.join("\n"));
+    return { ok: false, problems: plan.problems };
+  }
+
+  out.push("  sheet: " + plan.sheetName + "   column " + plan.colLetter +
+    ' (headed "' + plan.day + '")');
+
+  const values = {
+    marketedLeads: day.marketedLeads,
+    marketedDeals: day.marketedDeals,
+    marketedRate: day.marketedLeads ? day.marketedDeals / day.marketedLeads : 0,
+    techFlipLeads: day.techFlipLeads,
+    techFlipDeals: day.techFlipDeals,
+    techFlipRate: day.techFlipLeads ? day.techFlipDeals / day.techFlipLeads : 0,
+    revenue: day.revenue,
+    avgTicket: day.sales ? day.revenue / day.sales : 0
+  };
+
+  const blocked = [];
+  const planned = [];
+  GROWTH_ROWS.forEach(spec => {
+    const row = plan.rows[spec.key];
+    const cell = plan.sheet.getRange(row, plan.col);
+    const a1 = plan.colLetter + row;
+    /* A formula in the cell is somebody's calculation. Overwriting it with a
+       number would look like it worked and quietly break every later day. */
+    if (String(cell.getFormula() || "")) {
+      blocked.push("  - " + a1 + " " + spec.label + " holds a formula — left alone");
+      return;
+    }
+    const existing = cell.getValue();
+    const filled = existing !== "" && existing !== null && existing !== undefined;
+    if (filled && !GROWTH_SHEET_OVERWRITE) {
+      blocked.push("  - " + a1 + " " + spec.label + " already has " +
+        JSON.stringify(existing) + " — left alone");
+      return;
+    }
+    planned.push({ a1: a1, row: row, label: spec.label, value: values[spec.key] });
+  });
+
+  planned.forEach(p => out.push("  " + p.a1 + "  " + (p.label + "                       ").slice(0, 23) +
+    JSON.stringify(p.value)));
+  blocked.forEach(b => out.push(b));
+
+  if (commit && planned.length) {
+    planned.forEach(p => plan.sheet.getRange(p.row, plan.col).setValue(p.value));
+    out.push("  wrote " + planned.length + " cell(s).");
+  } else if (commit) {
+    out.push("  nothing to write.");
+  } else {
+    out.push("  (run writeGrowthSheetDay to commit" +
+      (blocked.length ? ", or set GROWTH_SHEET_OVERWRITE = true to replace what is there" : "") + ")");
+  }
+  if (blocked.length && !GROWTH_SHEET_OVERWRITE) {
+    out.push("  NPS is never written — it is not in any system here.");
+  }
+
+  Logger.log(out.join("\n"));
+  return { ok: true, written: commit ? planned.length : 0, planned: planned.length, blocked: blocked.length };
+}
+
+/*
+ * One day's column for the CM Growth Daily Sales sheet, printed in the order
+ * the rows appear so it can be typed straight down.
+ *
+ * Prints rather than writes. That workbook is an .xlsx, and SpreadsheetApp
+ * only opens native Google Sheets — a script cannot write into it as it
+ * stands. Saving it as a Sheet would change that; until then this is eight
+ * numbers to copy, and the reading gets checked by a human on the way past,
+ * which is worth something on a figure that goes to Paul.
+ *
+ * Leads exclude revisits. A revisit is a return to a lead already counted the
+ * day it first came in, so counting it again inflates leads and drags L2C%
+ * down on exactly the days a rep rescued something. It still counts as a DEAL
+ * if it sold — closing a revisit is the whole point of going back.
+ *
+ * Marketed is left broken out by source rather than pre-totalled. "marketed",
+ * Web and Inbound are all company-generated, but they are not the same thing
+ * and the sheet's one row hides that; the total to type is given, with its
+ * parts underneath.
+ */
+function growthSheetDay() {
+  const cfg = DAILY_RECAP_CONFIG;
+  let iso = String(GROWTH_SHEET_DATE || "").trim();
+  if (!iso) {
+    iso = Utilities.formatDate(new Date(Date.now() - 86400000), cfg.timeZone, "yyyy-MM-dd");
+  }
+  const label = Utilities.formatDate(
+    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE, MMMM d, yyyy");
+
+  const out = [];
+  out.push("Growth sheet — " + label + "  (" + iso + ")");
+  out.push(new Array(58).join("="));
+
+  /* Consults and their outcomes come off the recap log, because the source —
+     the whole point of the split — exists nowhere else. */
+  const leads = {}, deals = {};
+  let recapRows = 0, readFailed = "";
+  try {
+    const book = getLogSpreadsheet_();
+    readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length).forEach(r => {
+      const rowIso = r[0] instanceof Date
+        ? Utilities.formatDate(r[0], cfg.timeZone, "yyyy-MM-dd") : String(r[0] || "").trim();
+      if (rowIso !== iso) return;
+      recapRows++;
+      const src = normalizeLeadSource_(String(r[3] || "")) || "(no source given)";
+      const sold = String(r[4] || "").toUpperCase().indexOf("SOLD") !== -1;
+      if (src !== "Revisit") leads[src] = (leads[src] || 0) + 1;
+      if (sold) deals[src] = (deals[src] || 0) + 1;
+    });
+  } catch (err) {
+    readFailed = err && err.message ? err.message : String(err);
+  }
+
+  /* Revenue only exists on the alerts. */
+  const soldRes = readSoldAlerts_(Math.max(2, Math.min(60,
+    Math.round((Date.now() - Date.parse(iso + "T12:00:00Z")) / 86400000) + 3)));
+  const alerts = soldRes.ok
+    ? collapseResoldAlerts_(soldRes.alerts).filter(a => a.soldOnIso === iso) : [];
+  const revenue = alerts.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+
+  const tf = k => (k["Tech Flip"] || 0);
+  const marketedParts = k => Object.keys(k).filter(s => s !== "Tech Flip" && s !== "Revisit");
+  const marketedTotal = k => marketedParts(k).reduce((n, s) => n + k[s], 0);
+  const revisitDeals = deals["Revisit"] || 0;
+
+  /* Revisit closes belong in a deal row. Marketed is where they sit, because
+     the lead they came from was marketed when it first arrived. */
+  const mDeals = marketedTotal(deals) + revisitDeals;
+  const mLeads = marketedTotal(leads);
+  const rate = (d, l) => l ? Math.round(d * 1000 / l) / 10 + "%" : (d ? "—  (" + d + " sold, 0 leads)" : "0%");
+
+  out.push("");
+  out.push("  HVAC Marketed Leads     " + mLeads);
+  out.push("  HVAC Marketed Deals     " + mDeals);
+  out.push("  Marketed L2C %          " + rate(mDeals, mLeads));
+  out.push("  HVAC Tech Flip Leads    " + tf(leads));
+  out.push("  HVAC Tech Flip Deals    " + tf(deals));
+  out.push("  HVAC Tech Flip L2C %    " + rate(tf(deals), tf(leads)));
+  out.push("  NPS Sales Overall       (not in any system here — yours to fill)");
+  out.push("  HVAC Rev                $" + formatMoney_(revenue));
+  out.push("  HVAC AVG Ticket         " +
+    (alerts.length ? "$" + formatMoney_(revenue / alerts.length) : "—"));
+
+  out.push("");
+  out.push(new Array(58).join("-"));
+  out.push("what went into Marketed, so you can split it differently:");
+  const parts = {};
+  marketedParts(leads).forEach(s => { parts[s] = true; });
+  marketedParts(deals).forEach(s => { parts[s] = true; });
+  Object.keys(parts).sort().forEach(s =>
+    out.push("  " + (s + "                    ").slice(0, 20) +
+      "leads " + (leads[s] || 0) + "   deals " + (deals[s] || 0)));
+  if (revisitDeals) {
+    out.push("  " + ("revisit closes" + "                    ").slice(0, 20) +
+      "leads -   deals " + revisitDeals + "   (counted as a deal, not a lead)");
+  }
+  if (!Object.keys(parts).length && !revisitDeals) out.push("  (nothing)");
+
+  out.push("");
+  out.push("consults reported: " + recapRows + "   sold alerts: " + alerts.length);
+  alerts.forEach(a => out.push("    " + a.hca + " — " + (a.customer || "?") +
+    "  $" + formatMoney_(a.amount || 0)));
+
+  /* The two sources must agree on how many sold. When they do not, the recap
+     is the incomplete one — it only holds what somebody reported. */
+  const recapSold = Object.keys(deals).reduce((n, s) => n + deals[s], 0);
+  if (recapSold !== alerts.length) {
+    out.push("");
+    out.push("! " + recapSold + " sale(s) reported in recaps, " + alerts.length +
+      " sold alert(s) from ServiceTitan.");
+    out.push("  The deal rows above come from recaps, so a sale nobody reported is");
+    out.push("  missing from them — but its money IS in HVAC Rev. Check the list above.");
+  }
+  if (readFailed) {
+    out.push("");
+    out.push("! The recap log could not be read, so leads and deals are all zero: " + readFailed);
+  }
+  if (!soldRes.ok) {
+    out.push("");
+    out.push("! Sold alerts could not be read, so revenue is understated.");
+  }
+
+  Logger.log(out.join("\n"));
+  return { iso: iso, marketedLeads: mLeads, marketedDeals: mDeals,
+    techFlipLeads: tf(leads), techFlipDeals: tf(deals), revenue: revenue, sales: alerts.length };
+}
+
 /* The month the audit covers. Change these two and run auditSoldAppointments. */
 const AUDIT_FROM_ISO = "2026-07-01";
 const AUDIT_TO_ISO   = "2026-07-31";
