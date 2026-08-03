@@ -144,6 +144,33 @@ identically. Same list appears in the nightly digest under
 `CHECK THE DATE ON THESE`. To act on one, edit the Recap Log row's Date and Key
 by hand.
 
+### A6b. Point Job Status at the BI leads export — optional
+
+Save the Power BI **All Leads** export into Drive as a **Google Sheet** (File →
+Save as Google Sheets). SpreadsheetApp cannot open an .xlsx, and converting one
+in script needs the Advanced Drive Service enabled, which this deliberately
+avoids. Then near the top of the file:
+
+```javascript
+const BI_LEADS_SHEET_ID = "";   // ← the Sheet's id
+const BI_LEADS_TAB = "";        // blank = first tab
+```
+
+Leave it blank and Job Status behaves exactly as before.
+
+What it adds is the **HCA column on UNCLAIMED rows**. A ServiceTitan Booked Job
+Alert names no advisor — assignment happens after the alert fires — so those
+rows have always said a consult went unreported without saying by whom. BI's
+`TechName` fills it, and the status line becomes
+`UNCLAIMED — Jay Milo ran it, no recap`.
+
+It also reads `jobStatus`, so an appointment cancelled in ServiceTitan is
+labelled as cancelled rather than left on the list as somebody's missed recap.
+
+Three columns are appended to the right of Key — BI Rep, BI Lead Type, BI Job
+Status. Appended, not inserted, so nothing that relies on existing column
+positions moves.
+
 ### A7. Check tomorrow before it happens
 
 ```

@@ -4644,7 +4644,10 @@ const JOB_STATUS_HEADERS = [
   "Sold", "Sold Amount", "Sold On", "Estimates", "Estimate Detail", "Amount Needs Review",
   "Install Scheduled", "Install Completed", "Install Description",
   "COMBO Sales Rep", "Notes",
-  "Status", "Updated At", "Key"
+  "Status", "Updated At", "Key",
+  /* From the BI leads export. Appended rather than inserted so the column
+     positions everything else already relies on do not move. */
+  "BI Rep", "BI Lead Type", "BI Job Status"
 ];
 
 /* Column indices, named because a 27-wide row addressed by number is a bug
@@ -4655,7 +4658,8 @@ const JS = {
   systemAge: 11, timeline: 12,
   sold: 13, amount: 14, soldOn: 15, estimateCount: 16, estimateDetail: 17,
   needsReview: 18, installScheduled: 19, installCompleted: 20, installDescription: 21,
-  comboRep: 22, notes: 23, status: 24, updatedAt: 25, key: 26
+  comboRep: 22, notes: 23, status: 24, updatedAt: 25, key: 26,
+  biRep: 27, biLeadType: 28, biJobStatus: 29
 };
 
 /* "12000@7/30 | 348.13@7/31" — enough to show the lines behind a multi-estimate
@@ -4891,11 +4895,101 @@ function writeEmailNotes_(ss, byName, status, fromIso, toIso) {
  * with contradictory rows about the same job. Rows outside the window are left
  * untouched, so history survives.
  */
+/* The BI leads export, saved into Drive as a Google Sheet. Blank disables the
+   lookup entirely and Job Status behaves exactly as it did before.
+   Save the Power BI "All Leads" xlsx as a Sheet — SpreadsheetApp cannot open an
+   .xlsx, and converting one in script needs the Advanced Drive Service turned
+   on, which is a setup step this does not need to own. */
+const BI_LEADS_SHEET_ID = "";
+const BI_LEADS_TAB = "";
+
+/*
+ * What BI knows about each consult, keyed every way it might be matched.
+ *
+ * The one column worth the whole exercise is TechName. A ServiceTitan Booked
+ * Job Alert names no advisor — assignment happens after the alert fires — so
+ * every "UNCLAIMED, booked, no recap" row on Job Status has a blank HCA
+ * column. It tells you a consult went unreported but not by whom, which is
+ * the half of the question that matters. BI has the name.
+ *
+ * jobStatus comes along too, so a cancelled appointment stops being counted
+ * as one somebody failed to report.
+ *
+ * Returns {} on any problem. This is an enrichment: it must never be able to
+ * take Job Status down with it.
+ */
+function readBiLeads_() {
+  if (!BI_LEADS_SHEET_ID) return {};
+  const out = { byJob: {}, byCustomerDate: {}, rows: 0 };
+  try {
+    const ss = SpreadsheetApp.openById(BI_LEADS_SHEET_ID);
+    const sheet = BI_LEADS_TAB ? ss.getSheetByName(BI_LEADS_TAB) : ss.getSheets()[0];
+    if (!sheet || sheet.getLastRow() < 2) return {};
+
+    const grid = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+    const head = {};
+    grid[0].forEach((h, i) => { head[String(h || "").trim().toLowerCase()] = i; });
+    const col = (...names) => {
+      for (let i = 0; i < names.length; i++) if (names[i] in head) return head[names[i]];
+      return -1;
+    };
+    const cJob = col("job.number", "jobnumber", "job number");
+    const cRep = col("techname", "tech name", "soldbyname");
+    const cType = col("lead type", "leadtype");
+    const cCust = col("customer.name", "customer");
+    const cAppt = col("lastapptdate", "appointment date", "est");
+    const cStat = col("jobstatus", "job status");
+    if (cJob === -1 && cCust === -1) return {};
+
+    const iso = v => v instanceof Date
+      ? Utilities.formatDate(v, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")
+      : String(v || "").trim().slice(0, 10);
+
+    for (let r = 1; r < grid.length; r++) {
+      const row = grid[r];
+      const rec = {
+        rep: cRep === -1 ? "" : String(row[cRep] || "").replace(/\s+/g, " ").trim(),
+        leadType: cType === -1 ? "" : String(row[cType] || "").trim(),
+        jobStatus: cStat === -1 ? "" : String(row[cStat] || "").trim(),
+        customer: cCust === -1 ? "" : String(row[cCust] || "").trim(),
+        apptIso: cAppt === -1 ? "" : iso(row[cAppt])
+      };
+      if (!rec.rep && !rec.leadType && !rec.jobStatus) continue;
+      const job = cJob === -1 ? "" : String(row[cJob] || "").trim();
+      if (job) out.byJob[job] = rec;
+      if (rec.customer) {
+        out.byCustomerDate[normName_(rec.customer)] = rec;
+        if (rec.apptIso) out.byCustomerDate[normName_(rec.customer) + "|" + rec.apptIso] = rec;
+      }
+      out.rows++;
+    }
+  } catch (err) {
+    Logger.log("BI leads lookup unavailable, Job Status built without it: " +
+      (err && err.message ? err.message : String(err)));
+    return {};
+  }
+  return out;
+}
+
+/* Job number first — exact. Then customer plus the day, then customer alone. */
+function biLookup_(bi, jobNumber, customer, iso) {
+  if (!bi || !bi.byJob) return null;
+  if (jobNumber && bi.byJob[jobNumber]) return bi.byJob[jobNumber];
+  const n = normName_(customer);
+  if (!n) return null;
+  return (iso && bi.byCustomerDate[n + "|" + iso]) || bi.byCustomerDate[n] || null;
+}
+
 function writeJobStatus_(ss, byName, status, fromIso, toIso) {
   const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.jobStatusSheetName, JOB_STATUS_HEADERS);
   const stamp = new Date();
   const rows = [];
   const seen = {};
+  const bi = readBiLeads_();
+  const biCols = (jobNumber, customer, iso) => {
+    const m = biLookup_(bi, jobNumber, customer, iso);
+    return m ? [m.rep, m.leadType, m.jobStatus] : ["", "", ""];
+  };
 
   const push = row => {
     const key = row[JS.key];
@@ -4926,7 +5020,7 @@ function writeJobStatus_(ss, byName, status, fromIso, toIso) {
         s ? (s.comboNotes || "") : "",
         jobStatusLabel_(r, s), stamp,
         recapRowKey_(r.date, name, r.customer)
-      ]);
+      ].concat(biCols(b.jobNumber, r.customer, r.date)));
     });
 
     /* Sold with no recap row at all. */
@@ -4943,22 +5037,33 @@ function writeJobStatus_(ss, byName, status, fromIso, toIso) {
         s.comboRepDiffers || "", s.comboNotes || "",
         "NEEDS ATTENTION — sold, never reported", stamp,
         recapRowKey_(date, name, s.customer)
-      ]);
+      ].concat(biCols("", s.customer, date)));
     });
   });
 
-  /* Booked, the day has passed, nobody reported it. No HCA, because the alert
-     names none — the dispatch note is the only clue and it goes in its column. */
+  /* Booked, the day has passed, nobody reported it.
+     The alert names no advisor, so the HCA column used to sit empty here — the
+     row told you a consult went unreported but not by whom, which is the half
+     that lets you do something about it. BI's TechName fills it. When BI has a
+     name it goes in the HCA column and the status says so; without BI this is
+     exactly the row it always was.
+     A cancelled appointment is not an unreported one, so BI's jobStatus
+     downgrades it rather than leaving it on the list as a failure. */
   (status.unclaimedAppointments || []).forEach(u => {
+    const m = biLookup_(bi, u.jobNumber, u.customer, u.appointmentIso);
+    const cancelled = m && /cancel/i.test(m.jobStatus || "");
     push([
-      u.appointmentIso, "", u.customer, "No", "", "",
+      u.appointmentIso, m && m.rep ? m.rep : "", u.customer, "No", "", "",
       u.jobNumber || "", u.appointmentAt || "", u.jobType || "",
       u.sourceHint || "", u.assignedHint || "", "", "",
       "", "", "", "", "", "",
       "", "", "", "", "",
-      "UNCLAIMED — booked, no recap", stamp,
+      cancelled ? "Cancelled in ServiceTitan — not a missed recap"
+        : (m && m.rep ? "UNCLAIMED — " + m.rep + " ran it, no recap"
+                      : "UNCLAIMED — booked, no recap"),
+      stamp,
       recapRowKey_(u.appointmentIso, "", u.customer)
-    ]);
+    ].concat(m ? [m.rep, m.leadType, m.jobStatus] : ["", "", ""]));
   });
 
   /* Replace only the window. Anything older stays where it is. */
