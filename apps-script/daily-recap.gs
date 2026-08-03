@@ -2463,6 +2463,17 @@ function doGet(e) {
   }
 
   try {
+    /* The sold report is a different question off the same log, so it gets its
+       own route rather than bloating the 1:1 payload every page load. */
+    if (String(p.report || "") === "sold") {
+      const rep = buildSoldReportPayload_(p.from || "", p.to || "");
+      if (!configuredKey) {
+        rep.unsecured = true;
+        rep.warning = "No recapApiKey set — anyone with this URL can read customer names and prices.";
+      }
+      return jsonOut_(rep);
+    }
+
     const days = Math.max(1, Math.min(120, Number(p.days) || 14));
     const payload = buildRecapApiPayload_(days, p.hca || "");
     if (!configuredKey) {
@@ -2870,6 +2881,133 @@ function buildMorningSalesBrief_(yIso, yLabel) {
     sold: sold.length, sameDay: sameDay.length, prior: prior.length,
     unknown: unknown.length, total: total, notReported: silent
   };
+}
+
+/*
+ * The split the 9am brief works out for one night, widened to a date range so
+ * it can be read as a report rather than a paragraph.
+ *
+ *   sameDay — that rep's recap for that date names the customer, so the
+ *             consult and the close happened on the same day.
+ *   prior   — they filed a recap for that date and it does not name the
+ *             customer, so the sale came off a lead worked earlier.
+ *   unknown — they filed nothing for that date. Kept as its own answer and
+ *             never folded into prior: a rep who did not report is not
+ *             evidence that the lead was old, only that nobody can say.
+ *
+ * That third bucket is the whole reason this is worth reading. Fold it into
+ * prior and the report claims to know something it does not, which is exactly
+ * how six unreported consults hid on a Friday.
+ */
+function buildSoldReportPayload_(fromIso, toIso) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const todayIso = Utilities.formatDate(new Date(), cfg.timeZone, "yyyy-MM-dd");
+
+  fromIso = String(fromIso || "").trim() || todayIso.slice(0, 8) + "01";   // month to date
+  toIso = String(toIso || "").trim() || todayIso;
+  if (fromIso > toIso) { const swap = fromIso; fromIso = toIso; toIso = swap; }
+
+  const spanDays = Math.round(
+    (Date.parse(toIso + "T12:00:00Z") - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 1;
+
+  const warnings = [];
+  const soldRes = readSoldAlerts_(Math.max(1, Math.min(200, spanDays + 3)));
+  if (!soldRes.ok) {
+    warnings.push("ServiceTitan sold alerts could not be read, so these counts are incomplete.");
+  }
+
+  const sold = collapseResoldAlerts_(soldRes.alerts)
+    .filter(a => a.soldOnIso && a.soldOnIso >= fromIso && a.soldOnIso <= toIso);
+
+  /* A date cell comes back as a Date or a string depending on how the row was
+     written. Normalising here rather than trusting one shape. */
+  const isoCell = v => v instanceof Date
+    ? Utilities.formatDate(v, cfg.timeZone, "yyyy-MM-dd")
+    : String(v || "").trim();
+
+  const reported = {};    // "iso|hca" -> [customer]
+  const repliedBy = {};   // "iso|hca" -> Yes | Late | No
+  try {
+    const book = getLogSpreadsheet_();
+    readSheetRows_(book.ss, cfg.logSheetName, RECAP_LOG_HEADERS.length).forEach(r => {
+      const iso = isoCell(r[0]);
+      if (iso < fromIso || iso > toIso) return;
+      const key = iso + "|" + String(r[1] || "");
+      (reported[key] = reported[key] || []).push(String(r[2] || ""));
+    });
+    readSheetRows_(book.ss, cfg.complianceSheetName, COMPLIANCE_HEADERS.length).forEach(r => {
+      const iso = isoCell(r[0]);
+      if (iso < fromIso || iso > toIso) return;
+      repliedBy[iso + "|" + String(r[1] || "")] = String(r[2] || "");
+    });
+  } catch (err) {
+    warnings.push("The recap log could not be read, so every sale below counts as unknown: " +
+      (err && err.message ? err.message : String(err)));
+  }
+
+  const splitFor = s => {
+    const key = s.soldOnIso + "|" + s.hca;
+    if ((reported[key] || []).some(c => namesMatch_(c, s.customer))) return "sameDay";
+    const replied = String(repliedBy[key] || "").toLowerCase();
+    return (replied === "yes" || replied === "late") ? "prior" : "unknown";
+  };
+
+  const sales = sold.map(s => ({
+    hca: s.hca,
+    customer: s.customer || "",
+    amount: (s.amount === null || s.amount === undefined) ? null : Number(s.amount),
+    soldOnIso: s.soldOnIso,
+    jobName: s.name || "",
+    resold: !!s.resold,
+    split: splitFor(s)
+  })).sort((a, b) =>
+    a.soldOnIso === b.soldOnIso ? (a.hca < b.hca ? -1 : 1) : (a.soldOnIso < b.soldOnIso ? 1 : -1));
+
+  const blank = () => ({ sameDay: 0, prior: 0, unknown: 0, total: 0, amount: 0 });
+  const totals = blank(), byHca = {}, byDay = {};
+  sales.forEach(s => {
+    const add = t => { t[s.split]++; t.total++; t.amount += (s.amount || 0); };
+    add(totals);
+    add(byHca[s.hca] = byHca[s.hca] || blank());
+    add(byDay[s.soldOnIso] = byDay[s.soldOnIso] || blank());
+  });
+
+  /* Who was scheduled in the range and never answered. Their sales are the
+     unknown bucket, so naming them turns the number into an action. */
+  const silent = {};
+  Object.keys(repliedBy).forEach(key => {
+    const v = String(repliedBy[key] || "").toLowerCase();
+    if (v === "yes" || v === "late") return;
+    const name = key.slice(key.indexOf("|") + 1);
+    silent[name] = (silent[name] || 0) + 1;
+  });
+
+  return {
+    ok: true,
+    generatedAt: new Date().toISOString(),
+    fromIso: fromIso, toIso: toIso, todayIso: todayIso,
+    totals: totals,
+    byHca: Object.keys(byHca).sort().map(n => Object.assign({ hca: n }, byHca[n])),
+    byDay: Object.keys(byDay).sort().reverse().map(d => Object.assign({ iso: d }, byDay[d])),
+    sales: sales,
+    notReported: Object.keys(silent).sort().map(n => ({ hca: n, days: silent[n] })),
+    warnings: warnings
+  };
+}
+
+/* The report printed to the log, so it can be checked without deploying. */
+function previewSoldReport() {
+  const p = buildSoldReportPayload_("", "");
+  const pct = n => p.totals.total ? " (" + Math.round(n * 100 / p.totals.total) + "%)" : "";
+  Logger.log("Sold report " + p.fromIso + " to " + p.toIso +
+    "\n  total sold:  " + p.totals.total + "   $" + formatMoney_(p.totals.amount) +
+    "\n  same day:    " + p.totals.sameDay + pct(p.totals.sameDay) +
+    "\n  prior lead:  " + p.totals.prior + pct(p.totals.prior) +
+    "\n  unknown:     " + p.totals.unknown + pct(p.totals.unknown) +
+    (p.notReported.length ? "\n  no recap filed: " +
+      p.notReported.map(n => n.hca + " (" + n.days + "d)").join(", ") : "") +
+    (p.warnings.length ? "\n  ! " + p.warnings.join("\n  ! ") : ""));
+  return p;
 }
 
 function readSoldAlerts_(days) {

@@ -235,6 +235,20 @@ const RECAP_API_URL = "";   // ← paste the /exec URL between the quotes
 
 Until this is filled in, the 1:1 page cannot read any recap data.
 
+The **same** `/exec` URL goes into `sold-report.html`, near the top of its
+`<script>` block:
+
+```javascript
+const RECAP_API_URL = "";   // ← the same /exec URL
+const RECAP_API_KEY = "";   // ← only if you set a recapApiKey Script Property
+```
+
+That page shows the sold split — closed same day, from an earlier lead, and
+unknown — month to date, by HCA and by day. It reads
+`?report=sold&from=…&to=…` off the same deployment; no second deploy.
+`Run → previewSoldReport` prints the same numbers to the Apps Script log, so
+the figures can be checked before the page is wired up at all.
+
 A deployment serves a **pinned version**. Editing the code afterwards does not
 change what the deployment serves — you must redeploy. That is also why editing
 the script cannot break a live endpoint by accident.

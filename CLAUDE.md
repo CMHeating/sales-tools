@@ -153,6 +153,7 @@ The repo holds ~50 non-backup HTML files; these are the ones in active use.
 | `leaderboard.html` | Follow-up leaderboard (office screen display, auto-cycles) |
 | `daily-brief.html` | Geoff's daily 1-on-1 prep tool |
 | `exec-summary.html` | Weekly report for Paul (Sr VP) |
+| `sold-report.html` | Same-day vs earlier-lead sold split, month to date |
 | `sold-job-tracker.html` | HCA sold job tracker |
 | `system-overview.html` | Sales operations system overview |
 | `tracker-[name].html` | Per-HCA activity trackers — adam, amber, chester, davis, jay, joe, joseph, kyle, samir, trevor |
