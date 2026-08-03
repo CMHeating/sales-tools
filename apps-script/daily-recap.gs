@@ -2757,11 +2757,65 @@ function normName_(v) {
     .replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/* The labels ServiceTitan uses in a Sold Estimate Alert. Order does not
+   matter; this is only the set of places a value is allowed to end. */
+const ALERT_FIELD_LABELS = [
+  "Sold Estimate Alert", "Name", "Estimate#", "Estimate #",
+  "Opportunity#", "Opportunity #", "Sold by", "Sold By",
+  "Date", "Amount", "Customer", "Job#", "Job #"
+];
+
+/*
+ * Fields out of an alert body, WITHOUT trusting line breaks.
+ *
+ * The bodies are HTML with bare newlines and no <br>, so the newlines are
+ * whitespace and collapse. getPlainBody() then re-wraps at about 80
+ * characters, which puts the wrap in the middle of whatever field happens to
+ * be there. A line-based parse read
+ *
+ *   Sold by: Kyle McAlister Date: 8/1 10:45 AM Amount: $16,459.07 Customer: Caroline
+ *
+ * as a single field whose value was the rest of the alert — so "Sold by" was a
+ * seller nobody could match, every alert failed the roster test, and both the
+ * sold report and the 9am sales brief quietly counted zero sales.
+ *
+ * So values end at the next known label rather than at the next newline, which
+ * is true of both shapes: an alert that still arrives one-field-per-line
+ * parses identically.
+ *
+ * getPlainBody also renders each link as "408599745 <https://go.servicetitan…>",
+ * so the trailing URL is stripped off every value.
+ */
 function parseAlertFields_(body) {
+  const flat = String(body || "")
+    .replace(/<https?:\/\/[^>]*>/g, " ")     // link targets getPlainBody appends
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!flat) return {};
+
+  const alternation = ALERT_FIELD_LABELS
+    .map(l => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const finder = new RegExp("(?:^|\\s)(" + alternation + ")\\s*:\\s*", "g");
+
+  const hits = [];
+  let m;
+  while ((m = finder.exec(flat)) !== null) {
+    hits.push({ label: m[1], from: m.index + m[0].length });
+    /* Hand back the separator. The match consumed the space that the NEXT
+       label needs for its own (?:^|\s), so "Sold Estimate Alert: Name: ..."
+       would otherwise lose Name entirely. */
+    finder.lastIndex = Math.max(m.index + 1, m.index + m[0].length - 1);
+  }
+
   const out = {};
-  String(body || "").split(/\r?\n/).forEach(line => {
-    const m = line.match(/^\s*([A-Za-z#][A-Za-z #]*?)\s*:\s*(.+?)\s*$/);
-    if (m) out[m[1].toLowerCase().replace(/\s+/g, " ").trim()] = m[2];
+  hits.forEach((h, i) => {
+    const end = i + 1 < hits.length
+      ? flat.lastIndexOf(hits[i + 1].label, hits[i + 1].from)
+      : flat.length;
+    const value = flat.slice(h.from, end < h.from ? flat.length : end).trim();
+    const key = h.label.toLowerCase().replace(/\s+/g, " ").trim();
+    if (!(key in out)) out[key] = value;      // first wins, as before
   });
   return out;
 }
