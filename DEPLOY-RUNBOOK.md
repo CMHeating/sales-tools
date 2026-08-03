@@ -30,6 +30,10 @@ Do this first. Until step A2, the 6pm send contacts nobody.
 
 `apps-script/daily-recap.gs` → `Ctrl+A`, `Ctrl+V`, `Ctrl+S`.
 
+Everything a person edits is in one **SETTINGS YOU EDIT** block at the top —
+paused HCA, the growth sheet, the BI export, the audit window. Nothing below
+it needs touching to run day to day.
+
 This discards the one-off `fileLateRepliesNow` and `fixKylesCount` functions.
 That is correct — their work is already done and the fixed
 `markComplianceLate_` handles that case permanently.
@@ -52,7 +56,7 @@ revert it. Skipping this is what caused Friday's send to reach nobody.
 
 ### A3. Pause Trevor
 
-Near the top of the file:
+In the **SETTINGS YOU EDIT** block at the top of the file:
 
 ```javascript
 const PAUSE_HCA_NAME = "Trevor Bohm";
@@ -149,7 +153,16 @@ by hand.
 Save the Power BI **All Leads** export into Drive as a **Google Sheet** (File →
 Save as Google Sheets). SpreadsheetApp cannot open an .xlsx, and converting one
 in script needs the Advanced Drive Service enabled, which this deliberately
-avoids. Then near the top of the file:
+avoids.
+
+The id is the middle of the Sheet's URL:
+
+```
+docs.google.com/spreadsheets/d/1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww/edit
+                                └──────────── this part ─────────────────┘
+```
+
+Then in the **SETTINGS YOU EDIT** block at the top of the file (~line 72):
 
 ```javascript
 const BI_LEADS_SHEET_ID = "";   // ← the Sheet's id

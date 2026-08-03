@@ -25,6 +25,61 @@
  * job uses nearMinute to keep it close to 8:15pm.
  */
 
+/* ===================================================================== *
+ *  SETTINGS YOU EDIT
+ *
+ *  Everything in this file that a person is meant to change lives here.
+ *  They used to be scattered from line 900 to line 4900, which meant
+ *  scrolling a 5,000 line file to flip one flag. Nothing below this block
+ *  needs editing to run the thing day to day.
+ * ===================================================================== */
+
+/* Who is off the send. Set the name, then Run -> pauseHcaNow (or
+   resumeHcaNow). The Run dropdown passes no arguments, which is why the name
+   is a constant rather than a parameter. */
+const PAUSE_HCA_NAME = "Trevor Bohm";
+const PAUSE_HCA_REASON = "Off for a week or so";
+
+/* --- CM Growth Daily Sales — the exec summary Paul reads --------------- */
+
+/* Which day growthSheetDay / writeGrowthSheetDay fill in.
+   Blank = yesterday. Set "2026-08-01" to redo one specific day. */
+const GROWTH_SHEET_DATE = "";
+
+/* The workbook. Blank tab = routed from the date — Saturday and Sunday both
+   land on "Weekend", every other day on the tab of its own name. Set the tab
+   to force one. */
+const GROWTH_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
+const GROWTH_SHEET_TAB = "";
+
+/* Guard rail. Leave false and a day that already has numbers is refused
+   rather than rewritten, so running for the wrong date cannot quietly erase a
+   column somebody filled in by hand. */
+const GROWTH_SHEET_OVERWRITE = false;
+
+/* --- Power BI All Leads export ---------------------------------------- */
+
+/* Paste the id of the BI "All Leads" export, saved into Drive as a GOOGLE
+   SHEET. Blank disables the lookup and Job Status behaves exactly as before.
+   It must be a Sheet, not the .xlsx: SpreadsheetApp cannot open an Office
+   file, and converting one in script needs the Advanced Drive Service turned
+   on — a setup step worth avoiding for something that has to work at 6am.
+   File -> Save as Google Sheets, then take the id out of the URL:
+     docs.google.com/spreadsheets/d/<THIS PART>/edit
+   What it buys: a name on the UNCLAIMED rows. A Booked Job Alert names no
+   advisor, so those rows say a consult went unreported without saying by
+   whom. BI's TechName fills it. */
+const BI_LEADS_SHEET_ID = "";
+const BI_LEADS_TAB = "";
+
+/* --- auditSoldAppointments (read-only, run by hand) ------------------- */
+
+/* The month it measures. Change these two and Run -> auditSoldAppointments. */
+const AUDIT_FROM_ISO = "2026-07-01";
+const AUDIT_TO_ISO   = "2026-07-31";
+
+/* ===================== end of the settings ============================ */
+
 const DAILY_RECAP_CONFIG = {
   /* The starting value only. Once goLive() or goTest() has been run, the live
      setting is in Script Properties and this is ignored — see isTestMode_().
@@ -916,11 +971,6 @@ function showRecapMode() {
  * ------------------------------------------------------------------------- */
 
 const PAUSED_HCAS_PROPERTY = "pausedHcas";
-
-/* The Run dropdown calls functions with no arguments, so the name to pause
-   goes here and you run pauseHcaNow / resumeHcaNow beside it. */
-const PAUSE_HCA_NAME = "Trevor Bohm";
-const PAUSE_HCA_REASON = "Off for a week or so";
 
 function readPausedHcas_() {
   try {
@@ -3299,15 +3349,6 @@ function diagnoseSoldReport() {
   return { threads: threads.length, messages: messages, inRange: inRange };
 }
 
-/* Blank = yesterday. Set to "2026-08-01" to redo a specific day. */
-const GROWTH_SHEET_DATE = "";
-
-/* CM Growth Daily Sales — the exec summary Paul reads.
-   Blank tab = routed from the date: Sat and Sun both land on "Weekend", every
-   other day on its own name. Set it to force one tab. */
-const GROWTH_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
-const GROWTH_SHEET_TAB = "";
-
 /*
  * A tab is named for the day it COVERS, not the morning it is presented. So
  * Monday morning you open Weekend; Tuesday morning you open Monday. Naming
@@ -3320,11 +3361,6 @@ function growthTabFor_(iso) {
     new Date(Date.parse(iso + "T12:00:00Z")), DAILY_RECAP_CONFIG.timeZone, "EEEE");
   return (day === "Saturday" || day === "Sunday") ? "Weekend" : day;
 }
-/* Guard rail. Leave false and a day that already has numbers is refused rather
-   than rewritten, so running for the wrong date cannot quietly erase a column
-   somebody filled in by hand. */
-const GROWTH_SHEET_OVERWRITE = false;
-
 /* The label in column B for each row we know how to fill. Matching is on a
    normalised form because the sheet says "HVAC Tech Filp Deals" and
    "HVAC tech Flip L2C %", and those typos are not ours to correct — they may
@@ -3648,10 +3684,6 @@ function growthSheetDay() {
   return { iso: iso, marketedLeads: mLeads, marketedDeals: mDeals,
     techFlipLeads: tf(leads), techFlipDeals: tf(deals), revenue: revenue, sales: alerts.length };
 }
-
-/* The month the audit covers. Change these two and run auditSoldAppointments. */
-const AUDIT_FROM_ISO = "2026-07-01";
-const AUDIT_TO_ISO   = "2026-07-31";
 
 /*
  * Can a sale be traced back to the appointment that produced it?
@@ -4895,14 +4927,6 @@ function writeEmailNotes_(ss, byName, status, fromIso, toIso) {
  * with contradictory rows about the same job. Rows outside the window are left
  * untouched, so history survives.
  */
-/* The BI leads export, saved into Drive as a Google Sheet. Blank disables the
-   lookup entirely and Job Status behaves exactly as it did before.
-   Save the Power BI "All Leads" xlsx as a Sheet — SpreadsheetApp cannot open an
-   .xlsx, and converting one in script needs the Advanced Drive Service turned
-   on, which is a setup step this does not need to own. */
-const BI_LEADS_SHEET_ID = "";
-const BI_LEADS_TAB = "";
-
 /*
  * What BI knows about each consult, keyed every way it might be matched.
  *
