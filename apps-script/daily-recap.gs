@@ -2879,6 +2879,47 @@ function previewMorningSalesBrief() {
  * EARLIEST date, because that is the day it sold — the later alert would
  * otherwise push a Thursday sale into Friday's count.
  */
+/*
+ * Whether two estimates on one opportunity are the same work re-quoted, or two
+ * different things sold against the same job.
+ *
+ * The names say it plainly, once the revision markers are off the front:
+ *
+ *   "Supreme 25" / "*NEW* Supreme 25"                       -> the same thing
+ *   "American Standard furnace and heat pump"
+ *     / "American Standard 2 stage furnace and heat pump"   -> the same thing
+ *   "Mitsubishi Hyper Heat single zone"
+ *     / "200 amp electric panel replacement"                -> two things
+ *   "Family Comfort #1 Mitsubishi (2 Zone)" / "Kumo cloud"  -> two things
+ *
+ * Magnitude was the other candidate and it is worse: a customer who downgrades
+ * from a full system to a furnace halves the price on the same work, and an
+ * accessory can be a fifth of the job. Names separate these cleanly and the
+ * failure mode is the safe one — an unrecognised rename splits one sale into
+ * two rather than deleting the larger half of a real one.
+ */
+function sameEstimateName_(a, b) {
+  const tokens = v => {
+    const cleaned = String(v || "").toLowerCase()
+      /* Revision markers, and the dates reps stamp into a re-quote's name. */
+      .replace(/\b(updated?|new|copy|revision|rev|final|orig(inal)?)\b/g, " ")
+      .replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g, " ")
+      .replace(/[^a-z0-9]+/g, " ");
+    const out = {};
+    cleaned.split(" ").forEach(t => { if (t && t.length > 1) out[t] = true; });
+    return Object.keys(out);
+  };
+  const ta = tokens(a), tb = tokens(b);
+  /* No name to compare on either side — fall back to merging, which is what
+     this did before names were considered at all. */
+  if (!ta.length || !tb.length) return true;
+
+  const inB = {};
+  tb.forEach(t => { inB[t] = true; });
+  const shared = ta.filter(t => inB[t]).length;
+  return shared >= Math.ceil(Math.min(ta.length, tb.length) * 0.6);
+}
+
 function collapseResoldAlerts_(alerts) {
   /*
    * Two alerts are the same sale if they share an opportunity, OR if the same
@@ -2907,11 +2948,21 @@ function collapseResoldAlerts_(alerts) {
   };
 
   alerts.forEach((a, i) => {
-    /* The customer rides along in the opportunity key too. An opportunity
-       belongs to one customer, so this changes nothing on sound data — it just
-       means a stray or reused number can never merge two people's sales, which
-       is a far worse error than failing to merge one. */
-    if (a.opportunityNumber) link("opp|" + a.opportunityNumber + "|" + normName_(a.customer), i);
+    /* Opportunity alone is NOT enough. One opportunity carries every estimate
+       sold against that job, and a job is often several: Davis sold Christine
+       and Jerry Keller a heat pump, an electrical panel and a maintenance plan
+       under opportunity 399730750, and Joe C sold Julianne and Will Anderson a
+       Daikin and a generator load shed under 406408341. Merging those keeps
+       one and silently drops the rest — $12,059 of the Keller job.
+       So the estimate names have to agree as well; see sameEstimateName_. The
+       customer rides along too, so a stray or reused number can never merge
+       two people's sales. */
+    if (a.opportunityNumber) {
+      const peer = firstSeen["opp|" + a.opportunityNumber + "|" + normName_(a.customer)];
+      if (peer === undefined || sameEstimateName_(alerts[peer].name, a.name)) {
+        link("opp|" + a.opportunityNumber + "|" + normName_(a.customer), i);
+      }
+    }
     link("who|" + normName_(a.hca) + "|" + normName_(a.customer) + "|" +
       (a.amount === null || a.amount === undefined ? "" : a.amount), i);
   });
