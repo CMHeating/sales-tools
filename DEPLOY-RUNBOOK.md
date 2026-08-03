@@ -89,7 +89,7 @@ The log **must** contain `reply sweep hourly`. If it says only
 `job status 9:00 and 22:00`, the paste did not take — go back to A1.
 
 Installs: **send 06:00**, collect 20:15, **reply sweep hourly**,
-**sales brief 09:00**, job status 09:00 and 22:00.
+**sales brief 06:00**, job status 09:00 and 22:00.
 
 The recap goes out at 6am, before the first appointment, and asks for one block
 per appointment *as they finish it* rather than a reconstruction of the whole
@@ -106,8 +106,18 @@ want to fire a chase by hand.
 The sales brief emails yesterday's sales split into closed-on-the-day,
 from-an-earlier-lead, and **unknown** — the last being sales by a rep who filed
 no recap, where there is no way to tell. It never folds unknown into either of
-the other two. It runs at 09:00 rather than earlier so a recap filed after the
-07:00 nudge is counted. `previewMorningSalesBrief` prints it without sending.
+the other two. `previewMorningSalesBrief` prints it without sending.
+
+It runs at **06:00**, to be in the inbox before the 07:45 with Lyle and Aaron.
+It shares that hour with the send on purpose: the two need nothing from each
+other — the brief reports yesterday, the send asks about today — and they go to
+different people, so the order they fire in does not matter.
+
+Nothing reads sold alerts on an hourly schedule, and nothing needs to. Every
+function that reads them reads Gmail **live**, so a sale marked at 10am is in
+the next run of `previewSoldReport`, `growthSheetDay` or the brief with no
+refresh step. The only thing a 06:00 brief can miss is a recap filed
+overnight.
 
 The brief can only see consults that were reported. When someone has not
 reported it says so, names them, and points at the ServiceTitan dispatch board —

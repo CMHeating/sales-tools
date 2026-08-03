@@ -106,8 +106,15 @@ const DAILY_RECAP_CONFIG = {
   nudgeEnabled: false,
   nudgeHourWorking: 7,
   nudgeHourOff: 8,
-  /* After both nudge rounds, so a recap that came in at 7:30 is counted. */
-  morningBriefHour: 9
+  /* 6:00, so the same-day / follow-up split is in the inbox well before the
+     07:45 with Lyle and Aaron. It used to run at 09:00 to sit after the old
+     07:00 and 08:00 nudges; that chase now rides inside the 06:00 send, so
+     the reason is gone and 09:00 was simply too late to be useful.
+     Yesterday's replies closed at 20:15 last night, so the only thing a
+     06:00 brief can miss is someone filing overnight — and every function
+     that reads sold alerts reads Gmail live, so re-running after the meeting
+     picks up anything that landed since. */
+  morningBriefHour: 6
 };
 
 /*
@@ -5367,7 +5374,9 @@ function installDailyRecapTriggers() {
   ScriptApp.newTrigger("sweepRecapReplies")
     .timeBased().everyHours(1).create();
 
-  /* Late enough that a rep who answers first thing is already counted. */
+  /* Same hour as the send, deliberately. They share no data — the brief
+     reports yesterday, the send asks about today — and they go to different
+     people, so the order they fire in does not matter. */
   ScriptApp.newTrigger("sendMorningSalesBrief")
     .timeBased().everyDays(1).atHour(cfg.morningBriefHour)
     .inTimezone(cfg.timeZone).create();
