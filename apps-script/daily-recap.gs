@@ -4010,6 +4010,18 @@ function auditGrowthSheet() {
 
   const findings = [];
 
+  /* Every weekday tab was copied from the same one, so they carry the same
+     faults and would print the same paragraph of explanation five times over.
+     That is what pushed the first run past the log limit and truncated the
+     TO FIX list off the end. Each explanation is written out the first time
+     its kind appears and referred back to afterwards. */
+  const explained = {};
+  const explain = (kind, lines) => {
+    if (explained[kind]) { out.push("    (same as above)"); return; }
+    explained[kind] = true;
+    lines.forEach(l => out.push(l));
+  };
+
   ss.getSheets().forEach(sheet => {
     const name = sheet.getName();
     const nRows = Math.min(sheet.getLastRow(), 40);
@@ -4151,25 +4163,29 @@ function auditGrowthSheet() {
     if (stray.length) {
       out.push("");
       out.push("  ! Leftover data in " + stray.join(", ") + " — a day this tab does not cover.");
-      out.push("    Hiding a column does not clear it. The values are still there and any");
-      out.push("    formula pointing at them still reads them.");
+      explain("strayDays", [
+        "    Hiding a column does not clear it. The values are still there and any",
+        "    formula pointing at them still reads them."]);
       findings.push(name + ": leftover data in " + stray.join(", "));
     }
     if (strayFormulas.length) {
       out.push("");
       out.push("  ! MTD formulas that read outside column " + mtdLetter + ":");
       strayFormulas.forEach(f => out.push(f));
-      out.push("    These show the week, not the month. Point them at " + mtdLetter +
-        " cells and they will follow the month total the script writes.");
+      explain("strayFormulas", [
+        "    These show the week, not the month. Point them at " + mtdLetter +
+          " cells and they",
+        "    will follow the month total the script writes."]);
       findings.push(name + ": " + strayFormulas.length + " MTD formula(s) read the day columns");
     }
     if (willSkip.length) {
       out.push("");
       out.push("  ! Formulas in this tab's OWN day column — the writer skips these for good:");
       willSkip.forEach(f => out.push(f));
-      out.push("    A formula is treated as somebody's calculation and never overwritten, so");
-      out.push("    these cells will stay as they are while every cell around them updates.");
-      out.push("    Clear them if the script is meant to fill that row.");
+      explain("willSkip", [
+        "    A formula is treated as somebody's calculation and never overwritten, so",
+        "    these cells stay as they are while every cell around them updates.",
+        "    Clear them if the script is meant to fill that row."]);
       findings.push(name + ": " + willSkip.length + " formula(s) in its own day column, never written");
     }
     /* A day column is either recorded or waiting. Anything in between is
@@ -4182,16 +4198,15 @@ function auditGrowthSheet() {
         " cell(s) hold a value, " + ownEmpty.length + " are empty.");
       ownFilled.forEach(f => out.push("      " + f.a1 + "  " + f.label +
         "   holds " + JSON.stringify(f.value)));
-      out.push("    A day that was actually recorded fills the whole column, so this is");
-      out.push("    carry-over. The writer refuses a cell that already holds something, so");
-      out.push("    these will keep their current value while the empty ones fill in around");
-      out.push("    them. Clear them before the next run for this tab.");
+      explain("partFilled", [
+        "    A day that was actually recorded fills the whole column, so this is",
+        "    carry-over. The writer refuses a cell that already holds something, so these",
+        "    keep their value while the empty ones fill in around them. Clear them."]);
       findings.push(name + ": own day column part filled — " +
         ownFilled.map(f => f.a1).join(", ") + " are carry-over");
     } else if (ownFilled.length) {
       out.push("");
-      out.push("  (own day column is fully recorded — the writer will leave it alone, which");
-      out.push("   is the guard working, not a problem)");
+      out.push("  (own day column fully recorded — the writer leaves it alone, guard working)");
     }
   });
 
@@ -4205,7 +4220,20 @@ function auditGrowthSheet() {
     out.push("data elsewhere, and no MTD formula reading the day columns.");
   }
 
+  /* Apps Script truncates a long log, and it truncates the END — which is
+     where the TO FIX list is. Six tabs of identical carry-over was enough to
+     cut the last tab off mid-table and lose the summary entirely, so the
+     summary goes out as its own entry too. Two log lines beat one that stops
+     early. */
   Logger.log(out.join("\n"));
+  const summary = ["Growth sheet audit — summary"];
+  if (findings.length) {
+    summary.push(findings.length + " thing(s) to fix:");
+    findings.forEach(f => summary.push("  - " + f));
+  } else {
+    summary.push("Nothing to fix.");
+  }
+  Logger.log(summary.join("\n"));
   return { ok: true, findings: findings };
 }
 
