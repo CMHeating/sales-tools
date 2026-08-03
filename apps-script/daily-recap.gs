@@ -3961,6 +3961,189 @@ function growthValuesFrom_(m) {
   };
 }
 
+/* Which columns an A1 formula reads. "=SUM(C5:D5)/E4" -> ["C","D","E"].
+   Function names cannot match: a letter run only counts when digits follow. */
+function formulaColsUsed_(formula) {
+  const cols = {};
+  String(formula || "").replace(/(?:^|[^A-Za-z0-9_$])\$?([A-Z]{1,3})\$?(\d+)\b/g,
+    (m, c) => { cols[c] = true; return m; });
+  return Object.keys(cols).sort();
+}
+
+/*
+ * Every tab of the growth sheet, cell by cell, with the formulas showing.
+ *
+ * Read-only — writes nothing, hides nothing, unhides nothing. It exists
+ * because two things about that workbook cannot be seen by looking at it.
+ *
+ * A hidden column is still a column. Hiding the leftover Sat column on the
+ * weekday tabs takes it off the screen and changes nothing else: the values
+ * are still there, and any formula pointing at them still reads them. So a
+ * stale figure that used to be visibly wrong becomes invisibly wrong, which is
+ * worse. This prints hidden columns exactly like the rest.
+ *
+ * And an MTD cell showing a plausible percentage tells you nothing about which
+ * cells it got there from. A rate formula that averages the day columns looks
+ * identical on screen to one that divides the month's own totals — until the
+ * second week of the month, when one of them is a week behind and the other is
+ * not. This prints what each formula actually reads and flags the ones that
+ * reach outside the MTD column.
+ */
+function auditGrowthSheet() {
+  const out = [];
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  } catch (err) {
+    Logger.log("Could not open the growth sheet: " +
+      (err && err.message ? err.message : String(err)));
+    return { ok: false };
+  }
+
+  out.push("Growth sheet audit — " + ss.getName());
+  out.push("Read-only. Nothing is written, hidden or unhidden.");
+  out.push(new Array(70).join("="));
+
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayKeys = {};
+  DAY_NAMES.forEach(d => { dayKeys[d.toLowerCase()] = d; dayKeys[d.slice(0, 3).toLowerCase()] = d; });
+
+  const findings = [];
+
+  ss.getSheets().forEach(sheet => {
+    const name = sheet.getName();
+    const nRows = Math.min(sheet.getLastRow(), 40);
+    const nCols = Math.min(sheet.getLastColumn(), 20);
+    if (!nRows || !nCols) return;
+    const grid = sheet.getRange(1, 1, nRows, nCols).getValues();
+    const forms = sheet.getRange(1, 1, nRows, nCols).getFormulas();
+
+    out.push("");
+    out.push(new Array(70).join("-"));
+    out.push("TAB: " + name);
+
+    /* The header row is the one carrying FM Budget — same anchor the writer
+       uses, so the audit sees the sheet the way the writer will. */
+    let headerRow = -1, budgetCol = -1;
+    for (let r = 0; r < grid.length && headerRow === -1; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        if (growthLabelKey_(grid[r][c]).indexOf("budget") !== -1) { headerRow = r; budgetCol = c; break; }
+      }
+    }
+    if (headerRow === -1) {
+      out.push("  ! No FM Budget header — the writer will refuse this tab.");
+      findings.push(name + ": no FM Budget header");
+      return;
+    }
+    const mtdCol = budgetCol - 1;
+    const mtdLetter = growthColLetter_(mtdCol + 1);
+    if (mtdCol < 0 || growthLabelKey_(grid[headerRow][mtdCol]) !== "mtd") {
+      out.push("  ! The column before FM Budget is " + JSON.stringify(grid[headerRow][mtdCol]) +
+        ", not MTD — the writer will refuse this tab.");
+      findings.push(name + ": column before FM Budget is not MTD");
+      return;
+    }
+
+    /* Which days this tab is entitled to. Everything else in a day column is
+       left over from whatever it was copied from. */
+    const ownDays = {};
+    if (growthLabelKey_(name) === "weekend") { ownDays["Saturday"] = true; ownDays["Sunday"] = true; }
+    else if (dayKeys[growthLabelKey_(name)]) ownDays[dayKeys[growthLabelKey_(name)]] = true;
+
+    const hidden = c => {
+      try { return sheet.isColumnHiddenByUser(c + 1); } catch (err) { return null; }
+    };
+
+    const dayCols = [];
+    for (let c = 0; c < mtdCol; c++) {
+      const d = dayKeys[growthLabelKey_(grid[headerRow][c])];
+      if (d) dayCols.push({ c: c, letter: growthColLetter_(c + 1), header: grid[headerRow][c], day: d });
+    }
+
+    out.push("  header row " + (headerRow + 1) + "   MTD in column " + mtdLetter +
+      "   FM Budget in " + growthColLetter_(budgetCol + 1));
+    dayCols.forEach(d => {
+      const h = hidden(d.c);
+      out.push("  day column " + d.letter + '  headed "' + d.header + '"' +
+        (h === true ? "   [HIDDEN]" : h === null ? "   [hidden state unreadable]" : "") +
+        (ownDays[d.day] ? "" : "   <- not a day this tab covers"));
+    });
+    if (!dayCols.length) out.push("  ! No day columns at all on this tab.");
+    if (!Object.keys(ownDays).some(d => dayCols.some(x => x.day === d))) {
+      out.push("  ! This tab has no column for the day it is named after.");
+      findings.push(name + ": no column for its own day");
+    }
+
+    const rows = growthRowsFor_(grid);
+    out.push("");
+    out.push("  " + ("metric" + new Array(32).join(" ")).slice(0, 28) +
+      dayCols.map(d => (d.letter + new Array(20).join(" ")).slice(0, 18)).join("") +
+      mtdLetter + " (MTD)");
+
+    const strayDays = {}, strayFormulas = [];
+    GROWTH_ROWS.forEach(spec => {
+      const row = rows[spec.key];
+      if (!row) { out.push("  ! row not found: " + spec.label); return; }
+      const r = row - 1;
+      const show = c => {
+        const f = (forms[r] || [])[c];
+        if (f) return f;
+        const v = (grid[r] || [])[c];
+        return (v === "" || v === null || v === undefined) ? "-" : String(v);
+      };
+      const line = ["  " + ((spec.label + " (" + row + ")") + new Array(32).join(" ")).slice(0, 28)];
+      dayCols.forEach(d => {
+        line.push((show(d.c) + new Array(20).join(" ")).slice(0, 18));
+        const v = (grid[r] || [])[d.c];
+        if (!ownDays[d.day] && v !== "" && v !== null && v !== undefined) {
+          strayDays[d.letter + ' "' + d.header + '"'] = true;
+        }
+      });
+      line.push(show(mtdCol));
+      out.push(line.join(""));
+
+      /* An MTD formula that reads any column other than MTD is reading the
+         week. It will look right today and be wrong by Friday. */
+      const mf = (forms[r] || [])[mtdCol];
+      if (mf) {
+        const used = formulaColsUsed_(mf).filter(c => c !== mtdLetter);
+        if (used.length) strayFormulas.push("      " + mtdLetter + row + "  " + spec.label +
+          "   " + mf + "   reads " + used.join(", "));
+      }
+    });
+
+    const stray = Object.keys(strayDays);
+    if (stray.length) {
+      out.push("");
+      out.push("  ! Leftover data in " + stray.join(", ") + " — a day this tab does not cover.");
+      out.push("    Hiding a column does not clear it. The values are still there and any");
+      out.push("    formula pointing at them still reads them.");
+      findings.push(name + ": leftover data in " + stray.join(", "));
+    }
+    if (strayFormulas.length) {
+      out.push("");
+      out.push("  ! MTD formulas that read outside column " + mtdLetter + ":");
+      strayFormulas.forEach(f => out.push(f));
+      out.push("    These show the week, not the month. Point them at " + mtdLetter +
+        " cells and they will follow the month total the script writes.");
+      findings.push(name + ": " + strayFormulas.length + " MTD formula(s) read the day columns");
+    }
+  });
+
+  out.push("");
+  out.push(new Array(70).join("="));
+  if (findings.length) {
+    out.push("TO FIX:");
+    findings.forEach(f => out.push("  - " + f));
+  } else {
+    out.push("Nothing to fix. Every tab has its own day column, no leftover data,");
+    out.push("and every MTD formula reads only the MTD column.");
+  }
+
+  Logger.log(out.join("\n"));
+  return { ok: true, findings: findings };
+}
+
 /*
  * Can a sale be traced back to the appointment that produced it?
  *

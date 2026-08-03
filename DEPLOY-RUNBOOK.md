@@ -222,9 +222,28 @@ Two different write rules, on purpose:
 Leaving MTD formulas alone is now the right answer rather than a compromise.
 The L2C and AVG Ticket cells in that column divide one MTD cell by another, so
 once the counts and revenue underneath are written they recompute to the month
-figure themselves. **Check that once**: a formula pointing at the *day* columns
-instead will keep showing the week and nothing will flag it. The preview prints
-every formula it skipped so you can read them in one pass.
+figure themselves. A formula pointing at the *day* columns instead will keep
+showing the week — see the audit below, which finds those.
+
+```
+Run → auditGrowthSheet
+```
+
+Read-only. Prints every tab cell by cell **with the formulas showing**, and
+flags three things you cannot see by looking at the sheet:
+
+- **MTD formulas that read the day columns.** On screen these are identical to
+  a correct one — until the second week of the month, when one is a week behind
+  and the other is not. It prints the formula and which columns it reads.
+- **Leftover data in a day column the tab does not cover** — the `Sat` column
+  copied onto the weekday tabs. *Hiding a column does not clear it.* The values
+  are still there and any formula pointing at them still reads them, so hiding
+  turns a visibly wrong number into an invisibly wrong one. Hidden columns are
+  printed like any other, marked `[HIDDEN]`.
+- **Tabs the writer would refuse** — no FM Budget anchor, or no column for the
+  tab's own day.
+
+It ends with a TO FIX list. An empty one means every tab is sound.
 
 MTD is written to the same tab as the day column, covering the 1st of the month
 through that day — so each tab's MTD is correct for the morning you open it.
