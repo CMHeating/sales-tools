@@ -15,7 +15,12 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
 .header-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;line-height:1;}
 .header-sub{font-size:13px;color:#94a3b8;font-weight:500;margin-top:4px;}
 .print-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
-.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.summary-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+.lead-card.stale{border-color:#f87171;}
+.stale-banner{background:#fef2f2;border-bottom:1px solid #fecaca;padding:8px 20px;font-size:12px;font-weight:600;color:#b91c1c;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.stale-flag{display:inline-block;background:#dc2626;color:#fff;border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.filter-btn.stale-btn{border-color:#fecaca;color:#b91c1c;}
+.filter-btn.stale-btn.active{background:#dc2626;border-color:#dc2626;color:#fff;}
 .summary-tile{background:var(--white);border-radius:8px;border:1px solid var(--border);padding:16px;text-align:center;}
 .tile-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1;margin-bottom:4px;}
 .tile-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
@@ -87,6 +92,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padd
   </div>
   <button class="print-btn" onclick="window.print()">&#8982; Print / PDF</button>
 </div>
+<div id="dataNotice"></div>
 <div class="summary-bar" id="summaryBar"></div>
 <div class="filters" id="filters"></div>
 <div class="leads-list" id="leadsList"></div>
@@ -142,8 +148,57 @@ const leads=[
   {"customer":"William Thomas","address":"1111 East Casino Road, Everett, WA 98203 USA","phone":"(425) 399-0077","estimate":"$7K","estimateRaw":7018,"daysOld":3,"createdOn":"05/04/2026","status":"Contacted","lastFollowUp":"05/07/2026","followUps":1,"notes":""}
 ];
 function getUrgency(d){if(d<=3)return{cls:'urg-green',filter:'fresh'};if(d<=7)return{cls:'urg-yellow',filter:'fresh'};if(d<=14)return{cls:'urg-orange',filter:'hot'};if(d<=21)return{cls:'urg-red',filter:'critical'};return{cls:'urg-black',filter:'critical'};}
+/* ---- Stale-lead detection (work-schedule aware) ----------------------------
+   A lead is stale when it has gone untouched past its threshold, counting only
+   the days this HCA actually works. Scheduled days off never count against a
+   rep. Sold and Lost leads are closed and are never flagged.
+     - never followed up + status NotAttempted : 7 work days
+     - any other open lead                     : 14 work days since last touch
+   Note: thresholds run off createdOn / lastFollowUp real dates, not the
+   daysOld snapshot field, so they stay correct as the export ages.          */
+const WORK_DAYS=[0,1,2,3,4];/* Sun–Thu; 0=Sun .. 6=Sat */
+const WORK_DAYS_LABEL='Sun–Thu';
+const STALE_NEW_LIMIT=7,STALE_FOLLOWUP_LIMIT=14;
+function parseTrackerDate(s){if(!s)return null;const m=String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!m)return null;const d=new Date(+m[3],+m[1]-1,+m[2]);return isNaN(d.getTime())?null:d;}
+function workDaysSince(from){if(!from)return 0;const end=new Date();end.setHours(0,0,0,0);const cur=new Date(from.getFullYear(),from.getMonth(),from.getDate());cur.setDate(cur.getDate()+1);let n=0;while(cur<=end){if(WORK_DAYS.indexOf(cur.getDay())!==-1)n++;cur.setDate(cur.getDate()+1);}return n;}
+function getStale(lead){
+  if(lead.status==='Sold'||lead.status==='Lost')return null;
+  const fu=parseTrackerDate(lead.lastFollowUp);
+  if(fu){const w=workDaysSince(fu);return w>=STALE_FOLLOWUP_LIMIT?{days:w,limit:STALE_FOLLOWUP_LIMIT,reason:w+' work days since last follow-up'}:null;}
+  const created=parseTrackerDate(lead.createdOn);
+  if(!created)return null;
+  const w=workDaysSince(created);
+  const limit=lead.status==='NotAttempted'?STALE_NEW_LIMIT:STALE_FOLLOWUP_LIMIT;
+  if(w<limit)return null;
+  return{days:w,limit:limit,reason:lead.status==='NotAttempted'?w+' work days old, never attempted':w+' work days old, no follow-up logged'};
+}
+function staleBanner(st){return`<div class="stale-banner"><span class="stale-flag">Stale</span><span>${st.reason} &middot; threshold ${st.limit} work days &middot; ${WORK_DAYS_LABEL}, days off not counted</span></div>`;}
+
 function getDaysColor(d){if(d<=7)return'#16a34a';if(d<=14)return'#f97316';return'#dc2626';}
 function fmtK(n){if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+Math.round(n/1e3)+'K';return'$'+n;}
+/* ---- Live recompute of daysOld -------------------------------------------
+   The exported daysOld is a snapshot taken the day this file was generated and
+   drifts further from reality every day the export sits unrefreshed. Recompute
+   it from createdOn so Days Old, the urgency bars, the Critical count and the
+   averages stay true. The snapshot value is kept only where createdOn is
+   missing or unparseable. DATA_AS_OF is derived before the overwrite, so the
+   page can still say how old the underlying export is.                      */
+const DATA_AS_OF=(function(){let newest=null;leads.forEach(l=>{const c=parseTrackerDate(l.createdOn);if(!c)return;const n=Number(l.daysOld);if(!isFinite(n))return;const d=new Date(c.getTime()+n*86400000);if(!newest||d>newest)newest=d;});return newest;})();
+(function(){const t=new Date();t.setHours(0,0,0,0);leads.forEach(l=>{const c=parseTrackerDate(l.createdOn);if(!c)return;const d=Math.round((t-c)/86400000);if(d>=0)l.daysOld=d;});})();
+(function(){
+  if(!DATA_AS_OF)return;
+  const t=new Date();t.setHours(0,0,0,0);
+  const age=Math.round((t-DATA_AS_OF)/86400000);
+  if(age<14)return;
+  const el=document.getElementById('dataNotice');
+  if(!el)return;
+  const asOf=DATA_AS_OF.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  el.innerHTML='<div style="background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.5">'
+    +'<strong>Lead data exported '+asOf+' \u2014 '+age+' days ago.</strong> '
+    +'Days Old, urgency and the Critical count are calculated live from each lead\u2019s Created date, so those are current. '
+    +'The list of leads itself is not \u2014 anything booked, sold or closed since '+asOf+' will not appear here until the export is refreshed.'
+    +'</div>';
+})();
 leads.sort((a,b)=>a.daysOld-b.daysOld);
 const now=new Date();
 document.getElementById('hcaTitle').textContent=HCA_NAME+' — Follow-Up Tracker';
@@ -152,15 +207,17 @@ document.getElementById('footerDate').textContent=now.toLocaleDateString('en-US'
 const totalPipeline=leads.reduce((s,l)=>s+l.estimateRaw,0);
 const criticalCount=leads.filter(l=>l.daysOld>14).length;
 const avgDays=leads.length?Math.round(leads.reduce((s,l)=>s+l.daysOld,0)/leads.length):0;
+const staleCount=leads.filter(l=>!!getStale(l)).length;
 document.getElementById('summaryBar').innerHTML=`
   <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${leads.length}</div><div class="tile-lbl">Open Leads</div></div>
   <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${fmtK(totalPipeline)}</div><div class="tile-lbl">Pipeline Value</div></div>
   <div class="summary-tile"><div class="tile-val" style="color:${criticalCount>0?'#dc2626':'#16a34a'}">${criticalCount}</div><div class="tile-lbl">Critical (15+ Days)</div></div>
-  <div class="summary-tile"><div class="tile-val" style="color:var(--muted)">${avgDays}d</div><div class="tile-lbl">Avg Days Old</div></div>`;
-const counts={all:leads.length,critical:leads.filter(l=>l.daysOld>14).length,hot:leads.filter(l=>l.daysOld>7&&l.daysOld<=14).length,fresh:leads.filter(l=>l.daysOld<=7).length};
+  <div class="summary-tile"><div class="tile-val" style="color:var(--muted)">${avgDays}d</div><div class="tile-lbl">Avg Days Old</div></div>
+  <div class="summary-tile"><div class="tile-val" style="color:${staleCount>0?'#dc2626':'#16a34a'}">${staleCount}</div><div class="tile-lbl" title="Counts only this HCA's working days">Stale \u2014 Needs Attention</div></div>`;
+const counts={all:leads.length,stale:leads.filter(l=>!!getStale(l)).length,critical:leads.filter(l=>l.daysOld>14).length,hot:leads.filter(l=>l.daysOld>7&&l.daysOld<=14).length,fresh:leads.filter(l=>l.daysOld<=7).length};
 let activeFilter='all';
-function renderFilters(){document.getElementById('filters').innerHTML=[{key:'all',label:'All Leads'},{key:'critical',label:'Critical (15+ days)'},{key:'hot',label:'Hot (8-14 days)'},{key:'fresh',label:'Fresh (0-7 days)'}].map(f=>`<button class="filter-btn ${f.key===activeFilter?'active':''}" onclick="setFilter('${f.key}')">${f.label} <span class="count">${counts[f.key]}</span></button>`).join('');}
-function setFilter(key){activeFilter=key;renderFilters();document.querySelectorAll('.lead-card').forEach(c=>c.classList.toggle('hidden',key!=='all'&&c.dataset.urg!==key));}
+function renderFilters(){document.getElementById('filters').innerHTML=[{key:'all',label:'All Leads'},{key:'stale',label:'Stale \u2014 Needs Attention'},{key:'critical',label:'Critical (15+ days)'},{key:'hot',label:'Hot (8-14 days)'},{key:'fresh',label:'Fresh (0-7 days)'}].map(f=>`<button class="filter-btn ${f.key==='stale'?'stale-btn ':''}${f.key===activeFilter?'active':''}" onclick="setFilter('${f.key}')">${f.label} <span class="count">${counts[f.key]}</span></button>`).join('');}
+function setFilter(key){activeFilter=key;renderFilters();document.querySelectorAll('.lead-card').forEach(c=>{const show=key==='all'?true:(key==='stale'?c.dataset.stale==='1':c.dataset.urg===key);c.classList.toggle('hidden',!show);});}
 renderFilters();
 const listEl=document.getElementById('leadsList');
 const savedNotes={};
@@ -171,8 +228,8 @@ function buildPriorNotesHTML(lead,i){
   return`<div class="prior-notes-section"><button class="prior-notes-toggle" id="pnToggle-${i}" onclick="togglePriorNotes(${i})"><span class="toggle-label">Prior Notes <span class="note-count">${count}</span></span><span class="chevron">▼</span></button><div class="prior-notes-body" id="pnBody-${i}">${entriesHTML}</div></div>`;
 }
 if(leads.length===0){listEl.innerHTML='<div class="empty-state"><div style="font-size:48px">✅</div><div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;margin-top:12px">No Open Leads</div><p style="margin-top:8px;font-size:13px">You have no open leads this week.</p></div>';}
-else{leads.forEach((lead,i)=>{const urg=getUrgency(lead.daysOld);const card=document.createElement('div');card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;
-card.innerHTML=`<div class="lead-header"><div class="urgency-bar ${urg.cls}"></div><div class="lead-info"><div class="lead-name">${lead.customer}</div><div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div></div><div class="lead-stats"><div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div><div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div><div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div></div></div><div class="lead-body"><div class="status-group"><div class="field-label">Update Status</div><select class="status-select" id="status-${i}"><option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option><option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option><option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option><option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option><option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option></select></div><div class="notes-group"><div class="field-label">Follow-Up Notes (required to save)</div><textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea></div><div class="save-group"><button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button><div class="save-feedback" id="saveFeedback-${i}"></div><div class="st-reminder" id="stReminder-${i}"><div class="st-reminder-title">📋 Paste into ServiceTitan:</div><button class="copy-btn" id="copyBtn-${i}" onclick="copyNote(${i})">📋 Copy Note</button><div class="copy-note-preview" id="notePreview-${i}"></div></div></div></div>${buildPriorNotesHTML(lead,i)}`;
+else{leads.forEach((lead,i)=>{const urg=getUrgency(lead.daysOld);const st=getStale(lead);const card=document.createElement('div');card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;card.dataset.stale=st?'1':'0';if(st)card.classList.add('stale');
+card.innerHTML=`${st?staleBanner(st):''}<div class="lead-header"><div class="urgency-bar ${urg.cls}"></div><div class="lead-info"><div class="lead-name">${lead.customer}</div><div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div></div><div class="lead-stats"><div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div><div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div><div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div></div></div><div class="lead-body"><div class="status-group"><div class="field-label">Update Status</div><select class="status-select" id="status-${i}"><option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option><option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option><option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option><option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option><option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option></select></div><div class="notes-group"><div class="field-label">Follow-Up Notes (required to save)</div><textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea></div><div class="save-group"><button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button><div class="save-feedback" id="saveFeedback-${i}"></div><div class="st-reminder" id="stReminder-${i}"><div class="st-reminder-title">📋 Paste into ServiceTitan:</div><button class="copy-btn" id="copyBtn-${i}" onclick="copyNote(${i})">📋 Copy Note</button><div class="copy-note-preview" id="notePreview-${i}"></div></div></div></div>${buildPriorNotesHTML(lead,i)}`;
 listEl.appendChild(card);});}
 function logFollowUp(i){
   const lead=leads[i],status=document.getElementById(`status-${i}`).value,notes=document.getElementById(`notes-${i}`).value.trim();

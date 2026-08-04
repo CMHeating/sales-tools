@@ -25,7 +25,25 @@ const SOLD_TRACKER_CONFIG = {
   comboMatchWindowDays: 120,
   relatedWorkWindowDays: 60,
   bundleWindowDays: 30,
-  timeZone: "America/Los_Angeles"
+  timeZone: "America/Los_Angeles",
+
+  /* Email updates about a deal.
+     A Gmail search costs a round trip and there are a couple of hundred sold
+     jobs, so this is budgeted: results are cached in the payload itself and
+     carried forward, and only jobs whose notes have gone stale are searched
+     again — live jobs first. Set emailNotesEnabled false to turn it off. */
+  emailNotesEnabled: true,
+  emailNoteLookbackDays: 90,
+  emailNoteRefreshHours: 6,
+  emailNoteMaxSearchesPerRun: 40,
+  emailNoteThreadsPerJob: 8,
+  maxEmailNotesPerJob: 5,
+  /* Apps Script kills a script at six minutes. If that happened mid-search the
+     Firebase write would never run and the whole sync would be lost, not just
+     the notes — so searching stops well short and leaves the rest for the next
+     run. Measured from the start of the sync, not from the start of the notes
+     pass, because reading Gmail and the COMBO LOG has already spent time. */
+  emailNoteTimeBudgetMs: 150000
 };
 
 const HCA_CANONICAL = [
@@ -145,6 +163,13 @@ function syncSoldJobTracker() {
   const completedAlerts = readCompletedFormAlerts_();
   const combo = readComboLog_();
   const payload = buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, combo, startedAt);
+
+  /* Read before write: last run's payload is the cache the email budget works
+     against. Coordination notes need no cache — they come off the sheet. */
+  const previous = readSoldTrackerFromFirebase_();
+  const emailStats = attachEmailUpdates_(payload, previous, startedAt);
+  payload.sourceSummary.emailUpdates = emailStats;
+
   pushSoldTrackerToFirebase_(payload);
   Logger.log(JSON.stringify(payload.sourceSummary, null, 2));
   return payload.sourceSummary;
@@ -161,14 +186,84 @@ function previewSoldJobTracker() {
   return payload;
 }
 
-function setupSoldTrackerDailyTrigger() {
+/* The Run dropdown in the Apps Script editor calls a function with no
+   arguments, so previewDealNotes("...") cannot be run from it. Put the name
+   here and run previewDealNotesForCustomer instead. */
+const PREVIEW_DEAL_CUSTOMER = "Jessiah Johnson";
+
+function previewDealNotesForCustomer() {
+  return previewDealNotes(PREVIEW_DEAL_CUSTOMER);
+}
+
+/*
+ * Coordination notes and email updates for one customer, printed. Writes
+ * nothing — for checking what the tracker will show before a full sync.
+ */
+function previewDealNotes(customerName) {
+  const name = cleanText_(customerName);
+  if (!name) {
+    Logger.log('Call it with a name: previewDealNotes("Jessiah Johnson")');
+    return null;
+  }
+
+  const combo = readComboLog_();
+  const signature = nameSignature_(name);
+  const rows = combo.mainRows.concat(combo.tbdRows)
+    .filter(row => fuzzyNameMatch_(signature, comboRowSignature_(row)));
+
+  const out = {
+    customer: name,
+    comboRowsMatched: rows.length,
+    coordinationNotes: buildCoordinationNotes_(rows, rows[0] || null),
+    emailUpdates: readDealEmailNotes_(name, SOLD_TRACKER_CONFIG.emailNoteLookbackDays)
+  };
+  Logger.log(JSON.stringify(out, null, 2));
+  return out;
+}
+
+/*
+ * Hourly is the cadence this script is built around: the email-update budget
+ * spends 40 searches a run and relies on the next run picking up where it left
+ * off. On a daily trigger a few hundred jobs would take days to come round.
+ *
+ * Both installers delete the existing triggers first, so running the daily one
+ * on a project that is currently hourly quietly downgrades it. Use this one.
+ */
+function setupSoldTrackerHourlyTrigger() {
   deleteSoldTrackerTriggers_();
   ScriptApp.newTrigger("syncSoldJobTracker")
     .timeBased()
-    .everyDays(1)
-    .atHour(6)
-    .inTimezone(SOLD_TRACKER_CONFIG.timeZone)
+    .everyHours(1)
     .create();
+  Logger.log("Sold tracker now syncs hourly.");
+}
+
+/*
+ * Historical name, hourly behaviour — deliberately.
+ *
+ * The deployed project has carried this name pointing at an hourly install for
+ * a while, and it is the name in anyone's muscle memory. Making it mean "daily"
+ * here would turn the obvious button into the one that quietly cuts the sync to
+ * a twenty-fourth of its cadence, with nothing to show for it until someone
+ * noticed the tracker going stale days later. It delegates instead.
+ */
+function setupSoldTrackerDailyTrigger() {
+  Logger.log("Note: this installs the HOURLY trigger — the name is historical.");
+  return setupSoldTrackerHourlyTrigger();
+}
+
+/* Private alias kept so the name that exists in the deployed project still
+   resolves if anything calls it. */
+function setupSoldTrackerHourlyTrigger_() {
+  return setupSoldTrackerHourlyTrigger();
+}
+
+/* What is actually installed right now, without changing anything. */
+function showSoldTrackerTriggers() {
+  const found = ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction());
+  Logger.log(found.length ? "Triggers installed: " + found.join(", ")
+                          : "No triggers installed — nothing is syncing on a schedule.");
+  return found;
 }
 
 function deleteSoldTrackerTriggers_() {
@@ -317,6 +412,8 @@ function collapseDuplicateSoldAlerts_(rows) {
       clusters.push({
         key,
         latestDate: row.soldDate || row.emailDate,
+        /* The day it first sold, which is not the same thing. */
+        firstDate: row.soldDate || row.emailDate,
         item: row,
         count: 1,
         refs: row.messageId ? [row.messageId] : []
@@ -333,11 +430,32 @@ function collapseDuplicateSoldAlerts_(rows) {
       cluster.item = row;
     }
 
+    const firstSoFar = new Date(cluster.firstDate);
+    if (!Number.isNaN(rowDate.getTime()) && (Number.isNaN(firstSoFar.getTime()) || rowDate < firstSoFar)) {
+      cluster.firstDate = row.soldDate || row.emailDate;
+    }
+
     cluster.item.duplicateSoldAlertCount = cluster.count;
     cluster.item.duplicateSoldAlertRefs = cluster.refs;
   });
 
-  return clusters.map(cluster => cluster.item);
+  /*
+   * The latest alert wins on detail — a re-issued estimate carries the
+   * corrected figures — but the sale is dated from the FIRST alert, because
+   * that is the day it sold.
+   *
+   * Bruce Chhay sold Thursday at 4:45pm and the estimate was re-issued Friday
+   * at 6:35am. Taking the later date moved a Thursday sale into Friday's
+   * numbers, and there is no way to notice that from the tracker: one alert,
+   * one card, wrong day. Anyone counting "how many sold today" was over by one.
+   */
+  return clusters.map(cluster => {
+    if (cluster.count > 1 && cluster.firstDate && cluster.firstDate !== cluster.item.soldDate) {
+      cluster.item.resoldAlertDate = cluster.item.soldDate;   // kept for the audit trail
+      cluster.item.soldDate = cluster.firstDate;
+    }
+    return cluster.item;
+  });
 }
 
 function normalizeDuplicateText_(value) {
@@ -509,14 +627,26 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
   const tbdByKey = groupBy_(combo.tbdRows, "personKey");
 
   const jobs = soldAlerts.map(sold => {
-    const mainMatches = pickComboMatches_(sold, mainByKey[sold.personKey] || [], false);
-    const tbdMatches = pickComboMatches_(sold, tbdByKey[sold.personKey] || [], true);
-    const tbdDependencyMatches = pickTbdDependencyMatches_(sold, tbdByKey[sold.personKey] || []);
+    const mainResolved = resolveComboRows_(sold, mainByKey, combo.mainRows);
+    const tbdResolved = resolveComboRows_(sold, tbdByKey, combo.tbdRows);
+    const comboRows = mainResolved.rows.concat(tbdResolved.rows);
+
+    const mainMatches = pickComboMatches_(sold, mainResolved.rows, false);
+    const tbdMatches = pickComboMatches_(sold, tbdResolved.rows, true);
+    const tbdDependencyMatches = pickTbdDependencyMatches_(sold, tbdResolved.rows);
     const primaryCombo = tbdMatches[0] || mainMatches.find(row => row.department.toUpperCase() === "HVAC") || mainMatches[0] || null;
-    const booked = (bookedByKey[sold.personKey] || [])[0] || null;
-    const completed = (sold.jobNumber && completedByJob[sold.jobNumber] && completedByJob[sold.jobNumber][0]) || (completedByKey[sold.personKey] || [])[0] || null;
-    const relatedWork = buildRelatedWork_(sold, combo.mainRows.concat(combo.tbdRows), primaryCombo);
+    const booked = resolveAlertMatch_(sold, bookedByKey, bookedAlerts);
+    const completed = (sold.jobNumber && completedByJob[sold.jobNumber] && completedByJob[sold.jobNumber][0]) ||
+      resolveAlertMatch_(sold, completedByKey, completedAlerts);
+    const relatedWork = buildRelatedWork_(sold, comboRows, primaryCombo);
+    const coordinationNotes = buildCoordinationNotes_(comboRows, primaryCombo);
     const stage = determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatches);
+
+    // How the COMBO LOG row was found, so a spelling-driven match can be
+    // spot-checked rather than taken on faith.
+    const comboMatch = primaryCombo
+      ? (mainMatches.indexOf(primaryCombo) !== -1 ? mainResolved.method : tbdResolved.method)
+      : "none";
 
     return {
       id: sold.jobNumber || sold.estimateNumber || sold.messageId,
@@ -530,6 +660,8 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
       opportunityNumber: sold.opportunityNumber,
       jobNumber: sold.jobNumber,
       installDate: primaryCombo ? primaryCombo.installDate : null,
+      comboMatch,
+      comboCustomer: primaryCombo && comboMatch === "fuzzy" ? primaryCombo.customer : "",
       department: primaryCombo ? primaryCombo.department : "HVAC",
       jurisdiction: primaryCombo ? primaryCombo.jurisdiction : "",
       permitNotes: primaryCombo ? primaryCombo.permitNotes : "",
@@ -549,6 +681,7 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
         notes: booked.notes
       }) : {},
       relatedWork,
+      coordinationNotes,
       sourceRefs: {
         soldMessageId: sold.messageId,
         bookedMessageId: booked ? booked.messageId : "",
@@ -568,7 +701,10 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
     jobs: jobs.length,
     needsAttention: jobs.filter(job => job.stage === "SOLD_NEEDS_ATTENTION").length,
     active: jobs.filter(job => job.stage === "SOLD_ACTIVE" || job.stage === "SOLD_PENDING_MATCH").length,
-    done: jobs.filter(job => job.stage === "SOLD_DONE_FOLLOW_UP_LATER").length
+    done: jobs.filter(job => job.stage === "SOLD_DONE_FOLLOW_UP_LATER").length,
+    fuzzyComboMatches: jobs.filter(job => job.comboMatch === "fuzzy").length,
+    pendingComboMatch: jobs.filter(job => job.stage === "SOLD_PENDING_MATCH").length,
+    coordinationNotes: jobs.reduce((n, job) => n + (job.coordinationNotes || []).length, 0)
   };
 
   return {
@@ -582,8 +718,6 @@ function buildSoldTrackerPayload_(soldAlerts, bookedAlerts, completedAlerts, com
 
 function pickTbdDependencyMatches_(sold, rows) {
   return rows.filter(row => {
-    if (row.personKey !== sold.personKey) return false;
-
     const rowHca = normalizeHca_(row.salesRep);
     const hcaMatch = !rowHca || rowHca === sold.hca;
 
@@ -614,11 +748,125 @@ function pickComboMatches_(sold, rows, isTbd) {
   });
 }
 
+/* ---------------------------------------------------------------------------
+ * Coordination notes
+ *
+ * The install coordinators work the COMBO LOG by hand — a permit note here, a
+ * payment note there, "EMAILED JAY 7/29 AL" in the JOB COMPLETED column of a
+ * TBD row. Until now the tracker showed a handful of those as chips and
+ * dropped the rest, so the HCA saw "no install date" without the sentence
+ * explaining why.
+ *
+ * Every note column on every matched row is collected instead, labelled with
+ * the column it came from and which sheet it was on, so a TBD electrical note
+ * is not mistaken for the HVAC row's.
+ * ------------------------------------------------------------------------- */
+
+const COORDINATION_NOTE_FIELDS = [
+  { key: "jobNotes", label: "Job notes" },
+  { key: "permitNotes", label: "Permit" },
+  { key: "paymentNotes", label: "Payment" },
+  { key: "paymentMethod", label: "Payment method" },
+  { key: "mechanical", label: "Mechanical permit" },
+  { key: "electrical", label: "Electrical permit" },
+  { key: "electricalRequested", label: "Electrical requested" },
+  { key: "ductCleaning", label: "Duct cleaning" },
+  { key: "registration", label: "Equipment registration" },
+  { key: "jobCompleted", label: "Job completed" }
+];
+
+/* All-caps words that show up at the end of a note and are not somebody's
+   initials. Without this list "PAID IN FULL PIF" reads as a note by "PIF". */
+const NOT_INITIALS = [
+  "TBD", "HOA", "PIF", "COD", "ACH", "EFT", "HVAC", "ELEC", "MECH", "WH",
+  "AC", "HP", "DF", "NA", "OK", "NO", "YES", "ASAP", "EOD", "AM", "PM",
+  "CC", "PO", "SO", "ETA", "RTU", "AHU", "DIY", "GC", "HO"
+];
+
+function isPlaceholderNote_(text) {
+  const t = cleanText_(text).toUpperCase();
+  if (!t) return true;
+  if (/^[-–—_.*x\s]+$/i.test(t)) return true;
+  return t === "N/A" || t === "NA" || t === "NONE" || t === "0";
+}
+
+/*
+ * The coordinators stamp their notes "EMAILED JAY 7/29 AL" — what happened,
+ * when, and who. Pulling the date and the initials out lets the tracker sort
+ * and attribute them; the note text is left whole either way, so nothing is
+ * lost if the convention was not followed.
+ */
+function parseNoteStamp_(text, contextIso) {
+  const raw = cleanText_(text);
+  const out = { date: "", initials: "" };
+
+  const date = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if (date) {
+    const month = Number(date[1]);
+    const day = Number(date[2]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      let year = date[3] ? Number(date[3]) : Number(String(contextIso || "").slice(0, 4));
+      if (!year) year = Number(Utilities.formatDate(new Date(), SOLD_TRACKER_CONFIG.timeZone, "yyyy"));
+      if (year < 100) year += 2000;
+      out.date = year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    }
+  }
+
+  /* Initials only at the very end, and only when there is a note in front of
+     them — a cell containing nothing but "AL" is not an attributed note. */
+  const tail = raw.match(/\s([A-Z]{2,3})[.\s]*$/);
+  if (tail && NOT_INITIALS.indexOf(tail[1]) === -1 && raw.split(/\s+/).length >= 3) {
+    out.initials = tail[1];
+  }
+  return out;
+}
+
+function buildCoordinationNotes_(rows, primaryCombo) {
+  const notes = [];
+  const seen = {};
+
+  (rows || []).forEach(row => {
+    COORDINATION_NOTE_FIELDS.forEach(field => {
+      const text = cleanText_(row[field.key]);
+      if (isPlaceholderNote_(text)) return;
+
+      /* On a TBD tab the JOB COMPLETED column is repurposed as a live action
+         note — "AMBER IS WORKING ON THIS 7/29 AL" — so labelling it
+         "Job completed" there would say the opposite of what it means. */
+      const label = (row.isTbd && field.key === "jobCompleted") ? "TBD status" : field.label;
+
+      const key = (label + "|" + row.sourceSheet + "|" + text).toUpperCase();
+      if (seen[key]) return;
+      seen[key] = true;
+
+      const stamp = parseNoteStamp_(text, row.installDate);
+      notes.push(compactObject_({
+        source: "COMBO LOG",
+        sheet: row.sourceSheet,
+        department: row.department,
+        label: label,
+        text: text,
+        on: stamp.date,
+        by: stamp.initials,
+        onPrimaryRow: primaryCombo && row === primaryCombo ? true : ""
+      }));
+    });
+  });
+
+  /* Dated notes first, newest first; undated ones keep sheet order behind them
+     rather than being sorted arbitrarily. */
+  return notes.sort((a, b) => {
+    if (a.on && b.on) return a.on < b.on ? 1 : (a.on > b.on ? -1 : 0);
+    if (a.on) return -1;
+    if (b.on) return 1;
+    return 0;
+  }).slice(0, 24);
+}
+
 function buildRelatedWork_(sold, rows, primaryCombo) {
   const soldDate = sold.soldDate ? new Date(sold.soldDate) : null;
 
   return rows.filter(row => {
-    if (row.personKey !== sold.personKey) return false;
     if (primaryCombo && row === primaryCombo) return false;
 
     // Include TBD dependency rows even without an install date.
@@ -655,6 +903,247 @@ function determineStage_(primaryCombo, tbdMatches, completed, tbdDependencyMatch
 
   if (completed) return "SOLD_DONE_FOLLOW_UP_LATER";
   return "SOLD_PENDING_MATCH";
+}
+
+/* ---------------------------------------------------------------------------
+ * Email updates
+ *
+ * Everything said about a homeowner by email that is not a ServiceTitan alert
+ * — the coordinator chasing a panel upgrade, the HCA reporting the customer
+ * moved money around, the permit office reply. At the 1:1 that correspondence
+ * is the story of the deal, and it was previously only findable by searching
+ * Gmail by hand.
+ *
+ * The reader and summariser are deliberately the same shape as the ones in
+ * daily-recap.gs. Those live in a separate Apps Script project and cannot be
+ * imported; if the signature-trimming rules change in one, change both.
+ * ------------------------------------------------------------------------- */
+
+function readDealEmailNotes_(customer, sinceDays) {
+  const name = cleanText_(customer);
+  if (name.length < 4) return [];
+
+  const exclude = ' -from:' + SOLD_TRACKER_CONFIG.serviceTitanFrom + ' -subject:"Daily Recap"';
+  const window = " newer_than:" + Math.max(7, Math.min(180, sinceDays || 90)) + "d";
+  const cap = SOLD_TRACKER_CONFIG.emailNoteThreadsPerJob;
+
+  let threads = [];
+  try {
+    threads = GmailApp.search('"' + name.replace(/"/g, "") + '"' + exclude + window, 0, cap);
+    /* Internal mail usually says the surname only — "any update on Manrao?" —
+       so fall back, but only to a token distinctive enough to stand alone. */
+    if (!threads.length) {
+      const tokens = name.split(/\s+/).filter(t => t.length >= 6 && !/^and$/i.test(t));
+      const distinctive = tokens[tokens.length - 1];
+      if (distinctive) {
+        threads = GmailApp.search('"' + distinctive + '"' + exclude + window, 0, cap);
+      }
+    }
+  } catch (err) {
+    Logger.log("Email note search failed for " + name + ": " + err);
+    return [];
+  }
+
+  const notes = [];
+  threads.forEach(thread => {
+    let messages = [];
+    try { messages = thread.getMessages(); } catch (err) { return; }
+    /* The last word on a thread is the one that matters. */
+    const msg = messages[messages.length - 1];
+    if (!msg) return;
+
+    const who = emailSenderName_(msg.getFrom());
+    const summary = summariseDealEmail_(msg.getPlainBody(), who);
+    if (!summary) return;
+
+    notes.push({
+      on: Utilities.formatDate(msg.getDate(), SOLD_TRACKER_CONFIG.timeZone, "yyyy-MM-dd"),
+      from: who,
+      /* "Re: FW: Sold Estimate Alert" needs every prefix off, not just one. */
+      subject: String(msg.getSubject() || "").replace(/^((re|fw|fwd)\s*:\s*)+/i, "").trim(),
+      text: summary,
+      link: "https://mail.google.com/mail/u/0/#all/" + thread.getId(),
+      receivedMs: msg.getDate().getTime()
+    });
+  });
+
+  notes.sort((a, b) => b.receivedMs - a.receivedMs);
+  return notes.slice(0, SOLD_TRACKER_CONFIG.maxEmailNotesPerJob).map(n => {
+    delete n.receivedMs;
+    return n;
+  });
+}
+
+/*
+ * The sender's own words, trimmed to something readable at a glance.
+ *
+ * Everyone here signs with name, title, direct line, address. The signature
+ * has to be cut rather than filtered line by line: "Amber Maddalena" and
+ * "Comfort Advisor" are ordinary-looking lines and only their position gives
+ * them away. So the first signature marker ends the message and nothing after
+ * it is kept.
+ */
+function summariseDealEmail_(body, senderName) {
+  const own = emailOwnText_(body);
+  const who = cleanText_(senderName).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const out = [];
+
+  const lines = String(own || "").split(/\r?\n/).map(l => l.trim());
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+
+    /* Signature starts here — stop, do not merely skip. */
+    if (who && line.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === who) break;
+    if (line.length < 45 && /\b(advisor|manager|coordinator|consultant|supervisor|director|specialist|representative|technician)\s*$/i.test(line)) break;
+    if (/cmheating\.com|^www\.|\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/i.test(line)) break;
+    if (/^(warmest regards|regards|thank you|thanks|best|sincerely)[,!]?\s*$/i.test(line)) break;
+
+    /* Quote scaffolding, not signature — skip and keep reading. */
+    if (/^(on .*wrote:|from:|sent:|to:|cc:|subject:)/i.test(line)) continue;
+    if (/^(sent from my|get outlook)\b/i.test(line)) continue;
+    if (/^[-_=]{3,}$/.test(line)) continue;
+
+    out.push(line);
+    if (out.length >= 3) break;
+  }
+
+  const text = out.join(" ").replace(/\s+/g, " ").trim();
+  if (text.length <= 220) return text;
+  return text.slice(0, 217).replace(/\s+\S*$/, "") + "...";
+}
+
+/* Everything before the quoted original. */
+function emailOwnText_(body) {
+  const kept = [];
+  const lines = String(body || "").split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*>/.test(line)) break;
+    if (/^\s*On\s.+\swrote:\s*$/.test(line)) break;
+    if (/^\s*On\s.+<[^>]*$/.test(line)) break;
+    if (/^\s*-{2,}\s*Original Message\s*-{2,}/i.test(line)) break;
+    kept.push(line);
+  }
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function emailSenderName_(from) {
+  const m = String(from || "").match(/^\s*"?([^"<]+?)"?\s*</);
+  if (m) return m[1].trim();
+  return String(from || "").replace(/@cmheating\.com/i, "").trim();
+}
+
+/*
+ * Attaches email updates to the payload within a search budget.
+ *
+ * A Gmail search per job would be a couple of hundred round trips an hour, so
+ * the previous payload's notes are carried forward and only stale ones are
+ * searched again. Live jobs are refreshed before done ones, and oldest first,
+ * so the budget goes where someone is actually waiting on an answer.
+ */
+const EMAIL_REFRESH_PRIORITY = {
+  SOLD_NEEDS_ATTENTION: 0,
+  SOLD_PENDING_MATCH: 1,
+  SOLD_ACTIVE: 2,
+  SOLD_DONE_FOLLOW_UP_LATER: 3
+};
+
+function attachEmailUpdates_(payload, previousById, now) {
+  const cfg = SOLD_TRACKER_CONFIG;
+  const stats = { searched: 0, reused: 0, deferred: 0, disabled: false, outOfTime: false };
+
+  if (!cfg.emailNotesEnabled) {
+    stats.disabled = true;
+    return stats;
+  }
+
+  const nowMs = now.getTime();
+  const freshMs = cfg.emailNoteRefreshHours * 3600 * 1000;
+  const deadline = now.getTime() + cfg.emailNoteTimeBudgetMs;
+
+  /* Carry everything forward first, so a job that never gets searched this run
+     still shows whatever was found last time rather than going blank. */
+  payload.jobs.forEach(job => {
+    const prev = previousById[job.id];
+    if (prev && prev.emailUpdates) job.emailUpdates = prev.emailUpdates;
+    if (prev && prev.emailCheckedAt) job.emailCheckedAt = prev.emailCheckedAt;
+  });
+
+  const order = payload.jobs.slice().sort((a, b) => {
+    const pa = EMAIL_REFRESH_PRIORITY[a.stage], pb = EMAIL_REFRESH_PRIORITY[b.stage];
+    if (pa !== pb) return (pa === undefined ? 9 : pa) - (pb === undefined ? 9 : pb);
+    const ta = a.emailCheckedAt ? new Date(a.emailCheckedAt).getTime() : 0;
+    const tb = b.emailCheckedAt ? new Date(b.emailCheckedAt).getTime() : 0;
+    return ta - tb;
+  });
+
+  let budget = cfg.emailNoteMaxSearchesPerRun;
+
+  order.forEach(job => {
+    const checkedMs = job.emailCheckedAt ? new Date(job.emailCheckedAt).getTime() : 0;
+    if (checkedMs && (nowMs - checkedMs) < freshMs) { stats.reused++; return; }
+    if (budget <= 0) { stats.deferred++; return; }
+
+    /* Out of time is the same outcome as out of budget: the job keeps whatever
+       it had and waits for the next run. Never let this pass be the reason the
+       sync fails to write. */
+    if (new Date().getTime() > deadline) {
+      stats.deferred++;
+      stats.outOfTime = true;
+      return;
+    }
+
+    budget--;
+    stats.searched++;
+    job.emailUpdates = readDealEmailNotes_(job.customer, cfg.emailNoteLookbackDays);
+    job.emailCheckedAt = isoDateTime_(now);
+  });
+
+  if (stats.outOfTime) {
+    Logger.log("Email updates stopped early on time: " + stats.searched + " searched, " +
+      stats.deferred + " left for the next run.");
+  }
+
+  /* An empty array round-trips through Firebase as a missing key, which would
+     look identical to "never searched". Drop it and let emailCheckedAt say. */
+  payload.jobs.forEach(job => {
+    if (job.emailUpdates && !job.emailUpdates.length) delete job.emailUpdates;
+  });
+
+  return stats;
+}
+
+/*
+ * Last run's payload, used only as a cache for email updates. A failure here
+ * is not worth stopping a sync over — it just means every job looks unchecked
+ * and the budget starts from scratch.
+ */
+function readSoldTrackerFromFirebase_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const baseUrl = (props.getProperty("FIREBASE_DATABASE_URL") || "").replace(/\/$/, "");
+    if (!baseUrl) return {};
+
+    const explicitToken = props.getProperty("FIREBASE_AUTH_TOKEN") || "";
+    const authToken = explicitToken || getFirebaseAnonymousIdToken_();
+    const url = baseUrl + "/" + SOLD_TRACKER_CONFIG.firebasePath +
+      ".json?auth=" + encodeURIComponent(authToken);
+
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (response.getResponseCode() !== 200) return {};
+
+    const parsed = JSON.parse(response.getContentText() || "null");
+    const jobs = parsed && parsed.jobs;
+    const list = Array.isArray(jobs) ? jobs : (jobs ? Object.keys(jobs).map(k => jobs[k]) : []);
+
+    const byId = {};
+    list.forEach(job => { if (job && job.id) byId[job.id] = job; });
+    return byId;
+  } catch (err) {
+    Logger.log("Could not read the previous tracker payload: " + err);
+    return {};
+  }
 }
 
 function pushSoldTrackerToFirebase_(payload) {
@@ -809,7 +1298,9 @@ function parseSheetDate_(value) {
     }
   }
 
-  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  /* The backslashes here were doubled, so this branch matched a literal "\d"
+     and never an actual date — an ISO cell fell through to `new Date(raw)`. */
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) return raw;
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -895,6 +1386,183 @@ function personKeyFromParts_(first, last) {
   const f = firstWords[0] || "";
   const l = lastWords.length ? lastWords[lastWords.length - 1] : "";
   return l && f ? l + "|" + f : (l || f);
+}
+
+/* ---------------------------------------------------------------------------
+ * Fuzzy customer-name matching
+ *
+ * The COMBO LOG is typed by one set of hands, ServiceTitan alerts by another.
+ * The same homeowner arrives as "Michael McEachern" in one and
+ * "Michael Mc Eachern" in the other; as "Greg Anderson" and
+ * "ANDERSON, GREG 0000348"; as "Habtemariam" and "Habpemariam". An exact key
+ * misses every one of those and the job sits in PENDING COMBO LOG MATCH even
+ * though the install is scheduled.
+ *
+ * The rule: reduce both names to significant tokens, then require either two
+ * tokens that match — allowing a typo's worth of edit distance, scaled to how
+ * long the token is — or one substantial token when a side only offers one.
+ * A shared first name alone is never enough: "Sidney Abe" must not match
+ * "Sidney Johnson".
+ * ------------------------------------------------------------------------- */
+
+const NAME_STOPWORDS = ["M", "F", "MR", "MRS", "MS", "DR", "JR", "SR", "II", "III", "IV", "AND", "OR", "THE", "OF"];
+
+// Generic words that carry no identity of their own. Two different property
+// management companies both match on PROPERTY and MANAGEMENT; that pair must
+// not be enough to call them the same customer.
+const NAME_WEAK_TOKENS = [
+  "PROPERTY", "PROPERTIES", "MANAGEMENT", "MANAGMENT", "MGMT", "LLC", "INC",
+  "CORP", "CORPORATION", "COMPANY", "ASSOCIATION", "ASSOC", "HOA", "CHURCH",
+  "BAPTIST", "CENTER", "CENTRE", "SCHOOL", "RESTAURANT", "APARTMENTS", "APTS",
+  "CONDOMINIUM", "CONDO", "MINISTRIES", "HOLDINGS", "GROUP", "SERVICES",
+  "LLP", "TRUST", "FAMILY", "RESIDENCE"
+];
+
+// Name particles get glued to the word that follows so "MC EACHERN" and
+// "MCEACHERN" reduce to the same token instead of one side losing "MC" to the
+// short-word filter.
+const NAME_PARTICLE_RE = /\b(MC|MAC|VAN|VON|DE|DEL|DELA|LA|LE|DI|DA|ST)\s+(?=[A-Z])/g;
+
+function nameSignature_(value) {
+  const text = String(value === null || value === undefined ? "" : value)
+    .replace(/<https?:\/\/[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .toUpperCase()
+    .replace(/\([MF]\)/g, " ")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\b\d{3,}\b/g, " ")   // ServiceTitan customer numbers, street numbers
+    .trim()
+    .replace(NAME_PARTICLE_RE, "$1");
+
+  const tokens = [];
+  const weak = [];
+  text.split(/\s+/).filter(Boolean).forEach(word => {
+    if (word.length < 3) return;
+    if (/^\d+$/.test(word)) return;
+    if (NAME_STOPWORDS.indexOf(word) !== -1) return;
+    if (tokens.indexOf(word) !== -1) return;
+    tokens.push(word);
+    if (NAME_WEAK_TOKENS.indexOf(word) !== -1) weak.push(word);
+  });
+
+  return { tokens: tokens, weak: weak };
+}
+
+function levenshtein_(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  let prev = [];
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function nameTokensMatch_(a, b) {
+  if (a === b) return true;
+
+  const min = Math.min(a.length, b.length);
+  const max = Math.max(a.length, b.length);
+
+  // "EACHERN" inside "MCEACHERN", "JESSI" inside "JESSIAH". Only on tokens
+  // long enough that the overlap means something.
+  if (min >= 4 && (a.indexOf(b) !== -1 || b.indexOf(a) !== -1)) return true;
+
+  if (max - min > 2) return false;
+  const tolerance = max <= 4 ? 0 : (max <= 7 ? 1 : 2);
+  if (!tolerance) return false;
+  return levenshtein_(a, b) <= tolerance;
+}
+
+function fuzzyNameMatch_(sigA, sigB) {
+  if (!sigA || !sigB) return false;
+  if (!sigA.tokens.length || !sigB.tokens.length) return false;
+
+  const usedB = {};
+  let total = 0;
+  let strong = 0;
+
+  sigA.tokens.forEach(tokenA => {
+    for (let i = 0; i < sigB.tokens.length; i++) {
+      if (usedB[i]) continue;
+      if (!nameTokensMatch_(tokenA, sigB.tokens[i])) continue;
+      usedB[i] = true;
+      total++;
+      if (sigA.weak.indexOf(tokenA) === -1 && sigB.weak.indexOf(sigB.tokens[i]) === -1) strong++;
+      return;
+    }
+  });
+
+  if (!strong) return false;
+  if (total >= 2) return true;
+
+  // One match is only enough when a side offers nothing else — a COMBO LOG row
+  // carrying a surname and no first name, say — and the token is substantial.
+  const soloA = sigA.tokens.length === 1;
+  const soloB = sigB.tokens.length === 1;
+  if (!soloA && !soloB) return false;
+  const solo = soloA ? sigA.tokens[0] : sigB.tokens[0];
+  return solo.length >= 5;
+}
+
+function comboRowSignature_(row) {
+  if (!row.nameSignature) {
+    row.nameSignature = nameSignature_([row.first, row.last].filter(Boolean).join(" "));
+  }
+  return row.nameSignature;
+}
+
+/*
+ * Exact key first — it is right the overwhelming majority of the time and
+ * costs nothing. Only when it comes back empty do we scan the whole sheet
+ * looking for a near miss.
+ */
+function resolveComboRows_(sold, byKey, allRows) {
+  const exact = byKey[sold.personKey] || [];
+  if (exact.length) return { rows: exact, method: "exact" };
+
+  const signature = soldSignature_(sold);
+  if (!signature.tokens.length) return { rows: [], method: "none" };
+
+  const fuzzy = allRows.filter(row => fuzzyNameMatch_(signature, comboRowSignature_(row)));
+  return { rows: fuzzy, method: fuzzy.length ? "fuzzy" : "none" };
+}
+
+/*
+ * The Booked and Completed alerts come out of ServiceTitan the same way the
+ * Sold alert does, but a customer renamed between appointments — or entered as
+ * "LAST, FIRST" once — breaks the exact key just as easily.
+ */
+function resolveAlertMatch_(sold, byKey, allAlerts) {
+  const exact = byKey[sold.personKey] || [];
+  if (exact.length) return exact[0];
+
+  const signature = soldSignature_(sold);
+  if (!signature.tokens.length) return null;
+
+  for (let i = 0; i < allAlerts.length; i++) {
+    const alert = allAlerts[i];
+    if (!alert.nameSignature) alert.nameSignature = nameSignature_(alert.customer);
+    if (fuzzyNameMatch_(signature, alert.nameSignature)) return alert;
+  }
+  return null;
+}
+
+function soldSignature_(sold) {
+  if (!sold.nameSignature) sold.nameSignature = nameSignature_(sold.customer);
+  return sold.nameSignature;
 }
 
 function groupBy_(items, key) {

@@ -125,6 +125,15 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
         <div id="slotMessage" class="help">Select an HCA to load slots.</div>
         <div id="slots" class="slot-grid"></div>
       </div>
+
+      <!-- Talking points from the daily recaps. Additive: if the recap API is
+           not configured or is unreachable, this stays hidden and booking is
+           entirely unaffected. -->
+      <div class="card hidden" id="recapCard">
+        <h2>Last 14 days <span id="recapWho" class="help" style="font-weight:400"></span></h2>
+        <div id="recapBody"></div>
+        <button class="btn secondary hidden" id="recapToNotes">Add these to the 1:1 notes</button>
+      </div>
     </section>
 
     <!-- HCA -->
@@ -147,6 +156,15 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
 
 <script>
 const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
+
+/* Daily recap log, for 1:1 talking points. This is a DIFFERENT Apps Script
+   project from the scheduler above — paste the /exec URL of the daily-recap
+   deployment here. Leave it blank and the recap card simply never appears;
+   the scheduler is unaffected either way.
+   RECAP_API_KEY must match the recapApiKey Script Property, if you set one. */
+const RECAP_API_URL = "";
+const RECAP_API_KEY = "";
+const RECAP_DAYS = 14;
 
 /* Must match HCA_1ON1_ADMINS in the Apps Script backend. */
 const ADMINS = [
@@ -195,6 +213,7 @@ function init(){
   qs("signOutBtn").addEventListener("click", signOut);
   qs("actorPin").addEventListener("keydown", e => { if(e.key === "Enter") signIn(); });
   qs("hcaSelect").addEventListener("change", loadForHca);
+  qs("recapToNotes").addEventListener("click", addRecapToNotes);
   qs("bookBtn").addEventListener("click", bookSlot);
   qs("cancelBtn").addEventListener("click", () => cancelBooking(qs("hcaSelect").value, selectedHcaSummary));
   qs("myCancelBtn").addEventListener("click", () => cancelBooking(identity.name, summaryFor(identity.name)));
@@ -350,6 +369,11 @@ async function loadForHca(){
   qs("statusBox").innerHTML = "";
 
   const name = qs("hcaSelect").value;
+
+  /* Deliberately not awaited. Talking points are useful but never worth
+     delaying — or risking — the slot load that is the point of this page. */
+  loadRecapFor(name);
+
   if(!name){ qs("slotMessage").textContent = "Select an HCA to load slots."; return; }
 
   if(currentPayload && !backendKnows(name)){
@@ -485,6 +509,369 @@ async function cancelBooking(hca, item){
 }
 
 /* ---------------- transport ---------------- */
+
+/* ---- 1:1 talking points from the daily recap log -------------------------
+   Entirely self-contained and fail-quiet. Any problem here hides the card and
+   leaves the scheduler exactly as it was. */
+
+let recapSummaryText = "";
+
+function hcaEmailFor(name){
+  const row = HCAS.find(h => h.name === name);
+  return row ? row.email : "";
+}
+
+async function loadRecapFor(name){
+  const card = qs("recapCard");
+  recapSummaryText = "";
+  hide("recapCard"); hide("recapToNotes");
+  if(!RECAP_API_URL || !name) return;
+
+  /* Query by email. The scheduler calls him "Jay Milo" and the recap roster
+     says "Javierre Milo"; the address is the only key both sides share. */
+  const email = hcaEmailFor(name);
+  if(!email) return;
+
+  try{
+    const params = new URLSearchParams({hca:email, days:String(RECAP_DAYS)});
+    if(RECAP_API_KEY) params.set("key", RECAP_API_KEY);
+    const res = await fetch(RECAP_API_URL + "?" + params.toString());
+    const data = await res.json();
+    if(!data || !data.ok) return;
+
+    const h = (data.hcas || [])[0];
+    qs("recapWho").textContent = "· " + name;
+
+    /* A rep with nothing logged is not the same as a rep with nothing to
+       report — if they were scheduled and never answered, that is the
+       conversation. And a rep who filed nothing but closed a job in
+       ServiceTitan is the most important case of all. */
+    if(!h || (!h.appointments && !(h.missedDays || []).length && !(h.soldAlerts || []).length)){
+      qs("recapBody").innerHTML = '<p class="help">No recaps logged in the last ' + RECAP_DAYS + ' days.</p>'
+        + recapLogLink(data);
+      show("recapCard");
+      return;
+    }
+    renderRecap(h, data);
+    show("recapCard"); show("recapToNotes");
+  }catch(e){
+    /* Silent by design: a recap outage must not look like a scheduler fault. */
+  }
+}
+
+function recapLogLink(data){
+  if(!data || !data.logUrl) return "";
+  return '<p class="help" style="margin-top:12px">'
+    + '<a href="' + esc(data.logUrl) + '" target="_blank" rel="noopener">Open the daily recap log</a>'
+    + ' — every response, by day.</p>';
+}
+
+function renderRecap(h, data){
+  const money = n => "$" + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const out = [];
+
+  const bits = [h.appointments + " appointment" + (h.appointments === 1 ? "" : "s")];
+  if(h.sold) bits.push(h.sold + " sold (" + h.closeRate + "%)");
+  if(h.offered && h.offered.oneTime) bits.push(money(h.offered.oneTime) + " offered");
+  if(h.offered && h.offered.monthly) bits.push(money(h.offered.monthly) + "/mo rental offered");
+  if(h.replyRate !== null && h.replyRate !== undefined) bits.push("reported " + h.replyRate + "% of days");
+  out.push('<p><strong>' + esc(bits.join(" · ")) + '</strong></p>');
+
+  /* ---- what ServiceTitan says, where it differs from the recap -------------
+     Deliberately first. Walking into a 1:1 and asking how a deal is going when
+     it sold two days ago is the single worst thing this page can cause. */
+  const dealLine = s => {
+    const parts = [s.customer || "(unnamed)"];
+    if(s.amount) parts.push(money(s.amount));
+    if(s.soldOn) parts.push("sold " + s.soldOn);
+    let line = parts.join(" — ");
+    /* Several estimates on one job could be a system plus an accessory, or the
+       same deal repriced. The alerts do not say which, so the lines are shown
+       and the total is not asserted. */
+    if(s.multiEstimate){
+      line += " · " + s.estimates.length + " estimates ("
+        + s.estimates.map(e => money(e.amount) + (e.soldOn ? " " + e.soldOn : "")).join(", ")
+        + ") — verify the total";
+    }
+    return line;
+  };
+
+  /* A sale that came back off the board. Top of the card because it is the
+     one thing that reads as a win right up until you say it out loud. */
+  const cancelled = (h.soldAlerts || []).filter(s => s.cancelled);
+  if(cancelled.length){
+    out.push('<div class="notice error" style="margin-top:12px"><strong>Cancelled since the sale ('
+      + cancelled.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    cancelled.forEach(s => out.push('<li>' + esc(s.customer)
+      + (s.amount ? " — " + money(s.amount) : "")
+      + ' · ' + esc(String(s.statusLabel || "").replace(/^CANCELLED\s*/, "")) + '</li>'));
+    out.push('</ul></div>');
+  }
+
+  const unreported = h.soldNotReported || [];
+  if(unreported.length){
+    out.push('<div class="notice error" style="margin-top:12px"><strong>Sold in ServiceTitan, never in a recap ('
+      + unreported.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    unreported.forEach(s => out.push('<li>' + esc(dealLine(s)) + '</li>'));
+    out.push('</ul></div>');
+  }
+
+  const drift = h.statusDrift || [];
+  if(drift.length){
+    out.push('<div class="notice" style="margin-top:12px"><strong>Status has moved since the recap ('
+      + drift.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    drift.forEach(s => out.push('<li>' + esc(dealLine(s)) + ' · recap said '
+      + esc(String(s.reportedOutcome || "").toLowerCase()) + '</li>'));
+    out.push('</ul></div>');
+  }
+
+  /* Already in and done — acknowledge it rather than asking about the
+     follow-up. */
+  const installed = h.installed || [];
+  if(installed.length){
+    out.push('<div class="notice success" style="margin-top:12px"><strong>Installed ('
+      + installed.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    installed.forEach(s => out.push('<li>' + esc((s.customer || "(unnamed)")
+      + " — completed " + (s.installCompletedOn || "?")
+      + (s.installDescription ? " · " + s.installDescription : "")) + '</li>'));
+    out.push('</ul></div>');
+  }
+
+  /* Sold, not yet installed. The scheduled date comes from the COMBO LOG —
+     the alerts carry sold and completed and nothing between. A job sitting on
+     a TBD sheet says so rather than looking like an oversight. */
+  /* Cancelled jobs are not waiting on an install. Listing one here would put
+     it on the card twice and read as pipeline. */
+  const awaiting = (h.soldAlerts || []).filter(s => !s.installCompletedOn && !s.cancelled);
+  if(awaiting.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Sold, not yet installed ('
+      + awaiting.length + ')</strong></p><ul style="margin:4px 0 0 18px">');
+    awaiting.slice(0, 8).forEach(s => {
+      let when;
+      if(s.installScheduledOn) when = "install " + esc(s.installScheduledOn);
+      else if(s.installTbd) when = "install TBD on the COMBO LOG";
+      else when = "no COMBO LOG row found";
+      let line = esc(dealLine(s)) + " · " + when;
+      if(s.comboNotes) line += " · " + esc(s.comboNotes);
+      out.push('<li>' + line + '</li>');
+    });
+    if(awaiting.length > 8) out.push('<li class="help">+' + (awaiting.length - 8) + ' more</li>');
+    out.push('</ul>');
+  }
+
+  /* The COMBO LOG names a sales rep. Where it disagrees with who reported the
+     job, one of the two records is wrong and someone's number is off. */
+  const repDiff = (h.soldAlerts || []).filter(s => s.comboRepDiffers);
+  if(repDiff.length){
+    out.push('<div class="notice" style="margin-top:12px"><strong>COMBO LOG credits a different rep ('
+      + repDiff.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    repDiff.forEach(s => out.push('<li>' + esc(s.customer) + ' — ServiceTitan says '
+      + esc(h.name) + ', COMBO LOG says ' + esc(s.comboRepDiffers) + '</li>'));
+    out.push('</ul></div>');
+  }
+
+  /* Booked but never reported. Only a Sales Quote booking counts, and only
+     once the day has passed — this is "did anyone run it?", not a to-do list.
+     Company-wide, because the booking alert names no advisor; the dispatcher
+     note is the only clue and it is shown as one. */
+  const unclaimed = (data && data.reconciliation && data.reconciliation.unclaimedAppointments) || [];
+  const mine = unclaimed.filter(u => !u.assignedHint ||
+    (h.name || "").toLowerCase().indexOf(String(u.assignedHint).toLowerCase()) !== -1);
+  if(mine.length){
+    out.push('<div class="notice" style="margin-top:12px"><strong>Booked, no recap for it ('
+      + mine.length + ')</strong><ul style="margin:6px 0 0 18px">');
+    mine.slice(0, 10).forEach(u => {
+      const bits = [esc(u.customer || "(unnamed)")];
+      if(u.appointmentAt) bits.push(esc(u.appointmentAt));
+      if(u.jobType) bits.push(esc(u.jobType));
+      if(u.assignedHint) bits.push("dispatch note: keep with " + esc(u.assignedHint));
+      else if(u.techLead) bits.push("tech lead " + esc(u.techLead));
+      out.push('<li>' + bits.join(" — ") + '</li>');
+    });
+    if(mine.length > 10) out.push('<li class="help">+' + (mine.length - 10) + ' more</li>');
+    out.push('</ul></div>');
+  }
+
+  /* Ran it, no Sales Quote booking behind it. Not a fault — a revisit or a
+     self-generated lead looks exactly like this — so it sits in plain text. */
+  const noBooking = h.reportedNotBooked || [];
+  if(noBooking.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Reported with no booked job ('
+      + noBooking.length + ')</strong> — revisits and self-generated leads look like this.</p>'
+      + '<ul style="margin:4px 0 0 18px">');
+    noBooking.slice(0, 8).forEach(n => out.push('<li>' + esc(n.customer)
+      + (n.source ? " — " + esc(n.source) : "") + '</li>'));
+    if(noBooking.length > 8) out.push('<li class="help">+' + (noBooking.length - 8) + ' more</li>');
+    out.push('</ul>');
+  }
+
+  /* The booking's own word on lead source against the rep's. */
+  const srcDiff = (h.rows || []).filter(r => r.sourceHintDiffers);
+  if(srcDiff.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Lead source worth a word ('
+      + srcDiff.length + ')</strong></p><ul style="margin:4px 0 0 18px">');
+    srcDiff.slice(0, 6).forEach(r => out.push('<li>' + esc(r.customer) + ' — reported '
+      + esc(r.source || "nothing") + ', booking looks like ' + esc(r.sourceHintDiffers) + '</li>'));
+    out.push('</ul>');
+  }
+
+  if(data && data.reconciliation && data.reconciliation.bookedOk === false){
+    out.push('<p class="help" style="margin-top:10px">Booked Job Alerts could not be read, '
+      + 'so unreported appointments are not shown.</p>');
+  }
+
+  if(data && data.reconciliation && data.reconciliation.ok === false){
+    out.push('<p class="help" style="margin-top:10px">ServiceTitan alerts could not be read, '
+      + 'so sold and install status below may be out of date.</p>');
+  }
+
+  /* Objections carry their customer, because "price" starts no conversation
+     and "Bob Roe, price" does. */
+  if((h.objections || []).length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Objections</strong></p><ul style="margin:4px 0 0 18px">');
+    h.objections.slice(0, 8).forEach(o => {
+      out.push('<li>' + esc(o.customer || "(unnamed)") + " — " + esc(o.objection) + '</li>');
+    });
+    if(h.objections.length > 8) out.push('<li class="help">+' + (h.objections.length - 8) + ' more</li>');
+    out.push('</ul>');
+  }
+
+  /* The ones that quietly die between 1:1s. */
+  if((h.undated || []).length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Open, no next step</strong></p><ul style="margin:4px 0 0 18px">');
+    h.undated.slice(0, 8).forEach(u => out.push('<li>' + esc(u.customer) + '</li>'));
+    out.push('</ul>');
+  }
+
+  if((h.followUps || []).length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Backlog work reported</strong></p><ul style="margin:4px 0 0 18px">');
+    h.followUps.slice(0, 5).forEach(f => out.push('<li>' + esc(f.date) + " — " + esc(f.text) + '</li>'));
+    out.push('</ul>');
+  }
+
+  /* Named days rather than a percentage. This is the part that turns into an
+     actual sentence in the meeting. */
+  const missed = h.missedDays || [];
+  if(missed.length){
+    out.push('<p class="help" style="margin-top:10px"><strong>Missed recaps ('
+      + missed.length + ' of ' + h.daysScheduled + ' scheduled)</strong></p>');
+    out.push('<ul style="margin:4px 0 0 18px">');
+    missed.slice(0, 10).forEach(m => out.push('<li>' + esc(m.weekday || "") + " " + esc(m.date) + '</li>'));
+    if(missed.length > 10) out.push('<li class="help">+' + (missed.length - 10) + ' more</li>');
+    out.push('</ul>');
+  } else if(h.daysScheduled){
+    out.push('<p class="help" style="margin-top:10px">Reported on all ' + h.daysScheduled + ' scheduled days.</p>');
+  }
+
+  /* What people actually said about these homeowners by email. Often the most
+     useful thing about a deal is nowhere in ServiceTitan — it is Amy asking
+     for an install date and the rep answering. */
+  const withMail = [];
+  (h.rows || []).forEach(r => { if((r.emailNotes || []).length) withMail.push(r); });
+  (h.soldAlerts || []).forEach(s => {
+    if((s.emailNotes || []).length && !withMail.some(x => x.customer === s.customer)){
+      withMail.push(s);
+    }
+  });
+  if(withMail.length){
+    out.push('<p class="help" style="margin-top:14px"><strong>What has been said about these customers</strong></p>');
+    withMail.slice(0, 6).forEach(j => {
+      out.push('<div style="margin:8px 0 0 0;padding:10px 12px;background:rgba(0,0,0,.14);'
+        + 'border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+        + '<strong>' + esc(j.customer) + '</strong>');
+      j.emailNotes.slice(0, 3).forEach(n => {
+        out.push('<div class="help" style="margin-top:6px">'
+          + esc(n.date) + ' · ' + esc(n.from)
+          + (n.link ? ' · <a href="' + esc(n.link) + '" target="_blank" rel="noopener">open</a>' : '')
+          + '<br>' + esc(n.summary) + '</div>');
+      });
+      out.push('</div>');
+    });
+  }
+
+  out.push(recapLogLink(data));
+  qs("recapBody").innerHTML = out.join("");
+
+  const lines = ["Last " + RECAP_DAYS + " days: " + bits.join(" · ")];
+  if(cancelled.length){
+    lines.push("", "CANCELLED SINCE THE SALE:");
+    cancelled.forEach(s => lines.push("  - " + s.customer
+      + (s.amount ? " — " + money(s.amount) : "") + " · "
+      + String(s.statusLabel || "").replace(/^CANCELLED\s*/, "")));
+  }
+  if(withMail.length){
+    lines.push("", "What has been said by email:");
+    withMail.slice(0, 6).forEach(j => {
+      lines.push("  " + j.customer + ":");
+      j.emailNotes.slice(0, 2).forEach(n =>
+        lines.push("    - " + n.date + " " + n.from + " — " + n.summary));
+    });
+  }
+  if(unreported.length){
+    lines.push("", "SOLD IN SERVICETITAN, NOT IN A RECAP:");
+    unreported.forEach(s => lines.push("  - " + dealLine(s)));
+  }
+  if(drift.length){
+    lines.push("", "Status moved since the recap:");
+    drift.forEach(s => lines.push("  - " + dealLine(s) + " (recap said "
+      + String(s.reportedOutcome || "").toLowerCase() + ")"));
+  }
+  if(installed.length){
+    lines.push("", "Installed:");
+    installed.forEach(s => lines.push("  - " + (s.customer || "(unnamed)")
+      + " — completed " + (s.installCompletedOn || "?")));
+  }
+  if(awaiting.length){
+    lines.push("", "Sold, not yet installed:");
+    awaiting.slice(0, 8).forEach(s => lines.push("  - " + dealLine(s) + " · "
+      + (s.installScheduledOn ? "install " + s.installScheduledOn
+        : s.installTbd ? "install TBD on the COMBO LOG" : "no COMBO LOG row found")));
+  }
+  if(repDiff.length){
+    lines.push("", "COMBO LOG credits a different rep:");
+    repDiff.forEach(s => lines.push("  - " + s.customer + " — ServiceTitan says "
+      + h.name + ", COMBO LOG says " + s.comboRepDiffers));
+  }
+  if(mine.length){
+    lines.push("", "Booked with no recap for it:");
+    mine.slice(0, 10).forEach(u => lines.push("  - " + (u.customer || "(unnamed)")
+      + (u.appointmentAt ? " — " + u.appointmentAt : "")
+      + (u.assignedHint ? " (dispatch: keep with " + u.assignedHint + ")" : "")));
+  }
+  if(noBooking.length){
+    lines.push("", "Reported with no booked job (revisit / self-generated?):");
+    noBooking.slice(0, 8).forEach(n => lines.push("  - " + n.customer
+      + (n.source ? " — " + n.source : "")));
+  }
+  if(srcDiff.length){
+    lines.push("", "Lead source worth a word:");
+    srcDiff.slice(0, 6).forEach(r => lines.push("  - " + r.customer + " — reported "
+      + (r.source || "nothing") + ", booking looks like " + r.sourceHintDiffers));
+  }
+  if((h.objections || []).length){
+    lines.push("", "Objections:");
+    h.objections.slice(0, 8).forEach(o => lines.push("  - " + (o.customer || "(unnamed)") + " — " + o.objection));
+  }
+  if((h.undated || []).length){
+    lines.push("", "Open with no next step:");
+    h.undated.slice(0, 8).forEach(u => lines.push("  - " + u.customer));
+  }
+  if(missed.length){
+    lines.push("", "Missed recaps (" + missed.length + " of " + h.daysScheduled + "):");
+    missed.slice(0, 10).forEach(m => lines.push("  - " + (m.weekday ? m.weekday + " " : "") + m.date));
+  }
+  /* The link rides along into the calendar invite, so the full record is one
+     tap away during the meeting. */
+  if(data && data.logUrl) lines.push("", "Full recap log: " + data.logUrl);
+  recapSummaryText = lines.join("\n");
+}
+
+function addRecapToNotes(){
+  if(!recapSummaryText) return;
+  const box = qs("notesInput");
+  box.value = box.value.trim() ? box.value.trim() + "\n\n" + recapSummaryText : recapSummaryText;
+  box.focus();
+}
 
 async function api(params){
   const url = APP_SCRIPT_URL + "?" + new URLSearchParams(params).toString();

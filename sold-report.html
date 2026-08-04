@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM Heating — Sold Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f1f5f9;
+  --white: #ffffff;
+  --dark: #0f172a;
+  --surface: #1e293b;
+  --orange: #f97316;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --green: #16a34a;
+  --yellow: #d97706;
+  --red: #dc2626;
+  --blue: #0891b2;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Barlow', sans-serif;
+  background: var(--bg);
+  color: var(--dark);
+  padding: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.page-header {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 28px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.page-header img { height: 52px; }
+.header-center { text-align: center; }
+.header-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+.header-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+.print-btn {
+  padding: 10px 20px;
+  background: var(--orange);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: .5px;
+}
+.print-btn:hover { background: #ea580c; }
+
+/* ---- controls ---- */
+.controls {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+.ctl { display: flex; flex-direction: column; gap: 5px; }
+.ctl label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.ctl input, .ctl select {
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--dark);
+  background: var(--white);
+}
+.preset-row { display: flex; gap: 6px; }
+.preset {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  border-radius: 6px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.preset:hover { border-color: var(--orange); color: var(--orange); }
+.preset.on { background: var(--orange); border-color: var(--orange); color: white; }
+
+/* ---- headline ---- */
+.headline {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 26px 30px;
+  margin-bottom: 20px;
+}
+.headline .total-n {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1;
+}
+.headline .total-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 2px;
+}
+.headline .total-money {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 8px;
+}
+/* The alert amounts are pre-tax and the growth sheet's budget is not, so the
+   figure is labelled rather than silently compared. */
+.tax-note {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-left: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+.split-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+}
+.split {
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.split.same { border-left-color: var(--green); }
+.split.prior { border-left-color: var(--blue); }
+.split.unknown { border-left-color: var(--yellow); }
+.split .n {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+}
+.split .pct { font-size: 15px; font-weight: 700; color: var(--muted); margin-left: 6px; }
+.split .lbl {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+.split.same .lbl { color: var(--green); }
+.split.prior .lbl { color: var(--blue); }
+.split.unknown .lbl { color: var(--yellow); }
+.split .note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+
+/* ---- bar ---- */
+.bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 20px; background: var(--border); }
+.bar span { display: block; height: 100%; }
+.bar .same { background: var(--green); }
+.bar .prior { background: var(--blue); }
+.bar .unknown { background: var(--yellow); }
+
+/* ---- sections ---- */
+.section { margin-bottom: 22px; }
+.section-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  color: var(--dark);
+}
+/* Tables scroll inside their own box rather than pushing the page sideways —
+   on a phone the six-column rollups are wider than the screen. */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+}
+table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  background: var(--white);
+  font-size: 14px;
+}
+th {
+  background: #f8fafc;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border);
+}
+th.num, td.num { text-align: right; }
+td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #f8fafc; }
+td.name { font-weight: 600; }
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.pill.same { background: #dcfce7; color: #15803d; }
+.pill.prior { background: #cffafe; color: #0e7490; }
+.pill.unknown { background: #fef3c7; color: #b45309; }
+.pill.resold { background: #f1f5f9; color: var(--muted); margin-left: 6px; }
+.zero { color: #cbd5e1; }
+
+.callout {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.callout strong { color: #b45309; }
+.callout.err { border-color: #fecaca; background: #fef2f2; }
+.callout.err strong { color: var(--red); }
+
+.state {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.state code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.footer {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  body { padding: 16px; }
+  .page-header { flex-direction: column; gap: 14px; text-align: center; }
+  .split-grid { grid-template-columns: 1fr; }
+  .controls { flex-direction: column; align-items: stretch; }
+  table { font-size: 13px; }
+  th, td { padding: 8px 10px; }
+}
+@media print {
+  body { padding: 0; background: white; }
+  .print-btn, .controls { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
+  <div class="header-center">
+    <div class="header-title">Sold Report</div>
+    <div class="header-sub" id="rangeLabel">—</div>
+  </div>
+  <button class="print-btn" onclick="window.print()">Print</button>
+</div>
+
+<div class="controls">
+  <div class="ctl">
+    <label for="fromInput">From</label>
+    <input type="date" id="fromInput">
+  </div>
+  <div class="ctl">
+    <label for="toInput">To</label>
+    <input type="date" id="toInput">
+  </div>
+  <div class="ctl">
+    <label>Quick range</label>
+    <div class="preset-row">
+      <button class="preset on" data-preset="mtd">Month to date</button>
+      <button class="preset" data-preset="7">Last 7 days</button>
+      <button class="preset" data-preset="30">Last 30 days</button>
+    </div>
+  </div>
+  <button class="print-btn" id="loadBtn">Load</button>
+</div>
+
+<div id="content">
+  <div class="state">Loading…</div>
+</div>
+
+<div class="footer">
+  <strong>Same day</strong> means that rep's recap for that date names the customer — the consult
+  and the close happened on the same day. <strong>From an earlier lead</strong> means they filed a
+  recap for that date and it does not name the customer, so the sale came off a lead worked
+  earlier. <strong>Unknown</strong> means they filed no recap for that date, so nobody can say
+  which it was. Unknown is never counted as either of the other two.
+  <br><br>
+  Sales come from ServiceTitan Sold Estimate Alerts, which quote <strong>pre-tax</strong> — the growth sheet's FM budget includes tax, so the two are not directly comparable. The split comes from the daily recap log.
+  A rep who does not report makes their own sales unknown, not absent — the totals are still right.
+</div>
+
+<script>
+/* The /exec URL of the HCA Daily Recap Apps Script deployment. Same project as
+   the recap card on the 1:1 page, so if that one is filled in, paste the same
+   URL here. Leave blank and the page explains what to do rather than failing.
+
+   This must be a plain fetch, not { mode: 'no-cors' } — the repo's usual rule
+   covers fire-and-forget calls where the response is never read. This one reads
+   JSON back, and no-cors would make the body unreadable. That is also why the
+   deployment must be "Who has access: Anyone".
+
+   RECAP_API_KEY must match the recapApiKey Script Property, if one is set. */
+const RECAP_API_URL = "";
+const RECAP_API_KEY = "";
+
+const $ = id => document.getElementById(id);
+const content = $('content');
+
+const money = n => !n ? '$0' : '$' + Math.round(n).toLocaleString('en-US');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function isoToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+function isoDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+function prettyDate(iso) {
+  if (!iso) return '';
+  const p = iso.split('-');
+  const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function applyPreset(which) {
+  document.querySelectorAll('.preset').forEach(b =>
+    b.classList.toggle('on', b.dataset.preset === which));
+  if (which === 'mtd') {
+    $('fromInput').value = isoToday().slice(0, 8) + '01';
+  } else {
+    $('fromInput').value = isoDaysAgo(Number(which) - 1);
+  }
+  $('toInput').value = isoToday();
+}
+
+document.querySelectorAll('.preset').forEach(b => {
+  b.addEventListener('click', () => { applyPreset(b.dataset.preset); load(); });
+});
+$('loadBtn').addEventListener('click', () => {
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+  load();
+});
+
+function notConfigured() {
+  content.innerHTML =
+    '<div class="state">This report reads the daily recap log through the Apps Script web app, ' +
+    'and no URL has been set yet.<br><br>' +
+    'In the <strong>HCA Daily Recap</strong> project: Deploy &rarr; New deployment &rarr; Web app, ' +
+    'Execute as <strong>Me</strong>, Who has access <strong>Anyone</strong>. Copy the ' +
+    '<code>/exec</code> URL into <code>RECAP_API_URL</code> near the top of this file.<br><br>' +
+    'Until then, <code>Run &rarr; previewSoldReport</code> in the Apps Script editor prints the ' +
+    'same numbers to the log.</div>';
+}
+
+async function load() {
+  if (!RECAP_API_URL) { notConfigured(); return; }
+  content.innerHTML = '<div class="state">Loading…</div>';
+
+  const url = RECAP_API_URL + (RECAP_API_URL.indexOf('?') === -1 ? '?' : '&') +
+    'report=sold&from=' + encodeURIComponent($('fromInput').value) +
+    '&to=' + encodeURIComponent($('toInput').value) +
+    (RECAP_API_KEY ? '&key=' + encodeURIComponent(RECAP_API_KEY) : '');
+
+  let data;
+  try {
+    const res = await fetch(url);
+    data = await res.json();
+  } catch (err) {
+    content.innerHTML = '<div class="callout err"><strong>Could not reach the recap web app.</strong> ' +
+      esc(err.message || err) + '<br>Check that the deployment exists and is set to ' +
+      '“Who has access: Anyone”.</div>';
+    return;
+  }
+
+  if (!data || !data.ok) {
+    content.innerHTML = '<div class="callout err"><strong>The web app returned an error.</strong> ' +
+      esc((data && data.error) || 'No data.') + '</div>';
+    return;
+  }
+  render(data);
+}
+
+function render(d) {
+  const t = d.totals;
+  const pct = n => t.total ? Math.round(n * 100 / t.total) + '%' : '0%';
+  const w = n => t.total ? (n * 100 / t.total) : 0;
+  const out = [];
+
+  $('rangeLabel').textContent = prettyDate(d.fromIso) + ' — ' + prettyDate(d.toIso);
+
+  if (d.unsecured) {
+    out.push('<div class="callout"><strong>This link is unsecured.</strong> No ' +
+      '<code>recapApiKey</code> Script Property is set, so anyone with the URL can read customer ' +
+      'names and prices.</div>');
+  }
+  (d.warnings || []).forEach(warn => {
+    out.push('<div class="callout err"><strong>Incomplete.</strong> ' + esc(warn) + '</div>');
+  });
+
+  /* Headline */
+  out.push('<div class="headline">');
+  out.push('<div class="total-n">' + t.total + '</div>');
+  out.push('<div class="total-label">sold in this range</div>');
+  out.push('<div class="total-money">' + money(t.amount) +
+    '<span class="tax-note">pre-tax</span></div>');
+  out.push('<div class="bar">' +
+    '<span class="same" style="width:' + w(t.sameDay) + '%"></span>' +
+    '<span class="prior" style="width:' + w(t.prior) + '%"></span>' +
+    '<span class="unknown" style="width:' + w(t.unknown) + '%"></span></div>');
+  out.push('<div class="split-grid">');
+  out.push('<div class="split same"><div><span class="n">' + t.sameDay + '</span>' +
+    '<span class="pct">' + pct(t.sameDay) + '</span></div>' +
+    '<div class="lbl">Closed same day</div>' +
+    '<div class="note">The rep\'s recap for that day names the customer.</div></div>');
+  out.push('<div class="split prior"><div><span class="n">' + t.prior + '</span>' +
+    '<span class="pct">' + pct(t.prior) + '</span></div>' +
+    '<div class="lbl">From an earlier lead</div>' +
+    '<div class="note">They reported that day, and this was not one of the consults.</div></div>');
+  out.push('<div class="split unknown"><div><span class="n">' + t.unknown + '</span>' +
+    '<span class="pct">' + pct(t.unknown) + '</span></div>' +
+    '<div class="lbl">Unknown</div>' +
+    '<div class="note">No recap filed that day, so there is no way to tell.</div></div>');
+  out.push('</div></div>');
+
+  if (d.notReported && d.notReported.length) {
+    out.push('<div class="callout"><strong>' + d.notReported.length +
+      ' rep' + (d.notReported.length === 1 ? '' : 's') + ' missed at least one recap in this range:</strong> ' +
+      d.notReported.map(x => esc(x.hca) + ' (' + x.days + ' day' + (x.days === 1 ? '' : 's') + ')').join(', ') +
+      '.<br>Anything they sold on those days sits in Unknown. The ServiceTitan dispatch board is the ' +
+      'only place that shows what they actually ran.</div>');
+  }
+
+  if (!t.total) {
+    out.push('<div class="state">No HCA sales recorded in this range.</div>');
+    content.innerHTML = out.join('');
+    return;
+  }
+
+  /* By HCA */
+  out.push('<div class="section"><div class="section-title">By HCA</div>');
+  out.push('<div class="table-wrap"><table><thead><tr><th>HCA</th><th class="num">Same day</th>' +
+    '<th class="num">Earlier lead</th><th class="num">Unknown</th>' +
+    '<th class="num">Total</th><th class="num">Value</th></tr></thead><tbody>');
+  const cell = n => n ? n : '<span class="zero">0</span>';
+  d.byHca.forEach(h => {
+    out.push('<tr><td class="name">' + esc(h.hca) + '</td>' +
+      '<td class="num">' + cell(h.sameDay) + '</td>' +
+      '<td class="num">' + cell(h.prior) + '</td>' +
+      '<td class="num">' + cell(h.unknown) + '</td>' +
+      '<td class="num"><strong>' + h.total + '</strong></td>' +
+      '<td class="num">' + money(h.amount) + '</td></tr>');
+  });
+  out.push('<tr><td class="name">All</td>' +
+    '<td class="num"><strong>' + t.sameDay + '</strong></td>' +
+    '<td class="num"><strong>' + t.prior + '</strong></td>' +
+    '<td class="num"><strong>' + t.unknown + '</strong></td>' +
+    '<td class="num"><strong>' + t.total + '</strong></td>' +
+    '<td class="num"><strong>' + money(t.amount) + '</strong></td></tr>');
+  out.push('</tbody></table></div></div>');
+
+  /* By day */
+  out.push('<div class="section"><div class="section-title">By day</div>');
+  out.push('<div class="table-wrap"><table><thead><tr><th>Day</th><th class="num">Same day</th>' +
+    '<th class="num">Earlier lead</th><th class="num">Unknown</th>' +
+    '<th class="num">Total</th><th class="num">Value</th></tr></thead><tbody>');
+  d.byDay.forEach(x => {
+    out.push('<tr><td class="name">' + esc(prettyDate(x.iso)) + '</td>' +
+      '<td class="num">' + cell(x.sameDay) + '</td>' +
+      '<td class="num">' + cell(x.prior) + '</td>' +
+      '<td class="num">' + cell(x.unknown) + '</td>' +
+      '<td class="num"><strong>' + x.total + '</strong></td>' +
+      '<td class="num">' + money(x.amount) + '</td></tr>');
+  });
+  out.push('</tbody></table></div></div>');
+
+  /* Every sale */
+  const label = { sameDay: 'Same day', prior: 'Earlier lead', unknown: 'Unknown' };
+  out.push('<div class="section"><div class="section-title">Every sale</div>');
+  out.push('<div class="table-wrap"><table><thead><tr><th>Day</th><th>HCA</th><th>Customer</th>' +
+    '<th>Split</th><th class="num">Amount</th></tr></thead><tbody>');
+  d.sales.forEach(s => {
+    out.push('<tr><td>' + esc(prettyDate(s.soldOnIso)) + '</td>' +
+      '<td class="name">' + esc(s.hca) + '</td>' +
+      '<td>' + esc(s.customer || '(no customer named)') +
+      (s.resold ? '<span class="pill resold">re-issued</span>' : '') + '</td>' +
+      '<td><span class="pill ' + (s.split === 'sameDay' ? 'same' : s.split) + '">' +
+      label[s.split] + '</span></td>' +
+      '<td class="num">' + (s.amount ? money(s.amount) : '—') + '</td></tr>');
+  });
+  out.push('</tbody></table></div></div>');
+
+  content.innerHTML = out.join('');
+}
+
+applyPreset('mtd');
+load();
+</script>
+</body>
+</html>
