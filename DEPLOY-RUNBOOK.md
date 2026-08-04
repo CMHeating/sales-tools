@@ -93,7 +93,19 @@ The log **must** contain `reply sweep hourly`. If it says only
 `job status 9:00 and 22:00`, the paste did not take — go back to A1.
 
 Installs: **send 06:00**, collect 20:15, **reply sweep hourly**,
-**sales brief 06:00**, job status 09:00 and 22:00.
+**sales brief 06:00**, **growth sheet 07:00**, job status 09:00 and 22:00.
+
+The **growth sheet 07:00** trigger is `writeGrowthSheetForYesterday` — it fills
+yesterday's day column and MTD on the CM Growth Daily Sales workbook, an hour
+after the morning rush. It always writes *yesterday*, ignoring
+`GROWTH_SHEET_DATE` — so a date you left pinned from a manual backfill (A6c)
+cannot derail it. It stays **silent on a clean write**, because the sheet is the
+record; it emails you only when a human is needed: the write refused (a missing
+tab, or a partial sold-alert read), or a day cell was left alone because it
+already held something — which on a nightly cadence usually means the tab is
+still last week's and needs clearing. So the one manual habit this trigger
+depends on is **clearing the six tabs when the week rolls over**; if you forget,
+you get an email rather than a silently stale column.
 
 The recap goes out at 6am, before the first appointment, and asks for one block
 per appointment *as they finish it* rather than a reconstruction of the whole
@@ -190,6 +202,10 @@ positions moves.
 
 ### A6c. Fill the CM Growth Daily Sales sheet
 
+Once the A5 triggers are in, this happens **on its own at 07:00 each morning**
+(`writeGrowthSheetForYesterday`). You only run it by hand to backfill a specific
+day, or to check the numbers before they land:
+
 ```
 Run → previewGrowthSheetWrite     ← shows what it would do, writes nothing
 Run → writeGrowthSheetDay         ← commits
@@ -197,6 +213,11 @@ Run → writeGrowthSheetDay         ← commits
 
 One run fills two columns on one tab: **yesterday's day column** and the **MTD
 column** beside it.
+
+To backfill a *specific* day by hand, set `GROWTH_SHEET_DATE` to that date,
+save, run, then **set it back to `""` and save**. Leaving it pinned only affects
+these manual runs — the 07:00 trigger ignores it and always does yesterday — but
+a blank value is what you want for the manual commands too.
 
 Which tab is worked out from the date, and a tab is named for the day it
 **covers**, not the morning you open it. So Monday morning it writes Weekend;

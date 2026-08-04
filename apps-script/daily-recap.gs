@@ -175,7 +175,13 @@ const DAILY_RECAP_CONFIG = {
      06:00 brief can miss is someone filing overnight — and every function
      that reads sold alerts reads Gmail live, so re-running after the meeting
      picks up anything that landed since. */
-  morningBriefHour: 6
+  morningBriefHour: 6,
+
+  /* When the growth sheet fills itself. 7am, an hour after the send/brief, so
+     it runs alone and yesterday's overnight reply sweep has fully settled.
+     It writes yesterday's day column and refreshes MTD, then stays silent
+     unless something needs a human — see writeGrowthSheetForYesterday. */
+  growthWriteHour: 7
 };
 
 /*
@@ -3751,8 +3757,95 @@ function writeGrowthSheetDay() { return growthSheetWrite_(true); }
 function previewGrowthSheetMtd() { return growthMtdWrite_(false); }
 function writeGrowthSheetMtd() { return growthMtdWrite_(true); }
 
-function growthSheetWrite_(commit) {
-  const iso = growthTargetIso_();
+/*
+ * The nightly trigger target: fill yesterday's growth column and MTD.
+ *
+ * Always yesterday, computed here — never GROWTH_SHEET_DATE. That constant is
+ * for a person doing a one-off backfill from the editor; if it were left
+ * pinned to some past date, an automated run that honoured it would rewrite
+ * the same day every morning and never advance. So the schedule ignores it.
+ *
+ * Silent on a clean write, because the sheet itself is the record — unlike an
+ * email send, you can see whether it worked by opening the tab. It speaks up
+ * only when a human is actually needed: the write refused (a missing tab, or a
+ * sold-alert read that came back partial), the month total refused, or a day
+ * cell was left alone because it already held something. That last one is the
+ * one worth catching — on a nightly cadence each morning writes a fresh tab,
+ * so a blocked day cell usually means the tab is still last week's and was
+ * never cleared, which would otherwise sit there stale behind a correct-
+ * looking MTD.
+ */
+function writeGrowthSheetForYesterday() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const iso = Utilities.formatDate(
+    new Date(Date.now() - 86400000), cfg.timeZone, "yyyy-MM-dd");
+  const res = growthSheetWrite_(true, iso);
+
+  const mtdRefused = res.mtd && res.mtd.ok === false;
+  const dayBlocked = res.ok && (res.blocked || 0) > 0;
+  const needsEye = !res.ok || mtdRefused || dayBlocked;
+  if (needsEye) emailGrowthWriteReceipt_(iso, res);
+  return res;
+}
+
+/*
+ * Told only when something is off, so the mail means "look", not "for your
+ * records". Keeps the growth automation observable without a daily receipt
+ * for the boring case.
+ */
+function emailGrowthWriteReceipt_(iso, res) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const label = Utilities.formatDate(
+    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE, MMMM d");
+  const lines = [];
+  let subject;
+
+  if (!res.ok) {
+    subject = "Growth sheet NOT written — " + label;
+    lines.push("Yesterday's growth column was not written.");
+    lines.push("");
+    (res.problems || ["unknown reason"]).forEach(p => lines.push("  ! " + p));
+    lines.push("");
+    lines.push("Nothing was changed. Fix the cause and run writeGrowthSheetDay");
+    lines.push("by hand, or wait for tomorrow's run.");
+  } else {
+    subject = "Growth sheet — " + label + " needs a look";
+    const dayN = res.written || 0;
+    const mtd = res.mtd || {};
+    lines.push("Yesterday's column was written, but something wants a glance.");
+    lines.push("");
+    lines.push("  day column: " + dayN + " cell(s) written, " +
+      (res.blocked || 0) + " left alone");
+    if (mtd.ok) {
+      lines.push("  MTD:        " + (mtd.written || 0) + " cell(s), revenue $" +
+        formatMoney_((mtd.metrics && mtd.metrics.revenue) || 0));
+    } else {
+      lines.push("  MTD:        REFUSED — " + ((mtd.problems || [])[0] || "see the log"));
+    }
+    if ((res.blocked || 0) > 0) {
+      lines.push("");
+      lines.push("Some day cells were left alone because they already held a");
+      lines.push("value or a formula. On the nightly run each morning fills a");
+      lines.push("fresh tab, so if this is unexpected the tab is probably still");
+      lines.push("last week's and needs clearing — otherwise a stale day sits");
+      lines.push("behind a correct MTD. Open the " + label.split(",")[0] + " tab and check.");
+    }
+  }
+  lines.push("");
+  lines.push("The full run is in the Apps Script execution log.");
+
+  sendEmailSafe_({
+    to: [cfg.managerEmail],
+    subject: subject,
+    body: lines.join("\n")
+  });
+}
+
+function growthSheetWrite_(commit, isoOverride) {
+  /* isoOverride is how the nightly trigger forces yesterday. A date left
+     pinned in GROWTH_SHEET_DATE after a manual backfill must not derail the
+     automated run — see writeGrowthSheetForYesterday, which always passes one. */
+  const iso = isoOverride ? isoOverride : growthTargetIso_();
   const day = growthReport_(iso, null);        // also prints the numbers
   const out = [];
   out.push("");
@@ -6418,11 +6511,18 @@ function installDailyRecapTriggers() {
   ScriptApp.newTrigger("refreshJobStatus")
     .timeBased().everyDays(1).atHour(9).inTimezone(cfg.timeZone).create();
 
+  /* Fills yesterday's growth column and MTD, an hour after the morning rush.
+     Silent unless a human is needed — see writeGrowthSheetForYesterday. */
+  ScriptApp.newTrigger("writeGrowthSheetForYesterday")
+    .timeBased().everyDays(1).atHour(cfg.growthWriteHour)
+    .inTimezone(cfg.timeZone).create();
+
   Logger.log("Installed daily recap triggers (send " + cfg.sendHour + ":00, collect " +
     cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
     (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
       cfg.nudgeHourOff + ":00 off" : ", chase folded into the " + cfg.sendHour + ":00 send") +
     ", reply sweep hourly, sales brief " + cfg.morningBriefHour + ":00" +
+    ", growth sheet " + cfg.growthWriteHour + ":00" +
     ", job status 9:00 and 22:00 " + cfg.timeZone + ").");
 }
 
@@ -6432,7 +6532,7 @@ function deleteDailyRecapTriggers_() {
     if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
         fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday" ||
         fn === "sweepRecapReplies" || fn === "sendMorningSalesBrief" ||
-        fn === "refreshJobStatus") {
+        fn === "refreshJobStatus" || fn === "writeGrowthSheetForYesterday") {
       ScriptApp.deleteTrigger(trigger);
     }
   });
