@@ -2666,6 +2666,13 @@ function sendEmailSafe_(message) {
  */
 function doGet(e) {
   const p = (e && e.parameter) ? e.parameter : {};
+
+  /* Serving the 1:1 page from here, rather than from GitHub Pages, is what
+     puts Google's sign-in in front of it. See serveOneOnOnePage_. Checked
+     before the API key, because this route has no key to check — the reader
+     proves who they are to Google instead. */
+  if (String(p.page || "") === "1on1") return serveOneOnOnePage_();
+
   const configuredKey = readScriptProperty_("recapApiKey");
 
   if (configuredKey && String(p.key || "") !== configuredKey) {
@@ -2676,10 +2683,11 @@ function doGet(e) {
     /* The sold report is a different question off the same log, so it gets its
        own route rather than bloating the 1:1 payload every page load. */
     if (String(p.report || "") === "sold") {
-      const rep = buildSoldReportPayload_(p.from || "", p.to || "");
+      const rep = stripSoldIdentity_(buildSoldReportPayload_(p.from || "", p.to || ""));
       if (!configuredKey) {
         rep.unsecured = true;
-        rep.warning = "No recapApiKey set — anyone with this URL can read customer names and prices.";
+        rep.warning = "No recapApiKey set — anyone with this URL can read the counts and " +
+          "totals below. Customer names are withheld from this route regardless.";
       }
       return jsonOut_(rep);
     }
@@ -2694,6 +2702,105 @@ function doGet(e) {
   } catch (err) {
     return jsonOut_({ ok: false, error: err && err.message ? err.message : String(err) });
   }
+}
+
+/*
+ * The 1:1 page, served from this project so that Google's sign-in gates it.
+ *
+ * On GitHub Pages the page is a public file and there is nothing to sign in
+ * to: whatever it needs to reach this script is in its source. Served from
+ * here, the deployment's own access setting does the work — set it to
+ * "Anyone within CM Heating" and only staff can open the page at all.
+ *
+ * That alone is not enough, and it is worth being clear why. Moving the HTML
+ * does nothing to the /exec URL, which stays callable by anyone who has it.
+ * The part that matters is that a page served from here can call
+ * recapForOneOnOne through google.script.run — same origin, carrying the
+ * reader's Google session, with no URL and no key anywhere in the source. The
+ * page stops needing a secret rather than getting a better one.
+ *
+ * Requires an HTML file named "hca-1on1" in this Apps Script project, holding
+ * a copy of hca-1on1.html. There is no way to serve a file from the repo; the
+ * runbook covers the paste.
+ */
+function serveOneOnOnePage_() {
+  try {
+    return HtmlService.createHtmlOutputFromFile("hca-1on1")
+      .setTitle("HCA 1:1")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  } catch (err) {
+    /* A missing file here reads as a broken link, so say what is missing
+       rather than letting Apps Script show its own stack trace. */
+    return HtmlService.createHtmlOutput(
+      "<div style=\"font:15px/1.6 system-ui;padding:32px;max-width:640px\">" +
+      "<h2 style=\"margin:0 0 12px\">The 1:1 page is not installed here yet.</h2>" +
+      "<p>This deployment is set up to serve it, but the project has no HTML " +
+      "file named <code>hca-1on1</code>.</p>" +
+      "<p>In the Apps Script editor: <b>+ &rarr; HTML</b>, name it " +
+      "<code>hca-1on1</code>, and paste the contents of <code>hca-1on1.html</code> " +
+      "into it.</p>" +
+      "<p style=\"color:#64748b\">" + esc_(err && err.message ? err.message : String(err)) +
+      "</p></div>");
+  }
+}
+
+/*
+ * The 1:1 page's recap data, for google.script.run.
+ *
+ * Returns a JSON string rather than the object. google.script.run serialises
+ * return values itself and does not handle every shape the way JSON.stringify
+ * does, so handing it a string and parsing on the other side means the page
+ * receives exactly what the /exec route would have given it — one payload
+ * shape, not two that drift.
+ */
+function recapForOneOnOne(email, days) {
+  const n = Math.max(1, Math.min(120, Number(days) || 14));
+  try {
+    return JSON.stringify(buildRecapApiPayload_(n, String(email || "")));
+  } catch (err) {
+    return JSON.stringify({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+}
+
+function esc_(v) {
+  return String(v === null || v === undefined ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/*
+ * Customer identity never leaves by this route.
+ *
+ * sold-report.html is served from GitHub Pages, which is a public web server.
+ * A static page cannot hold a secret and cannot sign anybody in: whatever it
+ * needs to call this endpoint is in its source, readable by anyone who opens
+ * the page. So the URL is effectively the password, and a password that gets
+ * forwarded in an email or pasted into Slack stops being one.
+ *
+ * An API key does not fix that — it would sit in the same public source, next
+ * to the URL. It would silence the page's own warning without changing who can
+ * read the data, which is worse than the warning, because the warning is true.
+ *
+ * What does fix it is having less to leak. Counts, totals and the same-day
+ * split are what this report is actually for; the customer's name is not.
+ * Stripped here rather than in buildSoldReportPayload_ so that
+ * previewSoldReport, run from the editor by somebody already signed in, still
+ * prints everything.
+ *
+ * The 1:1 payload is the other route and keeps its detail — that page belongs
+ * behind Google sign-in, which is a different fix rather than this one.
+ */
+function stripSoldIdentity_(rep) {
+  if (!rep || !rep.sales) return rep;
+  rep.sales = rep.sales.map(s => ({
+    hca: s.hca,
+    amount: s.amount,
+    soldOnIso: s.soldOnIso,
+    resold: !!s.resold,
+    split: s.split
+  }));
+  rep.identityWithheld = true;
+  return rep;
 }
 
 function jsonOut_(obj) {

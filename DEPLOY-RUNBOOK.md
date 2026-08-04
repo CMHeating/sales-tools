@@ -307,6 +307,47 @@ Skipped as `Paused`.
 
 ---
 
+### C0. Who can read what
+
+Two pages, two different answers, because they carry different things.
+
+**`sold-report.html` stays public** and the endpoint withholds customer names.
+A page served from GitHub Pages cannot hold a secret — its URL and any key are
+in the source, readable by anyone who opens it — so an API key would only
+silence the page's own warning without changing who can read the data. Instead
+the `?report=sold` route strips identity: every deal is still listed with its
+rep, day, split and amount, but not who the customer was. A shared link costs
+you numbers rather than your pipeline. `previewSoldReport` in the editor still
+prints the named list.
+
+**`hca-1on1.html` moves behind Google sign-in.** This one names customers,
+quotes objections and holds what a rep said about why a deal stalled, and it is
+only ever used by you and the HCAs — which is exactly the case where serving it
+from Apps Script costs nothing.
+
+```
+Apps Script editor → + → HTML → name it exactly:  hca-1on1
+Paste the contents of hca-1on1.html into it, save.
+Deploy → New deployment → Web app
+  Execute as:      Me
+  Who has access:  Anyone within CM Heating
+```
+
+Then open `<your /exec URL>?page=1on1`.
+
+*Execute as Me* so the script can still read the log sheets; *Anyone within
+CM Heating* so only staff can open it.
+
+The page detects where it is running. Served from Apps Script it fetches the
+recap over `google.script.run` — same origin, carrying the reader's Google
+session, with **no URL and no key anywhere in the file**. Served from Pages it
+uses the old `fetch`. Both work, so nothing breaks while you switch, and the
+Pages copy can be deleted whenever you are ready.
+
+Note what this does and does not do: moving the HTML does not close the `/exec`
+endpoint, which stays callable by anyone holding the URL. What it changes is
+that the page no longer needs a secret at all, rather than getting a better one.
+
 ## Part B — Sold Job Tracker Sync
 
 Different project. Nothing here is urgent.
