@@ -273,6 +273,29 @@ there would read as a real score.
 **HVAC Rev is pre-tax.** The sheet's own FM Budget row includes tax, so the two
 are not comparable until BI supplies a tax-inclusive number.
 
+### A6d. When a run refuses instead of reporting
+
+Three refusals are deliberate. All three replace a number that would have
+looked fine and been wrong.
+
+**"REFUSING — the sold-alert search hit its ceiling."** Every Gmail read pages
+until it runs out or hits a ceiling, and a run that hits the ceiling knows it.
+A partial read produces revenue that is low and entirely normal-looking, so the
+growth writer refuses rather than putting it in the workbook. Raise
+`SOLD_ALERT_CEILING` (near the top of the file) and run it again. The sold
+report shows the same thing as a warning at the top of the page.
+
+**"Recap collection ABORTED — the Gmail search failed."** A failed search is not
+an empty inbox. Nothing is written, no digest goes out, and the last-run marker
+does not move, so the next scheduled run covers the same window and gets it
+right. You also get an email. If it repeats, check the Apps Script quota.
+
+**"N recap(s) failed to send."** The day is deliberately *not* marked as sent,
+so the next run — or `sendDailyRecap` by hand — tries again. Anyone who did get
+theirs may receive a second copy; that is the intended trade, and much cheaper
+than an HCA silently getting no recap while the log claims it went out. Usual
+cause is the daily MailApp quota.
+
 ### A7. Check tomorrow before it happens
 
 ```
