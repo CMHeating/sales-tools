@@ -273,6 +273,29 @@ there would read as a real score.
 **HVAC Rev is pre-tax.** The sheet's own FM Budget row includes tax, so the two
 are not comparable until BI supplies a tax-inclusive number.
 
+### A6d. When a run refuses instead of reporting
+
+Three refusals are deliberate. All three replace a number that would have
+looked fine and been wrong.
+
+**"REFUSING — the sold-alert search hit its ceiling."** Every Gmail read pages
+until it runs out or hits a ceiling, and a run that hits the ceiling knows it.
+A partial read produces revenue that is low and entirely normal-looking, so the
+growth writer refuses rather than putting it in the workbook. Raise
+`SOLD_ALERT_CEILING` (near the top of the file) and run it again. The sold
+report shows the same thing as a warning at the top of the page.
+
+**"Recap collection ABORTED — the Gmail search failed."** A failed search is not
+an empty inbox. Nothing is written, no digest goes out, and the last-run marker
+does not move, so the next scheduled run covers the same window and gets it
+right. You also get an email. If it repeats, check the Apps Script quota.
+
+**"N recap(s) failed to send."** The day is deliberately *not* marked as sent,
+so the next run — or `sendDailyRecap` by hand — tries again. Anyone who did get
+theirs may receive a second copy; that is the intended trade, and much cheaper
+than an HCA silently getting no recap while the log claims it went out. Usual
+cause is the daily MailApp quota.
+
 ### A7. Check tomorrow before it happens
 
 ```
@@ -283,6 +306,64 @@ Sends nothing. Confirm the roster is who you expect and that Trevor shows under
 Skipped as `Paused`.
 
 ---
+
+### C0. Who can read what
+
+Two pages, two different answers, because they carry different things.
+
+**`sold-report.html` stays public** and the endpoint withholds customer names.
+A page served from GitHub Pages cannot hold a secret — its URL and any key are
+in the source, readable by anyone who opens it — so an API key would only
+silence the page's own warning without changing who can read the data. Instead
+the `?report=sold` route strips identity: every deal is still listed with its
+rep, day, split and amount, but not who the customer was. A shared link costs
+you numbers rather than your pipeline. `previewSoldReport` in the editor still
+prints the named list.
+
+**`hca-1on1.html` moves behind Google sign-in.** This one names customers,
+quotes objections and holds what a rep said about why a deal stalled, and it is
+only ever used by you and the HCAs — which is exactly the case where serving it
+from Apps Script costs nothing.
+
+**This needs a SECOND deployment, not a change to the one you have.** One Apps
+Script project can have several deployments, each with its own URL and its own
+access setting. The existing one must stay on "Anyone", because
+`sold-report.html` on GitHub Pages calls it without signing in — switch that one
+to domain-only and the sold report breaks. So leave it alone and add another.
+
+1. Open the **HCA Daily Recap** project (the one whose code says
+   `DAILY_RECAP_CONFIG`).
+2. In the left sidebar, next to **Files**, click **+** → **HTML**.
+3. Name it exactly `hca-1on1`. The editor shows it as `hca-1on1.html`; the
+   name it is addressed by is `hca-1on1`, which is what the code asks for.
+4. It opens pre-filled with a small skeleton. Select all of that and replace it
+   with the whole of `hca-1on1.html` from this repo. Save.
+5. **Deploy → New deployment** (not *Manage deployments* — a new one).
+6. Click the gear next to **Select type** and choose **Web app**.
+7. Set:
+   - **Execute as:** `Me` — so it can still read the log sheets
+   - **Who has access:** `Anyone within CM Heating` — so only staff can open it
+8. **Deploy**. Copy the new URL it gives you. This is a different URL from the
+   one in `sold-report.html`.
+9. Open that new URL with `?page=1on1` on the end.
+
+Bookmark that. It is the 1:1 page now.
+
+**A web app deployment serves a pinned version of the code.** Pasting new `.gs`
+into the editor does not change what a deployment already serves — you have to
+deploy again to publish it. If `?page=1on1` gives an error right after a paste,
+this is why: **Deploy → Manage deployments → the pencil icon → Version: New
+version → Deploy.**
+
+The page detects where it is running. Served from Apps Script it fetches the
+recap over `google.script.run` — same origin, carrying the reader's Google
+session, with **no URL and no key anywhere in the file**. Served from Pages it
+uses the old `fetch`. Both work, so nothing breaks while you switch, and the
+Pages copy can be deleted whenever you are ready.
+
+Note what this does and does not do: moving the HTML does not close the `/exec`
+endpoint, which stays callable by anyone holding the URL. What it changes is
+that the page no longer needs a secret at all, rather than getting a better one.
 
 ## Part B — Sold Job Tracker Sync
 

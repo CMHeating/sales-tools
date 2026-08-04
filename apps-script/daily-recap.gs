@@ -246,12 +246,14 @@ function sendDailyRecap_(force) {
   }
 
   const owedBy = whoStillOwesYesterday_(now);
+  const failed = [];
   plan.working.forEach(hca => {
-    sendEmailSafe_({
+    const sent = sendEmailSafe_({
       to: [hca.email],
       subject: DAILY_RECAP_CONFIG.subjectPrefix + " — " + plan.dateLabel,
       body: buildRecapBody_(hca, plan.dateLabel, owedBy[hca.name] || "")
     });
+    if (!sent) failed.push(hca.name);
   });
 
   if (!plan.exceptions.ok) {
@@ -265,9 +267,40 @@ function sendDailyRecap_(force) {
     });
   }
 
-  /* Recorded after the send, so a run that threw partway does not lock the day
-     out. Recorded only for a real send — a test-mode preview contacts nobody
-     and must not block the real one. */
+  /*
+   * Recorded after the send, so a run that threw partway does not lock the day
+   * out. Recorded only for a real send — a test-mode preview contacts nobody
+   * and must not block the real one.
+   *
+   * And recorded only if EVERY recipient got theirs. sendEmailSafe_ swallows a
+   * quota or delivery error to keep one bad address from killing the loop, so
+   * writing the marker unconditionally meant a failed send still counted as
+   * sent — and the duplicate-send guard then refused the retry. The people who
+   * got nothing stayed with nothing, the log said the recap went out, and only
+   * somebody noticing by eye and running forceSendDailyRecap could undo it.
+   *
+   * Leaving the marker unwritten costs a duplicate email to those who did
+   * receive one. That is the cheaper mistake by a distance.
+   */
+  if (failed.length) {
+    const msg = "The recap for " + plan.dateLabel + " did NOT reach " +
+      failed.length + " of " + plan.working.length + " HCA(s):\n\n  " +
+      failed.join("\n  ") + "\n\n" +
+      "The day has deliberately NOT been marked as sent, so the next run — or\n" +
+      "sendDailyRecap by hand — will try again. Anyone who did get theirs may\n" +
+      "receive a second copy; that is the intended trade.\n\n" +
+      "Usual cause is the daily MailApp quota. Check it before re-running.";
+    Logger.log(msg);
+    sendEmailSafe_({
+      to: [DAILY_RECAP_CONFIG.managerEmail],
+      subject: "Daily Recap warning — " + failed.length + " recap(s) failed to send, " +
+        plan.dateLabel,
+      body: msg
+    });
+    plan.sendFailures = failed;
+    return plan;
+  }
+
   writeLastRealSend_(plan.isoDate);
 
   Logger.log("Sent recap to " + plan.working.length + " HCA(s) for " + plan.dateLabel);
@@ -721,7 +754,38 @@ function runCollection_(when, isBackfill) {
     ? Math.max(DAILY_RECAP_CONFIG.replyLookbackDays, ageDays + 2)
     : DAILY_RECAP_CONFIG.replyLookbackDays;
 
-  const replies = findRecapReplies_(plan.dateLabel, lastRun, lookback).replies;
+  /*
+   * A failed Gmail read is not an empty inbox.
+   *
+   * This used to take `.replies` and drop `ok`, so a quota error or a
+   * transient Gmail failure came back as an empty array and was treated as
+   * proof that nobody answered. The run then wrote every scheduled HCA down
+   * as "No", mailed a digest saying so, and advanced the last-run marker —
+   * and because the marker had moved, the later sweep could only ever
+   * upgrade those to "Late". People who replied on time were recorded as
+   * delinquent, permanently, by a network error.
+   *
+   * So: nothing is written, nothing is sent, and the marker does not move.
+   * The next scheduled run reads the same window again and gets it right.
+   */
+  const found = findRecapReplies_(plan.dateLabel, lastRun, lookback);
+  if (!found.ok) {
+    const msg = "Recap collection for " + plan.dateLabel +
+      " ABORTED — the Gmail search failed, so replies could not be read.\n\n" +
+      "Nothing was written to the log or the compliance sheet, no digest was\n" +
+      "sent, and the last-run marker was NOT advanced. The next run covers\n" +
+      "this window again, so no reply is lost by stopping here.\n\n" +
+      "If this repeats, check the Apps Script quota and authorization.";
+    Logger.log(msg);
+    sendEmailSafe_({
+      to: [DAILY_RECAP_CONFIG.managerEmail],
+      subject: "Daily Recap warning — reply collection aborted, " + plan.dateLabel,
+      body: msg
+    });
+    return { ok: false, aborted: "reply search failed",
+      replied: 0, missing: 0, late: 0, logged: 0 };
+  }
+  const replies = found.replies;
 
   const byHca = {};
   const late = [];
@@ -816,15 +880,18 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays, includeAllDates) 
   const query = 'subject:"' + cfg.subjectPrefix + '" newer_than:' + days + "d";
   const out = [];
 
-  let threads = [];
-  try {
-    threads = GmailApp.search(query, 0, 100);
-  } catch (err) {
-    /* ok:false so callers can tell "nobody replied" apart from "we could not
-       find out". The morning run must never chase people on a failed read. */
-    Logger.log("Recap reply search failed: " + (err && err.message ? err.message : String(err)));
-    return { ok: false, replies: out };
+  /* ok:false so callers can tell "nobody replied" apart from "we could not
+     find out". The morning run must never chase people on a failed read. */
+  const res = searchAllThreads_(query, RECAP_REPLY_CEILING);
+  if (!res.ok) {
+    Logger.log("Recap reply search failed: " + res.error);
+    return { ok: false, complete: false, replies: out };
   }
+  if (!res.complete) {
+    Logger.log("! Recap reply search hit its " + RECAP_REPLY_CEILING +
+      "-thread ceiling — some replies were not read.");
+  }
+  const threads = res.threads;
 
   /* Which nights were asked about at all. Needed to tell a genuine late reply
      from one sent to the wrong thread — see suspectWrongThread_. */
@@ -903,7 +970,7 @@ function findRecapReplies_(dateLabel, sinceDate, lookbackDays, includeAllDates) 
     });
   });
 
-  return { ok: true, replies: out };
+  return { ok: true, complete: res.complete, replies: out };
 }
 
 /*
@@ -2553,10 +2620,20 @@ function formatMoney_(n) {
 
 /* ------------------------------------------------------------------ email */
 
+/*
+ * Returns true only if the mail actually went.
+ *
+ * "Safe" here means the caller is not killed by one bad address mid-loop — it
+ * has never meant the send worked. Callers that record state afterwards have
+ * to know the difference: writing "sent" on the back of a swallowed quota
+ * error is how a day gets locked out with nobody having been emailed.
+ *
+ * No recipients is not a failure. There was nothing to send.
+ */
 function sendEmailSafe_(message) {
   try {
     const to = (message.to || []).filter(Boolean).join(",");
-    if (!to) return;
+    if (!to) return true;
 
     MailApp.sendEmail({
       to: to,
@@ -2564,8 +2641,10 @@ function sendEmailSafe_(message) {
       body: message.body || "",
       name: DAILY_RECAP_CONFIG.fromName
     });
+    return true;
   } catch (err) {
     Logger.log("Daily recap email failed: " + (err && err.message ? err.message : String(err)));
+    return false;
   }
 }
 
@@ -2587,6 +2666,13 @@ function sendEmailSafe_(message) {
  */
 function doGet(e) {
   const p = (e && e.parameter) ? e.parameter : {};
+
+  /* Serving the 1:1 page from here, rather than from GitHub Pages, is what
+     puts Google's sign-in in front of it. See serveOneOnOnePage_. Checked
+     before the API key, because this route has no key to check — the reader
+     proves who they are to Google instead. */
+  if (String(p.page || "") === "1on1") return serveOneOnOnePage_();
+
   const configuredKey = readScriptProperty_("recapApiKey");
 
   if (configuredKey && String(p.key || "") !== configuredKey) {
@@ -2597,10 +2683,11 @@ function doGet(e) {
     /* The sold report is a different question off the same log, so it gets its
        own route rather than bloating the 1:1 payload every page load. */
     if (String(p.report || "") === "sold") {
-      const rep = buildSoldReportPayload_(p.from || "", p.to || "");
+      const rep = stripSoldIdentity_(buildSoldReportPayload_(p.from || "", p.to || ""));
       if (!configuredKey) {
         rep.unsecured = true;
-        rep.warning = "No recapApiKey set — anyone with this URL can read customer names and prices.";
+        rep.warning = "No recapApiKey set — anyone with this URL can read the counts and " +
+          "totals below. Customer names are withheld from this route regardless.";
       }
       return jsonOut_(rep);
     }
@@ -2615,6 +2702,105 @@ function doGet(e) {
   } catch (err) {
     return jsonOut_({ ok: false, error: err && err.message ? err.message : String(err) });
   }
+}
+
+/*
+ * The 1:1 page, served from this project so that Google's sign-in gates it.
+ *
+ * On GitHub Pages the page is a public file and there is nothing to sign in
+ * to: whatever it needs to reach this script is in its source. Served from
+ * here, the deployment's own access setting does the work — set it to
+ * "Anyone within CM Heating" and only staff can open the page at all.
+ *
+ * That alone is not enough, and it is worth being clear why. Moving the HTML
+ * does nothing to the /exec URL, which stays callable by anyone who has it.
+ * The part that matters is that a page served from here can call
+ * recapForOneOnOne through google.script.run — same origin, carrying the
+ * reader's Google session, with no URL and no key anywhere in the source. The
+ * page stops needing a secret rather than getting a better one.
+ *
+ * Requires an HTML file named "hca-1on1" in this Apps Script project, holding
+ * a copy of hca-1on1.html. There is no way to serve a file from the repo; the
+ * runbook covers the paste.
+ */
+function serveOneOnOnePage_() {
+  try {
+    return HtmlService.createHtmlOutputFromFile("hca-1on1")
+      .setTitle("HCA 1:1")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  } catch (err) {
+    /* A missing file here reads as a broken link, so say what is missing
+       rather than letting Apps Script show its own stack trace. */
+    return HtmlService.createHtmlOutput(
+      "<div style=\"font:15px/1.6 system-ui;padding:32px;max-width:640px\">" +
+      "<h2 style=\"margin:0 0 12px\">The 1:1 page is not installed here yet.</h2>" +
+      "<p>This deployment is set up to serve it, but the project has no HTML " +
+      "file named <code>hca-1on1</code>.</p>" +
+      "<p>In the Apps Script editor: <b>+ &rarr; HTML</b>, name it " +
+      "<code>hca-1on1</code>, and paste the contents of <code>hca-1on1.html</code> " +
+      "into it.</p>" +
+      "<p style=\"color:#64748b\">" + esc_(err && err.message ? err.message : String(err)) +
+      "</p></div>");
+  }
+}
+
+/*
+ * The 1:1 page's recap data, for google.script.run.
+ *
+ * Returns a JSON string rather than the object. google.script.run serialises
+ * return values itself and does not handle every shape the way JSON.stringify
+ * does, so handing it a string and parsing on the other side means the page
+ * receives exactly what the /exec route would have given it — one payload
+ * shape, not two that drift.
+ */
+function recapForOneOnOne(email, days) {
+  const n = Math.max(1, Math.min(120, Number(days) || 14));
+  try {
+    return JSON.stringify(buildRecapApiPayload_(n, String(email || "")));
+  } catch (err) {
+    return JSON.stringify({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+}
+
+function esc_(v) {
+  return String(v === null || v === undefined ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/*
+ * Customer identity never leaves by this route.
+ *
+ * sold-report.html is served from GitHub Pages, which is a public web server.
+ * A static page cannot hold a secret and cannot sign anybody in: whatever it
+ * needs to call this endpoint is in its source, readable by anyone who opens
+ * the page. So the URL is effectively the password, and a password that gets
+ * forwarded in an email or pasted into Slack stops being one.
+ *
+ * An API key does not fix that — it would sit in the same public source, next
+ * to the URL. It would silence the page's own warning without changing who can
+ * read the data, which is worse than the warning, because the warning is true.
+ *
+ * What does fix it is having less to leak. Counts, totals and the same-day
+ * split are what this report is actually for; the customer's name is not.
+ * Stripped here rather than in buildSoldReportPayload_ so that
+ * previewSoldReport, run from the editor by somebody already signed in, still
+ * prints everything.
+ *
+ * The 1:1 payload is the other route and keeps its detail — that page belongs
+ * behind Google sign-in, which is a different fix rather than this one.
+ */
+function stripSoldIdentity_(rep) {
+  if (!rep || !rep.sales) return rep;
+  rep.sales = rep.sales.map(s => ({
+    hca: s.hca,
+    amount: s.amount,
+    soldOnIso: s.soldOnIso,
+    resold: !!s.resold,
+    split: s.split
+  }));
+  rep.identityWithheld = true;
+  return rep;
 }
 
 function jsonOut_(obj) {
@@ -3202,6 +3388,12 @@ function buildSoldReportPayload_(fromIso, toIso) {
   const soldRes = readSoldAlerts_(Math.max(1, Math.min(200, spanDays + 3)));
   if (!soldRes.ok) {
     warnings.push("ServiceTitan sold alerts could not be read, so these counts are incomplete.");
+  } else if (soldRes.complete === false) {
+    /* A truncated read and a failed read are the same problem wearing
+       different clothes: the total is low and nothing on the page says so. */
+    warnings.push("The sold-alert search hit its thread ceiling, so this range is " +
+      "only PARTIALLY read — every count and total below is understated. " +
+      "Narrow the date range and run it again.");
   }
 
   const sold = collapseResoldAlerts_(soldRes.alerts)
@@ -3562,12 +3754,26 @@ function writeGrowthSheetMtd() { return growthMtdWrite_(true); }
 function growthSheetWrite_(commit) {
   const iso = growthTargetIso_();
   const day = growthReport_(iso, null);        // also prints the numbers
-  const plan = planGrowthSheetWrite_(iso);
   const out = [];
   out.push("");
   out.push(new Array(58).join("="));
   out.push((commit ? "WRITE" : "PREVIEW — nothing will be written") + " — " + iso);
 
+  /* Checked before the sheet is even opened. A partial read produces a revenue
+     figure that is low and looks entirely normal, and this workbook is read as
+     final — nothing downstream would ever question it. Of the two ways this
+     run can refuse, a missing tab announces itself the moment somebody looks;
+     an understated total never does. So it is tested first, and it refuses
+     rather than warning and writing anyway. */
+  if (day.soldOk && !day.soldComplete) {
+    out.push("  ! REFUSING — the sold-alert search hit its ceiling, so revenue is");
+    out.push("    a partial figure and would be written as if it were the total.");
+    out.push("    Raise SOLD_ALERT_CEILING, then run this again.");
+    Logger.log(out.join("\n"));
+    return { ok: false, problems: ["sold-alert read was incomplete"] };
+  }
+
+  const plan = planGrowthSheetWrite_(iso);
   if (!plan.ok) {
     plan.problems.forEach(p => out.push("  ! " + p));
     Logger.log(out.join("\n"));
@@ -3684,6 +3890,13 @@ function growthMtdOn_(sheet, toIso, commit) {
   }
 
   const m = computeGrowthMetrics_(fromIso, toIso);
+  if (m.soldOk && !m.soldComplete) {
+    out.push("  ! REFUSING — the sold-alert search hit its ceiling over " +
+      fromIso + " to " + toIso + ", so the month's revenue is a partial figure.");
+    out.push("    Raise SOLD_ALERT_CEILING and run this again.");
+    Logger.log(out.join("\n"));
+    return { ok: false, problems: ["sold-alert read was incomplete"] };
+  }
   const values = growthValuesFrom_(m);
 
   out.push("  sheet: " + plan.sheetName + "   column " + plan.colLetter + " (MTD)");
@@ -3867,6 +4080,11 @@ function growthReport_(toIso, fromIso) {
   if (!m.soldOk) {
     out.push("");
     out.push("! Sold alerts could not be read, so revenue is understated.");
+  } else if (!m.soldComplete) {
+    out.push("");
+    out.push("! The sold-alert search hit its ceiling — this is a PARTIAL read.");
+    out.push("  HVAC Rev and the sale count above are LOW. Do not write these to");
+    out.push("  the sheet; shorten the range and run it again first.");
   }
 
   Logger.log(out.join("\n"));
@@ -3917,6 +4135,7 @@ function computeGrowthMetrics_(fromIso, toIso) {
         .filter(a => a.soldOnIso && a.soldOnIso >= fromIso && a.soldOnIso <= toIso)
         .sort((a, b) => a.soldOnIso < b.soldOnIso ? -1 : 1)
     : [];
+  const soldComplete = soldRes.ok ? soldRes.complete !== false : false;
   alertList.forEach(a => {
     const d = dayOf(a.soldOnIso);
     d.alerts++;
@@ -3943,7 +4162,7 @@ function computeGrowthMetrics_(fromIso, toIso) {
     byDay: byDay, alertList: alertList,
     recapRows: recapRows,
     recapSold: Object.keys(deals).reduce((n, s) => n + deals[s], 0),
-    readFailed: readFailed, soldOk: !!soldRes.ok
+    readFailed: readFailed, soldOk: !!soldRes.ok, soldComplete: soldComplete
   };
 }
 
@@ -4420,16 +4639,65 @@ function previewSoldReport() {
   return p;
 }
 
+/*
+ * Gmail search that pages, and says whether it reached the end.
+ *
+ * Every read here was a single `GmailApp.search(q, 0, N)` — one page, and a
+ * page that came back full still returned success. So a range holding more
+ * alerts than the cap reported a smaller number with nothing anywhere to say
+ * it had been cut short. That is the worst shape a wrong figure can take:
+ * quietly low, and never once looking wrong. The sold report and the growth
+ * sheet's revenue row both read these, and both go to Paul.
+ *
+ * The ceiling does not go away, because Apps Script has a six-minute budget
+ * and an unbounded search on a mailbox this size will spend it. What changes
+ * is that hitting it is now reported rather than assumed away: `complete` is
+ * false, and callers say so out loud instead of publishing a total they have
+ * no reason to trust.
+ *
+ * On a Gmail failure this returns ok:false and whatever it had. Callers must
+ * not use the partial — a half-read is not a small answer, it is an unknown
+ * one.
+ */
+function searchAllThreads_(query, ceiling) {
+  const PAGE = 100;
+  const max = Math.max(1, ceiling || 1000);
+  const out = [];
+  let start = 0;
+  try {
+    while (out.length < max) {
+      const want = Math.min(PAGE, max - out.length);
+      const batch = GmailApp.search(query, start, want);
+      batch.forEach(t => out.push(t));
+      /* Fewer than asked for means Gmail ran out, not that we stopped. */
+      if (batch.length < want) return { ok: true, complete: true, threads: out };
+      start += batch.length;
+    }
+  } catch (err) {
+    return { ok: false, complete: false, threads: out,
+      error: (err && err.message) ? err.message : String(err) };
+  }
+  return { ok: true, complete: false, threads: out };
+}
+
+/* How far each alert read will page before giving up and saying so. Sized so
+   a month of alerts fits with room over — July ran about 40 sold alerts and
+   200 booked. */
+const SOLD_ALERT_CEILING     = 600;
+const COMPLETION_ALERT_CEILING = 600;
+const BOOKED_ALERT_CEILING   = 900;
+const RECAP_REPLY_CEILING    = 400;
+
 function readSoldAlerts_(days) {
   const out = [];
-  let threads = [];
-  try {
-    threads = GmailApp.search('from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' +
-      Math.max(1, days) + "d", 0, 200);
-  } catch (err) {
-    Logger.log("Sold alert search failed: " + err);
-    return { ok: false, alerts: out };
+  const res = searchAllThreads_(
+    'from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' +
+    Math.max(1, days) + "d", SOLD_ALERT_CEILING);
+  if (!res.ok) {
+    Logger.log("Sold alert search failed: " + res.error);
+    return { ok: false, complete: false, alerts: out };
   }
+  const threads = res.threads;
 
   threads.forEach(t => t.getMessages().forEach(msg => {
     const f = parseAlertFields_(msg.getPlainBody());
@@ -4452,7 +4720,11 @@ function readSoldAlerts_(days) {
       received: msg.getDate()
     });
   }));
-  return { ok: true, alerts: out };
+  if (!res.complete) {
+    Logger.log("! Sold alert search hit its " + SOLD_ALERT_CEILING +
+      "-thread ceiling — this is a PARTIAL read and every total from it is low.");
+  }
+  return { ok: true, complete: res.complete, alerts: out };
 }
 
 /*
@@ -4462,14 +4734,14 @@ function readSoldAlerts_(days) {
  */
 function readInstallCompletions_(days) {
   const out = [];
-  let threads = [];
-  try {
-    threads = GmailApp.search('from:alerts@servicetitan.com subject:"Completed Form Alert" newer_than:' +
-      Math.max(1, days) + "d", 0, 200);
-  } catch (err) {
-    Logger.log("Completion alert search failed: " + err);
-    return { ok: false, completions: out };
+  const res = searchAllThreads_(
+    'from:alerts@servicetitan.com subject:"Completed Form Alert" newer_than:' +
+    Math.max(1, days) + "d", COMPLETION_ALERT_CEILING);
+  if (!res.ok) {
+    Logger.log("Completion alert search failed: " + res.error);
+    return { ok: false, complete: false, completions: out };
   }
+  const threads = res.threads;
 
   threads.forEach(t => t.getMessages().forEach(msg => {
     /* Installs only. Completed Form Alerts also fire for [HVAC COD Service],
@@ -4489,7 +4761,11 @@ function readInstallCompletions_(days) {
       received: msg.getDate()
     });
   }));
-  return { ok: true, completions: out };
+  if (!res.complete) {
+    Logger.log("! Completion alert search hit its " + COMPLETION_ALERT_CEILING +
+      "-thread ceiling — installs before that point are missing.");
+  }
+  return { ok: true, complete: res.complete, completions: out };
 }
 
 /*
@@ -4950,13 +5226,14 @@ function readBookedJobAlerts_(fromIso, toIso, days) {
   /* Booked well ahead of the appointment, so the search window has to be much
      wider than the window being reported on. */
   const lookback = Math.max(30, Math.min(180, (Number(days) || 14) + 90));
-  try {
-    threads = GmailApp.search('from:alerts@servicetitan.com subject:"Booked Job Alert [Sales Quote]" ' +
-      "newer_than:" + lookback + "d", 0, 300);
-  } catch (err) {
-    Logger.log("Booked alert search failed: " + err);
-    return { ok: false, booked: out };
+  const res = searchAllThreads_(
+    'from:alerts@servicetitan.com subject:"Booked Job Alert [Sales Quote]" ' +
+    "newer_than:" + lookback + "d", BOOKED_ALERT_CEILING);
+  if (!res.ok) {
+    Logger.log("Booked alert search failed: " + res.error);
+    return { ok: false, complete: false, booked: out };
   }
+  threads = res.threads;
 
   threads.forEach(t => t.getMessages().forEach(msg => {
     if (String(msg.getSubject() || "").indexOf("Booked Job Alert") === -1) return;
@@ -4974,7 +5251,11 @@ function readBookedJobAlerts_(fromIso, toIso, days) {
     seen[key] = true;
     deduped.push(b);
   });
-  return { ok: true, booked: deduped };
+  if (!res.complete) {
+    Logger.log("! Booked alert search hit its " + BOOKED_ALERT_CEILING +
+      "-thread ceiling — appointments before that point are missing.");
+  }
+  return { ok: true, complete: res.complete, booked: deduped };
 }
 
 function parseBookedAlert_(rawBody, received) {

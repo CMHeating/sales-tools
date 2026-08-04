@@ -162,9 +162,27 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXK
    deployment here. Leave it blank and the recap card simply never appears;
    the scheduler is unaffected either way.
    RECAP_API_KEY must match the recapApiKey Script Property, if you set one. */
-const RECAP_API_URL = "";
+const RECAP_API_URL = 'https://script.google.com/macros/s/AKfycbz5CnAAJTFSJo3XKVE_KOPTUZsYVv3lyJUQ15xcU5Any0HHyZsxQ60kUKroJL7ySJU2/exec';
 const RECAP_API_KEY = "";
 const RECAP_DAYS = 14;
+
+/*
+ * Served from Apps Script, or from GitHub Pages?
+ *
+ * google.script.run only exists inside an HtmlService page. When it does, the
+ * recap comes back over it: same origin, carrying the reader's Google session,
+ * with no URL and no key anywhere in this file. When it does not — the copy on
+ * Pages — the old fetch still runs, so both keep working and the switch can
+ * happen without a flag day.
+ *
+ * The public copy is the one worth thinking about. A static page cannot hold a
+ * secret: its URL and key are readable by anyone who opens it, which is why
+ * the sold report withholds customer names. This page cannot withhold them —
+ * naming the customer is the whole point of a talking point — so the answer
+ * for this one is to stop serving it publicly at all.
+ */
+const SERVED_BY_APPS_SCRIPT =
+  typeof google !== "undefined" && !!(google.script && google.script.run);
 
 /* Must match HCA_1ON1_ADMINS in the Apps Script backend. */
 const ADMINS = [
@@ -525,7 +543,8 @@ async function loadRecapFor(name){
   const card = qs("recapCard");
   recapSummaryText = "";
   hide("recapCard"); hide("recapToNotes");
-  if(!RECAP_API_URL || !name) return;
+  if(!name) return;
+  if(!SERVED_BY_APPS_SCRIPT && !RECAP_API_URL) return;
 
   /* Query by email. The scheduler calls him "Jay Milo" and the recap roster
      says "Javierre Milo"; the address is the only key both sides share. */
@@ -533,10 +552,7 @@ async function loadRecapFor(name){
   if(!email) return;
 
   try{
-    const params = new URLSearchParams({hca:email, days:String(RECAP_DAYS)});
-    if(RECAP_API_KEY) params.set("key", RECAP_API_KEY);
-    const res = await fetch(RECAP_API_URL + "?" + params.toString());
-    const data = await res.json();
+    const data = await fetchRecap(email);
     if(!data || !data.ok) return;
 
     const h = (data.hcas || [])[0];
@@ -871,6 +887,23 @@ function addRecapToNotes(){
   const box = qs("notesInput");
   box.value = box.value.trim() ? box.value.trim() + "\n\n" + recapSummaryText : recapSummaryText;
   box.focus();
+}
+
+function fetchRecap(email){
+  if(SERVED_BY_APPS_SCRIPT){
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(txt => {
+          try{ resolve(JSON.parse(txt)); }
+          catch(e){ reject(new Error("Unreadable recap payload.")); }
+        })
+        .withFailureHandler(reject)
+        .recapForOneOnOne(email, RECAP_DAYS);
+    });
+  }
+  const params = new URLSearchParams({hca:email, days:String(RECAP_DAYS)});
+  if(RECAP_API_KEY) params.set("key", RECAP_API_KEY);
+  return fetch(RECAP_API_URL + "?" + params.toString()).then(r => r.json());
 }
 
 async function api(params){

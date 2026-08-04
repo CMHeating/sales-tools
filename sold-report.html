@@ -187,6 +187,11 @@ body {
 .split.prior .lbl { color: var(--blue); }
 .split.unknown .lbl { color: var(--yellow); }
 .split .note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+/* Standalone note under a section. The .note above is scoped inside .split, so
+   this needs its own rule rather than inheriting one. */
+.section > .note { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 10px; }
+.pagenote { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 12px 2px 0; }
+.pagenote code { font-size: 11px; }
 
 /* ---- bar ---- */
 .bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 20px; background: var(--border); }
@@ -361,7 +366,7 @@ td.name { font-weight: 600; }
    deployment must be "Who has access: Anyone".
 
    RECAP_API_KEY must match the recapApiKey Script Property, if one is set. */
-const RECAP_API_URL = "";
+const RECAP_API_URL = 'https://script.google.com/macros/s/AKfycbz5CnAAJTFSJo3XKVE_KOPTUZsYVv3lyJUQ15xcU5Any0HHyZsxQ60kUKroJL7ySJU2/exec';
 const RECAP_API_KEY = "";
 
 const $ = id => document.getElementById(id);
@@ -456,9 +461,9 @@ function render(d) {
   $('rangeLabel').textContent = prettyDate(d.fromIso) + ' — ' + prettyDate(d.toIso);
 
   if (d.unsecured) {
-    out.push('<div class="callout"><strong>This link is unsecured.</strong> No ' +
-      '<code>recapApiKey</code> Script Property is set, so anyone with the URL can read customer ' +
-      'names and prices.</div>');
+    out.push('<div class="callout"><strong>This link is open.</strong> Anyone with the URL ' +
+      'can read the figures below \u2014 sale counts, amounts and per-rep totals. Customer ' +
+      'names are withheld, so a shared link costs you numbers rather than your pipeline.</div>');
   }
   (d.warnings || []).forEach(warn => {
     out.push('<div class="callout err"><strong>Incomplete.</strong> ' + esc(warn) + '</div>');
@@ -543,18 +548,34 @@ function render(d) {
   /* Every sale */
   const label = { sameDay: 'Same day', prior: 'Earlier lead', unknown: 'Unknown' };
   out.push('<div class="section"><div class="section-title">Every sale</div>');
-  out.push('<div class="table-wrap"><table><thead><tr><th>Day</th><th>HCA</th><th>Customer</th>' +
+  /* The customer column is only drawn when the payload actually carries names.
+     This page is served from a public web server, so the endpoint withholds
+     them — every deal is still here, with its rep, day, split and amount, which
+     is what the report is for. Kept conditional rather than deleted so a copy
+     served from behind a login shows the full table with no other change. */
+  const named = d.identityWithheld !== true;
+  out.push('<div class="table-wrap"><table><thead><tr><th>Day</th><th>HCA</th>' +
+    (named ? '<th>Customer</th>' : '') +
     '<th>Split</th><th class="num">Amount</th></tr></thead><tbody>');
   d.sales.forEach(s => {
     out.push('<tr><td>' + esc(prettyDate(s.soldOnIso)) + '</td>' +
-      '<td class="name">' + esc(s.hca) + '</td>' +
-      '<td>' + esc(s.customer || '(no customer named)') +
-      (s.resold ? '<span class="pill resold">re-issued</span>' : '') + '</td>' +
+      '<td class="name">' + esc(s.hca) +
+      (!named && s.resold ? ' <span class="pill resold">re-issued</span>' : '') + '</td>' +
+      (named
+        ? '<td>' + esc(s.customer || '(no customer named)') +
+          (s.resold ? '<span class="pill resold">re-issued</span>' : '') + '</td>'
+        : '') +
       '<td><span class="pill ' + (s.split === 'sameDay' ? 'same' : s.split) + '">' +
       label[s.split] + '</span></td>' +
       '<td class="num">' + (s.amount ? money(s.amount) : '—') + '</td></tr>');
   });
   out.push('</tbody></table></div></div>');
+  if (!named) {
+    out.push('<div class="pagenote">Customer names are withheld from this page. It is served ' +
+      'publicly, so anyone with the link can open it \u2014 the counts, splits and amounts ' +
+      'are here, the identities are not. Run <code>previewSoldReport</code> in Apps Script ' +
+      'for the named list.</div>');
+  }
 
   content.innerHTML = out.join('');
 }
