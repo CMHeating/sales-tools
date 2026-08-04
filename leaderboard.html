@@ -111,7 +111,7 @@ body::before{content:'';position:fixed;inset:0;
 <script>
 const AGGREGATOR_URL = 'https://script.google.com/macros/s/AKfycbzadkmyc4WzBzW5da2PN2Ib8XNGmHLBQILAr7bdL98CV6QwU_9vXyVXJ9PvOPoZCuVG/exec';
 
-const HCA_COLORS = {"Amber":"#f472b6","Chester":"#a78bfa","Davis":"#34d399","Jay":"#38bdf8","Joe":"#fb923c","Joseph":"#fbbf24","Kyle":"#4ade80","Samir":"#e879f9","Trevor":"#67e8f9"};
+const HCA_COLORS = {"Adam":"#f87171","Amber":"#f472b6","Chester":"#a78bfa","Davis":"#34d399","Jay":"#38bdf8","Joe":"#fb923c","Joseph":"#fbbf24","Kyle":"#4ade80","Samir":"#e879f9","Trevor":"#67e8f9"};
 
 let stats = {"Amber":{"ytd":{"attempts":51,"documented":43,"leads":41,"dismissed":19,"pipeline":1344563,"pts":1655},"rolling90":{"attempts":31,"documented":30,"leads":28,"dismissed":13,"pipeline":1003349,"pts":1105}},"Chester":{"ytd":{"attempts":86,"documented":60,"leads":75,"dismissed":0,"pipeline":1447897,"pts":2060},"rolling90":{"attempts":71,"documented":49,"leads":60,"dismissed":0,"pipeline":1246564,"pts":1690}},"Davis":{"ytd":{"attempts":17,"documented":15,"leads":53,"dismissed":17,"pipeline":1219864,"pts":725},"rolling90":{"attempts":9,"documented":9,"leads":41,"dismissed":8,"pipeline":856421,"pts":390}},"Jay":{"ytd":{"attempts":19,"documented":17,"leads":69,"dismissed":4,"pipeline":1161076,"pts":590},"rolling90":{"attempts":7,"documented":6,"leads":50,"dismissed":2,"pipeline":879353,"pts":220}},"Joe":{"ytd":{"attempts":2,"documented":2,"leads":63,"dismissed":3,"pipeline":1094804,"pts":105},"rolling90":{"attempts":2,"documented":2,"leads":46,"dismissed":3,"pipeline":787042,"pts":105}},"Joseph":{"ytd":{"attempts":0,"documented":0,"leads":80,"dismissed":0,"pipeline":1509767,"pts":0},"rolling90":{"attempts":0,"documented":0,"leads":56,"dismissed":0,"pipeline":1075055,"pts":0}},"Kyle":{"ytd":{"attempts":38,"documented":26,"leads":49,"dismissed":14,"pipeline":1148813,"pts":1110},"rolling90":{"attempts":22,"documented":17,"leads":34,"dismissed":8,"pipeline":813344,"pts":680}},"Samir":{"ytd":{"attempts":26,"documented":21,"leads":63,"dismissed":2,"pipeline":1036425,"pts":710},"rolling90":{"attempts":12,"documented":10,"leads":40,"dismissed":0,"pipeline":644862,"pts":320}},"Trevor":{"ytd":{"attempts":55,"documented":36,"leads":21,"dismissed":17,"pipeline":825875,"pts":1525},"rolling90":{"attempts":55,"documented":36,"leads":21,"dismissed":17,"pipeline":825875,"pts":1525}}};
 
@@ -127,7 +127,16 @@ function ranked(period) {
     .sort((a,b) => b.pts - a.pts);
 }
 
+// Same escaping as install-availability.html — names and stats come from the
+// aggregator fetch, so nothing remote goes into innerHTML unescaped.
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+
 function fmtPipeline(v) {
+  v = +v;
   if (!v) return '$0';
   if(v >= 1000000) return '$'+(v/1000000).toFixed(1)+'M';
   if(v >= 1000) return '$'+Math.round(v/1000)+'K';
@@ -144,11 +153,11 @@ function renderBoard(period) {
     const cls = ['rank-1','rank-2','rank-3'][i];
     const medal = i===0 ? '<div class="crown">\ud83d\udc51</div>' : '<div class="medal">'+(i+1)+'</div>';
     const ptsColor = i===0?'var(--gold)':i===1?'var(--silver)':'var(--bronze)';
-    return '<div class="'+cls+'">'+medal+'<div class="card-info"><div class="card-name" style="color:'+( HCA_COLORS[h.name]||'var(--white)')+'">'+h.name+'</div><div class="card-stats"><div class="card-stat">Attempts: <strong>'+(h.attempts||0)+'</strong></div><div class="card-stat">Documented: <strong>'+(h.documented||0)+'</strong></div><div class="card-stat">Resolved: <strong>'+(h.dismissed||0)+'</strong></div><div class="card-stat">Pipeline: <strong>'+fmtPipeline(h.pipeline)+'</strong></div></div></div><div><div class="card-pts" style="color:'+ptsColor+'">'+(h.pts||0)+'</div><div class="pts-lbl">points</div></div></div>';
+    return '<div class="'+cls+'">'+medal+'<div class="card-info"><div class="card-name" style="color:'+( HCA_COLORS[h.name]||'var(--white)')+'">'+escapeHtml(h.name)+'</div><div class="card-stats"><div class="card-stat">Attempts: <strong>'+(+h.attempts||0)+'</strong></div><div class="card-stat">Documented: <strong>'+(+h.documented||0)+'</strong></div><div class="card-stat">Resolved: <strong>'+(+h.dismissed||0)+'</strong></div><div class="card-stat">Pipeline: <strong>'+fmtPipeline(h.pipeline)+'</strong></div></div></div><div><div class="card-pts" style="color:'+ptsColor+'">'+(+h.pts||0)+'</div><div class="pts-lbl">points</div></div></div>';
   }).join('');
 
   document.getElementById(lowerId).innerHTML = r.slice(3).map((h,i) =>
-    '<div class="rank-row"><div class="row-num">'+(i+4)+'</div><div class="row-name" style="color:'+(HCA_COLORS[h.name]||'var(--white)')+'">'+h.name+'</div><div class="row-stats"><div class="row-stat">Att: <strong>'+(h.attempts||0)+'</strong></div><div class="row-stat">Doc: <strong>'+(h.documented||0)+'</strong></div></div><div class="row-bar-wrap"><div class="row-bar" style="width:'+Math.round(((h.pts||0)/maxPts)*100)+'%;background:'+(HCA_COLORS[h.name]||'var(--orange)')+'"></div></div><div class="row-pts">'+(h.pts||0)+'</div></div>'
+    '<div class="rank-row"><div class="row-num">'+(i+4)+'</div><div class="row-name" style="color:'+(HCA_COLORS[h.name]||'var(--white)')+'">'+escapeHtml(h.name)+'</div><div class="row-stats"><div class="row-stat">Att: <strong>'+(+h.attempts||0)+'</strong></div><div class="row-stat">Doc: <strong>'+(+h.documented||0)+'</strong></div></div><div class="row-bar-wrap"><div class="row-bar" style="width:'+Math.round(((+h.pts||0)/maxPts)*100)+'%;background:'+(HCA_COLORS[h.name]||'var(--orange)')+'"></div></div><div class="row-pts">'+(+h.pts||0)+'</div></div>'
   ).join('');
 }
 

@@ -35,6 +35,17 @@ exclude:
   - CLAUDE.md
   - database.install-availability.spark.rules.json
 
+  # --- Claude Code tooling ---
+  # The cmh-guard plugin, the marketplace catalog, and the per-repo guard
+  # config. Not needed by any browser-facing tool. Claude Code fetches the
+  # marketplace over git, not from the Pages site, so excluding these does not
+  # affect how the plugin installs. The two dot-directories are already skipped
+  # by Jekyll's dotfile handling; listing them makes the intent explicit rather
+  # than dependent on that behavior.
+  - plugins/
+  - .claude/
+  - .claude-plugin/
+
   # --- Jekyll defaults, preserved because setting `exclude` overrides them ---
   - Gemfile
   - Gemfile.lock

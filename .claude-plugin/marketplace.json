@@ -1,0 +1,17 @@
+{
+  "name": "cmh-tools",
+  "description": "CM Heating internal Claude Code plugins.",
+  "owner": {
+    "name": "CM Heating",
+    "url": "https://github.com/CMHeating"
+  },
+  "plugins": [
+    {
+      "name": "cmh-guard",
+      "source": "./plugins/cmh-guard",
+      "description": "Blocks edits to generated files and frozen snapshots, keeps secret literals out of committed files, and flags stale builds. Driven by a per-repo .claude/guard.json; inert without one.",
+      "version": "1.0.1",
+      "category": "safety"
+    }
+  ]
+}
