@@ -325,18 +325,35 @@ quotes objections and holds what a rep said about why a deal stalled, and it is
 only ever used by you and the HCAs — which is exactly the case where serving it
 from Apps Script costs nothing.
 
-```
-Apps Script editor → + → HTML → name it exactly:  hca-1on1
-Paste the contents of hca-1on1.html into it, save.
-Deploy → New deployment → Web app
-  Execute as:      Me
-  Who has access:  Anyone within CM Heating
-```
+**This needs a SECOND deployment, not a change to the one you have.** One Apps
+Script project can have several deployments, each with its own URL and its own
+access setting. The existing one must stay on "Anyone", because
+`sold-report.html` on GitHub Pages calls it without signing in — switch that one
+to domain-only and the sold report breaks. So leave it alone and add another.
 
-Then open `<your /exec URL>?page=1on1`.
+1. Open the **HCA Daily Recap** project (the one whose code says
+   `DAILY_RECAP_CONFIG`).
+2. In the left sidebar, next to **Files**, click **+** → **HTML**.
+3. Name it exactly `hca-1on1`. The editor shows it as `hca-1on1.html`; the
+   name it is addressed by is `hca-1on1`, which is what the code asks for.
+4. It opens pre-filled with a small skeleton. Select all of that and replace it
+   with the whole of `hca-1on1.html` from this repo. Save.
+5. **Deploy → New deployment** (not *Manage deployments* — a new one).
+6. Click the gear next to **Select type** and choose **Web app**.
+7. Set:
+   - **Execute as:** `Me` — so it can still read the log sheets
+   - **Who has access:** `Anyone within CM Heating` — so only staff can open it
+8. **Deploy**. Copy the new URL it gives you. This is a different URL from the
+   one in `sold-report.html`.
+9. Open that new URL with `?page=1on1` on the end.
 
-*Execute as Me* so the script can still read the log sheets; *Anyone within
-CM Heating* so only staff can open it.
+Bookmark that. It is the 1:1 page now.
+
+**A web app deployment serves a pinned version of the code.** Pasting new `.gs`
+into the editor does not change what a deployment already serves — you have to
+deploy again to publish it. If `?page=1on1` gives an error right after a paste,
+this is why: **Deploy → Manage deployments → the pencil icon → Version: New
+version → Deploy.**
 
 The page detects where it is running. Served from Apps Script it fetches the
 recap over `google.script.run` — same origin, carrying the reader's Google
