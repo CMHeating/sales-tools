@@ -4153,9 +4153,21 @@ function growthReport_(toIso, fromIso) {
   }
 
   out.push("");
-  out.push("consults reported: " + m.recapRows + "   sold alerts: " + m.alertList.length);
+  out.push("consults reported: " + m.recapRows + "   HVAC sold alerts: " + m.alertList.length);
   m.alertList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
     (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
+
+  /* Fireplaces are counted, but apart — they are a different line of business
+     and are NOT in HVAC Rev above. Printed so the sale is still visible and
+     the rep still gets the credit; the growth sheet has no fireplace row yet,
+     so nothing here is written to it. */
+  if (m.fireplaceCount) {
+    out.push("");
+    out.push("fireplace — separate line, NOT in HVAC Rev above (" + m.fireplaceCount +
+      " sale(s), $" + formatMoney_(m.fireplaceRevenue) + "):");
+    m.fireplaceList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
+      (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
+  }
 
   /* The two sources must agree on how many sold. When they do not, the recap
      is the incomplete one — it only holds what somebody reported. */
@@ -4223,18 +4235,28 @@ function computeGrowthMetrics_(fromIso, toIso) {
 
   const soldRes = readSoldAlerts_(Math.max(2, Math.min(120,
     Math.round((Date.now() - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 3)));
-  const alertList = soldRes.ok
+  const inRange = soldRes.ok
     ? collapseResoldAlerts_(soldRes.alerts)
         .filter(a => a.soldOnIso && a.soldOnIso >= fromIso && a.soldOnIso <= toIso)
         .sort((a, b) => a.soldOnIso < b.soldOnIso ? -1 : 1)
     : [];
   const soldComplete = soldRes.ok ? soldRes.complete !== false : false;
+
+  /* HVAC Rev is measured against an HVAC budget, so a fireplace does not belong
+     in it — see soldProductLine_. Split here: alertList is the HVAC sales that
+     drive revenue and the day/MTD rows, fireplaceList rides alongside so the
+     sale is still visible and credited, just not folded into HVAC. */
+  const lineOf = a => a.productLine || soldProductLine_(a.name);
+  const alertList = inRange.filter(a => lineOf(a) !== "fireplace");
+  const fireplaceList = inRange.filter(a => lineOf(a) === "fireplace");
+
   alertList.forEach(a => {
     const d = dayOf(a.soldOnIso);
     d.alerts++;
     d.revenue += (Number(a.amount) || 0);
   });
   const revenue = alertList.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+  const fireplaceRevenue = fireplaceList.reduce((s, a) => s + (Number(a.amount) || 0), 0);
 
   const isMarketed = s => s !== "Tech Flip" && s !== "Revisit";
   const marketedTotal = k => Object.keys(k).filter(isMarketed).reduce((n, s) => n + k[s], 0);
@@ -4253,6 +4275,8 @@ function computeGrowthMetrics_(fromIso, toIso) {
     sales: alertList.length,
     leads: leads, deals: deals, parts: parts, revisitDeals: revisitDeals,
     byDay: byDay, alertList: alertList,
+    fireplaceList: fireplaceList, fireplaceCount: fireplaceList.length,
+    fireplaceRevenue: fireplaceRevenue,
     recapRows: recapRows,
     recapSold: Object.keys(deals).reduce((n, s) => n + deals[s], 0),
     readFailed: readFailed, soldOk: !!soldRes.ok, soldComplete: soldComplete
@@ -4781,6 +4805,29 @@ const COMPLETION_ALERT_CEILING = 600;
 const BOOKED_ALERT_CEILING   = 900;
 const RECAP_REPLY_CEILING    = 400;
 
+/*
+ * Which product line a sold alert belongs to.
+ *
+ * A fireplace is a distinct line of business from HVAC — rare in summer, heavy
+ * in the fall and winter — and it must never land in HVAC Rev, which is
+ * measured against an HVAC budget. It cannot be told apart by the alert's
+ * business unit, because a fireplace sells under [Sales Quote] exactly like a
+ * heat pump; the estimate NAME is the signal ("Heat & Glo … zero clearance
+ * fireplace installation"). So the name is matched against the words that only
+ * a hearth product carries.
+ *
+ * Water heaters are deliberately absent for now. A standalone tankless is
+ * non-HVAC, but most water heaters sell bundled into an HVAC deal as an add-on,
+ * so separating them cleanly is a harder, later job — and lumping a bundled one
+ * out of HVAC Rev would be worse than leaving it in.
+ */
+const FIREPLACE_NAME_RE =
+  /\b(fireplace|hearth|gas\s*log|wood\s*stove|pellet\s*stove|gas\s*insert|fireplace\s*insert|heat\s*(?:&|and|-)\s*glo|heatilator|zero[\s-]*clearance)\b/i;
+
+function soldProductLine_(name) {
+  return FIREPLACE_NAME_RE.test(String(name || "")) ? "fireplace" : "hvac";
+}
+
 function readSoldAlerts_(days) {
   const out = [];
   const res = searchAllThreads_(
@@ -4806,6 +4853,7 @@ function readSoldAlerts_(days) {
       customer: String(f["customer"] || "").trim(),
       amount: parseDealAmount_(f["amount"] || "").amount,
       name: f["name"] || "",
+      productLine: soldProductLine_(f["name"] || ""),
       soldOn: f["date"] || "",
       jobNumber: f["job#"] || f["job #"] || "",
       estimateNumber: f["estimate#"] || f["estimate #"] || "",
