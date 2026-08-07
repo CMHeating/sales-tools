@@ -99,13 +99,15 @@
       <button class="copy" id="refresh">Refresh</button>
       <span class="count" id="count"></span>
     </div>
-    <table><thead><tr><th>Item</th><th class="hide-sm">Mfr</th><th>Ordered</th><th>Value</th><th>Condition</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
+    <table><thead><tr><th>Item</th><th class="hide-sm">Mfr</th><th>Ordered</th><th>Cost</th><th id="sellHead">Sell</th><th>Condition</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="foot" id="foot"></p>
   </div>
 </div>
 
 <script>
 const SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
+const MARKUP=2.6;                                   // sell price = cost × MARKUP
+const sellOf=u=>u.value>0?Math.round(u.value*MARKUP):0;
 let UNITS=[], IDENT="", UPDATED="", PINV="";
 const usd=v=>v.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
 const el=id=>document.getElementById(id);
@@ -145,13 +147,15 @@ async function doLogin(){
 let fStatus="Available",fAging=false,fR410=false;
 function filtered(){const q=el('q').value.trim().toLowerCase();return UNITS.filter(u=>{if(fStatus!=="all"&&u.status!==fStatus)return false;if(fAging&&!u.aging)return false;if(fR410&&!u.r410a)return false;if(q){const h=(u.model+" "+u.item+" "+u.serial+" "+u.customer+" "+u.notes+" "+u.mfr+" "+u.type).toLowerCase();if(!h.includes(q))return false;}return true;});}
 function sortRows(rows){const s=el('sort').value,y=u=>u.year||0;return rows.sort((a,b)=>s==='val'?b.value-a.value:s==='old'?(y(a)-y(b)||b.value-a.value):s==='new'?(y(b)-y(a)||b.value-a.value):s==='mfr'?(a.mfr+a.item).localeCompare(b.mfr+b.item):0);}
-function tiles(){const av=UNITS.filter(u=>u.status==='Available'),cm=UNITS.filter(u=>u.status==='Committed'),ag=UNITS.filter(u=>u.aging),sum=a=>a.reduce((x,u)=>x+u.value,0);
-  el('tiles').innerHTML=[['g','Available to sell',av.length,sum(av)],['b','Committed to installs',cm.length,sum(cm)],['','Total on hand',UNITS.length,sum(UNITS)],['a','Aging (2024 &amp; older)',ag.length,sum(ag)]].map(([c,k,n,v])=>`<div class="tile ${c}"><div class="k">${k}</div><div class="v">${n}</div><div class="d">${usd(v)}</div></div>`).join('');}
+function tiles(){const av=UNITS.filter(u=>u.status==='Available'),cm=UNITS.filter(u=>u.status==='Committed'),ag=UNITS.filter(u=>u.aging),sum=a=>a.reduce((x,u)=>x+u.value,0),ssum=a=>a.reduce((x,u)=>x+sellOf(u),0);
+  el('tiles').innerHTML=[['g','Available to sell',av.length,sum(av),ssum(av)],['b','Committed to installs',cm.length,sum(cm),0],['','Total on hand',UNITS.length,sum(UNITS),0],['a','Aging (2024 &amp; older)',ag.length,sum(ag),ssum(ag)]].map(([c,k,n,v,s])=>`<div class="tile ${c}"><div class="k">${k}</div><div class="v">${n}</div><div class="d">${s?('cost '+usd(v)+' · sell '+usd(s)):usd(v)}</div></div>`).join('');}
 function condTags(u){let t='';if(/scratch|dent/i.test(u.notes))t+='<span class="tag t-sd">Scratch/Dent</span>';if(u.r410a)t+='<span class="tag t-410">R-410A</span>';if(u.unret)t+='<span class="tag t-un">Unreturnable</span>';if(u.value===0)t+='<span class="tag t-sd">$0 write-off</span>';if(!t&&u.notes)t='<span class="who">'+u.notes+'</span>';return t||'<span class="who">—</span>';}
 function render(){const rows=sortRows(filtered());
-  el('rows').innerHTML=rows.map(u=>`<tr class="${u.aging?'aging':''}"><td><div class="item">${u.item||u.model}</div><div class="mod">${u.model}${u.serial?' · '+u.serial:''}</div></td><td class="hide-sm">${u.mfr}</td><td style="white-space:nowrap">${u.ordered||'—'}</td><td class="val">${usd(u.value)}</td><td>${condTags(u)}</td><td>${u.status==='Available'?'<span class="tag t-av">Available</span>':'<span class="tag t-cm">Committed</span><div class="who">'+(u.customer||'')+(u.install?' · '+u.install:'')+'</div>'}</td></tr>`).join('');
-  const val=rows.reduce((x,u)=>x+u.value,0);el('count').textContent=rows.length+' unit'+(rows.length===1?'':'s')+' · '+usd(val);}
-function copyList(){const rows=sortRows(filtered());const txt=rows.map(u=>`${u.item||u.model} — ${usd(u.value)}${u.status==='Committed'?' (committed: '+u.customer+')':''}${u.notes?' ['+u.notes+']':''}`).join('\n');navigator.clipboard.writeText(txt).then(()=>{const b=el('copy');b.textContent='Copied ✓';setTimeout(()=>b.textContent='Copy list',1400);});}
+  el('sellHead').textContent='Sell @ '+MARKUP+'×';
+  el('rows').innerHTML=rows.map(u=>`<tr class="${u.aging?'aging':''}"><td><div class="item">${u.item||u.model}</div><div class="mod">${u.model}${u.serial?' · '+u.serial:''}</div></td><td class="hide-sm">${u.mfr}</td><td style="white-space:nowrap">${u.ordered||'—'}</td><td class="val" style="color:var(--mut);font-weight:600">${usd(u.value)}</td><td class="val" style="color:var(--gold)">${u.value>0?usd(sellOf(u)):'—'}</td><td>${condTags(u)}</td><td>${u.status==='Available'?'<span class="tag t-av">Available</span>':'<span class="tag t-cm">Committed</span><div class="who">'+(u.customer||'')+(u.install?' · '+u.install:'')+'</div>'}</td></tr>`).join('');
+  const val=rows.reduce((x,u)=>x+u.value,0), sv=rows.reduce((x,u)=>x+sellOf(u),0);
+  el('count').textContent=rows.length+' unit'+(rows.length===1?'':'s')+' · cost '+usd(val)+' · sell '+usd(sv);}
+function copyList(){const rows=sortRows(filtered());const txt=rows.map(u=>`${u.item||u.model} — ${u.value>0?usd(sellOf(u)):'price on request'}${u.status==='Committed'?' (committed: '+u.customer+')':''}${u.notes?' ['+u.notes+']':''}`).join('\n');navigator.clipboard.writeText(txt).then(()=>{const b=el('copy');b.textContent='Copied ✓';setTimeout(()=>b.textContent='Copy list',1400);});}
 function setSnap(){const tot=usd(UNITS.reduce((x,u)=>x+u.value,0));
   el('snap').innerHTML='<span class="live"></span>Live from your Inventory Tracker sheet — '+UNITS.length+' units, '+tot+' tied up'+(UPDATED?' · '+UPDATED:'')+'. Signed in as '+IDENT+'.';
   el('foot').innerHTML='Pulled through the HCA login, so only enrolled HCAs can open it, and it reflects the sheet as edited. Reload the page to re-pull.';}
