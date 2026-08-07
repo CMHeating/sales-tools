@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clearance Inventory — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0f1c;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#ea580c;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#4aa3df;}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:15px}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 18px 60px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px}
+  .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
+  .back{color:var(--mut);text-decoration:none;font-size:13px}.back:hover{color:var(--text)}
+  h1{font-family:"Playfair Display",serif;font-weight:800;font-size:40px;margin:8px 0 4px}
+  .sub{color:var(--mut);margin:0 0 4px;max-width:720px}
+  .snap{color:var(--gold);font-size:12.5px;margin:6px 0 18px}
+  .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:middle}
+  .card{max-width:440px;margin:6vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px}
+  .card h2{font-family:"Playfair Display",serif;margin:0 0 6px;font-size:24px}
+  .card p{color:var(--mut);margin:0 0 18px;font-size:13.5px}
+  label{display:block;color:var(--mut);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin:12px 0 6px}
+  .card select,.card input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:10px;font-family:inherit;font-size:15px}
+  .go{width:100%;margin-top:18px;background:var(--orange);border:0;color:#fff;font-weight:800;padding:13px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:15px}
+  .go:disabled{opacity:.6;cursor:default}
+  .err{color:#fca5a5;font-size:13px;margin-top:12px;min-height:18px}
+  .hint{color:var(--mut);font-size:12px;margin-top:14px}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .tile .k{color:var(--mut);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .tile .v{font-size:26px;font-weight:800;margin-top:4px}.tile .d{color:var(--mut);font-size:12.5px;margin-top:2px}
+  .tile.g .v{color:var(--green)}.tile.a .v{color:var(--amber)}.tile.b .v{color:var(--blue)}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+  input.search{flex:1;min-width:220px;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:11px 14px;border-radius:10px;font-size:14px;font-family:inherit}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--mut);padding:9px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;user-select:none}
+  .chip.on{background:var(--gold);border-color:var(--gold);color:#1a1200}
+  select#sort{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px;border-radius:10px;font-family:inherit;font-size:13px}
+  .count{color:var(--mut);font-size:13px;margin-left:auto}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  thead th{position:sticky;top:0;background:#0f1729;color:#cbd5e1;text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:11px 10px;border-bottom:1px solid var(--line)}
+  tbody td{padding:11px 10px;border-bottom:1px solid #16223c;vertical-align:top}
+  tbody tr:hover{background:#0f1830}
+  tr.aging td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+  .item{font-weight:600}.mod{color:var(--mut);font-size:12px;font-family:ui-monospace,monospace}.val{font-weight:700;white-space:nowrap}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin:1px 3px 1px 0;white-space:nowrap}
+  .t-av{background:rgba(34,197,94,.14);color:#4ade80}.t-cm{background:rgba(74,163,223,.14);color:#7cc4f0}
+  .t-un{background:rgba(239,68,68,.14);color:#f87171}.t-410{background:rgba(245,158,11,.16);color:#fbbf24}.t-sd{background:rgba(148,163,184,.14);color:#cbd5e1}
+  .who{color:var(--mut);font-size:12px}
+  .foot{color:var(--mut);font-size:12.5px;margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
+  button.copy{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:9px 14px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+  button.copy:hover{border-color:var(--gold)}
+  .hidden{display:none}
+  @media(max-width:820px){.tiles{grid-template-columns:repeat(2,1fr)}h1{font-size:30px}.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="pill">CM HEATING</span>
+    <a class="back" href="index.html">&larr; HCA Toolkit</a>
+  </div>
+
+  <div id="login">
+    <div class="card">
+      <h2>Clearance Inventory</h2>
+      <p>Same login as your other tools: your name and the last 4 of your work phone.</p>
+      <label>Name</label>
+      <select id="name">
+        <option value="">Select your name…</option>
+        <option>Adam Weberg</option><option>Amber Maddalena</option><option>Chester Granard</option>
+        <option>Davis Diosdado</option><option>Jay Milo</option><option>Joe Chounramany</option>
+        <option>Joseph Ruble</option><option>Kyle McAlister</option><option>Samir Khoury</option>
+        <option>Trevor Bohm</option><option>Geoff Simons</option>
+      </select>
+      <label>Last 4 of work phone</label>
+      <input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+      <button class="go" id="go">View clearance list</button>
+      <div class="err" id="err"></div>
+      <div class="hint">Warehouse clearance stock — not a live order feed.</div>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <h1>Clearance Inventory</h1>
+    <p class="sub">On-hand equipment your team can move. Filter to <b>Available</b> to see what's free to sell; committed units show the job they're tied to.</p>
+    <p class="snap" id="snap"></p>
+    <div class="tiles" id="tiles"></div>
+    <div class="controls">
+      <input class="search" id="q" placeholder="Search model, item, serial, customer, notes…">
+      <span class="chip" data-f="all">All</span>
+      <span class="chip on" data-f="Available">Available</span>
+      <span class="chip" data-f="Committed">Committed</span>
+      <span class="chip" data-t="aging">Aging &#8804;2024</span>
+      <span class="chip" data-t="r410a">R-410A</span>
+      <select id="sort"><option value="val">Value: high &rarr; low</option><option value="old">Oldest first</option><option value="new">Newest first</option><option value="mfr">Manufacturer</option></select>
+      <button class="copy" id="copy">Copy list</button>
+      <button class="copy" id="refresh">Refresh</button>
+      <span class="count" id="count"></span>
+    </div>
+    <table><thead><tr><th>Item</th><th class="hide-sm">Mfr</th><th>Ordered</th><th>Value</th><th>Condition</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
+    <p class="foot" id="foot"></p>
+  </div>
+</div>
+
+<script>
+const SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
+let UNITS=[], IDENT="", UPDATED="", PINV="";
+const usd=v=>v.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+const el=id=>document.getElementById(id);
+
+async function api(params){
+  const r=await fetch(SCHED+"?"+new URLSearchParams(params).toString());
+  if(!r.ok) throw new Error("Service returned "+r.status);
+  return r.json();
+}
+async function doLogin(){
+  const name=el('name').value, pin=el('pin').value.trim();
+  el('err').textContent="";
+  if(!name){el('err').textContent="Pick your name.";return;}
+  if(pin.length<4){el('err').textContent="Enter the last 4 of your work phone.";return;}
+  el('go').disabled=true; el('go').textContent="Checking…";
+  try{
+    const res=await api({action:"clearance",actor:name,pin:pin});
+    if(!res.ok){ el('err').textContent=res.error||"That didn't match the roster."; el('go').disabled=false; el('go').textContent="View clearance list"; return; }
+    UNITS=res.units||[]; IDENT=name; PINV=pin; UPDATED=res.updated||"";
+    el('login').classList.add('hidden'); el('app').classList.remove('hidden');
+    setSnap(); tiles(); render();
+  }catch(e){
+    el('err').textContent="Couldn't reach the login service — check your connection and try again.";
+    el('go').disabled=false; el('go').textContent="View clearance list";
+  }
+}
+
+let fStatus="Available",fAging=false,fR410=false;
+function filtered(){const q=el('q').value.trim().toLowerCase();return UNITS.filter(u=>{if(fStatus!=="all"&&u.status!==fStatus)return false;if(fAging&&!u.aging)return false;if(fR410&&!u.r410a)return false;if(q){const h=(u.model+" "+u.item+" "+u.serial+" "+u.customer+" "+u.notes+" "+u.mfr+" "+u.type).toLowerCase();if(!h.includes(q))return false;}return true;});}
+function sortRows(rows){const s=el('sort').value,y=u=>u.year||0;return rows.sort((a,b)=>s==='val'?b.value-a.value:s==='old'?(y(a)-y(b)||b.value-a.value):s==='new'?(y(b)-y(a)||b.value-a.value):s==='mfr'?(a.mfr+a.item).localeCompare(b.mfr+b.item):0);}
+function tiles(){const av=UNITS.filter(u=>u.status==='Available'),cm=UNITS.filter(u=>u.status==='Committed'),ag=UNITS.filter(u=>u.aging),sum=a=>a.reduce((x,u)=>x+u.value,0);
+  el('tiles').innerHTML=[['g','Available to sell',av.length,sum(av)],['b','Committed to installs',cm.length,sum(cm)],['','Total on hand',UNITS.length,sum(UNITS)],['a','Aging (2024 &amp; older)',ag.length,sum(ag)]].map(([c,k,n,v])=>`<div class="tile ${c}"><div class="k">${k}</div><div class="v">${n}</div><div class="d">${usd(v)}</div></div>`).join('');}
+function condTags(u){let t='';if(/scratch|dent/i.test(u.notes))t+='<span class="tag t-sd">Scratch/Dent</span>';if(u.r410a)t+='<span class="tag t-410">R-410A</span>';if(u.unret)t+='<span class="tag t-un">Unreturnable</span>';if(u.value===0)t+='<span class="tag t-sd">$0 write-off</span>';if(!t&&u.notes)t='<span class="who">'+u.notes+'</span>';return t||'<span class="who">—</span>';}
+function render(){const rows=sortRows(filtered());
+  el('rows').innerHTML=rows.map(u=>`<tr class="${u.aging?'aging':''}"><td><div class="item">${u.item||u.model}</div><div class="mod">${u.model}${u.serial?' · '+u.serial:''}</div></td><td class="hide-sm">${u.mfr}</td><td style="white-space:nowrap">${u.ordered||'—'}</td><td class="val">${usd(u.value)}</td><td>${condTags(u)}</td><td>${u.status==='Available'?'<span class="tag t-av">Available</span>':'<span class="tag t-cm">Committed</span><div class="who">'+(u.customer||'')+(u.install?' · '+u.install:'')+'</div>'}</td></tr>`).join('');
+  const val=rows.reduce((x,u)=>x+u.value,0);el('count').textContent=rows.length+' unit'+(rows.length===1?'':'s')+' · '+usd(val);}
+function copyList(){const rows=sortRows(filtered());const txt=rows.map(u=>`${u.item||u.model} — ${usd(u.value)}${u.status==='Committed'?' (committed: '+u.customer+')':''}${u.notes?' ['+u.notes+']':''}`).join('\n');navigator.clipboard.writeText(txt).then(()=>{const b=el('copy');b.textContent='Copied ✓';setTimeout(()=>b.textContent='Copy list',1400);});}
+function setSnap(){const tot=usd(UNITS.reduce((x,u)=>x+u.value,0));
+  el('snap').innerHTML='<span class="live"></span>Live from your Inventory Tracker sheet — '+UNITS.length+' units, '+tot+' tied up'+(UPDATED?' · '+UPDATED:'')+'. Signed in as '+IDENT+'.';
+  el('foot').innerHTML='Pulled through the HCA login, so only enrolled HCAs can open it, and it reflects the sheet as edited. Reload the page to re-pull.';}
+
+document.querySelectorAll('.chip[data-f]').forEach(c=>c.onclick=()=>{document.querySelectorAll('.chip[data-f]').forEach(x=>x.classList.remove('on'));c.classList.add('on');fStatus=c.dataset.f;render();});
+document.querySelectorAll('.chip[data-t]').forEach(c=>c.onclick=()=>{c.classList.toggle('on');if(c.dataset.t==='aging')fAging=c.classList.contains('on');if(c.dataset.t==='r410a')fR410=c.classList.contains('on');render();});
+el('q').oninput=render; el('sort').onchange=render; el('copy').onclick=copyList;
+el('refresh').onclick=async()=>{const b=el('refresh');b.textContent='…';try{const res=await api({action:'clearance',actor:IDENT,pin:PINV});if(res.ok){UNITS=res.units||[];UPDATED=res.updated||'';setSnap();tiles();render();}}catch(e){}b.textContent='Refresh';};
+el('go').onclick=doLogin;
+el('pin').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+</script>
+</body>
+</html>
