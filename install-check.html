@@ -41,7 +41,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="hca-field-guide.html">&larr; Field Guide</a></div>
+  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="index.html">&larr; HCA Tools</a></div>
   <h1>Next-Day Install Check</h1>
   <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
 
@@ -49,7 +49,6 @@
   <div class="card">
     <div class="grid2">
       <div class="full"><label>Customer</label><input type="text" id="customer" placeholder="Customer name" autocapitalize="words" autocomplete="off"></div>
-      <div><label>Job #</label><input type="text" id="job" placeholder="#" inputmode="numeric" autocomplete="off"></div>
       <div><label>Install date</label><input type="date" id="idate"></div>
       <div><label>HCA name (whose job)</label>
         <select id="hca"><option value="">Select…</option>
@@ -154,7 +153,7 @@
 
 <script>
 var el=function(id){return document.getElementById(id)};
-var FIELDS=['customer','job','idate','hca','by','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
+var FIELDS=['customer','idate','hca','by','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
 
 function v(id){var e=el(id);return e?String(e.value||'').trim():''}
 function line(label,val){return val?(label+": "+val):''}
@@ -163,7 +162,7 @@ function block(title,rows){rows=rows.filter(Boolean);if(!rows.length)return'';re
 function checkText(){
   var out=[];
   out.push("NEXT-DAY INSTALL CHECK — CM Heating");
-  out.push((v('customer')?("Customer: "+v('customer')):"Customer: —")+(v('job')?("  ·  Job #"+v('job')):"")+(v('idate')?("  ·  Install "+v('idate')):""));
+  out.push((v('customer')?("Customer: "+v('customer')):"Customer: —")+(v('idate')?("  ·  Install "+v('idate')):""));
   out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+(v('ready')?("   ·   Ready: "+v('ready')):""));
   out.push("");
   out.push(block("SIGN-OFF",[line("Electrical",v('d-elec')),line("Install",v('d-install')),line("Sales",v('d-sales'))]));
@@ -201,7 +200,7 @@ function cap(s,n){s=String(s||'');return s.length>n?s.slice(0,n):s;}
 function sendToHca(){
   if(!v('hca')){el('bartxt').textContent='Pick the HCA name first.';return;}
   var b=el('sendBtn');b.textContent='Sending…';b.disabled=true;
-  api({action:'installcheck',customer:v('customer'),job:v('job'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:v('ready'),
+  api({action:'installcheck',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:v('ready'),
     delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
     mat:v('mat'),matnotes:cap(v('mat-notes'),300),
     photos:v('photos'),video:v('video'),layoutnotes:cap(v('layout-notes'),300),
