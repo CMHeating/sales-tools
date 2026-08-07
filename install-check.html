@@ -48,7 +48,7 @@
   <!-- JOB -->
   <div class="card">
     <div class="grid2">
-      <div class="full"><label>Customer</label><input type="text" id="customer" placeholder="Customer name" autocapitalize="words" autocomplete="off"></div>
+      <div class="full"><label>Customer</label><input type="text" id="customer" placeholder="Customer name" autocapitalize="words" autocomplete="off"><div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><button type="button" class="ghost" id="matchBtn" style="padding:9px 14px;font-size:13px;min-height:0">🔎 Match sold job</button><span id="matchInfo" style="font-size:12px;color:var(--mut);flex:1;min-width:150px;line-height:1.35"></span></div></div>
       <div><label>Install date</label><input type="date" id="idate"></div>
       <div><label>HCA name (whose job)</label>
         <select id="hca"><option value="">Select…</option>
@@ -154,6 +154,7 @@
 <script>
 var el=function(id){return document.getElementById(id)};
 var FIELDS=['customer','idate','hca','by','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
+var SOLD={};
 
 function v(id){var e=el(id);return e?String(e.value||'').trim():''}
 function line(label,val){return val?(label+": "+val):''}
@@ -181,7 +182,9 @@ function copyIt(){
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
-function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});try{localStorage.removeItem('cmh_installcheck');}catch(e){}try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;save();return true;}}return false;}
+function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
 
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
 var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
@@ -206,7 +209,8 @@ function sendToHca(){
     photos:v('photos'),video:v('video'),layoutnotes:cap(v('layout-notes'),300),
     belec:v('b-elec'),blabor:v('b-labor'),billnotes:cap(v('bill-notes'),300),
     heatload:v('heatload'),sizematch:v('sizematch'),equip:cap(v('equip'),120),sizenotes:cap(v('size-notes'),300),
-    disc:v('disc'),discnotes:cap(v('disc-notes'),300)
+    disc:v('disc'),discnotes:cap(v('disc-notes'),300),
+    soldcustomer:SOLD.customer||'',soldby:SOLD.soldby||'',soldamount:SOLD.amount||'',soldon:SOLD.soldon||'',soldest:SOLD.est||'',soldjob:SOLD.job||''
   }).then(function(d){
     b.disabled=false;b.textContent='Send to HCA';
     if(d&&d.ok){var who=d.to||v('hca');resetForm();el('bartxt').innerHTML='✓ Emailed '+who+' — '+(d.outcome==='ISSUE'?'issues flagged':'good to go')+' · cleared for the next one';}
@@ -218,6 +222,7 @@ load();
 FIELDS.forEach(function(f){var e=el(f);if(e){e.addEventListener('input',save);e.addEventListener('change',save);}});
 el('copyBtn').onclick=copyIt;
 el('sendBtn').onclick=sendToHca;
+var _mb=el('matchBtn');if(_mb)_mb.onclick=matchSold;
 </script>
 </body>
 </html>
