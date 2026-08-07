@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Next-Day Install Check — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#c97d10;--green:#22c55e;--red:#ef4444;--blue:#4aa3df;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;padding-bottom:104px;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+  .wrap{max-width:820px;margin:0 auto;padding:0 16px 40px;padding-left:max(16px,env(safe-area-inset-left,0));padding-right:max(16px,env(safe-area-inset-right,0))}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px}
+  .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
+  .back{color:var(--mut);text-decoration:none;font-size:13px}.back:hover{color:var(--text)}
+  h1{font-family:"Playfair Display",serif;font-weight:800;font-size:30px;margin:8px 0 4px}
+  .sub{color:var(--mut);margin:0 0 16px;max-width:680px;font-size:13.5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+  .card h2{font-family:"Playfair Display",serif;font-weight:700;font-size:17px;margin:0 0 12px;display:flex;align-items:center;gap:9px}
+  .card h2 .n{width:24px;height:24px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gold);font-family:Outfit}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .full{grid-column:1/-1}
+  label{display:block;color:var(--mut);font-size:11px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px}
+  input[type=text],input[type=date],select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:13px 14px;border-radius:10px;font-family:inherit;font-size:16px;min-height:48px}
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  textarea{resize:vertical;min-height:64px}
+  .link{display:inline-block;background:var(--panel2);border:1px solid var(--line);color:var(--text);text-decoration:none;padding:9px 12px;border-radius:9px;font-size:13px;font-weight:600;margin:0 6px 6px 0}
+  .link:hover{border-color:var(--gold)}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#0d1526f2;border-top:1px solid var(--line);backdrop-filter:blur(8px);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0))}
+  .bar-in{max-width:820px;margin:0 auto;display:flex;align-items:center;gap:10px}
+  .bar-txt{flex:1;font-size:13px;color:var(--mut)}
+  .go{background:var(--orange);border:0;color:#fff;font-weight:800;padding:13px 20px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:15px}
+  .go:hover{background:#e9960f}
+  .ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text);font-weight:600;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:14px}
+  #printout{display:none}
+  @media print{body{background:#fff;color:#000;padding:0}.wrap,.bar{display:none}#printout{display:block;padding:24px;font-family:Arial,sans-serif}#printout h2{margin:0 0 4px}#printout pre{white-space:pre-wrap;font-family:inherit;font-size:13px}}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="hca-field-guide.html">&larr; Field Guide</a></div>
+  <h1>Next-Day Install Check</h1>
+  <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
+
+  <!-- JOB -->
+  <div class="card">
+    <div class="grid2">
+      <div class="full"><label>Customer</label><input type="text" id="customer" placeholder="Customer name" autocapitalize="words" autocomplete="off"></div>
+      <div><label>Job #</label><input type="text" id="job" placeholder="#" inputmode="numeric" autocomplete="off"></div>
+      <div><label>Install date</label><input type="date" id="idate"></div>
+      <div><label>HCA name (whose job)</label>
+        <select id="hca"><option value="">Select…</option>
+          <option>Adam Weberg</option><option>Amber Maddalena</option><option>Chester Granard</option>
+          <option>Davis Diosdado</option><option>Javierre Milo</option><option>Joe Chounramany</option>
+          <option>Joseph Ruble</option><option>Kyle McAlister</option><option>Samir Khoury</option><option>Trevor Bohm</option>
+        </select>
+      </div>
+      <div><label>Checked by</label>
+        <select id="by"><option value="">Select…</option>
+          <option>Geoff Simons</option><option>Lyle Jones</option><option>Jonathan Jansen</option>
+        </select>
+      </div>
+      <div class="full"><label>Overall — ready to install?</label>
+        <select id="ready"><option value="">Select…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPARTMENT SIGN-OFF (the 3 dropdowns) -->
+  <div class="card">
+    <h2><span class="n">1</span> Department sign-off</h2>
+    <div class="grid2">
+      <div><label>Electrical — Jon</label>
+        <select id="d-elec"><option value="">Select…</option><option>✔ Confirmed</option><option>⚠ Needs attention</option><option>✖ Not ready</option><option>N/A</option></select></div>
+      <div><label>Install — Lyle</label>
+        <select id="d-install"><option value="">Select…</option><option>✔ Confirmed</option><option>⚠ Needs attention</option><option>✖ Not ready</option><option>N/A</option></select></div>
+      <div class="full"><label>Sales — Geoff</label>
+        <select id="d-sales"><option value="">Select…</option><option>✔ Confirmed</option><option>⚠ Needs attention</option><option>✖ Not ready</option><option>N/A</option></select></div>
+    </div>
+  </div>
+
+  <!-- MATERIALS -->
+  <div class="card">
+    <h2><span class="n">2</span> Materials list</h2>
+    <div class="grid2">
+      <div class="full"><label>Material list complete & ordered?</label>
+        <select id="mat"><option value="">Select…</option><option>✔ Yes — complete & ordered</option><option>⚠ Partial — see notes</option><option>✖ No</option><option>N/A</option></select></div>
+      <div class="full">
+        <a class="link" href="hca-layout-cheatsheet.html" target="_blank">Layout Cheat Sheet</a>
+        <a class="link" href="install-materials-reference.html" target="_blank">Materials Reference</a>
+      </div>
+      <div class="full"><label>Materials notes</label><textarea id="mat-notes" placeholder="Anything special ordered, back-ordered, or to confirm."></textarea></div>
+    </div>
+  </div>
+
+  <!-- LAYOUT PHOTOS & VIDEO — yes/no -->
+  <div class="card">
+    <h2><span class="n">3</span> Layout — photos & video</h2>
+    <div class="grid2">
+      <div><label>Layout photos taken?</label>
+        <select id="photos"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+      <div><label>Walkthrough video taken?</label>
+        <select id="video"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+      <div class="full"><label>Layout notes</label><textarea id="layout-notes" placeholder="Access, obstacles, where equipment lands, anything the crew should know."></textarea></div>
+    </div>
+  </div>
+
+  <!-- BILLING -->
+  <div class="card">
+    <h2><span class="n">4</span> Billing — electrical & labor</h2>
+    <div class="grid2">
+      <div><label>Electrical billed correctly?</label>
+        <select id="b-elec"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Needs fix</option><option>✖ Not billed</option><option>N/A</option></select></div>
+      <div><label>Labor billed correctly?</label>
+        <select id="b-labor"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Needs fix</option><option>✖ Not billed</option><option>N/A</option></select></div>
+      <div class="full"><label>Billing notes</label><textarea id="bill-notes" placeholder="Hours, electrical scope, add-ons, anything to correct before install."></textarea></div>
+    </div>
+  </div>
+
+  <!-- SIZING -->
+  <div class="card">
+    <h2><span class="n">5</span> Sizing — heat load & equipment</h2>
+    <div class="grid2">
+      <div><label>Heat load calc completed?</label>
+        <select id="heatload"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option><option>N/A</option></select></div>
+      <div><label>Equipment matches the load?</label>
+        <select id="sizematch"><option value="">Select…</option><option>✔ Yes — correctly sized</option><option>⚠ Review</option><option>✖ Mismatch</option></select></div>
+      <div class="full"><label>Applicable equipment / model for this sizing</label><input type="text" id="equip" placeholder="e.g. AMS 3-ton heat pump + variable-speed AH"></div>
+      <div class="full"><label>Sizing notes</label><textarea id="size-notes" placeholder="Load figure, tonnage, why this equipment fits."></textarea></div>
+    </div>
+  </div>
+
+  <!-- DISCOUNTS -->
+  <div class="card">
+    <h2><span class="n">6</span> Discounts</h2>
+    <div class="grid2">
+      <div class="full"><label>Discounts checked & correct?</label>
+        <select id="disc"><option value="">Select…</option><option>✔ Yes — verified</option><option>⚠ Needs review</option><option>None on this job</option></select></div>
+      <div class="full"><label>Discount notes</label><textarea id="disc-notes" placeholder="Which discounts applied, approvals, anything to confirm."></textarea></div>
+    </div>
+  </div>
+</div>
+
+<div class="bar"><div class="bar-in">
+  <div class="bar-txt" id="bartxt">Draft saves on this device</div>
+  <button class="ghost" id="copyBtn">Copy</button>
+  <button class="go" id="sendBtn">Send to HCA</button>
+</div></div>
+
+<div id="printout"></div>
+
+<script>
+var el=function(id){return document.getElementById(id)};
+var FIELDS=['customer','job','idate','hca','by','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
+
+function v(id){var e=el(id);return e?String(e.value||'').trim():''}
+function line(label,val){return val?(label+": "+val):''}
+function block(title,rows){rows=rows.filter(Boolean);if(!rows.length)return'';return title+"\n"+rows.map(function(r){return "  "+r}).join("\n")+"\n";}
+
+function checkText(){
+  var out=[];
+  out.push("NEXT-DAY INSTALL CHECK — CM Heating");
+  out.push((v('customer')?("Customer: "+v('customer')):"Customer: —")+(v('job')?("  ·  Job #"+v('job')):"")+(v('idate')?("  ·  Install "+v('idate')):""));
+  out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+(v('ready')?("   ·   Ready: "+v('ready')):""));
+  out.push("");
+  out.push(block("SIGN-OFF",[line("Electrical",v('d-elec')),line("Install",v('d-install')),line("Sales",v('d-sales'))]));
+  out.push(block("MATERIALS",[line("List",v('mat')),line("Notes",v('mat-notes'))]));
+  out.push(block("LAYOUT",[line("Photos taken",v('photos')),line("Video taken",v('video')),line("Notes",v('layout-notes'))]));
+  out.push(block("BILLING",[line("Electrical billed",v('b-elec')),line("Labor billed",v('b-labor')),line("Notes",v('bill-notes'))]));
+  out.push(block("SIZING",[line("Heat load calc",v('heatload')),line("Equipment matches load",v('sizematch')),line("Equipment",v('equip')),line("Notes",v('size-notes'))]));
+  out.push(block("DISCOUNTS",[line("Checked",v('disc')),line("Notes",v('disc-notes'))]));
+  return out.filter(function(x){return x!==''}).join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+function copyIt(){
+  var t=checkText();
+  function done(ok){var b=el('copyBtn');b.textContent=ok?'Copied ✓':'Copy failed';setTimeout(function(){b.textContent='Copy check'},1500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){done(true)},fb);}else fb();
+  function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done(true)}catch(e){done(false)}document.body.removeChild(ta);}
+}
+function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
+function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
+
+/* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
+var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
+function api(params){return new Promise(function(resolve,reject){
+  var cb="cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+  var s=document.createElement('script');
+  var timer=setTimeout(function(){cleanup();reject(new Error("timeout"));},15000);
+  function cleanup(){clearTimeout(timer);try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);}
+  window[cb]=function(d){cleanup();resolve(d);};
+  var q=new URLSearchParams(params);q.set('callback',cb);
+  s.src=SCHED+"?"+q.toString();
+  s.onerror=function(){cleanup();reject(new Error("network"));};
+  document.body.appendChild(s);
+});}
+function cap(s,n){s=String(s||'');return s.length>n?s.slice(0,n):s;}
+function sendToHca(){
+  if(!v('hca')){el('bartxt').textContent='Pick the HCA name first.';return;}
+  var b=el('sendBtn');b.textContent='Sending…';b.disabled=true;
+  api({action:'installcheck',customer:v('customer'),job:v('job'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:v('ready'),
+    delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
+    mat:v('mat'),matnotes:cap(v('mat-notes'),300),
+    photos:v('photos'),video:v('video'),layoutnotes:cap(v('layout-notes'),300),
+    belec:v('b-elec'),blabor:v('b-labor'),billnotes:cap(v('bill-notes'),300),
+    heatload:v('heatload'),sizematch:v('sizematch'),equip:cap(v('equip'),120),sizenotes:cap(v('size-notes'),300),
+    disc:v('disc'),discnotes:cap(v('disc-notes'),300)
+  }).then(function(d){
+    b.disabled=false;b.textContent='Send to HCA';
+    if(d&&d.ok){el('bartxt').innerHTML='✓ Emailed '+(d.to||v('hca'))+' — '+(d.outcome==='ISSUE'?'issues flagged':'good to go');}
+    else{el('bartxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed — use Copy instead.';}
+  }).catch(function(){b.disabled=false;b.textContent='Send to HCA';el('bartxt').textContent='Couldn’t reach the mailer — use Copy for now.';});
+}
+
+load();
+FIELDS.forEach(function(f){var e=el(f);if(e){e.addEventListener('input',save);e.addEventListener('change',save);}});
+el('copyBtn').onclick=copyIt;
+el('sendBtn').onclick=sendToHca;
+</script>
+</body>
+</html>
