@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>HCA Command Center v2.2.1 | CM Heating</title>
+<title>HCA Command Center v2.2.2 | CM Heating</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -23,7 +23,6 @@
   --line:#d7e2ea;
   --soft:#f4f8fb;
 }
-
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth}
 body{
@@ -43,7 +42,6 @@ body::before{
   pointer-events:none;
   z-index:-1;
 }
-
 .header{
   background:rgba(17,31,54,.96);
   border-bottom:3px solid var(--orange);
@@ -89,7 +87,6 @@ body::before{
 .btn.orange{background:var(--orange);color:#102033}
 .btn.ghost{background:rgba(255,255,255,.08);color:white}
 .btn:hover{filter:brightness(1.08)}
-
 .wrap{max-width:1200px;margin:0 auto;padding:22px}
 .notice{
   background:linear-gradient(135deg,var(--orange),#ffb35c);
@@ -123,7 +120,6 @@ body::before{
   outline:none;
 }
 .clear-btn{padding:13px 14px;border-radius:14px;border:0;background:#334155;color:white;font-weight:800;cursor:pointer}
-
 .quick-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(245px,1fr));
@@ -145,7 +141,6 @@ body::before{
 .icon{font-size:30px;margin-bottom:9px}
 .quick-card h2{font-size:20px;margin-bottom:7px}
 .quick-card p{color:#cbd5e1;font-size:14px}
-
 .section{
   background:white;
   color:var(--ink);
@@ -211,7 +206,6 @@ summary{cursor:pointer;font-weight:900;color:var(--blue)}
 details div{margin-top:12px}
 .footer{text-align:center;color:#94a3b8;font-size:12px;padding:28px}
 .hidden-by-search{display:none!important}
-
 .command-center{
   background:rgba(22,36,60,.96);
   border:1px solid rgba(255,255,255,.14);
@@ -247,7 +241,6 @@ details div{margin-top:12px}
 .command-link strong{display:block;font-size:15px;margin-bottom:2px}
 .command-link span{display:block;font-size:12px;color:#cbd5e1;line-height:1.35}
 .command-emoji{font-size:24px;line-height:1}
-
 .red-flag-panel{
   background:#fff1f2;
   color:#102033;
@@ -354,7 +347,6 @@ details div{margin-top:12px}
   font-weight:900;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
 @media(max-width:740px){
   .header{position:relative;padding:18px}
   .brand h1{font-size:27px}
@@ -363,7 +355,6 @@ details div{margin-top:12px}
   .section h2{font-size:23px}
   .top-actions{width:100%}.btn{flex:1}
 }
-
 .photo-ref{margin-top:16px}
 .photo-ref>h3{color:var(--blue);font-size:18px;margin:6px 0 10px}
 .photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -373,7 +364,6 @@ details div{margin-top:12px}
 </style>
 </head>
 <body>
-
 <header class="header">
   <div class="header-inner">
     <div class="brand">
@@ -386,26 +376,22 @@ details div{margin-top:12px}
     </div>
   </div>
 </header>
-
 <main class="wrap">
-
   <div class="notice">
-    🚧 HCA COMMAND CENTER v2.2.1 — ACTIVE FIELD TEST
+    🚧 HCA COMMAND CENTER v2.2.2 — ACTIVE FIELD TEST
     <small>Built from Cheat Sheet 2.0 and current CM Heating HCA field knowledge. Some rate screenshots, source PDFs, rebate links, and jurisdiction documents still need to be attached.</small>
   </div>
-
   <div class="security-note">
     🔒 Public-page rule: do not publish passwords, dealer portal credentials, private PINs, customer data, or protected login details here. Use this page for process, rules, and public/internal-safe guidance only.
   </div>
-
-  <section class="command-center searchable" id="command-center" data-tags="all command center dashboard install availability quoting comfort club caas calculator jurisdiction permit electrical labor ductless warranty objection contact rebate placement materials pick list">
+  <section class="command-center searchable" id="command-center" data-tags="all command center dashboard install availability quoting comfort club caas calculator jurisdiction permit electrical labor ductless warranty objection contact rebate placement materials pick list layout cheat sheet stage equipment">
     <h2>⚡ HCA Command Center</h2>
     <p>Fast paths for HCAs in the home. Start here when you need the answer, the tool, the red flag, or the escalation path quickly.</p>
     <div class="command-grid">
       <a class="command-link" href="install-availability-secure.html"><div class="command-emoji">📅</div><div><strong>Install Availability</strong><span>Check scheduling before promising timing.</span></div></a>
+      <a class="command-link" href="hca-layout-cheatsheet.html"><div class="command-emoji">🧰</div><div><strong>Install Materials</strong><span>Layout-form cheat sheet — what to stage for the job.</span></div></a>
       <a class="command-link" href="hca-caas-quoting.html"><div class="command-emoji">🧾</div><div><strong>HCA Quoting Tool</strong><span>Build governed package options.</span></div></a>
       <a class="command-link" href="caas-calculator.html"><div class="command-emoji">🟢</div><div><strong>Comfort Club Calculator</strong><span>Compare CaaS vs. ownership paths.</span></div></a>
-      <a class="command-link" href="install-materials.html"><div class="command-emoji">🧰</div><div><strong>Install Material List</strong><span>Build the job's pick list on your phone; copy it for the install team.</span></div></a>
       <a class="command-link" href="#jurisdictions"><div class="command-emoji">🏙️</div><div><strong>Jurisdiction Checker</strong><span>Setbacks, no-next-day, site plan risks.</span></div></a>
       <a class="command-link" href="#electrical"><div class="command-emoji">⚡</div><div><strong>Electrical Quick Calc</strong><span>Main amps × 0.80; over 60% needs review.</span></div></a>
       <a class="command-link" href="#labor"><div class="command-emoji">🛠️</div><div><strong>Labor Timing</strong><span>Half day, full day, 1.5 day, ductless logic.</span></div></a>
@@ -413,7 +399,6 @@ details div{margin-top:12px}
       <a class="command-link" href="#contacts"><div class="command-emoji">☎️</div><div><strong>Escalation Contacts</strong><span>Who to ask when unsure.</span></div></a>
     </div>
   </section>
-
   <section class="red-flag-panel searchable" id="red-flags" data-tags="all red flags stop verify financing credit rebate pud permit placement electrical labor ductless warranty objection contact fireplace commercial">
     <h2>🚨 Red Flags — Stop & Verify</h2>
     <p>Use these when a promise could create a scheduling, rebate, credit, permitting, electrical, or warranty problem.</p>
@@ -450,7 +435,6 @@ details div{margin-top:12px}
       </div>
     </div>
   </section>
-
   <section class="copy-bank searchable" id="copy-notes" data-tags="all copy service titan servicetitan notes documentation electrical rebate pud permit placement credit financing ductwork warranty refund home warranty">
     <span class="tag">Documentation</span>
     <h2>📋 Copy-to-ServiceTitan Notes</h2>
@@ -502,7 +486,6 @@ Manager approval required before accounting is added.</div>
       </div>
     </div>
   </section>
-
   <div class="filter-chips" id="filterChips">
     <button class="filter-chip active" data-tag="all">All</button>
     <button class="filter-chip" data-tag="financing">Financing</button>
@@ -518,12 +501,10 @@ Manager approval required before accounting is added.</div>
     <button class="filter-chip" data-tag="fireplace">Fireplace</button>
     <button class="filter-chip" data-tag="contact">Contacts</button>
   </div>
-
   <div class="search-row">
     <input class="search" id="searchBox" placeholder="Search: rebate, Kirkland, Bosch, ductless, electrical, labor, warranty, itemized pricing...">
     <button class="clear-btn" id="clearSearch">Clear</button>
   </div>
-
   <nav class="quick-grid" id="top">
     <a class="quick-card searchable" href="#financing" data-tags="financing credit equifax refund"><div class="icon">💳</div><h2>Financing / Credit</h2><p>Equifax, second look, refund workflow, internal lender rate sheets.</p></a>
     <a class="quick-card searchable" href="#rebates" data-tags="rebate rebates pud pse midstream heat pump"><div class="icon">💵</div><h2>Rebates</h2><p>PUD, PSE, Targeted Electrification, Midstream, qualifying flags.</p></a>
@@ -537,14 +518,13 @@ Manager approval required before accounting is added.</div>
     <a class="quick-card searchable" href="#objections" data-tags="objection objections scripts itemized pricing"><div class="icon">💬</div><h2>Objections / Scripts</h2><p>Itemized pricing, reseller permits, home warranties, blind spots.</p></a>
     <a class="quick-card searchable" href="#contacts" data-tags="contact contacts escalation"><div class="icon">☎️</div><h2>Escalation Contacts</h2><p>Sales, install, permitting, operations, electrical, plumbing.</p></a>
   </nav>
-
   <section id="financing" class="section searchable" data-tags="financing credit equifax second look refund docs ownership mortgage bankruptcy service titan">
     <span class="tag">Financing</span>
     <h2>💳 Financing / Credit / Refunds</h2>
     <div class="info warning" style="margin-top:12px">
       <h3>🔒 Internal Reference (Staff Only)</h3>
       <ul>
-        <li>Dealer rate sheets (Wells Fargo, Synchrony, Service Finance, GreenSky, GoodLeap, Fortiva) and the <b>Layout Form Materials cheat sheet</b> are staff-only and live behind login.</li>
+        <li>Dealer rate sheets (Wells Fargo, Synchrony, Service Finance, GreenSky, GoodLeap, Fortiva) are staff-only and live behind login. <span style="color:#94a3b8">(The Layout-Form Materials cheat sheet is now in the Command Center above — 🧰 Install Materials.)</span></li>
         <li><a href="financing-secure.html" style="color:var(--blue);font-weight:700">Open internal reference →</a> (use your name + Install-Availability PIN)</li>
         <li>Internal use only — do not screen-share or show these to homeowners.</li>
       </ul>
@@ -586,7 +566,6 @@ Manager approval required before accounting is added.</div>
       </div>
     </div>
   </section>
-
   <section id="rebates" class="section searchable" data-tags="rebate rebates pud pse midstream heat pump electrification targeted savings ahri">
     <span class="tag">Rebates</span>
     <h2>💵 Rebates / PUD / PSE</h2>
@@ -638,7 +617,6 @@ Manager approval required before accounting is added.</div>
       </div>
     </div>
   </section>
-
   <section id="placement" class="section searchable" data-tags="placement outdoor clearance setback property line meters dryer vent hoa deck window generator propane">
     <span class="tag">Placement</span>
     <h2>📏 Outdoor Unit Placement / Clearance / Safety Distances</h2>
@@ -689,7 +667,6 @@ Manager approval required before accounting is added.</div>
       </div>
     </div>
   </section>
-
   <section id="jurisdictions" class="section searchable" data-tags="jurisdiction jurisdictions permit permits city setback no next day critical area site plan kirkland edmonds everett woodinville bothell bellevue">
     <span class="tag">Jurisdictions</span>
     <h2>🏙️ City / Jurisdiction Quick Reference</h2>
@@ -716,7 +693,6 @@ Manager approval required before accounting is added.</div>
     </div>
     <div class="placeholder">Add source link / screenshot: site plan and floor plan jurisdiction spreadsheet</div>
   </section>
-
   <section id="electrical" class="section searchable" data-tags="electrical panel load breaker wire swap ampacity level quick calc hot tub ev charger heat strip single point entry kit split bus zinsco federal pacific bad panel replace furnace circuit midea mitsubishi wire gauge 12 10 8 6 amp tonnage length estimating elbow lb ll lr conduit body labor level 6 odu disconnect">
     <span class="tag">Electrical</span>
     <h2>⚡ Electrical Rules / Quick Calc / Difficulty Levels</h2>
@@ -832,7 +808,6 @@ Manager approval required before accounting is added.</div>
       </div>
     </div>
   </section>
-
   <section id="labor" class="section searchable" data-tags="labor timing install schedule furnace heat pump oil conversion ductless cassette slim duct">
     <span class="tag">Labor</span>
     <h2>🛠️ Labor Timing / Project Length</h2>
@@ -844,7 +819,6 @@ Manager approval required before accounting is added.</div>
       <div class="info"><h3>Ceiling Cassettes / Slim Duct</h3><ul><li>Ceiling cassettes: add 2–3 hours per head.</li><li>PEAD / attic / slim duct: accessibility drives labor.</li><li>4–5 registers, Level 1 difficulty: 1 day.</li><li>4–5 registers, Level 2 difficulty: 1.5 days.</li><li>6–10 registers, Level 1 difficulty: 1.5 days.</li><li>6–10 registers, Level 2 difficulty: 2 days.</li></ul></div>
     </div>
   </section>
-
   <section id="ductless" class="section searchable" data-tags="ductless mitsubishi mini split line length clearance head branch box mxz puz cassette">
     <span class="tag">Ductless</span>
     <h2>❄️ Ductless / Mitsubishi Rules</h2>
@@ -857,7 +831,6 @@ Manager approval required before accounting is added.</div>
       <div class="info"><h3>Daikin Mini Split Notes</h3><ul><li>Wi-Fi connection: add AZAI6WSCDKB per head.</li><li>Emura heads: refrigerant lines cannot exit side like standard heads; only out the back right or left.</li></ul></div>
     </div>
   </section>
-
   <section id="equipment" class="section searchable" data-tags="equipment bosch daikin ameristar goodman thermostat pre-coiled line set coil txv">
     <span class="tag">Equipment</span>
     <h2>🔥 Equipment-Specific Rules</h2>
@@ -869,9 +842,6 @@ Manager approval required before accounting is added.</div>
       <div class="info"><h3>Garage / Reznor Heater Notes</h3><ul><li>Venting always out roof.</li><li>Needs dedicated 110 line and breaker — standard electrical.</li><li>If gas line is already at exact location and exhaust is straightforward/short, may be half-day project.</li><li>Sizing rough note: 50 BTU per square foot.</li><li>May need new 4-inch B-vent, hanging bracket, propane kit, equipment rental/lift, gas piping, wall thermostat, permits.</li></ul></div>
     </div>
   </section>
-
-
-
   <section id="warranty" class="section searchable" data-tags="warranty permit inspection commercial guarantee transfer registration lemon craftsmanship">
     <span class="tag">Warranty / Permits</span>
     <h2>🛡️ Warranty, Guarantees, Permits</h2>
@@ -882,7 +852,6 @@ Manager approval required before accounting is added.</div>
       <div class="info"><h3>Permits</h3><ul><li>Permit inspections may occur from a few weeks after installation to a full year later.</li><li>Permit inspection applies only to the work being permitted.</li><li>Unpermitted past work in house generally is not flagged/fined because of the current permit inspection.</li></ul></div>
     </div>
   </section>
-
   <section id="objections" class="section searchable" data-tags="objection objections scripts itemized pricing reseller home warranty talk track customer language">
     <span class="tag">Sales Logic</span>
     <h2>💬 Objections / Scripts / Field Logic</h2>
@@ -893,8 +862,6 @@ Manager approval required before accounting is added.</div>
       <div class="info"><h3>Home Warranties</h3><ul><li>CM does not install and wait to be paid by home warranty company.</li><li>Customer must pay in full by installation day and deal with warranty company for reimbursement.</li></ul></div>
     </div>
   </section>
-
-
   <section id="fireplace" class="section searchable" data-tags="fireplace zc zero clearance insert scheduling construction tile weekend payment">
     <span class="tag">Fireplace</span>
     <h2>🔥 Fireplace Install Rules</h2>
@@ -922,7 +889,6 @@ Manager approval required before accounting is added.</div>
       </div>
     </div>
   </section>
-
   <section id="contacts" class="section searchable" data-tags="contact contacts escalation manager permitting operations electrical plumbing sales install coordination">
     <span class="tag">Escalation</span>
     <h2>☎️ Escalation Contacts</h2>
@@ -933,21 +899,16 @@ Manager approval required before accounting is added.</div>
       <div class="info"><h3>Support References</h3><ul><li>Service Titan support contact should stay internal.</li><li>Gensco, American Standard, Mitsubishi, Johnstone support details should be added carefully without publishing credentials.</li><li>Keep passwords and dealer portal credentials out of this public page.</li></ul></div>
     </div>
   </section>
-
 </main>
-
-<footer class="footer">CM Heating · HCA Command Center v2.2.1 Test · Built from Field Guide + Cheat Sheet 2.0</footer>
-
+<footer class="footer">CM Heating · HCA Command Center v2.2.2 Test · Built from Field Guide + Cheat Sheet 2.0</footer>
 <script>
 const searchBox = document.getElementById("searchBox");
 const clearSearch = document.getElementById("clearSearch");
 const searchable = Array.from(document.querySelectorAll(".searchable"));
 let activeTag = "all";
-
 function tagsFor(el){
   return (el.dataset.tags || "").toLowerCase();
 }
-
 function runSearch(){
   const q = searchBox.value.trim().toLowerCase();
   searchable.forEach(function(el){
@@ -962,9 +923,7 @@ function runSearch(){
     }
   });
 }
-
 searchBox.addEventListener("input", runSearch);
-
 clearSearch.addEventListener("click", function(){
   searchBox.value = "";
   activeTag = "all";
@@ -974,7 +933,6 @@ clearSearch.addEventListener("click", function(){
   runSearch();
   searchBox.focus();
 });
-
 function copyNote(id){
   const el = document.getElementById(id);
   if(!el) return;
@@ -987,7 +945,6 @@ function copyNote(id){
     fallbackCopy(text);
   }
 }
-
 function fallbackCopy(text){
   const temp = document.createElement("textarea");
   temp.value = text;
@@ -1000,7 +957,6 @@ function fallbackCopy(text){
   temp.remove();
   showToast("Copied to clipboard");
 }
-
 function showToast(message){
   let toast = document.getElementById("toast");
   if(!toast){
@@ -1013,7 +969,6 @@ function showToast(message){
   toast.classList.add("show");
   window.setTimeout(function(){toast.classList.remove("show");}, 1800);
 }
-
 document.querySelectorAll(".filter-chip").forEach(function(btn){
   btn.addEventListener("click", function(){
     document.querySelectorAll(".filter-chip").forEach(function(b){ b.classList.remove("active"); });
@@ -1023,6 +978,5 @@ document.querySelectorAll(".filter-chip").forEach(function(btn){
   });
 });
 </script>
-
 </body>
-</html>v
+</html>
