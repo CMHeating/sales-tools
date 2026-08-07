@@ -182,6 +182,7 @@ function copyIt(){
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
+function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});try{localStorage.removeItem('cmh_installcheck');}catch(e){}try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
 
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
 var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
@@ -209,7 +210,7 @@ function sendToHca(){
     disc:v('disc'),discnotes:cap(v('disc-notes'),300)
   }).then(function(d){
     b.disabled=false;b.textContent='Send to HCA';
-    if(d&&d.ok){el('bartxt').innerHTML='✓ Emailed '+(d.to||v('hca'))+' — '+(d.outcome==='ISSUE'?'issues flagged':'good to go');}
+    if(d&&d.ok){var who=d.to||v('hca');resetForm();el('bartxt').innerHTML='✓ Emailed '+who+' — '+(d.outcome==='ISSUE'?'issues flagged':'good to go')+' · cleared for the next one';}
     else{el('bartxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed — use Copy instead.';}
   }).catch(function(){b.disabled=false;b.textContent='Send to HCA';el('bartxt').textContent='Couldn’t reach the mailer — use Copy for now.';});
 }
