@@ -143,7 +143,7 @@
 </div>
 
 <div class="bar"><div class="bar-in">
-  <div class="bar-txt" id="bartxt">Draft saves on this device</div>
+  <div class="bar-txt" id="bartxt">Fill out, then Send to HCA</div>
   <button class="ghost" id="copyBtn">Copy</button>
   <button class="go" id="sendBtn">Send to HCA</button>
 </div></div>
@@ -182,7 +182,7 @@ function copyIt(){
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
 function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
-function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;save();return true;}}return false;}
+function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
 function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
 
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
@@ -218,8 +218,9 @@ function sendToHca(){
   }).catch(function(){b.disabled=false;b.textContent='Send to HCA';el('bartxt').textContent='Couldn’t reach the mailer — use Copy for now.';});
 }
 
-load();
-FIELDS.forEach(function(f){var e=el(f);if(e){e.addEventListener('input',save);e.addEventListener('change',save);}});
+/* No draft persistence — the form is blank on every open. Clear any draft a
+   previous version stashed on this device so it can never restore stale entries. */
+try{localStorage.removeItem('cmh_installcheck');}catch(e){}
 el('copyBtn').onclick=copyIt;
 el('sendBtn').onclick=sendToHca;
 var _mb=el('matchBtn');if(_mb)_mb.onclick=matchSold;
