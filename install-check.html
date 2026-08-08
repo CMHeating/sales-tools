@@ -48,7 +48,7 @@
   <!-- JOB -->
   <div class="card">
     <div class="grid2">
-      <div class="full"><label>Customer</label><input type="text" id="customer" placeholder="Customer name" autocapitalize="words" autocomplete="off"><div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><button type="button" class="ghost" id="matchBtn" style="padding:9px 14px;font-size:13px;min-height:0">🔎 Match sold job</button><span id="matchInfo" style="font-size:12px;color:var(--mut);flex:1;min-width:150px;line-height:1.35"></span></div></div>
+      <div class="full"><label>Customer</label><input type="text" id="customer" placeholder="Customer name" autocapitalize="words" autocomplete="off"><div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><button type="button" class="ghost" id="matchBtn" style="padding:11px 16px;font-size:14px;min-height:44px">🔎 Match sold job</button><span id="matchInfo" style="font-size:12px;color:var(--mut);flex:1;min-width:150px;line-height:1.35"></span></div></div>
       <div><label>Install date</label><input type="date" id="idate"></div>
       <div><label>HCA name (whose job)</label>
         <select id="hca"><option value="">Select…</option>
@@ -201,7 +201,8 @@ function api(params){return new Promise(function(resolve,reject){
 });}
 function cap(s,n){s=String(s||'');return s.length>n?s.slice(0,n):s;}
 function sendToHca(){
-  if(!v('hca')){el('bartxt').textContent='Pick the HCA name first.';return;}
+  var miss=!v('customer')?'customer':(!v('hca')?'hca':'');
+  if(miss){var mf=el(miss);el('bartxt').textContent=(miss==='customer'?'Enter the customer name first.':'Pick the HCA name first.');if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}
   var b=el('sendBtn');b.textContent='Sending…';b.disabled=true;
   api({action:'installcheck',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:v('ready'),
     delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
@@ -223,6 +224,15 @@ FIELDS.forEach(function(f){var e=el(f);if(e){e.addEventListener('input',save);e.
 el('copyBtn').onclick=copyIt;
 el('sendBtn').onclick=sendToHca;
 var _mb=el('matchBtn');if(_mb)_mb.onclick=matchSold;
+/* A11y: give every field an accessible name from its visible label (associates
+   the <label> and adds aria-label, so screen readers announce each control). */
+Array.prototype.forEach.call(document.querySelectorAll('.card label'),function(lab){
+  var ctl=lab.parentNode.querySelector('input,select,textarea');
+  if(!ctl)return;
+  var t=(lab.textContent||'').trim();
+  if(t&&!ctl.getAttribute('aria-label'))ctl.setAttribute('aria-label',t);
+  if(ctl.id&&!lab.getAttribute('for'))lab.setAttribute('for',ctl.id);
+});
 </script>
 </body>
 </html>
