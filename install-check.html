@@ -24,12 +24,12 @@
   .full{grid-column:1/-1}
   .banner{border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;border:1px solid}
   .banner b{font-weight:800}
+  .banner a{color:inherit;text-decoration:underline}
   .banner ul{margin:6px 0 0;padding-left:18px}
   .banner li{margin:2px 0}
   .banner.green{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.5);color:#bbf7d0}
   .banner.amber{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.55);color:#fde68a}
   .banner.red{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.55);color:#fecaca}
-  select:disabled{opacity:1;-webkit-text-fill-color:var(--text);color:var(--text)}
   label{display:block;color:var(--mut);font-size:11px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px}
   input[type=text],input[type=date],select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:13px 14px;border-radius:10px;font-family:inherit;font-size:16px;min-height:48px}
   select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
@@ -77,9 +77,10 @@
       </div>
       <div><label>In a critical area?</label>
         <select id="critical"><option value="">Select…</option><option>No</option><option>Yes — needs review</option></select></div>
+      <div class="full" style="margin-top:2px"><a class="link" href="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0" target="_blank" rel="noopener">📋 Jurisdictions sheet (live) ↗</a></div>
       <div class="full" id="jbanner" style="display:none"></div>
-      <div class="full"><label>Overall — ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set from the checklist)</span></label>
-        <select id="ready" disabled aria-live="polite"><option value="">Fill out the check…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
+      <div class="full"><label>Overall — ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set — you can raise it, not lower it)</span></label>
+        <select id="ready" aria-live="polite"><option value="">Fill out the check…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
       </div>
       <div class="full" id="verdict" style="display:none"></div>
     </div>
@@ -162,6 +163,7 @@
 var el=function(id){return document.getElementById(id)};
 var FIELDS=['customer','idate','hca','by','city','critical','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
 var SOLD={};
+var SHEET_URL="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0";
 
 /* ===== Guardrail + jurisdiction logic (parts drive the verdict) ===== */
 /* A field is a hard BLOCK when its value equals the mapped string below.
@@ -178,8 +180,8 @@ var BLOCKLABEL={'d-elec':'Electrical — Not ready','d-install':'Install — Not
   'mat':'Materials not complete','photos':'Layout photos not taken','video':'Walkthrough video not taken',
   'b-elec':'Electrical not billed','b-labor':'Labor not billed','heatload':'No heat load calc',
   'sizematch':'Equipment mismatch'};
-/* Jurisdiction rules mirror the field guide's City/Jurisdiction table.
-   NOTE: this list also lives in hca-field-guide.html — keep the two in sync. */
+/* Fallback jurisdiction rules — used only if the live sheet isn't wired in yet.
+   Source of truth is the Jurisdictions Google Sheet (see SHEET_URL / the link in the tool). */
 var JURIS={
   'kirkland':{lvl:'no',msg:'Kirkland is NOT next-day. Cannot be visible from street; check critical area / GIS.'},
   'woodinville':{lvl:'no',msg:'Woodinville is NOT next-day — about a week for permits. Need measuring-tape setback photos.'},
@@ -200,6 +202,9 @@ function jurisFor(){
   return hit;
 }
 var BYRANK={0:'✔ Ready',1:'⚠ Ready with notes',2:'✖ Not ready'};
+var RANKOF={'':-1,'✔ Ready':0,'⚠ Ready with notes':1,'✖ Not ready':2};
+function rankOf(s){var r=RANKOF[s];return r===undefined?-1:r;}
+var manualStatus=null; /* checker override — only allowed to RAISE severity, never lower */
 function computeVerdict(){
   var blockers=[],warnings=[],unanswered=[];
   for(var id in VREL){if(!VREL.hasOwnProperty(id))continue;
@@ -227,20 +232,22 @@ function renderVerdict(){
   var r=computeVerdict();
   var jb=el('jbanner');
   if(r.juris){jb.style.display='block';jb.className='banner '+(r.juris.lvl==='no'?'red':'amber');
-    jb.innerHTML=(r.juris.lvl==='no'?'⛔ ':'⚠ ')+'<b>Jurisdiction:</b> '+r.juris.msg;}
+    jb.innerHTML=(r.juris.lvl==='no'?'⛔ ':'⚠ ')+'<b>Jurisdiction:</b> '+r.juris.msg+' <a href="'+SHEET_URL+'" target="_blank" rel="noopener">live sheet ↗</a>';}
   else{jb.style.display='none';jb.innerHTML='';}
   var sel=el('ready'),vb=el('verdict'),bt=el('bartxt');
-  if(!r.anyAnswered){sel.value='';vb.style.display='none';vb.innerHTML='';if(bt)bt.textContent='Fill out, then Send to HCA';return;}
-  sel.value=r.status;
+  if(!r.anyAnswered){manualStatus=null;sel.value='';vb.style.display='none';vb.innerHTML='';if(bt)bt.textContent='Fill out, then Send to HCA';return;}
+  var status=r.status,rank=r.rank;
+  if(manualStatus!=null){if(rankOf(manualStatus)>rank){status=manualStatus;rank=rankOf(manualStatus);}else manualStatus=null;}
+  sel.value=status;
   vb.style.display='block';
-  vb.className='banner '+(r.rank===2?'red':(r.rank===1?'amber':'green'));
-  var html='<b>'+r.status+'</b>';
+  vb.className='banner '+(rank===2?'red':(rank===1?'amber':'green'));
+  var html='<b>'+status+'</b>';
   if(r.blockers.length){html+='<div style="margin-top:6px">HCA must update before it’s good to go:</div><ul>'+r.blockers.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
   var soft=r.warnings.concat(r.unanswered.map(function(u){return u+' — not answered';}));
   if(soft.length){html+='<div style="margin-top:6px">Notes / still to confirm:</div><ul>'+soft.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
-  if(r.rank===0)html+='<div style="margin-top:4px">All checks clear — good to go.</div>';
+  if(!r.blockers.length&&!soft.length){html+='<div style="margin-top:4px">'+(rank===0?'All checks clear — good to go.':'Set to “'+status+'” by the checker.')+'</div>';}
   vb.innerHTML=html;
-  if(bt)bt.textContent=r.rank===2?'Not cleared — Send notifies the HCA what to update.':(r.rank===1?'Ready with notes — review the flags, then Send.':'All clear — Send to HCA.');
+  if(bt)bt.textContent=rank===2?'Not cleared — Send notifies the HCA what to update.':(rank===1?'Ready with notes — review the flags, then Send.':'All clear — Send to HCA.');
 }
 
 function v(id){var e=el(id);return e?String(e.value||'').trim():''}
@@ -248,9 +255,10 @@ function line(label,val){return val?(label+": "+val):''}
 function block(title,rows){rows=rows.filter(Boolean);if(!rows.length)return'';return title+"\n"+rows.map(function(r){return "  "+r}).join("\n")+"\n";}
 function checkText(){
   var out=[],rr=computeVerdict();
+  var st=rr.status;if(manualStatus!=null&&rankOf(manualStatus)>rr.rank)st=manualStatus;
   out.push("NEXT-DAY INSTALL CHECK — CM Heating");
   out.push((v('customer')?("Customer: "+v('customer')):"Customer: —")+(v('idate')?("  ·  Install "+v('idate')):""));
-  out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+("   ·   Ready: "+(rr.status||'—')));
+  out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+("   ·   Ready: "+(st||'—')));
   out.push("");
   if(v('city')||rr.juris){out.push(block("JURISDICTION",[line("City",v('city')+(v('critical')==='Yes — needs review'?' · critical area':'')),rr.juris?((rr.juris.lvl==='no'?'NOT next-day — ':'Conditional — ')+rr.juris.msg):'']));}
   if(rr.blockers.length){out.push("BLOCKERS — HCA to update:");out.push(rr.blockers.map(function(x){return "  "+x;}).join("\n"));out.push("");}
@@ -272,7 +280,7 @@ function copyIt(){
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
-function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+function resetForm(){manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
 function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
 function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;renderVerdict();}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
@@ -293,11 +301,13 @@ function sendToHca(){
   var req=[['customer','Enter the customer name first.'],['idate','Add the install date.'],['hca','Pick the HCA name first.'],['by','Pick who checked it.'],['d-elec','Set the Electrical sign-off.'],['d-install','Set the Install sign-off.'],['d-sales','Set the Sales sign-off.']];
   for(var i=0;i<req.length;i++){if(!v(req[i][0])){var mf=el(req[i][0]);el('bartxt').textContent=req[i][1];if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}}
   var rr=computeVerdict();
+  var finalStatus=rr.status;
+  if(manualStatus!=null&&rankOf(manualStatus)>rr.rank)finalStatus=manualStatus;
   var b=el('sendBtn');b.textContent='Sending…';b.disabled=true;
-  api({action:'installcheck',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:rr.status,
+  api({action:'installcheck',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:finalStatus,
     city:v('city'),critical:v('critical'),
     jflag:rr.juris?((rr.juris.lvl==='no'?'NOT next-day: ':'Conditional: ')+rr.juris.msg):'',
-    verdict:rr.status,blockers:rr.blockers.join('; '),
+    verdict:finalStatus,blockers:rr.blockers.join('; '),
     notesflags:rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';})).join('; '),
     delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
     mat:v('mat'),matnotes:cap(v('mat-notes'),300),
@@ -327,9 +337,20 @@ Array.prototype.forEach.call(document.querySelectorAll('.card label'),function(l
   if(t&&!ctl.getAttribute('aria-label'))ctl.setAttribute('aria-label',t);
   if(ctl.id&&!lab.getAttribute('for'))lab.setAttribute('for',ctl.id);
 });
-/* Live guardrail: recompute the verdict whenever any field changes. */
+/* Live guardrail: recompute the verdict whenever any field changes.
+   #ready is handled separately so the checker can RAISE the status (never lower it). */
+function wrapHandler(e){if(e&&e.target&&e.target.id==='ready')return;renderVerdict();}
 var _wrap=document.querySelector('.wrap');
-if(_wrap){_wrap.addEventListener('input',renderVerdict);_wrap.addEventListener('change',renderVerdict);}
+if(_wrap){_wrap.addEventListener('input',wrapHandler);_wrap.addEventListener('change',wrapHandler);}
+el('ready').addEventListener('change',function(){
+  var comp=computeVerdict(),chosen=el('ready').value,reverted=false;
+  if(chosen===''){manualStatus=null;}
+  else if(rankOf(chosen)>comp.rank){manualStatus=chosen;}
+  else if(rankOf(chosen)===comp.rank){manualStatus=null;}
+  else{manualStatus=null;reverted=true;}
+  renderVerdict();
+  if(reverted&&el('bartxt'))el('bartxt').textContent='Can’t mark it that ready — clear the flags first.';
+});
 renderVerdict();
 </script>
 </body>
