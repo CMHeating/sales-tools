@@ -22,6 +22,14 @@
   .card h2 .n{width:24px;height:24px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gold);font-family:Outfit}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .full{grid-column:1/-1}
+  .banner{border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45;border:1px solid}
+  .banner b{font-weight:800}
+  .banner ul{margin:6px 0 0;padding-left:18px}
+  .banner li{margin:2px 0}
+  .banner.green{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.5);color:#bbf7d0}
+  .banner.amber{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.55);color:#fde68a}
+  .banner.red{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.55);color:#fecaca}
+  select:disabled{opacity:1;-webkit-text-fill-color:var(--text);color:var(--text)}
   label{display:block;color:var(--mut);font-size:11px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px}
   input[type=text],input[type=date],select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:13px 14px;border-radius:10px;font-family:inherit;font-size:16px;min-height:48px}
   select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
@@ -44,7 +52,6 @@
   <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="index.html">&larr; HCA Tools</a></div>
   <h1>Next-Day Install Check</h1>
   <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
-
   <!-- JOB -->
   <div class="card">
     <div class="grid2">
@@ -62,12 +69,21 @@
           <option>Geoff Simons</option><option>Lyle Jones</option><option>Jonathan Jansen</option>
         </select>
       </div>
-      <div class="full"><label>Overall — ready to install?</label>
-        <select id="ready"><option value="">Select…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
+      <div><label>City / jurisdiction</label>
+        <input type="text" id="city" list="cityList" placeholder="e.g. Kirkland" autocapitalize="words" autocomplete="off">
+        <datalist id="cityList">
+          <option>Everett</option><option>Kirkland</option><option>Edmonds</option><option>Bothell</option><option>Bellevue</option><option>Marysville</option><option>Mill Creek</option><option>Monroe</option><option>Mukilteo</option><option>Redmond</option><option>Woodinville</option><option>Woodway</option><option>Unincorporated Snohomish</option>
+        </datalist>
       </div>
+      <div><label>In a critical area?</label>
+        <select id="critical"><option value="">Select…</option><option>No</option><option>Yes — needs review</option></select></div>
+      <div class="full" id="jbanner" style="display:none"></div>
+      <div class="full"><label>Overall — ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set from the checklist)</span></label>
+        <select id="ready" disabled aria-live="polite"><option value="">Fill out the check…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
+      </div>
+      <div class="full" id="verdict" style="display:none"></div>
     </div>
   </div>
-
   <!-- DEPARTMENT SIGN-OFF (the 3 dropdowns) -->
   <div class="card">
     <h2><span class="n">1</span> Department sign-off</h2>
@@ -80,7 +96,6 @@
         <select id="d-sales"><option value="">Select…</option><option>✔ Confirmed</option><option>⚠ Needs attention</option><option>✖ Not ready</option><option>N/A</option></select></div>
     </div>
   </div>
-
   <!-- MATERIALS -->
   <div class="card">
     <h2><span class="n">2</span> Materials list</h2>
@@ -93,7 +108,6 @@
       <div class="full"><label>Materials notes</label><textarea id="mat-notes" placeholder="Anything special ordered, back-ordered, or to confirm."></textarea></div>
     </div>
   </div>
-
   <!-- LAYOUT PHOTOS & VIDEO — yes/no -->
   <div class="card">
     <h2><span class="n">3</span> Layout — photos & video</h2>
@@ -105,7 +119,6 @@
       <div class="full"><label>Layout notes</label><textarea id="layout-notes" placeholder="Access, obstacles, where equipment lands, anything the crew should know."></textarea></div>
     </div>
   </div>
-
   <!-- BILLING -->
   <div class="card">
     <h2><span class="n">4</span> Billing — electrical & labor</h2>
@@ -117,7 +130,6 @@
       <div class="full"><label>Billing notes</label><textarea id="bill-notes" placeholder="Hours, electrical scope, add-ons, anything to correct before install."></textarea></div>
     </div>
   </div>
-
   <!-- SIZING -->
   <div class="card">
     <h2><span class="n">5</span> Sizing — heat load & equipment</h2>
@@ -130,7 +142,6 @@
       <div class="full"><label>Sizing notes</label><textarea id="size-notes" placeholder="Load figure, tonnage, why this equipment fits."></textarea></div>
     </div>
   </div>
-
   <!-- DISCOUNTS -->
   <div class="card">
     <h2><span class="n">6</span> Discounts</h2>
@@ -141,30 +152,110 @@
     </div>
   </div>
 </div>
-
 <div class="bar"><div class="bar-in">
   <div class="bar-txt" id="bartxt">Fill out, then Send to HCA</div>
   <button class="ghost" id="copyBtn">Copy</button>
   <button class="go" id="sendBtn">Send to HCA</button>
 </div></div>
-
 <div id="printout"></div>
-
 <script>
 var el=function(id){return document.getElementById(id)};
-var FIELDS=['customer','idate','hca','by','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
+var FIELDS=['customer','idate','hca','by','city','critical','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
 var SOLD={};
+
+/* ===== Guardrail + jurisdiction logic (parts drive the verdict) ===== */
+/* A field is a hard BLOCK when its value equals the mapped string below.
+   Blocks force "Not ready" — the HCA gets a to-do list to update before it's good to go. */
+var BLOCK={'d-elec':'✖ Not ready','d-install':'✖ Not ready','d-sales':'✖ Not ready',
+  'mat':'✖ No','photos':'✖ No','video':'✖ No','b-elec':'✖ Not billed','b-labor':'✖ Not billed',
+  'heatload':'✖ No','sizematch':'✖ Mismatch'};
+var WARNVALS=['⚠ Needs attention','⚠ Partial — see notes','⚠ Needs fix','⚠ Review','⚠ Needs review'];
+var VREL={'d-elec':'Electrical sign-off','d-install':'Install sign-off','d-sales':'Sales sign-off',
+  'mat':'Materials list','photos':'Layout photos','video':'Walkthrough video',
+  'b-elec':'Electrical billed','b-labor':'Labor billed','heatload':'Heat load calc',
+  'sizematch':'Equipment sizing','disc':'Discounts'};
+var BLOCKLABEL={'d-elec':'Electrical — Not ready','d-install':'Install — Not ready','d-sales':'Sales — Not ready',
+  'mat':'Materials not complete','photos':'Layout photos not taken','video':'Walkthrough video not taken',
+  'b-elec':'Electrical not billed','b-labor':'Labor not billed','heatload':'No heat load calc',
+  'sizematch':'Equipment mismatch'};
+/* Jurisdiction rules mirror the field guide's City/Jurisdiction table.
+   NOTE: this list also lives in hca-field-guide.html — keep the two in sync. */
+var JURIS={
+  'kirkland':{lvl:'no',msg:'Kirkland is NOT next-day. Cannot be visible from street; check critical area / GIS.'},
+  'woodinville':{lvl:'no',msg:'Woodinville is NOT next-day — about a week for permits. Need measuring-tape setback photos.'},
+  'woodway':{lvl:'no',msg:'Woodway is NOT next-day — about a two-week scheduling window.'},
+  'monroe':{lvl:'no',msg:'Monroe is NOT next-day — minimum two days after sold for any equipment.'},
+  'edmonds':{lvl:'cond',msg:'Edmonds — call coordination first. RS-8 may be next-day only if setbacks pass.'},
+  'bellevue':{lvl:'cond',msg:'Bellevue — OK for single-family; multifamily may need plan review (not next-day).'},
+  'mukilteo':{lvl:'cond',msg:'Mukilteo — only if replacing a non-conforming unit and not making it worse; get before/after photos.'}
+};
+function normCity(s){return String(s||'').toLowerCase().replace(/[^a-z]+/g,'');}
+function jurisFor(){
+  var c=normCity(v('city')),hit=null;
+  if(c){for(var k in JURIS){if(JURIS.hasOwnProperty(k)&&c.indexOf(k)!==-1){hit={key:k,lvl:JURIS[k].lvl,msg:JURIS[k].msg};break;}}}
+  if(v('critical')==='Yes — needs review'){
+    if(!hit)hit={key:'critical',lvl:'cond',msg:'Critical area — needs special review before promising next-day.'};
+    else hit={key:hit.key,lvl:hit.lvl,msg:hit.msg+' Also flagged as a critical area.'};
+  }
+  return hit;
+}
+var BYRANK={0:'✔ Ready',1:'⚠ Ready with notes',2:'✖ Not ready'};
+function computeVerdict(){
+  var blockers=[],warnings=[],unanswered=[];
+  for(var id in VREL){if(!VREL.hasOwnProperty(id))continue;
+    var val=v(id);
+    if(val===''){unanswered.push(VREL[id]);continue;}
+    if(BLOCK[id]&&val===BLOCK[id]){blockers.push(BLOCKLABEL[id]);continue;}
+    if(WARNVALS.indexOf(val)!==-1){warnings.push(VREL[id]+' — '+val.replace(/^[⚠✖✔]\s*/,''));}
+  }
+  var di=v('idate');
+  if(di){var d=new Date(di+'T00:00:00'),now=new Date(),t=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    var diff=Math.round((d-t)/86400000);
+    if(diff<0)warnings.push('Install date is in the past');
+    else if(diff===0)warnings.push('Install date is today (not next-day)');
+    else if(diff>1)warnings.push('Install date is '+diff+' days out (not next-day)');}
+  var j=jurisFor();
+  var anyAnswered=v('customer')!==''||v('idate')!==''||v('city')!=='';
+  if(!anyAnswered){for(var id2 in VREL){if(VREL.hasOwnProperty(id2)&&v(id2)!==''){anyAnswered=true;break;}}}
+  var rank;
+  if(blockers.length)rank=2;
+  else if(warnings.length||unanswered.length||j)rank=1;
+  else rank=0;
+  return {rank:rank,status:BYRANK[rank],blockers:blockers,warnings:warnings,unanswered:unanswered,juris:j,anyAnswered:anyAnswered};
+}
+function renderVerdict(){
+  var r=computeVerdict();
+  var jb=el('jbanner');
+  if(r.juris){jb.style.display='block';jb.className='banner '+(r.juris.lvl==='no'?'red':'amber');
+    jb.innerHTML=(r.juris.lvl==='no'?'⛔ ':'⚠ ')+'<b>Jurisdiction:</b> '+r.juris.msg;}
+  else{jb.style.display='none';jb.innerHTML='';}
+  var sel=el('ready'),vb=el('verdict'),bt=el('bartxt');
+  if(!r.anyAnswered){sel.value='';vb.style.display='none';vb.innerHTML='';if(bt)bt.textContent='Fill out, then Send to HCA';return;}
+  sel.value=r.status;
+  vb.style.display='block';
+  vb.className='banner '+(r.rank===2?'red':(r.rank===1?'amber':'green'));
+  var html='<b>'+r.status+'</b>';
+  if(r.blockers.length){html+='<div style="margin-top:6px">HCA must update before it’s good to go:</div><ul>'+r.blockers.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
+  var soft=r.warnings.concat(r.unanswered.map(function(u){return u+' — not answered';}));
+  if(soft.length){html+='<div style="margin-top:6px">Notes / still to confirm:</div><ul>'+soft.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
+  if(r.rank===0)html+='<div style="margin-top:4px">All checks clear — good to go.</div>';
+  vb.innerHTML=html;
+  if(bt)bt.textContent=r.rank===2?'Not cleared — Send notifies the HCA what to update.':(r.rank===1?'Ready with notes — review the flags, then Send.':'All clear — Send to HCA.');
+}
 
 function v(id){var e=el(id);return e?String(e.value||'').trim():''}
 function line(label,val){return val?(label+": "+val):''}
 function block(title,rows){rows=rows.filter(Boolean);if(!rows.length)return'';return title+"\n"+rows.map(function(r){return "  "+r}).join("\n")+"\n";}
-
 function checkText(){
-  var out=[];
+  var out=[],rr=computeVerdict();
   out.push("NEXT-DAY INSTALL CHECK — CM Heating");
   out.push((v('customer')?("Customer: "+v('customer')):"Customer: —")+(v('idate')?("  ·  Install "+v('idate')):""));
-  out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+(v('ready')?("   ·   Ready: "+v('ready')):""));
+  out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+("   ·   Ready: "+(rr.status||'—')));
   out.push("");
+  if(v('city')||rr.juris){out.push(block("JURISDICTION",[line("City",v('city')+(v('critical')==='Yes — needs review'?' · critical area':'')),rr.juris?((rr.juris.lvl==='no'?'NOT next-day — ':'Conditional — ')+rr.juris.msg):'']));}
+  if(rr.blockers.length){out.push("BLOCKERS — HCA to update:");out.push(rr.blockers.map(function(x){return "  "+x;}).join("\n"));out.push("");}
+  var soft=rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';}));
+  if(soft.length){out.push("NOTES / CONFIRM:");out.push(soft.map(function(x){return "  "+x;}).join("\n"));out.push("");}
   out.push(block("SIGN-OFF",[line("Electrical",v('d-elec')),line("Install",v('d-install')),line("Sales",v('d-sales'))]));
   out.push(block("MATERIALS",[line("List",v('mat')),line("Notes",v('mat-notes'))]));
   out.push(block("LAYOUT",[line("Photos taken",v('photos')),line("Video taken",v('video')),line("Notes",v('layout-notes'))]));
@@ -175,16 +266,15 @@ function checkText(){
 }
 function copyIt(){
   var t=checkText();
-  function done(ok){var b=el('copyBtn');b.textContent=ok?'Copied ✓':'Copy failed';setTimeout(function(){b.textContent='Copy check'},1500);}
+  function done(ok){var b=el('copyBtn');b.textContent=ok?'Copied ✓':'Copy failed';setTimeout(function(){b.textContent='Copy'},1500);}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){done(true)},fb);}else fb();
   function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done(true)}catch(e){done(false)}document.body.removeChild(ta);}
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
-function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+function resetForm(){FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
 function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
-function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
-
+function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;renderVerdict();}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
 var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
 function api(params){return new Promise(function(resolve,reject){
@@ -200,10 +290,15 @@ function api(params){return new Promise(function(resolve,reject){
 });}
 function cap(s,n){s=String(s||'');return s.length>n?s.slice(0,n):s;}
 function sendToHca(){
-  var miss=!v('customer')?'customer':(!v('hca')?'hca':'');
-  if(miss){var mf=el(miss);el('bartxt').textContent=(miss==='customer'?'Enter the customer name first.':'Pick the HCA name first.');if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}
+  var req=[['customer','Enter the customer name first.'],['idate','Add the install date.'],['hca','Pick the HCA name first.'],['by','Pick who checked it.'],['d-elec','Set the Electrical sign-off.'],['d-install','Set the Install sign-off.'],['d-sales','Set the Sales sign-off.']];
+  for(var i=0;i<req.length;i++){if(!v(req[i][0])){var mf=el(req[i][0]);el('bartxt').textContent=req[i][1];if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}}
+  var rr=computeVerdict();
   var b=el('sendBtn');b.textContent='Sending…';b.disabled=true;
-  api({action:'installcheck',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:v('ready'),
+  api({action:'installcheck',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:rr.status,
+    city:v('city'),critical:v('critical'),
+    jflag:rr.juris?((rr.juris.lvl==='no'?'NOT next-day: ':'Conditional: ')+rr.juris.msg):'',
+    verdict:rr.status,blockers:rr.blockers.join('; '),
+    notesflags:rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';})).join('; '),
     delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
     mat:v('mat'),matnotes:cap(v('mat-notes'),300),
     photos:v('photos'),video:v('video'),layoutnotes:cap(v('layout-notes'),300),
@@ -217,7 +312,6 @@ function sendToHca(){
     else{el('bartxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed — use Copy instead.';}
   }).catch(function(){b.disabled=false;b.textContent='Send to HCA';el('bartxt').textContent='Couldn’t reach the mailer — use Copy for now.';});
 }
-
 /* No draft persistence — the form is blank on every open. Clear any draft a
    previous version stashed on this device so it can never restore stale entries. */
 try{localStorage.removeItem('cmh_installcheck');}catch(e){}
@@ -233,6 +327,10 @@ Array.prototype.forEach.call(document.querySelectorAll('.card label'),function(l
   if(t&&!ctl.getAttribute('aria-label'))ctl.setAttribute('aria-label',t);
   if(ctl.id&&!lab.getAttribute('for'))lab.setAttribute('for',ctl.id);
 });
+/* Live guardrail: recompute the verdict whenever any field changes. */
+var _wrap=document.querySelector('.wrap');
+if(_wrap){_wrap.addEventListener('input',renderVerdict);_wrap.addEventListener('change',renderVerdict);}
+renderVerdict();
 </script>
 </body>
 </html>
