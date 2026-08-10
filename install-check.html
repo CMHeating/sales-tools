@@ -63,6 +63,7 @@
           <option>Davis Diosdado</option><option>Javierre Milo</option><option>Joe Chounramany</option>
           <option>Joseph Ruble</option><option>Kyle McAlister</option><option>Samir Khoury</option><option>Trevor Bohm</option>
         </select>
+        <div id="hcaCheck" style="font-size:12px;margin-top:6px;line-height:1.35"></div>
       </div>
       <div><label>Checked by</label>
         <select id="by"><option value="">Select…</option>
@@ -163,6 +164,7 @@
 var el=function(id){return document.getElementById(id)};
 var FIELDS=['customer','idate','hca','by','city','critical','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
 var SOLD={};
+var COMBO_REP='';  /* SALES REP pulled from the Combo Log, kept for the HCA cross-check */
 var SHEET_URL="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0";
 
 /* ===== Guardrail + jurisdiction logic (parts drive the verdict) ===== */
@@ -280,9 +282,13 @@ function copyIt(){
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
-function resetForm(){manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};var mi=el('matchInfo');if(mi)mi.textContent='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+function resetForm(){manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};COMBO_REP='';var mi=el('matchInfo');if(mi)mi.textContent='';var hc=el('hcaCheck');if(hc){hc.textContent='';hc.style.color='';}var ci=el('city');if(ci)ci.dataset.auto='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
 function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
-function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;renderVerdict();}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
+/* Cross-check the Combo Log's SALES REP against the selected HCA. Compares on
+   last name so "Joe Ruble" (Combo Log) still matches "Joseph Ruble" (HCA list). */
+function lastNameOf(s){var t=String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);return t[t.length-1]||'';}
+function repCrossCheck(rep){var hc=el('hcaCheck');if(!hc)return;rep=String(rep||'').trim();if(!rep){hc.textContent='';hc.style.color='';return;}var hca=v('hca');var match=hca&&lastNameOf(hca)===lastNameOf(rep);hc.textContent=(match?'✓ ':'⚠ ')+'Combo Log rep: '+rep+(hca?(match?' — matches HCA':' — differs from selected HCA ('+hca+')'):' — no HCA selected yet');hc.style.color=match?'var(--mut)':'#e9960f';}
+function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;if(d.installDate){var _di=el('idate');if(_di)_di.value=d.installDate;}if(d.installCity){var _ci=el('city');if(_ci&&(_ci.value.trim()===''||_ci.dataset.auto==='1')){_ci.value=d.installCity;_ci.dataset.auto='1';}}COMBO_REP=d.installRep||'';repCrossCheck(COMBO_REP);var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.installDate)bits+=' · install '+d.installDate;if(d.installCity)bits+=' · '+d.installCity;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;renderVerdict();}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
 var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
 function api(params){return new Promise(function(resolve,reject){
@@ -328,6 +334,10 @@ try{localStorage.removeItem('cmh_installcheck');}catch(e){}
 el('copyBtn').onclick=copyIt;
 el('sendBtn').onclick=sendToHca;
 var _mb=el('matchBtn');if(_mb)_mb.onclick=matchSold;
+/* keep the rep cross-check honest if the checker changes the HCA by hand, and
+   let a hand-typed city override the auto-filled one (so the next match won't stomp it) */
+var _hcaSel=el('hca');if(_hcaSel)_hcaSel.addEventListener('change',function(){repCrossCheck(COMBO_REP);});
+var _citySel=el('city');if(_citySel)_citySel.addEventListener('input',function(){this.dataset.auto='';});
 /* A11y: give every field an accessible name from its visible label (associates
    the <label> and adds aria-label, so screen readers announce each control). */
 Array.prototype.forEach.call(document.querySelectorAll('.card label'),function(lab){
