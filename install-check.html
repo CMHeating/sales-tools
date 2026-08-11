@@ -68,7 +68,7 @@
   <div class="banner amber" id="roleBanner" style="display:none;margin-bottom:14px"></div>
   <!-- IN-PROGRESS CHECKS (saved on the server — reopen to finish) -->
   <div class="card" id="resumeCard" style="display:none">
-    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">⏳</span> In-progress checks — tap to finish</span><span id="resumeProg" style="font-size:13px;color:var(--mut);font-weight:600;text-transform:none;letter-spacing:0"></span></h2>
+    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">⏳</span> In-progress checks — tap to finish</span><span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><label style="font-size:12px;color:var(--mut)">Waiting on</label><select id="resumeWho" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;font-weight:600"><option value="all">Everyone</option><option value="jon">Jon (Electrical)</option><option value="lyle">Lyle (Install)</option><option value="geoff">Geoff (Sales)</option><option value="hca">HCA uploads</option></select><span id="resumeProg" style="font-size:13px;color:var(--mut);font-weight:600"></span></span></h2>
     <div id="resumeList"></div>
     <p class="sub" style="margin:10px 2px 0;font-size:12px">These are saved checks still missing an upload or a manager spot-check. Tap one to reopen it exactly where it left off.</p>
   </div>
@@ -355,20 +355,33 @@ function parseResume(){
 }
 /* Pull any in-progress (unfinished) checks from the server so they can be reopened
    and finished from the tool — no reliance on the email link surviving. */
+var OPEN_CHECKS=[];
+/* Work out who a saved check is still waiting on, from its field values. */
+function owedBy(payload){
+  var f=(payload&&payload.f)||{};
+  var done=function(v){return /^\s*✔/.test(String(v||''));};
+  return {jon:!String(f['d-elec']||'').trim(),lyle:!String(f['d-install']||'').trim(),geoff:!String(f['d-sales']||'').trim(),
+    hca:(!done(f.heatload)||!done(f.video)||!done(f.photos)||!done(f.mat))};
+}
+var WHO_LABEL={all:'anyone',jon:'Jon',lyle:'Lyle',geoff:'Geoff',hca:'the HCA'};
+function renderOpenChecks(){
+  var card=el('resumeCard'),list=el('resumeList'),pg=el('resumeProg');if(!card||!list)return;
+  if(!OPEN_CHECKS.length){card.style.display='none';return;}
+  var who=(el('resumeWho')&&el('resumeWho').value)||'all';
+  var shown=OPEN_CHECKS.filter(function(c){if(who==='all')return true;var o=owedBy(c.payload);return !!o[who];});
+  list.innerHTML='';
+  if(!shown.length){list.innerHTML='<p class="sub" style="margin:6px 2px">Nothing waiting on '+(WHO_LABEL[who]||who)+' right now.</p>';if(pg)pg.textContent=OPEN_CHECKS.length+' open';card.style.display='block';return;}
+  shown.forEach(function(c){
+    var row=document.createElement('div');row.className='qrow';
+    row.innerHTML='<span class="qdot" style="background:#e0912f"></span><div class="qmain"><div class="qname">'+qesc(c.customer||'(no name)')+'</div><div class="qmeta">'+(c.idate?('install '+qesc(c.idate)+' · '):'')+qesc(c.outstanding||'in progress')+'</div></div>';
+    row.onclick=function(){applyCheckPayload(c.payload,'Reopened in-progress check — finish the missing items and Send.');};
+    list.appendChild(row);
+  });
+  if(pg)pg.textContent=(who==='all')?(shown.length+' open'):(shown.length+' waiting on '+(WHO_LABEL[who]||who));
+  card.style.display='block';
+}
 function loadOpenChecks(){
-  api({action:'openchecks'}).then(function(d){
-    if(!(d&&d.ok&&d.checks&&d.checks.length))return;
-    var card=el('resumeCard'),list=el('resumeList');if(!card||!list)return;
-    list.innerHTML='';
-    d.checks.forEach(function(c){
-      var row=document.createElement('div');row.className='qrow';
-      row.innerHTML='<span class="qdot" style="background:#e0912f"></span><div class="qmain"><div class="qname">'+qesc(c.customer||'(no name)')+'</div><div class="qmeta">'+(c.idate?('install '+qesc(c.idate)+' · '):'')+qesc(c.outstanding||'in progress')+'</div></div>';
-      row.onclick=function(){applyCheckPayload(c.payload,'Reopened in-progress check — finish the missing items and Send.');};
-      list.appendChild(row);
-    });
-    var pg=el('resumeProg');if(pg)pg.textContent=d.checks.length+' open';
-    card.style.display='block';
-  }).catch(function(){});
+  api({action:'openchecks'}).then(function(d){OPEN_CHECKS=(d&&d.ok&&d.checks)?d.checks:[];renderOpenChecks();}).catch(function(){});
 }
 /* Auto-load the day's installs from the schedule (Combo Log via the backend) when
    the page is opened normally — no queue link needed. Defaults to tomorrow. */
@@ -483,6 +496,7 @@ if(!_resumed){
   loadOpenChecks();   /* also surface any saved, unfinished checks to resume */
 }
 var _qdSel=el('queueDay');if(_qdSel)_qdSel.addEventListener('change',function(){autoLoadQueue(this.value);});
+var _rwSel=el('resumeWho');if(_rwSel)_rwSel.addEventListener('change',renderOpenChecks);
 </script>
 </body>
 </html>
