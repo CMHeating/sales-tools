@@ -64,6 +64,8 @@
   <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="index.html">&larr; HCA Tools</a></div>
   <h1>Next-Day Install Check</h1>
   <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
+  <!-- ROLE BANNER (shows when a manager opens their own "finish this spot check" link) -->
+  <div class="banner amber" id="roleBanner" style="display:none;margin-bottom:14px"></div>
   <!-- REVIEW QUEUE (only shows when the page is opened from a queue link) -->
   <div class="card" id="queueCard" style="display:none">
     <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">★</span> Install review queue</span><span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><select id="queueDay" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;font-weight:600"><option value="next">Tomorrow</option><option value="today">Today</option></select><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600"></span></span></h2>
@@ -328,6 +330,15 @@ function parseResume(){
     if(obj.sold)SOLD={customer:obj.sold.customer||'',soldby:obj.sold.soldby||'',amount:obj.sold.amount||'',soldon:obj.sold.soldon||'',est:obj.sold.est||'',job:obj.sold.job||''};
     renderVerdict();
     var info=el('matchInfo');if(info)info.textContent='Resumed from email — add your sign-off, then Send.';
+    /* Manager-scoped link: name whose spot-check this is, lock the other two sign-offs
+       so they only touch their own part (locked fields still submit their value). */
+    if(obj.role&&obj.role.field){
+      var rf=obj.role.field,who=obj.role.who||'',dep=obj.role.dep||'';
+      var rb=el('roleBanner');
+      if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='🔧 <b>You’re finishing the '+dep+' spot-check'+(who?(' — '+who):'')+'.</b> Set your sign-off below and hit <b>Send to HCA</b>. The other sign-offs are locked so you only complete your part.';}
+      ['d-elec','d-install','d-sales'].forEach(function(id){var e=el(id);if(e&&id!==rf){e.disabled=true;e.style.opacity='0.55';}});
+      var tgt=el(rf);if(tgt){tgt.style.outline='2px solid var(--orange)';tgt.style.outlineOffset='2px';try{setTimeout(function(){tgt.scrollIntoView({block:'center',behavior:'smooth'});},250);}catch(e){}}
+    }
     return true;
   }catch(e){return false;}
 }
