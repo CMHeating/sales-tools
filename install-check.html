@@ -314,6 +314,23 @@ function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='
 function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;clearForm_();if(it.customer)el('customer').value=it.customer;if(it.idate)el('idate').value=it.idate;if(it.city){var ci=el('city');if(ci){ci.value=it.city;ci.dataset.auto='1';}}if(it.hca)setHca(it.hca);if(it.rep){COMBO_REP=it.rep;repCrossCheck(it.rep);}renderVerdict();renderQueue();if(it.customer)matchSold();try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}}
 function advanceQueue(){if(qIdx<0)return false;qDone[qIdx]=true;var next=-1;for(var k=1;k<=QUEUE.length;k++){var j=(qIdx+k)%QUEUE.length;if(!qDone[j]){next=j;break;}}renderQueue();if(next>=0){loadQueueItem(next);return true;}return false;}
 function qDoneCount(){var n=0;for(var k in qDone){if(qDone.hasOwnProperty(k)&&qDone[k])n++;}return n;}
+/* Resume a specific check from an email link (#check=...): pre-fill every field
+   that was entered so far so a CC'd manager just adds their sign-off and re-sends.
+   The check's state rides in the link, so it accumulates down the email chain. */
+function parseResume(){
+  try{
+    var m=String(location.hash||'').match(/[#&]check=([^&]*)/);
+    if(!m||!m[1])return false;
+    var obj=JSON.parse(decodeURIComponent(m[1]));
+    if(!obj||!obj.f)return false;
+    Object.keys(obj.f).forEach(function(k){var e=el(k);if(e)e.value=obj.f[k];});
+    if(el('city')&&el('city').value)el('city').dataset.auto='1';
+    if(obj.sold)SOLD={customer:obj.sold.customer||'',soldby:obj.sold.soldby||'',amount:obj.sold.amount||'',soldon:obj.sold.soldon||'',est:obj.sold.est||'',job:obj.sold.job||''};
+    renderVerdict();
+    var info=el('matchInfo');if(info)info.textContent='Resumed from email — add your sign-off, then Send.';
+    return true;
+  }catch(e){return false;}
+}
 /* Auto-load the day's installs from the schedule (Combo Log via the backend) when
    the page is opened normally — no queue link needed. Defaults to tomorrow. */
 function autoLoadQueue(day){
@@ -349,7 +366,9 @@ function api(params){return new Promise(function(resolve,reject){
 });}
 function cap(s,n){s=String(s||'');return s.length>n?s.slice(0,n):s;}
 function sendToHca(){
-  var req=[['customer','Enter the customer name first.'],['idate','Add the install date.'],['hca','Pick the HCA name first.'],['by','Pick who checked it.'],['d-elec','Set the Electrical sign-off.'],['d-install','Set the Install sign-off.'],['d-sales','Set the Sales sign-off.']];
+  /* Sign-offs are NOT required to send — an incomplete check can go out so Jon /
+     Lyle / Geoff get the email and can finish their part. Only the basics gate it. */
+  var req=[['customer','Enter the customer name first.'],['idate','Add the install date.'],['hca','Pick the HCA name first.'],['by','Pick who checked it.']];
   for(var i=0;i<req.length;i++){if(!v(req[i][0])){var mf=el(req[i][0]);el('bartxt').textContent=req[i][1];if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}}
   var rr=computeVerdict();
   var finalStatus=rr.status;
@@ -416,9 +435,13 @@ el('ready').addEventListener('change',function(){
   if(reverted&&el('bartxt'))el('bartxt').textContent='Can’t mark it that ready — clear the flags first.';
 });
 renderVerdict();
-parseQueue();
-/* No queue link? Auto-load the day's installs from the schedule. */
-if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
+/* Precedence: a resume link (one check) wins over a queue link, which wins over
+   the auto-loaded schedule. */
+var _resumed=parseResume();
+if(!_resumed){
+  parseQueue();
+  if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
+}
 var _qdSel=el('queueDay');if(_qdSel)_qdSel.addEventListener('change',function(){autoLoadQueue(this.value);});
 </script>
 </body>
