@@ -66,9 +66,9 @@
   <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
   <!-- REVIEW QUEUE (only shows when the page is opened from a queue link) -->
   <div class="card" id="queueCard" style="display:none">
-    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span><span class="n">★</span> Today&rsquo;s review queue</span><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600;text-transform:none;letter-spacing:0"></span></h2>
+    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">★</span> Install review queue</span><span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><select id="queueDay" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;font-weight:600"><option value="next">Tomorrow</option><option value="today">Today</option></select><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600"></span></span></h2>
     <div id="queueList"></div>
-    <p class="sub" style="margin:10px 2px 0;font-size:12px">Tap a job to load it into the check below. After you Send to HCA, the next job loads automatically. The list rides in the link — it never leaves your device.</p>
+    <p class="sub" style="margin:10px 2px 0;font-size:12px">Tap a job to load it into the check below. After you Send to HCA, the next job loads automatically. Pulls the day&rsquo;s HVAC installs from the schedule — double-check against ServiceTitan dispatch for anything missed.</p>
   </div>
   <!-- JOB -->
   <div class="card">
@@ -314,6 +314,20 @@ function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='
 function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;clearForm_();if(it.customer)el('customer').value=it.customer;if(it.idate)el('idate').value=it.idate;if(it.city){var ci=el('city');if(ci){ci.value=it.city;ci.dataset.auto='1';}}if(it.hca)setHca(it.hca);if(it.rep){COMBO_REP=it.rep;repCrossCheck(it.rep);}renderVerdict();renderQueue();if(it.customer)matchSold();try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}}
 function advanceQueue(){if(qIdx<0)return false;qDone[qIdx]=true;var next=-1;for(var k=1;k<=QUEUE.length;k++){var j=(qIdx+k)%QUEUE.length;if(!qDone[j]){next=j;break;}}renderQueue();if(next>=0){loadQueueItem(next);return true;}return false;}
 function qDoneCount(){var n=0;for(var k in qDone){if(qDone.hasOwnProperty(k)&&qDone[k])n++;}return n;}
+/* Auto-load the day's installs from the schedule (Combo Log via the backend) when
+   the page is opened normally — no queue link needed. Defaults to tomorrow. */
+function autoLoadQueue(day){
+  day=day||'next';
+  var qc=el('queueCard');if(qc)qc.style.display='block';
+  var list=el('queueList');if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Loading '+(day==='today'?'today':'tomorrow')+'’s installs…</p>';
+  var pg=el('queueProg');if(pg)pg.textContent='';
+  clearForm_();QUEUE=[];qDone={};qIdx=-1;
+  api({action:'pendinginstalls',day:day}).then(function(d){
+    if(d&&d.ok&&d.jobs&&d.jobs.length){QUEUE=d.jobs;qDone={};qIdx=-1;renderQueue();}
+    else if(d&&d.ok){if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">No HVAC installs on the schedule for '+qesc(d.date||(day==='today'?'today':'tomorrow'))+' yet.</p>';if(pg)pg.textContent='';}
+    else{if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Couldn’t reach the schedule — fill the check in manually, or switch the day and retry.</p>';}
+  }).catch(function(){if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Couldn’t reach the schedule — fill the check in manually, or switch the day and retry.</p>';});
+}
 function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
 /* Cross-check the Combo Log's SALES REP against the selected HCA. Compares on
    last name so "Joe Ruble" (Combo Log) still matches "Joseph Ruble" (HCA list). */
@@ -403,6 +417,9 @@ el('ready').addEventListener('change',function(){
 });
 renderVerdict();
 parseQueue();
+/* No queue link? Auto-load the day's installs from the schedule. */
+if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
+var _qdSel=el('queueDay');if(_qdSel)_qdSel.addEventListener('change',function(){autoLoadQueue(this.value);});
 </script>
 </body>
 </html>
