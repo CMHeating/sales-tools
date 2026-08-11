@@ -167,7 +167,7 @@
   <div class="card">
     <h2><span class="n">✓</span> Overall — ready to install?</h2>
     <div class="grid2">
-      <div class="full"><label>Ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set — you can raise it, not lower it)</span></label>
+      <div class="full"><label>Ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set — override it if you need to)</span></label>
         <select id="ready" aria-live="polite"><option value="">Fill out the check…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
       </div>
       <div class="full" id="verdict" style="display:none"></div>
@@ -272,16 +272,17 @@ function renderVerdict(){
   else{jb.style.display='none';jb.innerHTML='';}
   var sel=el('ready'),vb=el('verdict'),bt=el('bartxt');
   if(!r.anyAnswered){manualStatus=null;sel.value='';vb.style.display='none';vb.innerHTML='';if(bt)bt.textContent='Fill out, then Send to HCA';return;}
-  var status=r.status,rank=r.rank;
-  if(manualStatus!=null){if(rankOf(manualStatus)>rank){status=manualStatus;rank=rankOf(manualStatus);}else manualStatus=null;}
+  var status=r.status,rank=r.rank,overridden=false;
+  /* The checker's choice wins in EITHER direction — the auto-verdict is only a default. */
+  if(manualStatus!=null){if(rankOf(manualStatus)!==-1&&manualStatus!==r.status){status=manualStatus;rank=rankOf(manualStatus);overridden=true;}else{manualStatus=null;}}
   sel.value=status;
   vb.style.display='block';
   vb.className='banner '+(rank===2?'red':(rank===1?'amber':'green'));
-  var html='<b>'+status+'</b>';
+  var html='<b>'+status+'</b>'+(overridden?(' <span style="font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0">— you set this (auto-verdict: '+r.status+')</span>'):'');
   if(r.blockers.length){html+='<div style="margin-top:6px">HCA must update before it’s good to go:</div><ul>'+r.blockers.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
   var soft=r.warnings.concat(r.unanswered.map(function(u){return u+' — not answered';}));
   if(soft.length){html+='<div style="margin-top:6px">Notes / still to confirm:</div><ul>'+soft.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
-  if(!r.blockers.length&&!soft.length){html+='<div style="margin-top:4px">'+(rank===0?'All checks clear — good to go.':'Set to “'+status+'” by the checker.')+'</div>';}
+  if(!r.blockers.length&&!soft.length&&!overridden){html+='<div style="margin-top:4px">'+(rank===0?'All checks clear — good to go.':'Held at “'+status+'” by a jurisdiction flag — set it yourself if you’ve confirmed it.')+'</div>';}
   vb.innerHTML=html;
   if(bt)bt.textContent=rank===2?'Not cleared — Send notifies the HCA what to update.':(rank===1?'Ready with notes — review the flags, then Send.':'All clear — Send to HCA.');
 }
@@ -291,7 +292,7 @@ function line(label,val){return val?(label+": "+val):''}
 function block(title,rows){rows=rows.filter(Boolean);if(!rows.length)return'';return title+"\n"+rows.map(function(r){return "  "+r}).join("\n")+"\n";}
 function checkText(){
   var out=[],rr=computeVerdict();
-  var st=rr.status;if(manualStatus!=null&&rankOf(manualStatus)>rr.rank)st=manualStatus;
+  var st=rr.status;if(manualStatus!=null)st=manualStatus;
   out.push("NEXT-DAY INSTALL CHECK — CM Heating");
   out.push((v('customer')?("Customer: "+v('customer')):"Customer: —")+(v('idate')?("  ·  Install "+v('idate')):""));
   out.push((v('hca')?("HCA: "+v('hca')):"")+(v('by')?("   ·   Checked by: "+v('by')):"")+("   ·   Ready: "+(st||'—')));
@@ -445,7 +446,7 @@ function sendToHca(handoff){
   for(var i=0;i<req.length;i++){if(!v(req[i][0])){var mf=el(req[i][0]);el('bartxt').textContent=req[i][1];if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}}
   var rr=computeVerdict();
   var finalStatus=rr.status;
-  if(manualStatus!=null&&rankOf(manualStatus)>rr.rank)finalStatus=manualStatus;
+  if(manualStatus!=null)finalStatus=manualStatus;
   var b=el(handoff?'handoffBtn':'sendBtn'),lbl=handoff?'Save & send to next manager':'Send to HCA',other=el(handoff?'sendBtn':'handoffBtn');
   b.textContent=handoff?'Saving…':'Sending…';b.disabled=true;if(other)other.disabled=true;
   api({action:'installcheck',handoff:handoff?'1':'',customer:v('customer'),idate:v('idate'),hca:v('hca'),by:v('by'),ready:finalStatus,
@@ -506,13 +507,11 @@ function wrapHandler(e){if(e&&e.target&&e.target.id==='ready')return;renderVerdi
 var _wrap=document.querySelector('.wrap');
 if(_wrap){_wrap.addEventListener('input',wrapHandler);_wrap.addEventListener('change',wrapHandler);}
 el('ready').addEventListener('change',function(){
-  var comp=computeVerdict(),chosen=el('ready').value,reverted=false;
-  if(chosen===''){manualStatus=null;}
-  else if(rankOf(chosen)>comp.rank){manualStatus=chosen;}
-  else if(rankOf(chosen)===comp.rank){manualStatus=null;}
-  else{manualStatus=null;reverted=true;}
+  /* Full manual override: whatever the checker picks sticks. Picking the value that
+     matches the auto-verdict clears the override; blank clears it too. */
+  var chosen=el('ready').value;
+  manualStatus=(chosen==='')?null:chosen;
   renderVerdict();
-  if(reverted&&el('bartxt'))el('bartxt').textContent='Can’t mark it that ready — clear the flags first.';
 });
 renderVerdict();
 /* Precedence: a resume link (one check) wins over a queue link, which wins over
