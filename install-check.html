@@ -319,7 +319,11 @@ function equipLabel(s){s=String(s||'').trim();if(!s)return'';var k=s.toUpperCase
 function qLabel(it){var b=[];if(it.addr)b.push(it.addr);if(it.city)b.push(it.city);if(it.hca)b.push(it.hca);if(it.equip)b.push(equipLabel(it.equip));if(it.idate)b.push(it.idate);return b.join(' · ');}
 function parseQueue(){try{var m=String(location.hash||'').match(/[#&]q=([^&]*)/);if(!m||!m[1])return;var arr=JSON.parse(decodeURIComponent(m[1]));if(Object.prototype.toString.call(arr)==='[object Array]'&&arr.length){QUEUE=arr;qDone={};qIdx=-1;renderQueue();var qc=el('queueCard');if(qc)qc.style.display='block';}}catch(e){}}
 function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='';var done=0;QUEUE.forEach(function(it,i){if(qDone[i])done++;var row=document.createElement('div');row.className='qrow'+(i===qIdx?' qcur':'')+(qDone[i]?' qdone':'');row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+'</div><div class="qmeta">'+qesc(qLabel(it))+(it.jflag?(' · <span class="qflag">⚠ '+qesc(it.jflag)+'</span>'):'')+'</div></div>'+(qDone[i]?'<span class="qcheck">✓</span>':'');row.onclick=function(){loadQueueItem(i);};list.appendChild(row);});var p=el('queueProg');if(p)p.textContent=done+' of '+QUEUE.length+' done';}
-function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;clearForm_();if(it.customer)el('customer').value=it.customer;if(it.idate)el('idate').value=it.idate;if(it.city){var ci=el('city');if(ci){ci.value=it.city;ci.dataset.auto='1';}}if(it.hca)setHca(it.hca);if(it.rep){COMBO_REP=it.rep;repCrossCheck(it.rep);}renderVerdict();renderQueue();if(it.customer)matchSold();try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}}
+function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;
+  /* Resume saved progress for this job if a check was already started — never reset it. */
+  var saved=findOpenCheck(it.customer,it.idate);
+  if(saved&&saved.payload){applyCheckPayload(saved.payload,'Reopened saved progress for '+(it.customer||'this job')+' — finish and Send.');renderQueue();return;}
+  clearForm_();if(it.customer)el('customer').value=it.customer;if(it.idate)el('idate').value=it.idate;if(it.city){var ci=el('city');if(ci){ci.value=it.city;ci.dataset.auto='1';}}if(it.hca)setHca(it.hca);if(it.rep){COMBO_REP=it.rep;repCrossCheck(it.rep);}renderVerdict();renderQueue();if(it.customer)matchSold();try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}}
 function advanceQueue(){if(qIdx<0)return false;qDone[qIdx]=true;var next=-1;for(var k=1;k<=QUEUE.length;k++){var j=(qIdx+k)%QUEUE.length;if(!qDone[j]){next=j;break;}}renderQueue();if(next>=0){loadQueueItem(next);return true;}return false;}
 function qDoneCount(){var n=0;for(var k in qDone){if(qDone.hasOwnProperty(k)&&qDone[k])n++;}return n;}
 /* Resume a specific check from an email link (#check=...): pre-fill every field
@@ -356,6 +360,10 @@ function parseResume(){
 /* Pull any in-progress (unfinished) checks from the server so they can be reopened
    and finished from the tool — no reliance on the email link surviving. */
 var OPEN_CHECKS=[];
+/* Match a saved (in-progress) check to a job by customer + install date — same key
+   the server builds — so tapping a queued job resumes its saved progress, not a blank. */
+function pendKey(cust,idate){return String(cust||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()+'|'+String(idate||'').trim();}
+function findOpenCheck(cust,idate){var k=pendKey(cust,idate);for(var i=0;i<OPEN_CHECKS.length;i++){if(OPEN_CHECKS[i]&&OPEN_CHECKS[i].key===k)return OPEN_CHECKS[i];}return null;}
 /* Work out who a saved check is still waiting on, from its field values. */
 function owedBy(payload){
   var f=(payload&&payload.f)||{};
