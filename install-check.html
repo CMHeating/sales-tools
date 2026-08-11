@@ -106,10 +106,6 @@
         <select id="critical"><option value="">Select…</option><option>No</option><option>Yes — needs review</option></select></div>
       <div class="full" style="margin-top:2px"><a class="link" href="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0" target="_blank" rel="noopener">📋 Jurisdictions sheet (live) ↗</a></div>
       <div class="full" id="jbanner" style="display:none"></div>
-      <div class="full"><label>Overall — ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set — you can raise it, not lower it)</span></label>
-        <select id="ready" aria-live="polite"><option value="">Fill out the check…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
-      </div>
-      <div class="full" id="verdict" style="display:none"></div>
     </div>
   </div>
   <!-- HCA UPLOADS -->
@@ -165,6 +161,16 @@
         <select id="sizematch"><option value="">Select…</option><option>✔ Yes — correctly sized</option><option>⚠ Review</option><option>✖ Mismatch</option></select></div>
       <div class="full"><label>Equipment / model</label><input type="text" id="equip" placeholder="e.g. AMS 3-ton heat pump + variable-speed AH"></div>
       <div class="full"><label>Discount / rebate / sizing notes</label><textarea id="disc-notes" placeholder="Discounts applied, rebate program & status, AHRI cert #, sizing rationale."></textarea></div>
+    </div>
+  </div>
+  <!-- OVERALL (auto-verdict, just above approvals) -->
+  <div class="card">
+    <h2><span class="n">✓</span> Overall — ready to install?</h2>
+    <div class="grid2">
+      <div class="full"><label>Ready to install? <span style="text-transform:none;letter-spacing:0;color:var(--mut)">(auto-set — you can raise it, not lower it)</span></label>
+        <select id="ready" aria-live="polite"><option value="">Fill out the check…</option><option>✔ Ready</option><option>⚠ Ready with notes</option><option>✖ Not ready</option></select>
+      </div>
+      <div class="full" id="verdict" style="display:none"></div>
     </div>
   </div>
   <!-- APPROVALS (moved to the bottom) -->
