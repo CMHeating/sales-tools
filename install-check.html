@@ -66,6 +66,12 @@
   <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
   <!-- ROLE BANNER (shows when a manager opens their own "finish this spot check" link) -->
   <div class="banner amber" id="roleBanner" style="display:none;margin-bottom:14px"></div>
+  <!-- IN-PROGRESS CHECKS (saved on the server — reopen to finish) -->
+  <div class="card" id="resumeCard" style="display:none">
+    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">⏳</span> In-progress checks — tap to finish</span><span id="resumeProg" style="font-size:13px;color:var(--mut);font-weight:600;text-transform:none;letter-spacing:0"></span></h2>
+    <div id="resumeList"></div>
+    <p class="sub" style="margin:10px 2px 0;font-size:12px">These are saved checks still missing an upload or a manager spot-check. Tap one to reopen it exactly where it left off.</p>
+  </div>
   <!-- REVIEW QUEUE (only shows when the page is opened from a queue link) -->
   <div class="card" id="queueCard" style="display:none">
     <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">★</span> Install review queue</span><span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><select id="queueDay" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;font-weight:600"><option value="next">Tomorrow</option><option value="today">Today</option></select><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600"></span></span></h2>
@@ -319,28 +325,50 @@ function qDoneCount(){var n=0;for(var k in qDone){if(qDone.hasOwnProperty(k)&&qD
 /* Resume a specific check from an email link (#check=...): pre-fill every field
    that was entered so far so a CC'd manager just adds their sign-off and re-sends.
    The check's state rides in the link, so it accumulates down the email chain. */
+/* Fill the whole form from a saved check payload — used by both the email resume
+   link and the "in-progress checks" list fetched from the server. */
+function applyCheckPayload(obj,note){
+  if(!obj||!obj.f)return false;
+  clearForm_();
+  Object.keys(obj.f).forEach(function(k){var e=el(k);if(e){e.disabled=false;e.style.opacity='';e.style.outline='';e.value=obj.f[k];}});
+  if(el('city')&&el('city').value)el('city').dataset.auto='1';
+  if(obj.sold)SOLD={customer:obj.sold.customer||'',soldby:obj.sold.soldby||'',amount:obj.sold.amount||'',soldon:obj.sold.soldon||'',est:obj.sold.est||'',job:obj.sold.job||''};
+  renderVerdict();
+  var info=el('matchInfo');if(info)info.textContent=note||'Reopened — finish and Send.';
+  var rb=el('roleBanner');if(rb){rb.style.display='none';rb.innerHTML='';}
+  /* Manager-scoped email link: name whose spot-check this is and lock the other two
+     sign-offs so they only touch their own part (locked fields still submit). */
+  if(obj.role&&obj.role.field){
+    var rf=obj.role.field,who=obj.role.who||'',dep=obj.role.dep||'';
+    if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='🔧 <b>You’re finishing the '+dep+' spot-check'+(who?(' — '+who):'')+'.</b> Set your sign-off below and hit <b>Send to HCA</b>. The other sign-offs are locked so you only complete your part.';}
+    ['d-elec','d-install','d-sales'].forEach(function(id){var e=el(id);if(e&&id!==rf){e.disabled=true;e.style.opacity='0.55';}});
+    var tgt=el(rf);if(tgt){tgt.style.outline='2px solid var(--orange)';tgt.style.outlineOffset='2px';try{setTimeout(function(){tgt.scrollIntoView({block:'center',behavior:'smooth'});},250);}catch(e){}}
+  } else { try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){} }
+  return true;
+}
 function parseResume(){
   try{
     var m=String(location.hash||'').match(/[#&]check=([^&]*)/);
     if(!m||!m[1])return false;
-    var obj=JSON.parse(decodeURIComponent(m[1]));
-    if(!obj||!obj.f)return false;
-    Object.keys(obj.f).forEach(function(k){var e=el(k);if(e)e.value=obj.f[k];});
-    if(el('city')&&el('city').value)el('city').dataset.auto='1';
-    if(obj.sold)SOLD={customer:obj.sold.customer||'',soldby:obj.sold.soldby||'',amount:obj.sold.amount||'',soldon:obj.sold.soldon||'',est:obj.sold.est||'',job:obj.sold.job||''};
-    renderVerdict();
-    var info=el('matchInfo');if(info)info.textContent='Resumed from email — add your sign-off, then Send.';
-    /* Manager-scoped link: name whose spot-check this is, lock the other two sign-offs
-       so they only touch their own part (locked fields still submit their value). */
-    if(obj.role&&obj.role.field){
-      var rf=obj.role.field,who=obj.role.who||'',dep=obj.role.dep||'';
-      var rb=el('roleBanner');
-      if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='🔧 <b>You’re finishing the '+dep+' spot-check'+(who?(' — '+who):'')+'.</b> Set your sign-off below and hit <b>Send to HCA</b>. The other sign-offs are locked so you only complete your part.';}
-      ['d-elec','d-install','d-sales'].forEach(function(id){var e=el(id);if(e&&id!==rf){e.disabled=true;e.style.opacity='0.55';}});
-      var tgt=el(rf);if(tgt){tgt.style.outline='2px solid var(--orange)';tgt.style.outlineOffset='2px';try{setTimeout(function(){tgt.scrollIntoView({block:'center',behavior:'smooth'});},250);}catch(e){}}
-    }
-    return true;
+    return applyCheckPayload(JSON.parse(decodeURIComponent(m[1])),'Resumed from email — add your sign-off, then Send.');
   }catch(e){return false;}
+}
+/* Pull any in-progress (unfinished) checks from the server so they can be reopened
+   and finished from the tool — no reliance on the email link surviving. */
+function loadOpenChecks(){
+  api({action:'openchecks'}).then(function(d){
+    if(!(d&&d.ok&&d.checks&&d.checks.length))return;
+    var card=el('resumeCard'),list=el('resumeList');if(!card||!list)return;
+    list.innerHTML='';
+    d.checks.forEach(function(c){
+      var row=document.createElement('div');row.className='qrow';
+      row.innerHTML='<span class="qdot" style="background:#e0912f"></span><div class="qmain"><div class="qname">'+qesc(c.customer||'(no name)')+'</div><div class="qmeta">'+(c.idate?('install '+qesc(c.idate)+' · '):'')+qesc(c.outstanding||'in progress')+'</div></div>';
+      row.onclick=function(){applyCheckPayload(c.payload,'Reopened in-progress check — finish the missing items and Send.');};
+      list.appendChild(row);
+    });
+    var pg=el('resumeProg');if(pg)pg.textContent=d.checks.length+' open';
+    card.style.display='block';
+  }).catch(function(){});
 }
 /* Auto-load the day's installs from the schedule (Combo Log via the backend) when
    the page is opened normally — no queue link needed. Defaults to tomorrow. */
@@ -452,6 +480,7 @@ var _resumed=parseResume();
 if(!_resumed){
   parseQueue();
   if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
+  loadOpenChecks();   /* also surface any saved, unfinished checks to resume */
 }
 var _qdSel=el('queueDay');if(_qdSel)_qdSel.addEventListener('change',function(){autoLoadQueue(this.value);});
 </script>
