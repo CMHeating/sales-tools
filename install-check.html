@@ -45,6 +45,18 @@
   #printout{display:none}
   @media print{body{background:#fff;color:#000;padding:0}.wrap,.bar{display:none}#printout{display:block;padding:24px;font-family:Arial,sans-serif}#printout h2{margin:0 0 4px}#printout pre{white-space:pre-wrap;font-family:inherit;font-size:13px}}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}h1{font-size:25px}}
+  .qrow{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;margin-top:8px;cursor:pointer;background:var(--panel2)}
+  .qrow:hover{border-color:var(--orange)}
+  .qrow.qcur{border-color:var(--orange);box-shadow:inset 0 0 0 1px var(--orange)}
+  .qrow.qdone{opacity:.5}
+  .qdot{width:9px;height:9px;border-radius:50%;background:var(--mut);flex:none}
+  .qrow.qcur .qdot{background:var(--orange)}
+  .qrow.qdone .qdot{background:#39b34a}
+  .qmain{flex:1;min-width:0}
+  .qname{font-weight:700;font-size:15px}
+  .qmeta{font-size:12px;color:var(--mut);margin-top:2px;overflow-wrap:anywhere}
+  .qflag{color:#e9960f;font-weight:700}
+  .qcheck{font-size:16px;color:#39b34a;flex:none}
 </style>
 </head>
 <body>
@@ -52,6 +64,12 @@
   <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="index.html">&larr; HCA Tools</a></div>
   <h1>Next-Day Install Check</h1>
   <p class="sub">Run this the day before install so nothing gets missed — materials, layout, billing, sizing, and discounts all verified, with a clear sign-off on electrical, install, and sales.</p>
+  <!-- REVIEW QUEUE (only shows when the page is opened from a queue link) -->
+  <div class="card" id="queueCard" style="display:none">
+    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span><span class="n">★</span> Today&rsquo;s review queue</span><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600;text-transform:none;letter-spacing:0"></span></h2>
+    <div id="queueList"></div>
+    <p class="sub" style="margin:10px 2px 0;font-size:12px">Tap a job to load it into the check below. After you Send to HCA, the next job loads automatically. The list rides in the link — it never leaves your device.</p>
+  </div>
   <!-- JOB -->
   <div class="card">
     <div class="grid2">
@@ -165,6 +183,7 @@ var el=function(id){return document.getElementById(id)};
 var FIELDS=['customer','idate','hca','by','city','critical','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','layout-notes','b-elec','b-labor','bill-notes','heatload','sizematch','equip','size-notes','disc','disc-notes'];
 var SOLD={};
 var COMBO_REP='';  /* SALES REP pulled from the Combo Log, kept for the HCA cross-check */
+var QUEUE=[],qIdx=-1,qDone={};  /* morning review queue, handed in via the link's #q= payload */
 var SHEET_URL="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0";
 
 /* ===== Guardrail + jurisdiction logic (parts drive the verdict) ===== */
@@ -282,7 +301,19 @@ function copyIt(){
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
-function resetForm(){manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};COMBO_REP='';var mi=el('matchInfo');if(mi)mi.textContent='';var hc=el('hcaCheck');if(hc){hc.textContent='';hc.style.color='';}var ci=el('city');if(ci)ci.dataset.auto='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+function clearForm_(){manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};COMBO_REP='';var mi=el('matchInfo');if(mi)mi.textContent='';var hc=el('hcaCheck');if(hc){hc.textContent='';hc.style.color='';}var ci=el('city');if(ci)ci.dataset.auto='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();}
+function resetForm(){clearForm_();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
+/* ===== Morning review queue — jobs handed off in the link's #q= payload ===== */
+function qesc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+/* Equipment shorthand the install team uses on the board / Combo Log. */
+var EQUIP_MAP={'GF/HP':'Gas furnace + heat pump','GF HP':'Gas furnace + heat pump','HP/AH':'Heat pump + air handler','HP AH':'Heat pump + air handler','DHP':'Ductless heat pump','GF':'Gas furnace','FAU':'Gas furnace','HP':'Heat pump','AC':'Air conditioner','AH':'Air handler','G HWT':'Gas water heater','HWT':'Water heater'};
+function equipLabel(s){s=String(s||'').trim();if(!s)return'';var k=s.toUpperCase();return EQUIP_MAP[k]?(EQUIP_MAP[k]+' ('+s+')'):s;}
+function qLabel(it){var b=[];if(it.addr)b.push(it.addr);if(it.city)b.push(it.city);if(it.hca)b.push(it.hca);if(it.equip)b.push(equipLabel(it.equip));if(it.idate)b.push(it.idate);return b.join(' · ');}
+function parseQueue(){try{var m=String(location.hash||'').match(/[#&]q=([^&]*)/);if(!m||!m[1])return;var arr=JSON.parse(decodeURIComponent(m[1]));if(Object.prototype.toString.call(arr)==='[object Array]'&&arr.length){QUEUE=arr;qDone={};qIdx=-1;renderQueue();var qc=el('queueCard');if(qc)qc.style.display='block';}}catch(e){}}
+function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='';var done=0;QUEUE.forEach(function(it,i){if(qDone[i])done++;var row=document.createElement('div');row.className='qrow'+(i===qIdx?' qcur':'')+(qDone[i]?' qdone':'');row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+'</div><div class="qmeta">'+qesc(qLabel(it))+(it.jflag?(' · <span class="qflag">⚠ '+qesc(it.jflag)+'</span>'):'')+'</div></div>'+(qDone[i]?'<span class="qcheck">✓</span>':'');row.onclick=function(){loadQueueItem(i);};list.appendChild(row);});var p=el('queueProg');if(p)p.textContent=done+' of '+QUEUE.length+' done';}
+function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;clearForm_();if(it.customer)el('customer').value=it.customer;if(it.idate)el('idate').value=it.idate;if(it.city){var ci=el('city');if(ci){ci.value=it.city;ci.dataset.auto='1';}}if(it.hca)setHca(it.hca);if(it.rep){COMBO_REP=it.rep;repCrossCheck(it.rep);}renderVerdict();renderQueue();if(it.customer)matchSold();try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}}
+function advanceQueue(){if(qIdx<0)return false;qDone[qIdx]=true;var next=-1;for(var k=1;k<=QUEUE.length;k++){var j=(qIdx+k)%QUEUE.length;if(!qDone[j]){next=j;break;}}renderQueue();if(next>=0){loadQueueItem(next);return true;}return false;}
+function qDoneCount(){var n=0;for(var k in qDone){if(qDone.hasOwnProperty(k)&&qDone[k])n++;}return n;}
 function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
 /* Cross-check the Combo Log's SALES REP against the selected HCA. Compares on
    last name so "Joe Ruble" (Combo Log) still matches "Joseph Ruble" (HCA list). */
@@ -324,7 +355,16 @@ function sendToHca(){
     soldcustomer:SOLD.customer||'',soldby:SOLD.soldby||'',soldamount:SOLD.amount||'',soldon:SOLD.soldon||'',soldest:SOLD.est||'',soldjob:SOLD.job||''
   }).then(function(d){
     b.disabled=false;b.textContent='Send to HCA';
-    if(d&&d.ok){var who=d.to||v('hca');resetForm();el('bartxt').innerHTML='✓ Emailed '+who+' — '+(d.outcome==='ISSUE'?'issues flagged':'good to go')+' · cleared for the next one';}
+    if(d&&d.ok){var who=d.to||v('hca');
+      if(qIdx>=0&&QUEUE.length){
+        var more=advanceQueue();
+        var qp=el('queueProg');
+        if(more){if(qp)qp.textContent='✓ Emailed '+who+' · '+qDoneCount()+' of '+QUEUE.length+' done — next loaded';}
+        else{clearForm_();if(qp)qp.textContent='✓ All '+QUEUE.length+' reviewed';el('bartxt').innerHTML='✓ Emailed '+qesc(who)+' — queue complete, all '+QUEUE.length+' reviewed.';}
+      } else {
+        resetForm();el('bartxt').innerHTML='✓ Emailed '+qesc(who)+' — '+(d.outcome==='ISSUE'?'issues flagged':'good to go')+' · cleared for the next one';
+      }
+    }
     else{el('bartxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed — use Copy instead.';}
   }).catch(function(){b.disabled=false;b.textContent='Send to HCA';el('bartxt').textContent='Couldn’t reach the mailer — use Copy for now.';});
 }
@@ -362,6 +402,7 @@ el('ready').addEventListener('change',function(){
   if(reverted&&el('bartxt'))el('bartxt').textContent='Can’t mark it that ready — clear the flags first.';
 });
 renderVerdict();
+parseQueue();
 </script>
 </body>
 </html>
