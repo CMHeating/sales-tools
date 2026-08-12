@@ -42,6 +42,9 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
 .slot strong{display:block;font-size:15px}
 .slot:hover,.slot.selected{border-color:rgba(201,125,16,.72);box-shadow:0 0 0 3px rgba(201,125,16,.18)}
 .slot.busy{opacity:.42;cursor:not-allowed}
+.slot .tag{display:inline-block;margin-top:6px;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#bbf7d0;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.35);border-radius:999px;padding:2px 7px}
+.slot.standing{border-color:rgba(34,197,94,.5)}
+.slot.standing.selected{border-color:rgba(201,125,16,.72)}
 .btn{border:0;background:var(--orange);color:white;font-family:Outfit,sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-radius:999px;padding:13px 16px;cursor:pointer;margin-top:16px;width:100%}
 .btn.secondary{background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.44);color:#fecaca}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
@@ -65,7 +68,7 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
     <div>
       <div class="badge">HCA Tools</div>
       <h1>HCA 1:1 Scheduler</h1>
-      <p>One 20-minute 1:1 every two weeks. Geoff schedules these.</p>
+      <p>Weekly 20-minute 1:1s, scheduled by Geoff. An HCA's standing weekly slot is pre-filled — just confirm it, or pick another time.</p>
     </div>
     <a class="back" href="https://cmheating.github.io/sales-tools/">← HCA Toolkit</a>
   </header>
@@ -88,7 +91,7 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
         </div>
         <button class="btn" id="signInBtn">Continue</button>
       </div>
-      <div class="help">Geoff books the 1:1s. HCAs can see their own status and cancel.</div>
+      <div class="help">Geoff signs in to book. Everyone can see the cycle tracker below without signing in.</div>
     </section>
 
     <!-- SIGNED IN -->
@@ -106,7 +109,7 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
     <section class="grid hidden" id="adminPanel">
       <div class="card">
         <h2>Book a 1:1</h2>
-        <p>Pick the HCA, choose an open 20-minute slot, and book it. The booking goes on the shared HCA 1:1 Schedule calendar and is blocked on Geoff's work calendar.</p>
+        <p>Pick the HCA. If they have a standing weekly slot it's pre-selected — confirm it, or choose another open 20-minute slot. The booking goes on the shared HCA 1:1 Schedule calendar and is blocked on Geoff's work calendar.</p>
 
         <label for="hcaSelect">HCA</label>
         <select id="hcaSelect"></select>
@@ -136,19 +139,10 @@ textarea::placeholder,input::placeholder{color:var(--muted2)}
       </div>
     </section>
 
-    <!-- HCA -->
-    <section class="card hidden" id="hcaPanel">
-      <h2>Your 1:1</h2>
-      <p id="hcaPanelIntro">Geoff schedules these. If you need to change yours, cancel below and let him know.</p>
-      <div id="myStatusBox" class="status-grid" style="margin-top:12px"></div>
-      <button class="btn secondary hidden" id="myCancelBtn">Cancel my 1:1</button>
-      <div class="help" id="myCancelHelp"></div>
-    </section>
-
     <!-- TRACKER -->
     <section class="card">
-      <h2>2-week cycle tracker</h2>
-      <p>Who has booked or completed their required 1:1 for the current cycle.</p>
+      <h2>Cycle tracker</h2>
+      <p>Who has booked or completed their 1:1 for the current cycle. HCAs with a standing weekly slot run on a weekly cycle.</p>
       <div id="tracker" class="table"></div>
     </section>
   </main>
@@ -221,8 +215,7 @@ function summaryFor(name){return (currentPayload?.hcas || []).find(r => r.name =
 
 function init(){
   qs("actorName").innerHTML = '<option value="">Select your name...</option>'
-    + '<optgroup label="Scheduling">' + ADMINS.map(a=>`<option value="${esc(a.name)}">${esc(a.name)}</option>`).join("") + '</optgroup>'
-    + '<optgroup label="HCAs">' + HCAS.map(h=>`<option value="${esc(h.name)}">${esc(h.name)}</option>`).join("") + '</optgroup>';
+    + ADMINS.map(a=>`<option value="${esc(a.name)}">${esc(a.name)}</option>`).join("");
 
   qs("hcaSelect").innerHTML = '<option value="">Select an HCA...</option>'
     + HCAS.map(h=>`<option value="${esc(h.name)}">${esc(h.name)}</option>`).join("");
@@ -234,7 +227,6 @@ function init(){
   qs("recapToNotes").addEventListener("click", addRecapToNotes);
   qs("bookBtn").addEventListener("click", bookSlot);
   qs("cancelBtn").addEventListener("click", () => cancelBooking(qs("hcaSelect").value, selectedHcaSummary));
-  qs("myCancelBtn").addEventListener("click", () => cancelBooking(identity.name, summaryFor(identity.name)));
 
   loadTracker();
 }
@@ -264,15 +256,7 @@ async function signIn(){
     hideNotice();
   }catch(err){
     if(err.code === "NOT_ADMIN"){
-      // The backend returns NOT_ADMIN both for a real HCA and for a wrong pin,
-      // so the pin is only truly verified when they attempt a cancel.
-      if(HCAS.some(h => h.name === name)){
-        identity = {name:name, pin:pin, isAdmin:false};
-        enterHcaMode();
-        hideNotice();
-      }else{
-        showNotice("That name and last 4 don't match an account allowed to book.", "error");
-      }
+      showNotice("That name and last 4 don't match the scheduler admin.", "error");
     }else if(err.code === "AUTH_REQUIRED"){
       showNotice("Enter your name and the last 4 of your work phone.", "error");
     }else{
@@ -294,7 +278,7 @@ function signOut(){
   qs("notesInput").value = "";
   qs("slots").innerHTML = "";
   qs("statusBox").innerHTML = "";
-  hide("whoCard"); hide("adminPanel"); hide("hcaPanel");
+  hide("whoCard"); hide("adminPanel");
   show("identityCard");
   hideNotice();
   loadTracker();
@@ -303,17 +287,9 @@ function signOut(){
 function enterAdminMode(){
   qs("whoRole").textContent = "Scheduling";
   qs("whoName").textContent = identity.name;
-  hide("identityCard"); hide("hcaPanel");
+  hide("identityCard");
   show("whoCard"); show("adminPanel");
   qs("slotMessage").textContent = "Select an HCA to load slots.";
-}
-
-function enterHcaMode(){
-  qs("whoRole").textContent = "HCA";
-  qs("whoName").textContent = identity.name;
-  hide("identityCard"); hide("adminPanel");
-  show("whoCard"); show("hcaPanel");
-  renderMyStatus();
 }
 
 /* ---------------- tracker ---------------- */
@@ -323,7 +299,6 @@ async function loadTracker(){
     const payload = await api({action:"status"});
     currentPayload = payload;
     renderTracker(payload);
-    if(identity.name && !identity.isAdmin) renderMyStatus();
   }catch(err){
     showNotice("Could not load the scheduler backend: " + friendly(err), "error");
   }
@@ -336,43 +311,11 @@ function renderTracker(payload){
 
   qs("tracker").innerHTML =
     rows.map(h =>
-      `<div class="row"><div><strong>${esc(h.name)}</strong><small>${h.meetingStart ? esc(dateTimeLabel(h.meetingStart)) : "No booking this cycle"}</small></div><span class="status-pill ${statusClass(h.status)}">${esc(h.status || "Not booked")}</span></div>`
+      `<div class="row"><div><strong>${esc(h.name)}</strong><small>${h.meetingStart ? esc(dateTimeLabel(h.meetingStart)) : (h.cadence === "weekly" ? "No booking this week" : "No booking this cycle")}</small></div><span class="status-pill ${statusClass(h.status)}">${esc(h.status || "Not booked")}</span></div>`
     ).join("")
     + missing.map(h =>
       `<div class="row"><div><strong>${esc(h.name)}</strong><small>Not set up in the scheduler backend yet</small></div><span class="status-pill missing">Not configured</span></div>`
     ).join("");
-}
-
-/* ---------------- HCA view ---------------- */
-
-function renderMyStatus(){
-  const item = summaryFor(identity.name);
-
-  if(!item){
-    qs("myStatusBox").innerHTML = "";
-    qs("hcaPanelIntro").textContent = "You're not set up in the scheduler backend yet. Ask Geoff to add you.";
-    hide("myCancelBtn");
-    qs("myCancelHelp").textContent = "";
-    return;
-  }
-
-  qs("hcaPanelIntro").textContent = "Geoff schedules these. If you need to change yours, cancel below and let him know.";
-  qs("myStatusBox").innerHTML = [
-    ["Cycle", `${currentPayload?.cycle?.start || ""} to ${currentPayload?.cycle?.end || ""}`],
-    ["Status", item.status || "Not booked"],
-    ["Booked time", item.meetingStart ? dateTimeLabel(item.meetingStart) : "None yet"]
-  ].map(([a,b]) => `<div class="stat"><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join("");
-
-  if(isBooked(item) && item.canSelfCancel){
-    show("myCancelBtn");
-    qs("myCancelHelp").textContent = "";
-  }else if(isBooked(item)){
-    hide("myCancelBtn");
-    qs("myCancelHelp").textContent = "Self-cancel isn't enabled for you. Contact Geoff or Amy to change this 1:1.";
-  }else{
-    hide("myCancelBtn");
-    qs("myCancelHelp").textContent = "";
-  }
 }
 
 /* ---------------- admin booking ---------------- */
@@ -409,10 +352,10 @@ async function loadForHca(){
 
     if(isBooked(selectedHcaSummary)){
       qs("slots").innerHTML = "";
-      qs("slotMessage").textContent = name + " already has a 1:1 booked this cycle. Cancel it first to reschedule.";
+      qs("slotMessage").textContent = name + " already has a 1:1 booked" + (selectedHcaSummary && selectedHcaSummary.cadence === "weekly" ? " this week" : " this cycle") + ". Cancel it first to reschedule.";
       return;
     }
-    renderSlots(payload.slots || []);
+    renderSlots(payload);
   }catch(err){
     if(err.code === "AUTH_REQUIRED" || err.code === "NOT_ADMIN"){
       showNotice("Your session isn't recognised any more. Switch user and sign in again.", "error");
@@ -428,11 +371,17 @@ function renderStatus(payload){
   const item = (payload.hcas || []).find(x => x.name === hca) || {};
   selectedHcaSummary = item;
 
-  qs("statusBox").innerHTML = [
-    ["Cycle", `${payload.cycle?.start || ""} to ${payload.cycle?.end || ""}`],
+  const cycleText = item.periodStart
+    ? `${item.periodStart} to ${item.periodEnd}`
+    : `${payload.cycle?.start || ""} to ${payload.cycle?.end || ""}`;
+  const rows = [
+    [item.cadence === "weekly" ? "This week" : "Cycle", cycleText],
     ["Status", item.status || "Not booked"],
     ["Booked time", item.meetingStart ? dateTimeLabel(item.meetingStart) : "None yet"]
-  ].map(([a,b]) => `<div class="stat"><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join("");
+  ];
+  if(item.standingLabel) rows.splice(1, 0, ["Standing slot", item.standingLabel]);
+  qs("statusBox").innerHTML = rows
+    .map(([a,b]) => `<div class="stat"><span>${esc(a)}</span><strong>${esc(b)}</strong></div>`).join("");
 
   const booked = isBooked(item);
   if(booked){ show("cancelBtn"); hide("bookBtn"); }
@@ -440,21 +389,43 @@ function renderStatus(payload){
   qs("notesInput").disabled = booked;
 }
 
-function renderSlots(slots){
+function renderSlots(payload){
+  const slots = (payload && payload.slots) || [];
+  const standingStart = payload && payload.standingSlotStart ? payload.standingSlotStart : "";
+
   if(!slots.length){ qs("slotMessage").textContent = "No open slots in the next three weeks."; return; }
-  qs("slotMessage").textContent = "Choose one available slot.";
+
   qs("slots").innerHTML = slots.map((s,i) =>
-    `<button class="slot ${s.available?'':'busy'}" data-index="${i}" ${s.available?'':'disabled'}><strong>${esc(dateTimeLabel(s.start))}</strong></button>`
+    `<button class="slot ${s.available?'':'busy'} ${s.standing?'standing':''}" data-index="${i}" ${s.available?'':'disabled'}>`
+    + `<strong>${esc(dateTimeLabel(s.start))}</strong>`
+    + (s.standing ? '<span class="tag">Standing slot</span>' : '')
+    + `</button>`
   ).join("");
 
-  [...document.querySelectorAll(".slot")].forEach(btn => {
+  const buttons = [...document.querySelectorAll(".slot")];
+  buttons.forEach(btn => {
     btn.addEventListener("click", () => {
-      [...document.querySelectorAll(".slot")].forEach(x => x.classList.remove("selected"));
+      buttons.forEach(x => x.classList.remove("selected"));
       btn.classList.add("selected");
       selectedSlot = slots[Number(btn.dataset.index)];
       qs("bookBtn").disabled = false;
     });
   });
+
+  // Pre-fill the standing weekly slot when the backend recommends one.
+  let preIndex = -1;
+  if(standingStart) preIndex = slots.findIndex(s => s.available && s.start === standingStart);
+  if(preIndex === -1) preIndex = slots.findIndex(s => s.available && s.standing);
+
+  if(preIndex !== -1){
+    buttons[preIndex].classList.add("selected");
+    selectedSlot = slots[preIndex];
+    qs("bookBtn").disabled = false;
+    qs("slotMessage").innerHTML = 'Pre-filled the standing weekly slot: <strong>'
+      + esc(dateTimeLabel(slots[preIndex].start)) + '</strong>. Confirm below, or pick another time.';
+  }else{
+    qs("slotMessage").textContent = "Choose one available slot.";
+  }
 }
 
 async function bookSlot(){
@@ -479,7 +450,7 @@ async function bookSlot(){
     renderStatus(payload);
     qs("slots").innerHTML = "";
     qs("notesInput").value = "";
-    qs("slotMessage").textContent = hca + " is booked for this cycle.";
+    qs("slotMessage").textContent = hca + " is booked.";
   }catch(err){
     showNotice("Booking failed: " + friendly(err), "error");
     qs("bookBtn").disabled = false;
@@ -495,7 +466,7 @@ async function cancelBooking(hca, item){
   const ok = confirm(`Cancel ${hca}'s 1:1 on ${dateTimeLabel(item.meetingStart)}?`);
   if(!ok) return;
 
-  const btn = identity.isAdmin ? qs("cancelBtn") : qs("myCancelBtn");
+  const btn = qs("cancelBtn");
   const original = btn.textContent;
   btn.disabled = true;
   btn.textContent = "Canceling...";
@@ -512,12 +483,8 @@ async function cancelBooking(hca, item){
     showNotice("Canceled. Removed from the 1:1 schedule and Geoff's calendar.", "success");
     currentPayload = payload;
     renderTracker(payload);
-    if(identity.isAdmin){
-      renderStatus(payload);
-      renderSlots(payload.slots || []);
-    }else{
-      renderMyStatus();
-    }
+    renderStatus(payload);
+    renderSlots(payload);
   }catch(err){
     showNotice("Cancel failed: " + friendly(err), "error");
   }finally{
