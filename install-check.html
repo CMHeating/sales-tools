@@ -78,6 +78,12 @@
     <div id="queueList"></div>
     <p class="sub" style="margin:10px 2px 0;font-size:12px">Tap a job to load it into the check below. After you Send to HCA, the next job loads automatically. Pulls the day&rsquo;s HVAC installs from the schedule — double-check against ServiceTitan dispatch for anything missed.</p>
   </div>
+  <!-- UPCOMING INSTALLS BUCKET (next 3 weeks from the schedule) -->
+  <div class="card" id="bucketsCard" style="display:none">
+    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">📅</span> Upcoming installs — next 3 weeks</span><span id="upcomingProg" style="font-size:13px;color:var(--mut);font-weight:600;text-transform:none;letter-spacing:0"></span></h2>
+    <div id="upcomingList"></div>
+    <p class="sub" style="margin:10px 2px 0;font-size:12px">A rolling look-ahead of scheduled HVAC installs from the Combo Log, grouped by day, matched to the selling HCA. Tomorrow&rsquo;s jobs are the review queue above; this is everything after that. Tap any job to load it into the check.</p>
+  </div>
   <!-- JOB -->
   <div class="card">
     <div class="grid2">
@@ -403,6 +409,7 @@ function loadOpenChecks(){
     OPEN_CHECKS=all.filter(function(c){return String(c.status||'').toLowerCase()==='open';});
     renderOpenChecks();
     if(QUEUE.length)renderQueue();   /* reflect done / in-progress state on the queue */
+    if(UPCOMING&&typeof renderUpcoming==='function')renderUpcoming();   /* show ✓/⏳ on the upcoming bucket too */
   }).catch(function(){});
 }
 /* Auto-load the day's installs from the schedule (Combo Log via the backend) when
@@ -516,11 +523,56 @@ el('ready').addEventListener('change',function(){
 renderVerdict();
 /* Precedence: a resume link (one check) wins over a queue link, which wins over
    the auto-loaded schedule. */
+/* ===== Upcoming installs bucket — a rolling 3-week look-ahead from the schedule =====
+   Pulls the next few weeks of HVAC installs (grouped by day, matched to HCA) from the
+   backend's scheduledinstalls action, and shows each with its check status (✓ / ⏳). */
+var UPCOMING=null;
+function fmtDay(iso){try{var p=String(iso).split('-');var dt=new Date(+p[0],+p[1]-1,+p[2]);var dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return dn[dt.getDay()]+' '+mn[dt.getMonth()]+' '+dt.getDate();}catch(e){return iso;}}
+function upStatusTag(it){var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';if(st==='complete')return ' · <span style="color:#39b34a;font-weight:700">✓ checked</span>';if(st==='open')return ' · <span class="qflag">⏳ in progress</span>';return '';}
+function fillFromInstall(it){
+  var saved=findSavedCheck(it.customer,it.idate);
+  if(saved&&saved.payload&&saved.payload.f){applyCheckPayload(saved.payload,'Reopened saved progress for '+(it.customer||'this job')+' — finish and Send.');return;}
+  clearForm_();
+  if(it.customer)el('customer').value=it.customer;
+  if(it.idate)el('idate').value=it.idate;
+  if(it.city){var ci=el('city');if(ci){ci.value=it.city;ci.dataset.auto='1';}}
+  if(it.hca)setHca(it.hca);
+  if(it.rep){COMBO_REP=it.rep;repCrossCheck(it.rep);}
+  renderVerdict();
+  if(it.customer)matchSold();
+  try{el('customer').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}
+}
+function renderUpcoming(){
+  var card=el('bucketsCard'),list=el('upcomingList');if(!card||!list||!UPCOMING)return;
+  var tom=UPCOMING.tomorrow||'';
+  var days=(UPCOMING.days||[]).filter(function(dd){return dd.date>tom;});   /* strictly after tomorrow — tomorrow lives in the queue above */
+  list.innerHTML='';var total=0;
+  if(!days.length){list.innerHTML='<p class="sub" style="margin:6px 2px">Nothing scheduled beyond tomorrow in the next 3 weeks yet.</p>';}
+  days.forEach(function(dd){
+    total+=dd.count;
+    var h=document.createElement('div');h.className='qmeta';h.style.cssText='margin:12px 2px 4px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:0';h.textContent=fmtDay(dd.date)+'  ·  '+dd.count+(dd.count===1?' install':' installs');list.appendChild(h);
+    dd.installs.forEach(function(it){
+      var row=document.createElement('div');row.className='qrow';
+      row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+'</div><div class="qmeta">'+qesc(qLabel(it))+upStatusTag(it)+'</div></div>';
+      row.onclick=function(){fillFromInstall(it);};
+      list.appendChild(row);
+    });
+  });
+  var pg=el('upcomingProg');if(pg)pg.textContent=total?(total+' upcoming'):'';
+  card.style.display='block';
+}
+function loadUpcoming(){
+  api({action:'scheduledinstalls',weeks:3}).then(function(d){
+    if(d&&d.ok){UPCOMING=d;renderUpcoming();}
+    else{var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t load the upcoming schedule'+(d&&d.error?(': '+qesc(d.error)):'')+'.</p>';var c=el('bucketsCard');if(c)c.style.display='block';}
+  }).catch(function(){var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t reach the schedule for the upcoming bucket.</p>';var c=el('bucketsCard');if(c)c.style.display='block';});
+}
 var _resumed=parseResume();
 if(!_resumed){
   parseQueue();
   if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
   loadOpenChecks();   /* also surface any saved, unfinished checks to resume */
+  loadUpcoming();     /* upcoming 3-week bucket (the next-day bucket is the queue above) */
 }
 var _qdSel=el('queueDay');if(_qdSel)_qdSel.addEventListener('change',function(){autoLoadQueue(this.value);});
 var _rwSel=el('resumeWho');if(_rwSel)_rwSel.addEventListener('change',renderOpenChecks);
