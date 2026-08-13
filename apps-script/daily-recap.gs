@@ -4187,43 +4187,26 @@ function growthReport_(toIso, fromIso) {
   m.alertList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
     (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
 
-  /* Fireplaces are counted, but apart — they are a different line of business
-     and are NOT in HVAC Rev above. Printed so the sale is still visible and
-     the rep still gets the credit; the growth sheet has no fireplace row yet,
-     so nothing here is written to it. */
+  /* Fireplaces ARE HVAC — their revenue is in HVAC Rev, sale count and average
+     ticket above, same as any heat pump. Still called out as a subset here so
+     the seasonality is visible: a rare summer sale, heavier through fall,
+     winter and spring. A subset of the list above, not a separate total. */
   if (m.fireplaceCount) {
     out.push("");
-    out.push("fireplace — separate line, NOT in HVAC Rev above (" + m.fireplaceCount +
-      " sale(s), $" + formatMoney_(m.fireplaceRevenue) + "):");
+    out.push("of which fireplace — in HVAC Rev above, shown for seasonality (" +
+      m.fireplaceCount + " sale(s), $" + formatMoney_(m.fireplaceRevenue) + "):");
     m.fireplaceList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
       (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
-    /* The revenue is out of HVAC Rev, but the DEAL count above can't be — the
-       recap log records no product line, so if one of these fireplaces closed a
-       marketed or tech-flip lead it is still sitting in HVAC Marketed/Tech Flip
-       Deals (and its L2C%), which HVAC Rev and AVG Ticket exclude. Rare enough
-       to flag rather than guess at: only a product line on the recap could pull
-       it out cleanly. Watch it when a fireplace shows against reported deals. */
-    if (m.marketedDeals || m.techFlipDeals) {
-      out.push("  NOTE: if a fireplace above closed a marketed/tech-flip lead, it");
-      out.push("  still counts in HVAC Deals/L2C% (recaps carry no product line),");
-      out.push("  while HVAC Rev/AVG Ticket leave it out. Adjust by hand if it matters.");
-    }
   }
 
-  /* The two sources must agree on how many sold. Recap deals are product-blind,
-     so compare against ALL sold alerts — HVAC plus fireplace — not the HVAC-only
-     list, or every fireplace sale reads as a phantom mismatch. When they do
-     disagree the recap is the incomplete one; it only holds what somebody
-     reported. */
-  const alertsTotal = m.alertList.length + (m.fireplaceCount || 0);
-  if (m.recapSold !== alertsTotal) {
+  /* The two sources must agree on how many sold. When they disagree the recap
+     is the incomplete one — it only holds what somebody reported. */
+  if (m.recapSold !== m.alertList.length) {
     out.push("");
-    out.push("! " + m.recapSold + " sale(s) reported in recaps, " + alertsTotal +
-      " sold alert(s) from ServiceTitan" +
-      (m.fireplaceCount ? " (" + m.alertList.length + " HVAC + " +
-        m.fireplaceCount + " fireplace)" : "") + ".");
+    out.push("! " + m.recapSold + " sale(s) reported in recaps, " + m.alertList.length +
+      " sold alert(s) from ServiceTitan.");
     out.push("  The deal rows above come from recaps, so a sale nobody reported is");
-    out.push("  missing from them — its money is in the totals above. Check the list.");
+    out.push("  missing from them — but its money IS in HVAC Rev. Check the list above.");
   }
   if (m.readFailed) {
     out.push("");
@@ -4289,12 +4272,13 @@ function computeGrowthMetrics_(fromIso, toIso) {
     : [];
   const soldComplete = soldRes.ok ? soldRes.complete !== false : false;
 
-  /* HVAC Rev is measured against an HVAC budget, so a fireplace does not belong
-     in it — see soldProductLine_. Split here: alertList is the HVAC sales that
-     drive revenue and the day/MTD rows, fireplaceList rides alongside so the
-     sale is still visible and credited, just not folded into HVAC. */
+  /* Fireplaces ARE HVAC — their revenue counts in HVAC Rev, the sale count and
+     the day/MTD rows, same as a heat pump. alertList is therefore every sold
+     alert in range. fireplaceList is a SUBSET of it, kept only so the report
+     can show the seasonality (rare in summer, heavier fall through spring) —
+     see soldProductLine_. Nothing is subtracted from the totals. */
   const lineOf = a => a.productLine || soldProductLine_(a.name);
-  const alertList = inRange.filter(a => lineOf(a) !== "fireplace");
+  const alertList = inRange;
   const fireplaceList = inRange.filter(a => lineOf(a) === "fireplace");
 
   alertList.forEach(a => {
@@ -4855,18 +4839,17 @@ const RECAP_REPLY_CEILING    = 400;
 /*
  * Which product line a sold alert belongs to.
  *
- * A fireplace is a distinct line of business from HVAC — rare in summer, heavy
- * in the fall and winter — and it must never land in HVAC Rev, which is
- * measured against an HVAC budget. It cannot be told apart by the alert's
- * business unit, because a fireplace sells under [Sales Quote] exactly like a
- * heat pump; the estimate NAME is the signal ("Heat & Glo … zero clearance
- * fireplace installation"). So the name is matched against the words that only
- * a hearth product carries.
+ * A fireplace's revenue COUNTS in HVAC Rev — it is HVAC, and we expect more of
+ * it through fall, winter and spring. This tag does not pull it out of any
+ * total; it only lets the report show fireplaces as a subset so that seasonal
+ * shape is visible. It can't be told apart by the alert's business unit, since
+ * a fireplace sells under [Sales Quote] exactly like a heat pump; the estimate
+ * NAME is the signal ("Heat & Glo … zero clearance fireplace installation"), so
+ * the name is matched against the words only a hearth product carries.
  *
  * Water heaters are deliberately absent for now. A standalone tankless is
  * non-HVAC, but most water heaters sell bundled into an HVAC deal as an add-on,
- * so separating them cleanly is a harder, later job — and lumping a bundled one
- * out of HVAC Rev would be worse than leaving it in.
+ * so separating them cleanly is a harder, later job.
  */
 const FIREPLACE_NAME_RE =
   /\b(fireplace|hearth|gas\s*log|wood\s*stove|pellet\s*stove|gas\s*insert|fireplace\s*insert|heat\s*(?:&|and|-)\s*glo|heatilator|zero[\s-]*clearance)\b/i;
