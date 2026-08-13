@@ -10,6 +10,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
@@ -34,6 +35,29 @@ const HCA_PINS = {};
 let currentEditor = null;
 
 const app  = initializeApp(FIREBASE_CONFIG);
+
+// ─── App Check (reCAPTCHA v3) — verifies each request comes from THIS real app,
+// so a known/guessed PIN can't be used to script the database from outside.
+// STAGED ON TEST ONLY. Paste your reCAPTCHA v3 site key (Firebase Console →
+// App Check → register this web app) in place of the placeholder below.
+// Wrapped defensively: while the placeholder is here (or on any error) App Check
+// is simply skipped and the board runs exactly as it does today — it cannot
+// break the page. It only activates once you paste a real key.
+const RECAPTCHA_V3_SITE_KEY = "PASTE_RECAPTCHA_V3_SITE_KEY_HERE";
+try {
+  if (RECAPTCHA_V3_SITE_KEY && RECAPTCHA_V3_SITE_KEY.indexOf("PASTE_") !== 0) {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(RECAPTCHA_V3_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+    console.log("✅ App Check initialized (TEST)");
+  } else {
+    console.warn("⚠ App Check site key not set — running without App Check (safe, no behavior change).");
+  }
+} catch (e) {
+  console.error("App Check init skipped (page still works):", e);
+}
+
 const auth = getAuth(app);
 const db   = getDatabase(app);
 
