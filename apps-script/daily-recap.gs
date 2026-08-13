@@ -175,7 +175,13 @@ const DAILY_RECAP_CONFIG = {
      06:00 brief can miss is someone filing overnight — and every function
      that reads sold alerts reads Gmail live, so re-running after the meeting
      picks up anything that landed since. */
-  morningBriefHour: 6
+  morningBriefHour: 6,
+
+  /* When the growth sheet fills itself. 7am, an hour after the send/brief, so
+     it runs alone and yesterday's overnight reply sweep has fully settled.
+     It writes yesterday's day column and refreshes MTD, then stays silent
+     unless something needs a human — see writeGrowthSheetForYesterday. */
+  growthWriteHour: 7
 };
 
 /*
@@ -3751,26 +3757,141 @@ function writeGrowthSheetDay() { return growthSheetWrite_(true); }
 function previewGrowthSheetMtd() { return growthMtdWrite_(false); }
 function writeGrowthSheetMtd() { return growthMtdWrite_(true); }
 
-function growthSheetWrite_(commit) {
-  const iso = growthTargetIso_();
+/*
+ * The nightly trigger target: fill yesterday's growth column and MTD.
+ *
+ * Always yesterday, computed here — never GROWTH_SHEET_DATE. That constant is
+ * for a person doing a one-off backfill from the editor; if it were left
+ * pinned to some past date, an automated run that honoured it would rewrite
+ * the same day every morning and never advance. So the schedule ignores it.
+ *
+ * Silent on a clean write, because the sheet itself is the record — unlike an
+ * email send, you can see whether it worked by opening the tab. It speaks up
+ * only when a human is actually needed: the write refused (a missing tab, or a
+ * sold-alert read that came back partial), the month total refused, or a day
+ * cell was left alone because it already held something. That last one is the
+ * one worth catching — on a nightly cadence each morning writes a fresh tab,
+ * so a blocked day cell usually means the tab is still last week's and was
+ * never cleared, which would otherwise sit there stale behind a correct-
+ * looking MTD.
+ */
+function writeGrowthSheetForYesterday() {
+  const cfg = DAILY_RECAP_CONFIG;
+  const iso = Utilities.formatDate(
+    new Date(Date.now() - 86400000), cfg.timeZone, "yyyy-MM-dd");
+  const res = growthSheetWrite_(true, iso);
+
+  const mtdRefused = res.mtd && res.mtd.ok === false;
+  const dayBlocked = res.ok && (res.blocked || 0) > 0;
+  const needsEye = !res.ok || mtdRefused || dayBlocked;
+  if (needsEye) emailGrowthWriteReceipt_(iso, res);
+  return res;
+}
+
+/*
+ * Told only when something is off, so the mail means "look", not "for your
+ * records". Keeps the growth automation observable without a daily receipt
+ * for the boring case.
+ */
+function emailGrowthWriteReceipt_(iso, res) {
+  const cfg = DAILY_RECAP_CONFIG;
+  const label = Utilities.formatDate(
+    new Date(Date.parse(iso + "T12:00:00Z")), cfg.timeZone, "EEEE, MMMM d");
+  const lines = [];
+  let subject;
+
+  if (!res.ok) {
+    subject = "Growth sheet NOT written — " + label;
+    lines.push("Yesterday's growth column was not written.");
+    lines.push("");
+    (res.problems || ["unknown reason"]).forEach(p => lines.push("  ! " + p));
+    lines.push("");
+    lines.push("Nothing was changed. Fix the cause and run writeGrowthSheetDay");
+    lines.push("by hand, or wait for tomorrow's run.");
+  } else {
+    subject = "Growth sheet — " + label + " needs a look";
+    const dayN = res.written || 0;
+    const mtd = res.mtd || {};
+    lines.push("Yesterday's column was written, but something wants a glance.");
+    lines.push("");
+    lines.push("  day column: " + dayN + " cell(s) written, " +
+      (res.blocked || 0) + " left alone");
+    if (mtd.ok) {
+      lines.push("  MTD:        " + (mtd.written || 0) + " cell(s), revenue $" +
+        formatMoney_((mtd.metrics && mtd.metrics.revenue) || 0));
+    } else {
+      lines.push("  MTD:        REFUSED — " + ((mtd.problems || [])[0] || "see the log"));
+    }
+    if ((res.blocked || 0) > 0) {
+      lines.push("");
+      lines.push("Some day cells were left alone because they already held a");
+      lines.push("value or a formula. On the nightly run each morning fills a");
+      lines.push("fresh tab, so if this is unexpected the tab is probably still");
+      lines.push("last week's and needs clearing — otherwise a stale day sits");
+      lines.push('behind a correct MTD. Open the "' + growthTabFor_(iso) +
+        '" tab and check.');
+    }
+  }
+  lines.push("");
+  lines.push("The full run is in the Apps Script execution log.");
+
+  sendEmailSafe_({
+    to: [cfg.managerEmail],
+    subject: subject,
+    body: lines.join("\n")
+  });
+}
+
+/*
+ * The numbers are only safe to write if both sources came back whole. Three
+ * ways they don't, each of which writes a low-but-plausible figure into a
+ * workbook that is read as final:
+ *
+ *   - the sold-alert search failed outright  -> revenue would be written as $0
+ *   - it came back partial at its ceiling    -> revenue is understated
+ *   - the recap log could not be read        -> every lead and deal is 0
+ *
+ * A person running this from the editor sees the log and can catch it. The
+ * nightly trigger has nobody watching, so any of these has to REFUSE the write
+ * and let the caller raise the alarm — not commit a wrong number and move on.
+ * Returns the reason string when the read is unsafe to write, "" when it is.
+ */
+function growthWriteBlockedReason_(m) {
+  if (!m.soldOk)
+    return "the sold-alert search failed, so revenue would be written as $0";
+  if (!m.soldComplete)
+    return "the sold-alert search hit its ceiling, so revenue is a partial figure";
+  if (m.readFailed)
+    return "the recap log could not be read, so leads and deals would all be 0";
+  return "";
+}
+
+function growthSheetWrite_(commit, isoOverride) {
+  /* isoOverride is how the nightly trigger forces yesterday. A date left
+     pinned in GROWTH_SHEET_DATE after a manual backfill must not derail the
+     automated run — see writeGrowthSheetForYesterday, which always passes one. */
+  const iso = isoOverride ? isoOverride : growthTargetIso_();
   const day = growthReport_(iso, null);        // also prints the numbers
   const out = [];
   out.push("");
   out.push(new Array(58).join("="));
   out.push((commit ? "WRITE" : "PREVIEW — nothing will be written") + " — " + iso);
 
-  /* Checked before the sheet is even opened. A partial read produces a revenue
-     figure that is low and looks entirely normal, and this workbook is read as
-     final — nothing downstream would ever question it. Of the two ways this
-     run can refuse, a missing tab announces itself the moment somebody looks;
-     an understated total never does. So it is tested first, and it refuses
-     rather than warning and writing anyway. */
-  if (day.soldOk && !day.soldComplete) {
-    out.push("  ! REFUSING — the sold-alert search hit its ceiling, so revenue is");
-    out.push("    a partial figure and would be written as if it were the total.");
-    out.push("    Raise SOLD_ALERT_CEILING, then run this again.");
+  /* Checked before the sheet is even opened. A failed or partial read produces
+     numbers that are low and look entirely normal, and this workbook is read as
+     final — nothing downstream would ever question it. Of the ways this run can
+     refuse, a missing tab announces itself the moment somebody looks; an
+     understated total never does. So it is tested first, and it refuses rather
+     than warning and writing anyway. soldOk/soldComplete/readFailed ride back on
+     the result so the nightly trigger can tell a refusal from a clean run. */
+  const blockReason = growthWriteBlockedReason_(day);
+  if (blockReason) {
+    out.push("  ! REFUSING — " + blockReason + ",");
+    out.push("    and it would be written into the sheet as if it were real.");
+    out.push("    Fix the cause, then run this again.");
     Logger.log(out.join("\n"));
-    return { ok: false, problems: ["sold-alert read was incomplete"] };
+    return { ok: false, problems: [blockReason],
+      soldOk: day.soldOk, soldComplete: day.soldComplete, readFailed: day.readFailed };
   }
 
   const plan = planGrowthSheetWrite_(iso);
@@ -3834,6 +3955,7 @@ function growthSheetWrite_(commit) {
   return {
     ok: true, written: commit ? planned.length : 0,
     planned: planned.length, blocked: blocked.length,
+    soldOk: day.soldOk, soldComplete: day.soldComplete, readFailed: day.readFailed,
     mtd: mtd
   };
 }
@@ -3890,12 +4012,13 @@ function growthMtdOn_(sheet, toIso, commit) {
   }
 
   const m = computeGrowthMetrics_(fromIso, toIso);
-  if (m.soldOk && !m.soldComplete) {
-    out.push("  ! REFUSING — the sold-alert search hit its ceiling over " +
-      fromIso + " to " + toIso + ", so the month's revenue is a partial figure.");
-    out.push("    Raise SOLD_ALERT_CEILING and run this again.");
+  const blockReason = growthWriteBlockedReason_(m);
+  if (blockReason) {
+    out.push("  ! REFUSING — " + blockReason + ", over " +
+      fromIso + " to " + toIso + ". Replacing a correct MTD with this would be");
+    out.push("    worse than leaving it. Fix the cause and run this again.");
     Logger.log(out.join("\n"));
-    return { ok: false, problems: ["sold-alert read was incomplete"] };
+    return { ok: false, problems: [blockReason] };
   }
   const values = growthValuesFrom_(m);
 
@@ -4060,18 +4183,47 @@ function growthReport_(toIso, fromIso) {
   }
 
   out.push("");
-  out.push("consults reported: " + m.recapRows + "   sold alerts: " + m.alertList.length);
+  out.push("consults reported: " + m.recapRows + "   HVAC sold alerts: " + m.alertList.length);
   m.alertList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
     (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
 
-  /* The two sources must agree on how many sold. When they do not, the recap
-     is the incomplete one — it only holds what somebody reported. */
-  if (m.recapSold !== m.alertList.length) {
+  /* Fireplaces are counted, but apart — they are a different line of business
+     and are NOT in HVAC Rev above. Printed so the sale is still visible and
+     the rep still gets the credit; the growth sheet has no fireplace row yet,
+     so nothing here is written to it. */
+  if (m.fireplaceCount) {
     out.push("");
-    out.push("! " + m.recapSold + " sale(s) reported in recaps, " + m.alertList.length +
-      " sold alert(s) from ServiceTitan.");
+    out.push("fireplace — separate line, NOT in HVAC Rev above (" + m.fireplaceCount +
+      " sale(s), $" + formatMoney_(m.fireplaceRevenue) + "):");
+    m.fireplaceList.forEach(a => out.push("    " + a.soldOnIso + "  " + a.hca + " — " +
+      (a.customer || "?") + "  $" + formatMoney_(a.amount || 0)));
+    /* The revenue is out of HVAC Rev, but the DEAL count above can't be — the
+       recap log records no product line, so if one of these fireplaces closed a
+       marketed or tech-flip lead it is still sitting in HVAC Marketed/Tech Flip
+       Deals (and its L2C%), which HVAC Rev and AVG Ticket exclude. Rare enough
+       to flag rather than guess at: only a product line on the recap could pull
+       it out cleanly. Watch it when a fireplace shows against reported deals. */
+    if (m.marketedDeals || m.techFlipDeals) {
+      out.push("  NOTE: if a fireplace above closed a marketed/tech-flip lead, it");
+      out.push("  still counts in HVAC Deals/L2C% (recaps carry no product line),");
+      out.push("  while HVAC Rev/AVG Ticket leave it out. Adjust by hand if it matters.");
+    }
+  }
+
+  /* The two sources must agree on how many sold. Recap deals are product-blind,
+     so compare against ALL sold alerts — HVAC plus fireplace — not the HVAC-only
+     list, or every fireplace sale reads as a phantom mismatch. When they do
+     disagree the recap is the incomplete one; it only holds what somebody
+     reported. */
+  const alertsTotal = m.alertList.length + (m.fireplaceCount || 0);
+  if (m.recapSold !== alertsTotal) {
+    out.push("");
+    out.push("! " + m.recapSold + " sale(s) reported in recaps, " + alertsTotal +
+      " sold alert(s) from ServiceTitan" +
+      (m.fireplaceCount ? " (" + m.alertList.length + " HVAC + " +
+        m.fireplaceCount + " fireplace)" : "") + ".");
     out.push("  The deal rows above come from recaps, so a sale nobody reported is");
-    out.push("  missing from them — but its money IS in HVAC Rev. Check the list above.");
+    out.push("  missing from them — its money is in the totals above. Check the list.");
   }
   if (m.readFailed) {
     out.push("");
@@ -4130,18 +4282,28 @@ function computeGrowthMetrics_(fromIso, toIso) {
 
   const soldRes = readSoldAlerts_(Math.max(2, Math.min(120,
     Math.round((Date.now() - Date.parse(fromIso + "T12:00:00Z")) / 86400000) + 3)));
-  const alertList = soldRes.ok
+  const inRange = soldRes.ok
     ? collapseResoldAlerts_(soldRes.alerts)
         .filter(a => a.soldOnIso && a.soldOnIso >= fromIso && a.soldOnIso <= toIso)
         .sort((a, b) => a.soldOnIso < b.soldOnIso ? -1 : 1)
     : [];
   const soldComplete = soldRes.ok ? soldRes.complete !== false : false;
+
+  /* HVAC Rev is measured against an HVAC budget, so a fireplace does not belong
+     in it — see soldProductLine_. Split here: alertList is the HVAC sales that
+     drive revenue and the day/MTD rows, fireplaceList rides alongside so the
+     sale is still visible and credited, just not folded into HVAC. */
+  const lineOf = a => a.productLine || soldProductLine_(a.name);
+  const alertList = inRange.filter(a => lineOf(a) !== "fireplace");
+  const fireplaceList = inRange.filter(a => lineOf(a) === "fireplace");
+
   alertList.forEach(a => {
     const d = dayOf(a.soldOnIso);
     d.alerts++;
     d.revenue += (Number(a.amount) || 0);
   });
   const revenue = alertList.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+  const fireplaceRevenue = fireplaceList.reduce((s, a) => s + (Number(a.amount) || 0), 0);
 
   const isMarketed = s => s !== "Tech Flip" && s !== "Revisit";
   const marketedTotal = k => Object.keys(k).filter(isMarketed).reduce((n, s) => n + k[s], 0);
@@ -4160,6 +4322,8 @@ function computeGrowthMetrics_(fromIso, toIso) {
     sales: alertList.length,
     leads: leads, deals: deals, parts: parts, revisitDeals: revisitDeals,
     byDay: byDay, alertList: alertList,
+    fireplaceList: fireplaceList, fireplaceCount: fireplaceList.length,
+    fireplaceRevenue: fireplaceRevenue,
     recapRows: recapRows,
     recapSold: Object.keys(deals).reduce((n, s) => n + deals[s], 0),
     readFailed: readFailed, soldOk: !!soldRes.ok, soldComplete: soldComplete
@@ -4688,6 +4852,45 @@ const COMPLETION_ALERT_CEILING = 600;
 const BOOKED_ALERT_CEILING   = 900;
 const RECAP_REPLY_CEILING    = 400;
 
+/*
+ * Which product line a sold alert belongs to.
+ *
+ * A fireplace is a distinct line of business from HVAC — rare in summer, heavy
+ * in the fall and winter — and it must never land in HVAC Rev, which is
+ * measured against an HVAC budget. It cannot be told apart by the alert's
+ * business unit, because a fireplace sells under [Sales Quote] exactly like a
+ * heat pump; the estimate NAME is the signal ("Heat & Glo … zero clearance
+ * fireplace installation"). So the name is matched against the words that only
+ * a hearth product carries.
+ *
+ * Water heaters are deliberately absent for now. A standalone tankless is
+ * non-HVAC, but most water heaters sell bundled into an HVAC deal as an add-on,
+ * so separating them cleanly is a harder, later job — and lumping a bundled one
+ * out of HVAC Rev would be worse than leaving it in.
+ */
+const FIREPLACE_NAME_RE =
+  /\b(fireplace|hearth|gas\s*log|wood\s*stove|pellet\s*stove|gas\s*insert|fireplace\s*insert|heat\s*(?:&|and|-)\s*glo|heatilator|zero[\s-]*clearance)\b/i;
+
+/* The words that only an HVAC product carries. Used to catch a BUNDLED estimate
+   — "heat pump + gas insert fireplace" — which trips the fireplace words above
+   but is mostly an HVAC sale. Note "heat" is deliberately NOT here: "Heat & Glo"
+   is a hearth brand, and a bare "heat" would drag every fireplace back into
+   HVAC. These are specific enough that a pure fireplace estimate never matches. */
+const HVAC_NAME_RE =
+  /\b(heat\s*pump|furnace|air\s*condition|a\/?c\b|mini[\s-]*split|ductless|air\s*handler|condenser|evaporator|SEER|HVAC|dual\s*fuel|package\s*unit|gas\s*pack)\b/i;
+
+/*
+ * Fireplace only when the estimate is PURELY a hearth product — a fireplace
+ * word present and no HVAC word alongside it. A bundled deal that carries both
+ * (a heat pump with a gas insert thrown in) stays HVAC: its dollar figure is
+ * one number we cannot split by line, and the safe default is to leave a mostly-
+ * HVAC sale in HVAC Rev rather than pull the whole amount out over the add-on.
+ */
+function soldProductLine_(name) {
+  const s = String(name || "");
+  return FIREPLACE_NAME_RE.test(s) && !HVAC_NAME_RE.test(s) ? "fireplace" : "hvac";
+}
+
 function readSoldAlerts_(days) {
   const out = [];
   const res = searchAllThreads_(
@@ -4713,6 +4916,7 @@ function readSoldAlerts_(days) {
       customer: String(f["customer"] || "").trim(),
       amount: parseDealAmount_(f["amount"] || "").amount,
       name: f["name"] || "",
+      productLine: soldProductLine_(f["name"] || ""),
       soldOn: f["date"] || "",
       jobNumber: f["job#"] || f["job #"] || "",
       estimateNumber: f["estimate#"] || f["estimate #"] || "",
@@ -6418,11 +6622,18 @@ function installDailyRecapTriggers() {
   ScriptApp.newTrigger("refreshJobStatus")
     .timeBased().everyDays(1).atHour(9).inTimezone(cfg.timeZone).create();
 
+  /* Fills yesterday's growth column and MTD, an hour after the morning rush.
+     Silent unless a human is needed — see writeGrowthSheetForYesterday. */
+  ScriptApp.newTrigger("writeGrowthSheetForYesterday")
+    .timeBased().everyDays(1).atHour(cfg.growthWriteHour)
+    .inTimezone(cfg.timeZone).create();
+
   Logger.log("Installed daily recap triggers (send " + cfg.sendHour + ":00, collect " +
     cfg.collectHour + ":" + pad2_(cfg.collectMinute) +
     (cfg.nudgeEnabled ? ", nudge " + cfg.nudgeHourWorking + ":00 working / " +
       cfg.nudgeHourOff + ":00 off" : ", chase folded into the " + cfg.sendHour + ":00 send") +
     ", reply sweep hourly, sales brief " + cfg.morningBriefHour + ":00" +
+    ", growth sheet " + cfg.growthWriteHour + ":00" +
     ", job status 9:00 and 22:00 " + cfg.timeZone + ").");
 }
 
@@ -6432,7 +6643,7 @@ function deleteDailyRecapTriggers_() {
     if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
         fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday" ||
         fn === "sweepRecapReplies" || fn === "sendMorningSalesBrief" ||
-        fn === "refreshJobStatus") {
+        fn === "refreshJobStatus" || fn === "writeGrowthSheetForYesterday") {
       ScriptApp.deleteTrigger(trigger);
     }
   });
