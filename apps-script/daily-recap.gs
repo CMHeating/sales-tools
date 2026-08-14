@@ -2813,7 +2813,8 @@ var L2C_DAYS = [
   ["Sat 8/8", 3, 1, 0, 0, 0, 0, 0, 0],
   ["Sun 8/9", 2, 1, 0, 0, 0, 0, 0, 0],
   ["Mon 8/10", 4, 2, 0, 1, 0, 0, 3, 7520],
-  ["Tue 8/11", 5, 2, 0, 4, 0, 0, 10, 87020]
+  ["Tue 8/11", 5, 2, 0, 4, 0, 0, 10, 87020],
+  ["Wed 8/12", 5, 4, 0, 3, 1, 0, 5, 54070]
 ];
 
 /* ============================================================================
@@ -2825,9 +2826,9 @@ var L2C_DAYS = [
  * you only update these four lead numbers from the BI dashboard.
  *   Total 64 = Inbound 38 + Webform 8 + Self Gen 0 + Tech 18.
  * ============================================================================ */
-var BI_MTD_LEADS = 74;        // BI dashboard Total Leads
-var BI_MTD_MKT_LEADS = 52;    // Marketed = Inbound + Webform
-var BI_MTD_TECH_LEADS = 22;   // Tech
+var BI_MTD_LEADS = 85;        // BI dashboard Total Leads
+var BI_MTD_MKT_LEADS = 58;    // Marketed = Inbound + Webform
+var BI_MTD_TECH_LEADS = 27;   // Tech
 var BI_MTD_SG_LEADS = 0;      // Self Gen
 var L2CPLUS_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
 var L2CPLUS_PIPE_TAB = "Backlog Pipeline";
@@ -12706,3 +12707,402 @@ function backfillObjectionNotes() {
   Logger.log(msg);
   return msg;
 }
+
+/* =====================================================================
+   TIME-OFF / PTO MODULE  — re-authored 8/14/2026
+   ---------------------------------------------------------------------
+   NOTE: the original module was lost in the 8/13 truncation and could not
+   be found in any backup, so this is a REWRITE against the same eight
+   function names, not a byte-for-byte restore. Behaviour is deliberately
+   conservative:
+
+     - Nothing here writes to the Schedule Exceptions sheet unless YOU
+       call applyApprovedTimeOff() yourself. The scheduled tick only
+       proposes (emails you a digest).
+     - Only "Approved" rows are ever proposed.
+     - Only people on RECAP_ROSTER are touched. Everyone else in the HR
+       report is ignored.
+     - Writes are de-duplicated against rows already in the sheet, and
+       past dates are skipped.
+
+   It writes into the SAME sheet the recap already reads via
+   readExceptionsForDate_(): columns Date | HCA Name | Type | Notes,
+   spreadsheet DAILY_RECAP_CONFIG.exceptionsSpreadsheetId. So the manual
+   path you have been using keeps working exactly as before — this just
+   fills the rows in for you.
+   ===================================================================== */
+
+/* Config for the module. Change TIME_OFF_QUERY if the HR mail changes. */
+var TIME_OFF_CONFIG = {
+  /* Gmail search used to find the payroll time-off mail. Broad on purpose:
+     scanTimeOffCandidates_ does the real filtering. */
+  query: 'subject:("time off" OR "PTO" OR "vacation" OR "sick") newer_than:{DAYS}d',
+  lookbackDays: 14,
+  /* Only propose days this far ahead; keeps a year-long vacation request
+     from carpet-bombing the sheet. */
+  horizonDays: 60
+};
+
+/* Map whatever the HR system calls it onto the two words the recap's
+   schedule logic understands: "Vacation" or "Sick". Returns "" for
+   anything we should not act on (denied/cancelled types etc). */
+function timeOffType_(raw) {
+  var t = String(raw || "").toLowerCase().trim();
+  if (!t) return "";
+  if (t.indexOf("sick") !== -1) return "Sick";
+  if (t.indexOf("paid time off") !== -1) return "Vacation";
+  if (t.indexOf("pto") !== -1) return "Vacation";
+  if (t.indexOf("vacation") !== -1) return "Vacation";
+  if (t.indexOf("holiday") !== -1) return "Vacation";
+  if (t.indexOf("bereavement") !== -1) return "Vacation";
+  if (t.indexOf("personal") !== -1) return "Vacation";
+  return "";
+}
+
+/* Pull ISO dates out of a chunk of text.
+   Handles "9/17/2026 - 9/18/2026" ranges and bare "9/17/2026" dates.
+   A range is expanded to every calendar day it covers (inclusive).
+   Returns a de-duplicated, sorted array of "yyyy-MM-dd" strings. */
+function extractTimeOffDates_(text) {
+  var s = String(text || "");
+  var out = {};
+  var D = "(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})";
+  var rangeRe = new RegExp(D + "\\s*(?:-|–|—|to|through)\\s*" + D, "g");
+  var seenSpan = [];
+  var m;
+
+  function iso(mm, dd, yyyy) {
+    return yyyy + "-" + pad2_(mm) + "-" + pad2_(dd);
+  }
+  function addSpan(a, b) {
+    /* Guard: never expand more than ~90 days, and never run backwards. */
+    var start = new Date(a + "T12:00:00");
+    var end = new Date(b + "T12:00:00");
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+    if (end < start) return;
+    var guard = 0;
+    var cur = start;
+    while (cur <= end && guard < 90) {
+      out[Utilities.formatDate(cur, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")] = true;
+      cur = new Date(cur.getTime() + 24 * 60 * 60 * 1000);
+      guard++;
+    }
+  }
+
+  while ((m = rangeRe.exec(s)) !== null) {
+    var a = iso(m[1], m[2], m[3]);
+    var b = iso(m[4], m[5], m[6]);
+    seenSpan.push(m[0]);
+    addSpan(a, b);
+  }
+
+  /* Now the singles — but skip any that were already consumed by a range. */
+  var singleRe = new RegExp(D, "g");
+  var consumed = seenSpan.join(" | ");
+  while ((m = singleRe.exec(s)) !== null) {
+    if (consumed.indexOf(m[0]) !== -1) continue;
+    out[iso(m[1], m[2], m[3])] = true;
+  }
+
+  return Object.keys(out).sort();
+}
+
+/* Read recent time-off mail and turn it into structured candidates.
+   Returns [{ name, roster, type, status, dates:[iso], subject, msgId, date }]
+   Only rows whose person is on RECAP_ROSTER survive. */
+function scanTimeOffCandidates_(days) {
+  var lookback = days || TIME_OFF_CONFIG.lookbackDays;
+  var q = TIME_OFF_CONFIG.query.replace("{DAYS}", String(lookback));
+  var out = [];
+  var threads;
+  try {
+    threads = GmailApp.search(q, 0, 50);
+  } catch (err) {
+    Logger.log("Time-off scan failed: " + (err && err.message ? err.message : err));
+    return out;
+  }
+
+  var todayIso = Utilities.formatDate(new Date(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+  var horizon = new Date(new Date().getTime() + TIME_OFF_CONFIG.horizonDays * 24 * 60 * 60 * 1000);
+  var horizonIso = Utilities.formatDate(horizon, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+
+  threads.forEach(function (th) {
+    th.getMessages().forEach(function (msg) {
+      var body = "";
+      try {
+        body = msg.getPlainBody() || "";
+      } catch (e) {
+        return;
+      }
+      var subject = msg.getSubject() || "";
+      var hay = subject + "\n" + body;
+
+      /* Walk the roster and look for each person by name in the text.
+         The HR report is a table, so we slice the line(s) mentioning them. */
+      RECAP_ROSTER.forEach(function (hca) {
+        var target = normName_(hca.name);
+        if (!target) return;
+
+        var lines = hay.split(/\r?\n/);
+        for (var i = 0; i < lines.length; i++) {
+          if (normName_(lines[i]).indexOf(target) === -1) continue;
+
+          /* Take this line plus the next two — the HR export wraps
+             dates and notes onto continuation lines. */
+          var chunk = lines.slice(i, i + 3).join(" ");
+          var status = /approved/i.test(chunk) ? "Approved"
+            : /denied/i.test(chunk) ? "Denied"
+              : /requested/i.test(chunk) ? "Requested" : "";
+          if (/cancellation/i.test(chunk)) status = "Cancelled";
+
+          var type = timeOffType_(chunk);
+          if (!type) continue;
+
+          var dates = extractTimeOffDates_(chunk).filter(function (d) {
+            return d >= todayIso && d <= horizonIso;
+          });
+          if (!dates.length) continue;
+
+          out.push({
+            name: hca.name,
+            roster: hca,
+            type: type,
+            status: status,
+            dates: dates,
+            subject: subject,
+            msgId: msg.getId(),
+            date: Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")
+          });
+          break;
+        }
+      });
+    });
+  });
+
+  return out;
+}
+
+/* Read-only. Scans, then emails you a digest of what it WOULD write.
+   Nothing touches the sheet. This is what the trigger runs. */
+function proposeTimeOffFromEmail(days) {
+  var cands = scanTimeOffCandidates_(days);
+  var approved = cands.filter(function (c) { return c.status === "Approved"; });
+
+  if (!approved.length) {
+    Logger.log("Time-off scan: nothing approved and upcoming in the last " +
+      (days || TIME_OFF_CONFIG.lookbackDays) + " days.");
+    return { count: 0, candidates: [] };
+  }
+
+  var existing = timeOffExistingKeys_();
+  var lines = [];
+  var newCount = 0;
+
+  approved.forEach(function (c) {
+    var fresh = c.dates.filter(function (d) {
+      return !existing[d + "|" + c.name.toLowerCase()];
+    });
+    if (!fresh.length) return;
+    newCount += fresh.length;
+    lines.push("  " + c.name + " — " + c.type + " — " + fresh.join(", ") +
+      "\n      (from: " + c.subject + ")");
+  });
+
+  if (!newCount) {
+    Logger.log("Time-off scan: " + approved.length +
+      " approved request(s), all already in the Schedule Exceptions sheet.");
+    return { count: 0, candidates: approved };
+  }
+
+  var body = "Approved time off found in email that is NOT yet in the Schedule Exceptions sheet:\n\n" +
+    lines.join("\n") + "\n\n" +
+    "Nothing has been written. To apply these, run applyApprovedTimeOff() in the\n" +
+    "Apps Script editor, or add the rows by hand as usual.\n\n" +
+    "Sheet: https://docs.google.com/spreadsheets/d/" +
+    DAILY_RECAP_CONFIG.exceptionsSpreadsheetId + "/edit\n";
+
+  MailApp.sendEmail({
+    to: DAILY_RECAP_CONFIG.managerEmail,
+    subject: "Time off to review — " + newCount + " day(s) not on the schedule",
+    body: body,
+    name: DAILY_RECAP_CONFIG.fromName
+  });
+
+  Logger.log("Time-off scan: proposed " + newCount + " day(s) by email.");
+  return { count: newCount, candidates: approved };
+}
+
+/* Existing rows in the sheet, keyed "iso|lowercased name", so we never
+   write a duplicate. */
+function timeOffExistingKeys_() {
+  var seen = {};
+  try {
+    var cfg = DAILY_RECAP_CONFIG;
+    var ss = SpreadsheetApp.openById(cfg.exceptionsSpreadsheetId);
+    var sheet = cfg.exceptionsSheetName
+      ? ss.getSheetByName(cfg.exceptionsSheetName)
+      : ss.getSheets()[0];
+    if (!sheet) return seen;
+    var values = sheet.getDataRange().getValues();
+    if (values.length < 2) return seen;
+    var header = values[0].map(function (h) { return String(h || "").trim().toLowerCase(); });
+    var cDate = indexOfHeader_(header, ["date"]);
+    var cName = indexOfHeader_(header, ["hca name", "hca", "name"]);
+    if (cDate === -1 || cName === -1) return seen;
+    for (var i = 1; i < values.length; i++) {
+      var iso = normalizeSheetDate_(values[i][cDate]);
+      var nm = String(values[i][cName] || "").trim().toLowerCase();
+      if (iso && nm) seen[iso + "|" + nm] = true;
+    }
+  } catch (err) {
+    Logger.log("timeOffExistingKeys_ failed: " + (err && err.message ? err.message : err));
+  }
+  return seen;
+}
+
+/* THE ONLY FUNCTION THAT WRITES. Appends approved, upcoming, not-already-
+   present time off into the Schedule Exceptions sheet. Run it by hand. */
+function applyApprovedTimeOff(days) {
+  var cfg = DAILY_RECAP_CONFIG;
+  var cands = scanTimeOffCandidates_(days).filter(function (c) {
+    return c.status === "Approved";
+  });
+  if (!cands.length) {
+    Logger.log("applyApprovedTimeOff: nothing approved to write.");
+    return { written: 0 };
+  }
+
+  var ss = SpreadsheetApp.openById(cfg.exceptionsSpreadsheetId);
+  var sheet = cfg.exceptionsSheetName
+    ? ss.getSheetByName(cfg.exceptionsSheetName)
+    : ss.getSheets()[0];
+  if (!sheet) {
+    Logger.log("applyApprovedTimeOff: exceptions sheet not found.");
+    return { written: 0 };
+  }
+
+  var values = sheet.getDataRange().getValues();
+  var header = values[0].map(function (h) { return String(h || "").trim().toLowerCase(); });
+  var cDate = indexOfHeader_(header, ["date"]);
+  var cName = indexOfHeader_(header, ["hca name", "hca", "name"]);
+  var cType = indexOfHeader_(header, ["type"]);
+  var cNote = indexOfHeader_(header, ["notes", "note"]);
+  if (cDate === -1 || cName === -1 || cType === -1) {
+    Logger.log("applyApprovedTimeOff: expected Date / HCA Name / Type columns, got: " + header.join(", "));
+    return { written: 0 };
+  }
+
+  var existing = timeOffExistingKeys_();
+  var width = Math.max(cDate, cName, cType, cNote) + 1;
+  var rows = [];
+  var log = [];
+
+  cands.forEach(function (c) {
+    c.dates.forEach(function (d) {
+      var key = d + "|" + c.name.toLowerCase();
+      if (existing[key]) return;
+      existing[key] = true;
+      var row = new Array(width).fill("");
+      row[cDate] = d;
+      row[cName] = c.name;
+      row[cType] = c.type;
+      if (cNote !== -1) row[cNote] = "Auto-added from approved time-off email " + c.date;
+      rows.push(row);
+      log.push(c.name + " " + d + " " + c.type);
+    });
+  });
+
+  if (!rows.length) {
+    Logger.log("applyApprovedTimeOff: everything approved is already on the sheet.");
+    return { written: 0 };
+  }
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, width).setValues(rows);
+  Logger.log("applyApprovedTimeOff: wrote " + rows.length + " row(s):\n  " + log.join("\n  "));
+  return { written: rows.length, rows: log };
+}
+
+/* Morning heads-up: who the schedule says is off today. Reads the sheet
+   only — this is the same data the recap uses to decide who to skip. */
+function sendTimeOffMorningCheck() {
+  var iso = Utilities.formatDate(new Date(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+  var ex = readExceptionsForDate_(iso);
+
+  if (!ex.ok) {
+    MailApp.sendEmail({
+      to: DAILY_RECAP_CONFIG.managerEmail,
+      subject: "Time off check — Schedule Exceptions sheet unreadable",
+      body: "Could not read the Schedule Exceptions sheet this morning, so nobody " +
+        "was suppressed from the recap.\n\nError: " + ex.error + "\n",
+      name: DAILY_RECAP_CONFIG.fromName
+    });
+    return { ok: false };
+  }
+
+  var names = Object.keys(ex.byName);
+  if (!names.length) {
+    Logger.log("Time off check " + iso + ": nobody off today.");
+    return { ok: true, count: 0 };
+  }
+
+  var lines = names.map(function (k) {
+    return "  " + k.replace(/\b\w/g, function (ch) { return ch.toUpperCase(); }) +
+      " — " + ex.byName[k].type +
+      (ex.byName[k].notes ? " (" + ex.byName[k].notes + ")" : "");
+  });
+
+  MailApp.sendEmail({
+    to: DAILY_RECAP_CONFIG.managerEmail,
+    subject: "Off today (" + iso + "): " + names.length,
+    body: "Per the Schedule Exceptions sheet, off today:\n\n" + lines.join("\n") +
+      "\n\nThese people will not be nagged for a recap.\n",
+    name: DAILY_RECAP_CONFIG.fromName
+  });
+
+  Logger.log("Time off check " + iso + ": " + names.length + " off.");
+  return { ok: true, count: names.length };
+}
+
+/* Trigger handler. Deliberately propose-only — see the header note. */
+function timeOffTick() {
+  try {
+    proposeTimeOffFromEmail();
+  } catch (err) {
+    Logger.log("timeOffTick failed: " + (err && err.message ? err.message : err));
+  }
+}
+
+/* Install (or reinstall) the two time-off triggers. Idempotent. */
+function installTimeOffTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    var fn = t.getHandlerFunction();
+    if (fn === "timeOffTick" || fn === "sendTimeOffMorningCheck") {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  var tz = DAILY_RECAP_CONFIG.timeZone;
+  /* Scan for new approved requests once a day, mid-afternoon — after
+     payroll has processed the morning's approvals. */
+  ScriptApp.newTrigger("timeOffTick")
+    .timeBased().everyDays(1).atHour(15).inTimezone(tz).create();
+  /* Heads-up before the 6am send goes out. */
+  ScriptApp.newTrigger("sendTimeOffMorningCheck")
+    .timeBased().everyDays(1).atHour(5).inTimezone(tz).create();
+  Logger.log("Installed time-off triggers (scan 15:00, morning check 05:00, " + tz + ").");
+}
+
+/* Safe dry run — logs what the scanner sees without emailing or writing. */
+function testTimeOffScan() {
+  var c = scanTimeOffCandidates_();
+  Logger.log("Time-off candidates found: " + c.length);
+  c.forEach(function (x) {
+    Logger.log("  " + x.name + " | " + x.type + " | " + x.status + " | " +
+      x.dates.join(", ") + " | " + x.subject);
+  });
+  return c;
+}
+/* ================= END TIME-OFF / PTO MODULE ================= */
+
+
+
+
