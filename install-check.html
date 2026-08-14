@@ -127,9 +127,9 @@
       <div><label>Heat load calc completed?</label>
         <select id="heatload"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option><option>N/A</option></select></div>
       <div><label>Layout photos taken?</label>
-        <select id="photos"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+        <select id="photos"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Partial — see notes</option><option>✖ No</option></select></div>
       <div><label>Walkthrough video taken?</label>
-        <select id="video"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+        <select id="video"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Partial — see notes</option><option>✖ No</option></select></div>
       <div class="full"><a class="link" href="hca-layout-cheatsheet.html" target="_blank">Layout Cheat Sheet</a></div>
       <div class="full"><label>Materials / layout notes</label><textarea id="mat-notes" placeholder="Special orders, back-ordered items, access, obstacles, where equipment lands."></textarea></div>
     </div>
@@ -209,7 +209,6 @@ var SOLD={};
 var COMBO_REP='';  /* SALES REP pulled from the Combo Log, kept for the HCA cross-check */
 var QUEUE=[],qIdx=-1,qDone={};  /* morning review queue, handed in via the link's #q= payload */
 var SHEET_URL="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0";
-
 /* ===== Guardrail + jurisdiction logic (parts drive the verdict) ===== */
 /* A field is a hard BLOCK when its value equals the mapped string below.
    Blocks force "Not ready" — the HCA gets a to-do list to update before it's good to go. */
@@ -295,7 +294,6 @@ function renderVerdict(){
   vb.innerHTML=html;
   if(bt)bt.textContent=rank===2?'Not cleared — Send notifies the HCA what to update.':(rank===1?'Ready with notes — review the flags, then Send.':'All clear — Send to HCA.');
 }
-
 function v(id){var e=el(id);return e?String(e.value||'').trim():''}
 function line(label,val){return val?(label+": "+val):''}
 function block(title,rows){rows=rows.filter(Boolean);if(!rows.length)return'';return title+"\n"+rows.map(function(r){return "  "+r}).join("\n")+"\n";}
