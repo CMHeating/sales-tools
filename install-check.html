@@ -382,7 +382,7 @@ function findSavedCheck(cust,idate){return SAVED_BY_KEY[pendKey(cust,idate)]||nu
 /* Work out who a saved check is still waiting on, from its field values. */
 function owedBy(payload){
   var f=(payload&&payload.f)||{};
-  var done=function(v){return /^\s*✔/.test(String(v||''));};
+  var done=function(v){v=String(v||'').trim();return /^✔/.test(v)||/^N\/A/i.test(v)||/^⚠ Partial/.test(v);};
   return {jon:!String(f['d-elec']||'').trim(),lyle:!String(f['d-install']||'').trim(),geoff:!String(f['d-sales']||'').trim(),
     hca:(!done(f.heatload)||!done(f.video)||!done(f.photos)||!done(f.mat))};
 }
@@ -473,6 +473,7 @@ function sendToHca(handoff){
   }).then(function(d){
     b.disabled=false;b.textContent=lbl;if(other)other.disabled=false;
     if(d&&d.ok){var who=d.to||v('hca');
+      loadOpenChecks();
       if(handoff){
         var mgrs=(d.awaiting&&d.awaiting.length)?d.awaiting.join(' & '):'the next manager';
         el('bartxt').innerHTML='✓ Saved — sent to '+qesc(mgrs)+' to finish their spot-check.';
