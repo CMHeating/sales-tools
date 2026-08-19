@@ -33,6 +33,11 @@ If your row says "no," you are operating from whatever context your own
 configuration gave you. Say so rather than guessing, and do not assume a rule
 you cannot see does not exist.
 
+**Precedence.** The START HERE doc in the Sales Ops Drive folder is the source of
+truth for sales operations. Where it and this file disagree on a rule, **START
+HERE wins and this file is the thing to fix.** This file exists to carry those
+rules to surfaces that cannot read that doc, not to reinterpret them.
+
 ---
 
 ## 2. The rules that never bend
@@ -133,6 +138,9 @@ to the Sales Ops folder containing:
 
 Then tell the operator, in the conversation, that a paste is pending. A
 corrections file nobody is told about is a file nobody applies.
+
+The same intake is written into the START HERE doc as its PART 11, so a session
+that can read that doc but not this file still knows where to put what it finds.
 
 ### 4.4 A rule that came from a mistake → write down the mistake
 
