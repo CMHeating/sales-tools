@@ -1,5 +1,7 @@
 # CM Heating Sales Operations Hub
 
+*Working on this repo with an AI agent? Start with [`AGENTS.md`](./AGENTS.md).*
+
 Follow-up accountability system and HCA tool hub for Home Comfort Advisors — built to drive conversion, documentation culture, rental/CaaS process discipline, and leadership visibility.
 
 ## Live URLs

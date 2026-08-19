@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Read [`AGENTS.md`](./AGENTS.md) first.** It is the master routing file for
+> every agent surface — Claude, Codex, Gemini, scheduled runs — and carries the
+> rules that do not bend (never write to a spreadsheet, never run an Apps Script
+> function, never commit a secret, nothing goes outward unsent), plus where
+> finished work and new rules are supposed to land.
+>
+> This file is the **repo-mechanics** reference: build, deploy, file routing,
+> the guard hook, design patterns. A new rule about *how to behave* goes in
+> `AGENTS.md`; a new rule about *working in this codebase* goes here. See
+> `AGENTS.md` §4.
+
 ## What This Repo Is
 
 CM Heating Sales Operations Hub — a collection of static HTML tools for the sales team (HCAs: Home Comfort Advisors) at CM Heating, an HVAC company in Everett, WA. Tools cover follow-up tracking, leaderboard display, quoting, scheduling, 1:1s, and install availability.

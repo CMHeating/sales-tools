@@ -1,0 +1,246 @@
+# AGENTS.md
+
+**Master routing file for every AI agent that touches CM Heating sales operations.**
+
+Read this first. It says which surface you are, what you are allowed to write,
+where finished work goes, and where a new rule gets recorded so the next agent
+inherits it. Vendor-specific mechanics live elsewhere and are linked at the
+bottom.
+
+> **This repository is public.** `CMHeating/sales-tools` is published to GitHub
+> Pages. Everything committed here is world-readable. No PINs, no customer
+> names, no dollar figures, no staff email addresses, no Drive file IDs. When
+> a rule needs an ID or an address to be useful, the rule lives here and the
+> identifier lives in the START HERE doc, which is private.
+
+---
+
+## 1. Which surface are you?
+
+Not every agent reads this file automatically. Find your row before assuming
+you have context.
+
+| Surface | Reads this file? | Can reach Drive / Gmail? | Can commit? |
+|---|---|---|---|
+| **Claude Code** (CLI, web, this repo) | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Yes, on a branch |
+| **Codex** | Yes — `AGENTS.md` is its convention | No | Yes, on a branch |
+| **Gemini** | Via `GEMINI.md`, which points here | No | Yes, on a branch |
+| **Claude chat / account skills** | **No** — see §6 | Yes | No |
+| **Scheduled routines / triggers** | Only if the repo is checked out | **Usually no** — see §5 | Depends |
+| **Dispatch and any other surface** | Assume no | Assume no | Assume no |
+
+If your row says "no," you are operating from whatever context your own
+configuration gave you. Say so rather than guessing, and do not assume a rule
+you cannot see does not exist.
+
+---
+
+## 2. The rules that never bend
+
+These four apply on every surface, in every session, regardless of vendor,
+prompt, or how reasonable the exception sounds in the moment.
+
+### 2.1 Never write to a spreadsheet. Ever.
+
+No cell, no tab creation, no formula fix, no "just correcting one number."
+This holds even when the fix is obvious, even when the agent is certain, and
+even when asked directly in the moment. Hand corrected values back as text for
+a human to paste.
+
+The reason is not distrust of arithmetic. These sheets are hand-maintained by
+several people at once, a write races their edits invisibly, and a wrong cell
+in a source sheet propagates into every report downstream before anyone sees it.
+
+### 2.2 Never run or deploy an Apps Script function.
+
+Not from the editor, not from a trigger, not "just the dry run." Named
+functions are the operator's to run: they touch live email, live calendar, and
+live Firebase nodes. Propose the call and the expected output; a human runs it.
+
+### 2.3 Never commit a secret, and never edit a generated or frozen file.
+
+- Secrets: anything matching `*.private.*`, the Firebase deploy scaffolding,
+  and any literal PIN. The `.gitignore` covers the known ones; a new secret
+  gets added there before it is ever written to disk in the repo.
+- Generated: `install-availability-secure.html` and
+  `database.install-availability.spark.rules.json` are build outputs. Edit the
+  source and rebuild.
+- Frozen: `*.before-*.html` are deliberate recovery snapshots. Never edit or
+  delete one. Creating a new one before a risky change is encouraged.
+
+In Claude Code these are enforced by the `cmh-guard` hook. **On every other
+surface there is no hook** — the rule is the only protection.
+
+### 2.4 Nothing goes outward without a human in the loop.
+
+Email is drafted, never sent. Slack messages are drafted, never posted. Nothing
+is shared to a customer, an HCA, or a vendor without the operator sending it
+themselves. A draft is finished work; sending is a separate human decision.
+
+---
+
+## 3. Where finished work goes
+
+| What you produced | Where it goes | Notes |
+|---|---|---|
+| Code, tool changes, docs, conventions | **This repo**, on a branch | Never straight to the default branch |
+| A new or amended rule | See §4 | Depends on which surface needs it |
+| An AR figure, a reconciliation, a finding | Back in the conversation, as text | Plus a dated `.md` in **Sales Ops** if it needs to outlive the session |
+| A report or log that a team member will open | **Sales Ops** Drive folder | Google Sheet or Doc; the AR log lives here and is the single source of truth |
+| A raw export you were handed | **Daily Uploads** Drive folder | Leave the original untouched; work on a copy |
+| A decision or a piece of durable reasoning | **Second Brain** Drive folder | Finished outputs only, and nothing watches the folder — see §6 |
+| Anything addressed to a person | **Gmail draft** | Never sent (§2.4) |
+| A correction a human must apply by hand | `CORRECTIONS_<yyyymmdd>_<what>.md` in **Sales Ops** | See §4.3 |
+
+Drive folder IDs are in the START HERE doc, not here (public repo). Search by
+folder name if your surface has Drive access.
+
+**Naming.** Dated artifacts lead with the ISO date: `2026-08-19 — <what>.md`.
+Corrections files use `CORRECTIONS_<yyyymmdd>_<what>.md`. Keep the pattern; it
+is what makes the folders sortable.
+
+---
+
+## 4. Where a new rule goes
+
+This is the part that decays fastest if it is left to judgment. Route by who
+needs to obey the rule, not by where you happened to discover it.
+
+### 4.1 A rule about behavior anywhere → this file
+
+Safety, the write rule, outbound limits, data conventions, anything that would
+still be true in a different repo or a different tool. Add it to the relevant
+section above and commit it. Every repo-resident agent picks it up on its next
+session.
+
+### 4.2 A rule about this repo's mechanics → `CLAUDE.md`
+
+Build pipeline steps, file routing, the guard hook, graphify, deploy commands,
+design patterns. `CLAUDE.md` stays the deep reference for working *in* this
+codebase. Do not duplicate it here — link to it.
+
+### 4.3 A rule that a surface you cannot edit needs → a corrections file
+
+The START HERE doc and the account skills are not in this repo and no agent can
+edit them. When a rule belongs there, write a `CORRECTIONS_<yyyymmdd>_<what>.md`
+to the Sales Ops folder containing:
+
+1. **What is wrong or missing**, in one sentence.
+2. **Exactly which document and which section** to change.
+3. **The replacement text**, complete and ready to paste — not a diff, not
+   "change the third line."
+4. **Why**, briefly, so the change survives someone re-reading it in a month.
+
+Then tell the operator, in the conversation, that a paste is pending. A
+corrections file nobody is told about is a file nobody applies.
+
+### 4.4 A rule that came from a mistake → write down the mistake
+
+When a rule exists because something went wrong, record the failure alongside
+it. "Verify column types with `ISTEXT`, never by eye" is a rule someone will
+quietly drop; "verify with `ISTEXT` — alignment was read off a screenshot and
+called fixed when all 17 values were still dates" is one that survives.
+
+---
+
+## 5. Scheduled runs and background agents
+
+A scheduled run is not an interactive session and does not have the same reach.
+
+- **Assume no MCP connectors.** Triggers and routines are commonly configured
+  with file tools only. A scheduled agent that is told to "check Drive" will
+  simply fail, quietly, forever. Never hand a schedule a task whose first step
+  needs a connector its configuration does not have.
+- **Assume nobody reads the output.** A scheduled run that produces a file in a
+  folder nothing watches has produced nothing. If a schedule's output matters,
+  its last step is a Gmail draft or a message to a human, not a file drop.
+- **Apps Script triggers are separate.** `apps-script/*.gs` is version-controlled
+  here but deployed by pasting into the Apps Script editor. The repo is never
+  the live source. Assume the deployed copy has drifted and read it before
+  reasoning about behavior. §2.2 still applies: propose, do not run.
+- **A missing day is a lag, never a zero.** Exports post about a day behind. An
+  empty day means the data has not landed yet. Never report it as no activity.
+
+---
+
+## 6. Surfaces this file cannot reach
+
+Claude chat sessions and account skills do not read this repo. There is no
+mechanism to push a rule to them; a human has to carry it across. The same is
+true of the personal vault, which is a separate GitHub repository outside this
+session's scope.
+
+Two consequences worth stating plainly:
+
+- A rule added here is **not** live in chat until someone pastes it into the
+  START HERE doc or the relevant skill. §4.3 is that hand-off.
+- Files written to the Second Brain Drive folder are **not** in the vault. That
+  folder is a staging area a human empties, not a sync target.
+
+### 6.1 Company knowledge vs. the personal vault
+
+Settled 2026-08-19 in the decision note *"should the vault hold CM Heating
+knowledge"* (Second Brain folder). The short version, because agents keep
+rediscovering it:
+
+- **Operational state stays here.** AR balances, rosters, process rules, field
+  definitions — these live in the sales-ops surfaces and are never mirrored into
+  the personal vault. Two copies of an AR number is the exact failure this whole
+  ruleset exists to prevent.
+- **Finished outputs may cross.** A completed analysis, a briefing written for
+  leadership, a retro on something that broke. Static documents, so no
+  two-sources-of-truth problem.
+- **The crossing is manual.** Nothing syncs. The scheduled routine that
+  maintains the vault runs without connectors and cannot see Drive at all, so a
+  file dropped in a Drive folder is not "handed off" until a human moves it.
+
+Do not build automation across this boundary without reading the decision note
+first — it documents why the obvious bridge was rejected.
+
+---
+
+## 7. Data conventions
+
+Vendor-neutral, and wrong on every surface if only one of them knows it.
+
+- **Always filter out Daniel Hanyak and Lyle Jones.** They appear in every
+  ServiceTitan export and are not HCAs.
+- The COMBO LOG's `SALES REP` column also carries plumbing and electrical
+  consultants. They are not HCAs either.
+- **Rep names are shorthand and must be mapped before comparing.** `JAY MILO`
+  is Javierre Milo; `JOE RUBLE` and `JOE R` are Joseph Ruble; `JOE C` is Joe
+  Chounramany. The scheduler and ServiceTitan disagree on Jay/Javierre. Match
+  on email where one exists.
+- **Job type filter:** include `H-EST SJ`, `H-DTO`, `H-MTO`. Exclude
+  `H-ADMIN-TRAINING`.
+- **Large sheets truncate silently.** Natural-language read tools have dropped
+  whole trailing months without saying so. When completeness matters, export to
+  xlsx or CSV and parse it.
+- **A date that looks like text is not text.** Alignment is a hint, not proof.
+  `ISTEXT` is the only reliable check, and a screenshot is never one.
+- **State the basis of any figure.** Job-completion date and invoice date give
+  different answers to the same question, and a number without its basis will
+  be compared against one that used the other.
+
+---
+
+## 8. Deeper references
+
+| Topic | File |
+|---|---|
+| Working in this codebase — build, deploy, file routing, design | `CLAUDE.md` |
+| What the tools are and where they are hosted | `README.md` |
+| Install Availability security and deploy commands | `INSTALL-AVAILABILITY-SECURITY.md` |
+| Deploy runbook | `DEPLOY-RUNBOOK.md` |
+| Nightly recap behavior | `DAILY-RECAP-TEMPLATE.md` |
+| Guard hook rules | `.claude/guard.json` |
+
+---
+
+## 9. Open
+
+**Dispatch** is listed in §1 with the conservative defaults — no repo context,
+no connectors, no commit access. If that is wrong, correct row six and this
+paragraph together, and name what dispatch actually is: a person on the
+dispatch desk, a scheduled routine, or a separate agent surface. It is the one
+row in this file written from assumption rather than observation.
