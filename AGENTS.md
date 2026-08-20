@@ -29,8 +29,8 @@ you have context.
 | Surface | Reads this file? | Can reach Drive / Gmail? | Can commit? |
 |---|---|---|---|
 | **Claude Code** (CLI, web, this repo) | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Yes, on a branch |
-| **Codex** | Yes — `AGENTS.md` is its convention | No | Yes, on a branch |
-| **Gemini** | Via `GEMINI.md`, which points here | No | Yes, on a branch |
+| **Codex** | Only with the repo checked out | No | Yes, on a branch |
+| **Gemini** | Only with the repo checked out, via `GEMINI.md` | No | Yes, on a branch |
 | **Claude chat / account skills** | **No** — see §6 | Yes | No |
 | **Scheduled routines / triggers** | Only if the repo is checked out | **Usually no** — see §5 | Depends |
 | **Dispatch and any other surface** | Assume no | Assume no | Assume no |
@@ -38,6 +38,23 @@ you have context.
 If your row says "no," you are operating from whatever context your own
 configuration gave you. Say so rather than guessing, and do not assume a rule
 you cannot see does not exist.
+
+**"Reads this file" means the file is on disk in front of it.** Codex and Gemini
+pick up `AGENTS.md` and `GEMINI.md` only when the repo is checked out locally
+and the tool is pointed at it. The browser and app versions of both have no
+outbound network access — they cannot fetch `github.com/CMHeating/sales-tools`,
+and asking one to "go read AGENTS.md" produces either a refusal or an invented
+answer. On those surfaces the operator pastes the documents in, and the paste is
+the only context the agent has.
+
+Recorded 2026-08-20, from a Gemini session that was handed `RED-TEAM.md` and
+reported it could not reach the repo. Before that, row three of this table
+asserted the opposite. Its first substantive recommendation — put the hard rules
+in the repo next to the systems they govern — would have published customer
+names, AR balances and staff emails to a public GitHub Pages site, which it had
+no way to know because it could not read the paragraph at the top of this file
+saying so. An agent that cannot see the boundary will route work straight
+through it while sounding entirely reasonable.
 
 **Precedence, highest first.**
 
@@ -72,7 +89,9 @@ session. Kept here so there is one copy to fix when a rule changes.
 > write a CORRECTIONS_<date>_<what>.md to the Sales Ops folder with complete
 > paste-ready text — and tell me in the chat that it's waiting.
 
-**Codex / Gemini** — have every rule, no way to check a number:
+**Codex / Gemini** — have every rule, no way to check a number. If the surface
+has no repo checked out, paste `AGENTS.md` and `CLAUDE.md` in place of the first
+line; it cannot fetch them:
 
 > Read AGENTS.md at the repo root first, then CLAUDE.md.
 >
