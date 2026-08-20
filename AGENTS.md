@@ -7,6 +7,12 @@ where finished work goes, and where a new rule gets recorded so the next agent
 inherits it. Vendor-specific mechanics live elsewhere and are linked at the
 bottom.
 
+**This file is a mirror, not an authority.** The rules originate in
+`00 AGENT RULES — read first` (🧠 Second Brain, Drive) and the START HERE doc
+(Sales Ops, Drive). Codex and Gemini cannot reach Drive, so those rules are
+restated here for them. Where this file and either Drive doc disagree, the Drive
+doc is right and this file is the thing to fix.
+
 > **This repository is public.** `CMHeating/sales-tools` is published to GitHub
 > Pages. Everything committed here is world-readable. No PINs, no customer
 > names, no dollar figures, no staff email addresses, no Drive file IDs. When
@@ -33,10 +39,17 @@ If your row says "no," you are operating from whatever context your own
 configuration gave you. Say so rather than guessing, and do not assume a rule
 you cannot see does not exist.
 
-**Precedence.** The START HERE doc in the Sales Ops Drive folder is the source of
-truth for sales operations. Where it and this file disagree on a rule, **START
-HERE wins and this file is the thing to fix.** This file exists to carry those
-rules to surfaces that cannot read that doc, not to reinterpret them.
+**Precedence, highest first.**
+
+1. **`00 AGENT RULES — read first`** (🧠 Second Brain) — how any agent behaves:
+   the write surface, secrets, Drive mechanics, git. Applies to every surface.
+2. **START HERE — CM Heating Sales Ops Source of Truth** (Sales Ops) — how sales
+   ops actually works: counting rules, permits, the morning routine, the traps.
+3. **This file**, then `CLAUDE.md` — the repo-reachable restatement, plus repo
+   mechanics that exist nowhere else.
+
+Find both Drive docs **by title**; their IDs churn. Where a lower level
+contradicts a higher one, the higher one is right.
 
 ### 1.1 Standard session openers
 
@@ -46,8 +59,9 @@ session. Kept here so there is one copy to fix when a rule changes.
 
 **Claude chat / Cowork** — reaches the data, was handed no rules:
 
-> Read the Google Drive file "CM Heating — Sales Ops Source of Truth" — find it
-> BY NAME, not by ID, the ID changes on every edit. Then read the Apps Script
+> Read "00 AGENT RULES — read first" in the 🧠 Second Brain folder, then the
+> Google Drive file "CM Heating — Sales Ops Source of Truth" — find both BY
+> NAME, not by ID, the IDs change on every edit. Then read the Apps Script
 > projects HCA Daily Recap, HCA 1:1 Scheduler and HCA Call-Out Watcher directly
 > from Drive before changing anything.
 >
@@ -150,12 +164,20 @@ is what makes the folders sortable.
 This is the part that decays fastest if it is left to judgment. Route by who
 needs to obey the rule, not by where you happened to discover it.
 
-### 4.1 A rule about behavior anywhere → this file
+### 4.1 A rule about behavior anywhere → `00 AGENT RULES`
 
-Safety, the write rule, outbound limits, data conventions, anything that would
-still be true in a different repo or a different tool. Add it to the relevant
-section above and commit it. Every repo-resident agent picks it up on its next
-session.
+Safety, the write surface, secrets, Drive mechanics, git — anything still true in
+a different repo or a different tool. It belongs in `00 AGENT RULES — read first`
+in the 🧠 Second Brain folder, which is the top of the precedence list in §1.
+
+If you cannot reach Drive, you cannot add it there: write a corrections file
+(§4.3) instead. Do **not** quietly add it here and call it recorded — Cowork and
+the account skill would never see it.
+
+### 4.1a A rule about how sales ops works → the START HERE doc
+
+Counting rules, field definitions, permits, the morning routine, a new trap. Same
+constraint: Drive-only, so a repo surface routes it through §4.3.
 
 ### 4.2 A rule about this repo's mechanics → `CLAUDE.md`
 
@@ -165,8 +187,9 @@ codebase. Do not duplicate it here — link to it.
 
 ### 4.3 A rule that a surface you cannot edit needs → a corrections file
 
-The START HERE doc and the account skills are not in this repo and no agent can
-edit them. When a rule belongs there, write a `CORRECTIONS_<yyyymmdd>_<what>.md`
+`00 AGENT RULES`, the START HERE doc and the account skill are not in this repo.
+No agent can edit the doc or the skill, and a repo-only surface cannot reach any
+of the three. When a rule belongs there, write a `CORRECTIONS_<yyyymmdd>_<what>.md`
 to the Sales Ops folder containing:
 
 1. **What is wrong or missing**, in one sentence.
@@ -275,6 +298,9 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 
 | Topic | File |
 |---|---|
+| **How any agent behaves — the authority** | `00 AGENT RULES — read first` (🧠 Second Brain, Drive) |
+| **How sales ops works — the authority** | START HERE doc (Sales Ops, Drive) |
+| Where a new rule goes, for Drive-side surfaces | START HERE doc, PART 11 |
 | Working in this codebase — build, deploy, file routing, design | `CLAUDE.md` |
 | What the tools are and where they are hosted | `README.md` |
 | Install Availability security and deploy commands | `INSTALL-AVAILABILITY-SECURITY.md` |
