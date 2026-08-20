@@ -307,6 +307,7 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 | Deploy runbook | `DEPLOY-RUNBOOK.md` |
 | Nightly recap behavior | `DAILY-RECAP-TEMPLATE.md` |
 | Guard hook rules | `.claude/guard.json` |
+| Adversarial review brief — for Codex / Gemini | `RED-TEAM.md` |
 
 ---
 
