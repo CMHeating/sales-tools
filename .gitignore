@@ -86,3 +86,10 @@ node_modules/
 
 # graphify knowledge graph — rebuild locally; commit only a full graph (needs LLM key for the HTML tools)
 graphify-out/
+
+# --- Session handoffs: never commit ---
+# HANDOFF.local.md is the rolling handoff between sessions. It routinely names
+# customers, job numbers, AR balances and Gmail draft IDs, and this repo is
+# published to GitHub Pages. The SessionStart brief hook reads it from disk;
+# it is never meant to travel through git.
+*.local.md
