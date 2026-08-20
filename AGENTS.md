@@ -38,6 +38,45 @@ truth for sales operations. Where it and this file disagree on a rule, **START
 HERE wins and this file is the thing to fix.** This file exists to carry those
 rules to surfaces that cannot read that doc, not to reinterpret them.
 
+### 1.1 Standard session openers
+
+Claude Code needs none of this — it reads these files on its own. The other
+surfaces do not, so the operator pastes the matching block at the top of a
+session. Kept here so there is one copy to fix when a rule changes.
+
+**Claude chat / Cowork** — reaches the data, was handed no rules:
+
+> Read the Google Drive file "CM Heating — Sales Ops Source of Truth" — find it
+> BY NAME, not by ID, the ID changes on every edit. Then read the Apps Script
+> projects HCA Daily Recap, HCA 1:1 Scheduler and HCA Call-Out Watcher directly
+> from Drive before changing anything.
+>
+> You never write to a spreadsheet and never run an Apps Script function. Hand
+> corrected values back as text.
+>
+> If you find a rule, a trap or a correction that doc doesn't already carry,
+> write a CORRECTIONS_<date>_<what>.md to the Sales Ops folder with complete
+> paste-ready text — and tell me in the chat that it's waiting.
+
+**Codex / Gemini** — have every rule, no way to check a number:
+
+> Read AGENTS.md at the repo root first, then CLAUDE.md.
+>
+> You have no Drive, Gmail or ServiceTitan access. If a task needs a live
+> figure, say so and stop — do not infer it from what's in the repo.
+>
+> Work on a branch. This repo is public: no PINs, no customer names, no dollar
+> figures.
+
+**A scheduled run** — assume no connectors, assume nobody reads the output:
+
+> Before anything else, confirm you actually have the tools this task needs. If
+> a step requires Drive, Gmail or the repo and you cannot reach it, stop and
+> report that — do not substitute a guess.
+>
+> Your last step is a Gmail draft or a message to a human. A file left in a
+> folder nobody watches is not a delivery.
+
 ---
 
 ## 2. The rules that never bend
