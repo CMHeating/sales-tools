@@ -32,8 +32,7 @@ you have context.
 | **Claude Code — cloud / web** | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Markdown to a feature branch only |
 | **Codex** | Only with the repo checked out | No | Yes, on a branch |
 | **Gemini** | Only with the repo checked out, via `GEMINI.md` | No | Yes, on a branch |
-| **Codor — Mac mini** | Only with the repo checked out *and* the agent pointed at it | **Unverified** — see §9 | **Assume no** until tested |
-| **Codor — iPhone** | **No** — no checkout on the device | **Unverified** — see §9 | **No** |
+| **Codor** — every agent runs on the Mac mini | **No** — no Codor agent is pointed at this checkout | **No** — no Drive server in either adapter's config | **Not this repo** — no checkout here |
 | **Claude chat / account skills** | **No** — see §6 | Yes | No |
 | **Scheduled routines / triggers** | Only if the repo is checked out | **Usually no** — see §5 | Depends |
 | **Dispatch and any other surface** | Assume no | Assume no | Assume no |
@@ -122,10 +121,10 @@ line; it cannot fetch them:
 > Your last step is a Gmail draft or a message to a human. A file left in a
 > folder nobody watches is not a delivery.
 
-**Codor (either device)** — several agents in one app, capabilities may differ
-between them. This opener carries the never-bend rules inline on purpose: a
-phone surface may have no way to fetch anything, and an opener that only says
-"go read the rules" leaves it with nothing.
+**Codor** — several agents in one app, capabilities may differ between them.
+This opener carries the never-bend rules inline on purpose, and that is not
+belt-and-braces: no Codor agent can reach Drive, so an opener that only says
+"go read the rules" would leave every one of them with nothing.
 
 > You are one of several agents in this app and the others may have tools you do
 > not. **State at the top of every reply what you could and could not reach** —
@@ -376,11 +375,30 @@ this paragraph together, and name what dispatch actually is: a person on the
 dispatch desk, a scheduled routine, or a separate agent surface. It is the one
 row in this file written from assumption rather than observation.
 
-**Codor** was added to §1 on 2026-08-21 with unverified capability columns. It
-is a multi-agent app running GPT and Claude agents together, on the Mac mini and
-on iPhone. Nobody has yet confirmed whether either side can reach Google Drive,
-nor whether the Mac mini side is pointed at this checkout. Both rows carry the
-conservative default. Run the test in the handoff of the same date against
-**each agent separately** — the GPT side and the Claude side may differ — then
-correct the rows and this paragraph together. Same standing as the dispatch row
-above: assumption, not observation.
+**Codor** was added to §1 on 2026-08-21 as two rows — one for the Mac mini, one
+for iPhone — with both capability columns marked unverified. **That split was
+wrong and has been corrected to a single row.** Verified the same day from
+configuration rather than from any agent's self-report:
+
+- **Every Codor agent runs on the Mac mini.** All eight are local `claude-code`
+  or `codex` processes with a mini `cwd`. **The iPhone is a paired client of
+  that same switchboard**, not a separate execution environment — it talks to
+  the same agents. Device does not determine capability; the agent's own
+  configuration does, so a row per device described a distinction that does not
+  exist.
+- **None is pointed at this checkout.** Their working directories are
+  `autotrader` and `hca-governed-package-platform`. So "reads this file" is No
+  outright, not "only with a checkout."
+- **None can reach Drive.** There is no Drive server in the user-scope MCP
+  config the `claude-code` agents inherit, nor in `~/.codex/config.toml` for the
+  `codex` ones. Absent, not unverified.
+
+This row is therefore observation, not assumption — unlike the dispatch row
+above. It goes stale the moment someone points a Codor agent at this repo or
+adds a Drive connector to either adapter, so re-check the config rather than
+trusting the row.
+
+One question configuration cannot answer: whether an agent that *cannot* reach a
+file will say so or invent its contents. The reachability test in the
+2026-08-21 handoff still measures that, and it is worth running against each
+agent separately for that reason alone.
