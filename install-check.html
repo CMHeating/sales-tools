@@ -332,7 +332,7 @@ var EQUIP_MAP={'GF/HP':'Gas furnace + heat pump','GF HP':'Gas furnace + heat pum
 function equipLabel(s){s=String(s||'').trim();if(!s)return'';var k=s.toUpperCase();return EQUIP_MAP[k]?(EQUIP_MAP[k]+' ('+s+')'):s;}
 function qLabel(it){var b=[];if(it.addr)b.push(it.addr);if(it.city)b.push(it.city);if(it.hca)b.push(it.hca);if(it.equip)b.push(equipLabel(it.equip));if(it.idate)b.push(it.idate);return b.join(' · ');}
 function parseQueue(){try{var m=String(location.hash||'').match(/[#&]q=([^&]*)/);if(!m||!m[1])return;var arr=JSON.parse(decodeURIComponent(m[1]));if(Object.prototype.toString.call(arr)==='[object Array]'&&arr.length){QUEUE=arr;qDone={};qIdx=-1;renderQueue();var qc=el('queueCard');if(qc)qc.style.display='block';}}catch(e){}}
-function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='';var done=0;QUEUE.forEach(function(it,i){var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';var complete=(st==='complete'),open=(st==='open');var doneFlag=qDone[i]||complete;if(doneFlag)done++;var tag=complete?' · <span style="color:#39b34a;font-weight:700">✓ cleared</span>':(open?' · <span class="qflag">⏳ in progress</span>':'');var row=document.createElement('div');row.className='qrow'+(i===qIdx?' qcur':'')+(doneFlag?' qdone':'');row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+'</div><div class="qmeta">'+qesc(qLabel(it))+(it.jflag?(' · <span class="qflag">⚠ '+qesc(it.jflag)+'</span>'):'')+tag+'</div></div>'+(doneFlag?'<span class="qcheck">✓</span>':'');row.onclick=function(){loadQueueItem(i);};list.appendChild(row);});var p=el('queueProg');if(p)p.textContent=done+' of '+QUEUE.length+' done';}
+function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='';var done=0;QUEUE.forEach(function(it,i){var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';var complete=(st==='complete'),open=(st==='open');var doneFlag=qDone[i]||complete;if(doneFlag)done++;var mv=(sc&&sc.movedFrom)?(' <span class="qflag">(checked for '+qesc(sc.movedFrom)+')</span>'):'';var tag=complete?(' · <span style="color:#39b34a;font-weight:700">✓ cleared</span>'+mv):(open?(' · <span class="qflag">⏳ in progress</span>'+mv):'');var row=document.createElement('div');row.className='qrow'+(i===qIdx?' qcur':'')+(doneFlag?' qdone':'');row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+'</div><div class="qmeta">'+qesc(qLabel(it))+(it.jflag?(' · <span class="qflag">⚠ '+qesc(it.jflag)+'</span>'):'')+tag+'</div></div>'+(doneFlag?'<span class="qcheck">✓</span>':'');row.onclick=function(){loadQueueItem(i);};list.appendChild(row);});var p=el('queueProg');if(p)p.textContent=done+' of '+QUEUE.length+' done';}
 function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;
   /* Resume saved progress for this job if a check was already started — never reset it. */
   var saved=findSavedCheck(it.customer,it.idate);
@@ -373,12 +373,41 @@ function parseResume(){
 }
 /* Pull any in-progress (unfinished) checks from the server so they can be reopened
    and finished from the tool — no reliance on the email link surviving. */
-var OPEN_CHECKS=[],SAVED_BY_KEY={};
+var OPEN_CHECKS=[],SAVED_BY_KEY={},SAVED_BY_CUST={};
 /* Match a saved check (in-progress OR already-cleared) to a job by customer + install
    date — same key the server builds — so the queue shows what's done and tapping a job
    resumes its saved progress instead of a blank. */
-function pendKey(cust,idate){return String(cust||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()+'|'+String(idate||'').trim();}
-function findSavedCheck(cust,idate){return SAVED_BY_KEY[pendKey(cust,idate)]||null;}
+function custKey(cust){return String(cust||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+function pendKey(cust,idate){return custKey(cust)+'|'+String(idate||'').trim();}
+/* Whole days between two ISO yyyy-mm-dd dates, or null if either isn't one. */
+function daysApart(a,b){a=String(a||'').trim();b=String(b||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(a)||!/^\d{4}-\d{2}-\d{2}$/.test(b))return null;
+  var da=new Date(a+'T00:00:00'),db=new Date(b+'T00:00:00');
+  if(isNaN(da.getTime())||isNaN(db.getTime()))return null;
+  return Math.abs(db-da)/86400000;}
+/* A rescheduled install moves by days or a couple of weeks. A repeat customer
+   comes back in months. 45 days sits well clear of both. */
+var RESCHEDULE_WINDOW_DAYS=45;
+/* Exact customer+date first — that is the key the server builds, so it is the
+   only answer that is certain. If it misses, the install date may simply have
+   moved: the saved check still exists under the OLD date, and without this
+   fallback the job renders with no tag at all and looks untouched, so the check
+   gets redone from blank and the server saves a SECOND record under the new
+   date. That is the fork.
+   The fallback only guesses when there is nothing to guess between: exactly one
+   saved check for that customer, and its date within the reschedule window. Two
+   or more and it declines rather than pick. A match found this way sets
+   .movedFrom so the caller can SHOW that it was inferred and from which date —
+   an inference must never render as indistinguishable from an exact hit. */
+function findSavedCheck(cust,idate){
+  var exact=SAVED_BY_KEY[pendKey(cust,idate)];
+  if(exact){exact.movedFrom='';return exact;}
+  var list=SAVED_BY_CUST[custKey(cust)]||[];
+  if(list.length!==1)return null;
+  var c=list[0],gap=daysApart(c.idate,idate);
+  if(gap===null||gap>RESCHEDULE_WINDOW_DAYS)return null;
+  c.movedFrom=c.idate||'';
+  return c;}
 /* Work out who a saved check is still waiting on, from its field values. */
 function owedBy(payload){
   var f=(payload&&payload.f)||{};
@@ -406,7 +435,9 @@ function renderOpenChecks(){
 function loadOpenChecks(){
   api({action:'openchecks'}).then(function(d){
     var all=(d&&d.ok&&d.checks)?d.checks:[];
-    SAVED_BY_KEY={};all.forEach(function(c){if(c.key)SAVED_BY_KEY[c.key]=c;});
+    SAVED_BY_KEY={};SAVED_BY_CUST={};all.forEach(function(c){if(c.key)SAVED_BY_KEY[c.key]=c;
+      var ck=custKey(c.customer||String(c.key||'').split('|')[0]);
+      if(ck){(SAVED_BY_CUST[ck]=SAVED_BY_CUST[ck]||[]).push(c);}});
     OPEN_CHECKS=all.filter(function(c){return String(c.status||'').toLowerCase()==='open';});
     renderOpenChecks();
     if(QUEUE.length)renderQueue();   /* reflect done / in-progress state on the queue */
@@ -530,7 +561,7 @@ renderVerdict();
    backend's scheduledinstalls action, and shows each with its check status (✓ / ⏳). */
 var UPCOMING=null;
 function fmtDay(iso){try{var p=String(iso).split('-');var dt=new Date(+p[0],+p[1]-1,+p[2]);var dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return dn[dt.getDay()]+' '+mn[dt.getMonth()]+' '+dt.getDate();}catch(e){return iso;}}
-function upStatusTag(it){var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';if(st==='complete')return ' · <span style="color:#39b34a;font-weight:700">✓ checked</span>';if(st==='open')return ' · <span class="qflag">⏳ in progress</span>';return '';}
+function upStatusTag(it){var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';var mv=(sc&&sc.movedFrom)?(' <span class="qflag">(checked for '+qesc(sc.movedFrom)+')</span>'):'';if(st==='complete')return ' · <span style="color:#39b34a;font-weight:700">✓ checked</span>'+mv;if(st==='open')return ' · <span class="qflag">⏳ in progress</span>'+mv;return '';}
 function fillFromInstall(it){
   var saved=findSavedCheck(it.customer,it.idate);
   if(saved&&saved.payload&&saved.payload.f){applyCheckPayload(saved.payload,'Reopened saved progress for '+(it.customer||'this job')+' — finish and Send.');return;}
