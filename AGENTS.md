@@ -32,7 +32,7 @@ you have context.
 | **Claude Code — cloud / web** | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Markdown to a feature branch only |
 | **Codex** | Only with the repo checked out | No | Yes, on a branch |
 | **Gemini** | Only with the repo checked out, via `GEMINI.md` | No | Yes, on a branch |
-| **Codor** — every agent runs on the Mac mini | **No** — none is pointed at this checkout | **Yes, Drive** — tested 2026-08-21, both adapters | **Not this repo** — no checkout here |
+| **Codor** — every agent runs on the Mac mini | **No** — none is pointed at this checkout | **Per agent** — `claude-code` and `codex` reach Drive (tested 2026-08-20); the read-only `gemini` auditor does **not** | **Not this repo** — no checkout here |
 | **Claude chat / account skills** | **No** — see §6 | Yes | No |
 | **Scheduled routines / triggers** | Only if the repo is checked out | **Usually no** — see §5 | Depends |
 | **Dispatch and any other surface** | Assume no | Assume no | Assume no |
@@ -123,8 +123,9 @@ line; it cannot fetch them:
 
 **Codor** — several agents in one app, capabilities may differ between them.
 This opener carries the never-bend rules inline on purpose, and that is not
-belt-and-braces: no Codor agent can reach Drive, so an opener that only says
-"go read the rules" would leave every one of them with nothing.
+belt-and-braces: capability is per agent, and the read-only `gemini` auditor
+cannot reach Drive at all, so an opener that only says "go read the rules"
+would leave that one with nothing.
 
 > You are one of several agents in this app and the others may have tools you do
 > not. **State at the top of every reply what you could and could not reach** —
@@ -375,13 +376,15 @@ this paragraph together, and name what dispatch actually is: a person on the
 dispatch desk, a scheduled routine, or a separate agent surface. It is the one
 row in this file written from assumption rather than observation.
 
-**Codor** was added to §1 on 2026-08-21 as two rows — one for the Mac mini, one
+**Codor** was added to §1 on 2026-08-20 as two rows — one for the Mac mini, one
 for iPhone — with both capability columns marked unverified. **That split was
 wrong and has been corrected to a single row.** Verified the same day from
 configuration rather than from any agent's self-report:
 
-- **Every Codor agent runs on the Mac mini.** All eight are local `claude-code`
-  or `codex` processes with a mini `cwd`. **The iPhone is a paired client of
+- **Every Codor agent runs on the Mac mini.** Each is a local process with a
+  mini `cwd` — `claude-code`, `codex`, or a `gemini` auditor. Do not trust an
+  agent count written here: ephemeral `-ext-` agents spawn and die constantly,
+  and the totals stood at 50 and 32 across the two channels on 2026-08-20. **The iPhone is a paired client of
   that same switchboard**, not a separate execution environment — it talks to
   the same agents. Device does not determine capability; the agent's own
   configuration does, so a row per device described a distinction that does not
@@ -389,12 +392,22 @@ configuration rather than from any agent's self-report:
 - **None is pointed at this checkout.** Their working directories are
   `autotrader` and `hca-governed-package-platform`. So "reads this file" is No
   outright, not "only with a checkout."
-- **They CAN reach Drive** — tested 2026-08-21 against a live agent on each
-  adapter. Both were asked to open `00 AGENT RULES` and report its byte count,
+- **Claude Code and Codex agents CAN reach Drive** — tested 2026-08-20 against
+  a live agent on each adapter. Both were asked to open `00 AGENT RULES` and report its byte count,
   one verbatim sentence, and its section count. Both returned **21,935 bytes**,
   the sentence word-for-word, and the same section count, independently. The
   `claude-code` agent additionally volunteered that the connector truncated the
   file's tail mid-word — an artifact it could not have invented.
+- **A read-only `gemini` auditor joined both channels on 2026-08-20**, and it is
+  the one Codor agent that cannot reach Drive. Asked for a Drive document it
+  answered `NO DRIVE ACCESS` rather than describing what the file would contain.
+  Its read-only policy was established by ground truth, not by asking: questioned
+  directly it said "WRITE: YES", because it does carry a `write_file` tool — but
+  the call is refused ("must be within the designated plans directory") and no
+  file appears on disk. **Ask an agent what it can do and you learn which tools
+  it holds; watch what happens and you learn what it can do.** Its API key sits
+  in a 600-mode file read by a wrapper at spawn time, so no key is in any plist,
+  config, or commit.
 
 **That last point corrects an earlier claim in this file, and the mistake is
 worth keeping.** On 2026-08-20 this paragraph asserted the opposite — "no Drive
