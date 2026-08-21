@@ -32,7 +32,7 @@ you have context.
 | **Claude Code — cloud / web** | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Markdown to a feature branch only |
 | **Codex** | Only with the repo checked out | No | Yes, on a branch |
 | **Gemini** | Only with the repo checked out, via `GEMINI.md` | No | Yes, on a branch |
-| **Codor** — every agent runs on the Mac mini | **No** — no Codor agent is pointed at this checkout | **No** — no Drive server in either adapter's config | **Not this repo** — no checkout here |
+| **Codor** — every agent runs on the Mac mini | **No** — none is pointed at this checkout | **Yes, Drive** — tested 2026-08-21, both adapters | **Not this repo** — no checkout here |
 | **Claude chat / account skills** | **No** — see §6 | Yes | No |
 | **Scheduled routines / triggers** | Only if the repo is checked out | **Usually no** — see §5 | Depends |
 | **Dispatch and any other surface** | Assume no | Assume no | Assume no |
@@ -389,16 +389,29 @@ configuration rather than from any agent's self-report:
 - **None is pointed at this checkout.** Their working directories are
   `autotrader` and `hca-governed-package-platform`. So "reads this file" is No
   outright, not "only with a checkout."
-- **None can reach Drive.** There is no Drive server in the user-scope MCP
-  config the `claude-code` agents inherit, nor in `~/.codex/config.toml` for the
-  `codex` ones. Absent, not unverified.
+- **They CAN reach Drive** — tested 2026-08-21 against a live agent on each
+  adapter. Both were asked to open `00 AGENT RULES` and report its byte count,
+  one verbatim sentence, and its section count. Both returned **21,935 bytes**,
+  the sentence word-for-word, and the same section count, independently. The
+  `claude-code` agent additionally volunteered that the connector truncated the
+  file's tail mid-word — an artifact it could not have invented.
 
-This row is therefore observation, not assumption — unlike the dispatch row
-above. It goes stale the moment someone points a Codor agent at this repo or
-adds a Drive connector to either adapter, so re-check the config rather than
-trusting the row.
+**That last point corrects an earlier claim in this file, and the mistake is
+worth keeping.** On 2026-08-20 this paragraph asserted the opposite — "no Drive
+server in the user-scope MCP config … absent, not unverified" — derived by
+reading `~/.claude.json` and `~/.codex/config.toml` and finding no Drive entry.
+The config was read correctly; the inference from it was wrong, and it was
+published as observation. **A capability is what a surface demonstrably does,
+not what its config file appears to say.** Test the behaviour; do not infer it.
 
-One question configuration cannot answer: whether an agent that *cannot* reach a
-file will say so or invent its contents. The reachability test in the
-2026-08-21 handoff still measures that, and it is worth running against each
-agent separately for that reason alone.
+The checkout column is still config-derived, but from a field that means what it
+says: every agent's `cwd` is `autotrader` or `hca-governed-package-platform`,
+not this repo. That goes stale the moment someone points a Codor agent here.
+
+Two things the test also established. **The iPhone is a full client, not a
+viewer** — agents were added and removed from it during the same session, so it
+administers the same switchboard rather than merely watching it. And **a dead
+agent is indistinguishable from a blocked one until you check**: the first codex
+agent tried returned nothing, which looked like an outage and was in fact a
+stale registration reporting `no such member`. Check agent status before
+concluding anything from silence.
