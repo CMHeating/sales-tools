@@ -28,7 +28,8 @@ you have context.
 
 | Surface | Reads this file? | Can reach Drive / Gmail? | Can commit? |
 |---|---|---|---|
-| **Claude Code** (CLI, web, this repo) | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Yes, on a branch |
+| **Claude Code — local CLI (Mac Mini)** | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | **Yes, including merges to `main`** |
+| **Claude Code — cloud / web** | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Markdown to a feature branch only |
 | **Codex** | Only with the repo checked out | No | Yes, on a branch |
 | **Gemini** | Only with the repo checked out, via `GEMINI.md` | No | Yes, on a branch |
 | **Claude chat / account skills** | **No** — see §6 | Yes | No |
@@ -39,6 +40,15 @@ If your row says "no," you are operating from whatever context your own
 configuration gave you. Say so rather than guessing, and do not assume a rule
 you cannot see does not exist.
 
+**The two Claude Code rows are not interchangeable.** `00 AGENT RULES` §10 puts
+merges to `main` and any push touching code on the Mac Mini alone; a cloud
+session may push documentation to a feature branch and nothing else. Until
+2026-08-20 this table carried one combined row reading "Yes, on a branch,"
+which understated the CLI and overstated the cloud session at the same time.
+It was caught by a local session that merged to `main` under a row saying it
+could not, and reported the contradiction rather than acting as though the
+table were the authority. §10 is the authority.
+
 **"Reads this file" means the file is on disk in front of it.** Codex and Gemini
 pick up `AGENTS.md` and `GEMINI.md` only when the repo is checked out locally
 and the tool is pointed at it. The browser and app versions of both have no
@@ -48,7 +58,7 @@ answer. On those surfaces the operator pastes the documents in, and the paste is
 the only context the agent has.
 
 Recorded 2026-08-20, from a Gemini session that was handed `RED-TEAM.md` and
-reported it could not reach the repo. Before that, row three of this table
+reported it could not reach the repo. Before that, the Gemini row of this table
 asserted the opposite. Its first substantive recommendation — put the hard rules
 in the repo next to the systems they govern — would have published customer
 names, AR balances and staff emails to a public GitHub Pages site, which it had
@@ -333,7 +343,7 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 ## 9. Open
 
 **Dispatch** is listed in §1 with the conservative defaults — no repo context,
-no connectors, no commit access. If that is wrong, correct row six and this
-paragraph together, and name what dispatch actually is: a person on the
+no connectors, no commit access. If that is wrong, correct the dispatch row and
+this paragraph together, and name what dispatch actually is: a person on the
 dispatch desk, a scheduled routine, or a separate agent surface. It is the one
 row in this file written from assumption rather than observation.
