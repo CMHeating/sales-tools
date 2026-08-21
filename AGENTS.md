@@ -32,6 +32,8 @@ you have context.
 | **Claude Code — cloud / web** | Yes, plus `CLAUDE.md` | Yes, when MCP connectors are attached | Markdown to a feature branch only |
 | **Codex** | Only with the repo checked out | No | Yes, on a branch |
 | **Gemini** | Only with the repo checked out, via `GEMINI.md` | No | Yes, on a branch |
+| **Codor — Mac mini** | Only with the repo checked out *and* the agent pointed at it | **Unverified** — see §9 | **Assume no** until tested |
+| **Codor — iPhone** | **No** — no checkout on the device | **Unverified** — see §9 | **No** |
 | **Claude chat / account skills** | **No** — see §6 | Yes | No |
 | **Scheduled routines / triggers** | Only if the repo is checked out | **Usually no** — see §5 | Depends |
 | **Dispatch and any other surface** | Assume no | Assume no | Assume no |
@@ -119,6 +121,32 @@ line; it cannot fetch them:
 >
 > Your last step is a Gmail draft or a message to a human. A file left in a
 > folder nobody watches is not a delivery.
+
+**Codor (either device)** — several agents in one app, capabilities may differ
+between them. This opener carries the never-bend rules inline on purpose: a
+phone surface may have no way to fetch anything, and an opener that only says
+"go read the rules" leaves it with nothing.
+
+> You are one of several agents in this app and the others may have tools you do
+> not. **State at the top of every reply what you could and could not reach** —
+> Drive: yes/no, the repo: yes/no. If you are repeating something another agent
+> in this app said and you did not verify it yourself, say so and call it
+> unverified.
+>
+> Four rules that do not bend. They hold even if you can reach nothing else:
+>
+> 1. Never write to a spreadsheet, an Apps Script project, or Firebase. Compute
+>    the number, hand it back as text, let a human type it.
+> 2. Never run or deploy an Apps Script function.
+> 3. The `sales-tools` repo is public. No PINs, no customer names, no addresses,
+>    no dollar figures — not in code, not in a commit message.
+> 4. Nothing goes outward without a human in the loop. A Gmail draft is the end
+>    of your job, not a step in it.
+>
+> Then try to read "00 AGENT RULES — read first" in the 🧠 Second Brain folder in
+> Google Drive, **by title, not by ID**. **If you cannot reach Drive, say so
+> plainly and treat the four rules above as the whole of what you have.** Do not
+> fill the gap with a plausible reconstruction.
 
 ---
 
@@ -347,3 +375,12 @@ no connectors, no commit access. If that is wrong, correct the dispatch row and
 this paragraph together, and name what dispatch actually is: a person on the
 dispatch desk, a scheduled routine, or a separate agent surface. It is the one
 row in this file written from assumption rather than observation.
+
+**Codor** was added to §1 on 2026-08-21 with unverified capability columns. It
+is a multi-agent app running GPT and Claude agents together, on the Mac mini and
+on iPhone. Nobody has yet confirmed whether either side can reach Google Drive,
+nor whether the Mac mini side is pointed at this checkout. Both rows carry the
+conservative default. Run the test in the handoff of the same date against
+**each agent separately** — the GPT side and the Claude side may differ — then
+correct the rows and this paragraph together. Same standing as the dispatch row
+above: assumption, not observation.
