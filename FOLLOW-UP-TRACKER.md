@@ -31,14 +31,14 @@ Fields the page uses on each lead:
 |---|---|
 | `hca` | Which HCA's list the lead belongs to |
 | `customer` | Name shown at the top of the card |
-| `key` | Lead identity sent back with a logged outcome; also a fallback job number if it is all digits |
+| `key` | Lead identity sent back with a logged outcome; also a fallback job number when it is six or more digits |
 | `createdOn` | Shown as "Consult created"; fallback for the age badge |
 | `lastApptDate` | Shown as "last visit"; **primary** source for the age badge |
 | `visits` | "· 3 visits" |
 | `leadType`, `campaign` | The grey line under the name |
 | `notes` | The grey note box. Array of lines or a single string, both work |
 | `status`, `followUps`, `lastFollowUp` | The status chip and the stale test |
-| `snoozeUntil` | Hides the card from the top of the list until that date |
+| `snoozeUntil` | Sorts the card to the bottom of the list and pauses the stale test until that date |
 | `canceled` | "CANCELED CONSULT — rebook?" badge |
 | `jobNumber` (or `job` / `jobId`) | Builds the "Open in ServiceTitan" link. **Not emitted yet — see below** |
 
