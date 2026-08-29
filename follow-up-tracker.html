@@ -168,7 +168,7 @@ let data = null, hca = null, filter = 'all', user = null;
 const $ = function(id){ return document.getElementById(id) };
 
 /* ---------- helpers ---------- */
-function qs(name){ const m = new URLSearchParams(location.search).get(name); return m ? decodeURIComponent(m) : null }
+function qs(name){ const v = new URLSearchParams(location.search).get(name); return v ? v : null; }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] }) }
 function parseIso(s){ if(!s) return null; const d = new Date(String(s).slice(0,10) + 'T12:00:00'); return Number.isNaN(d.getTime()) ? null : d }
 function noon(){ const t = new Date(); t.setHours(12,0,0,0); return t }
@@ -274,12 +274,17 @@ $('signInBtn').addEventListener('click', function(){
   $('signInBtn').disabled = true;
   signInWithPopup(auth, provider).catch(function(err){
     const code = (err && err.code) || '';
-    const popupFailed = /popup-blocked|popup-closed-by-user|cancelled-popup-request|operation-not-supported-in-this-environment|web-storage-unsupported/.test(code);
-    if (popupFailed){
+    const redirectFallback = /popup-blocked|operation-not-supported-in-this-environment|web-storage-unsupported/.test(code);
+    if (redirectFallback){
       /* Some in-app browsers and locked-down iOS setups will not open a popup. */
       signInWithRedirect(auth, provider).catch(function(e2){
         showGate('Sign-in could not start (' + ((e2 && e2.code) || 'unknown') + '). Try Chrome or Safari.');
       });
+      return;
+    }
+    if (code === 'popup-closed-by-user' || code === 'cancelled-popup-request'){
+      /* The HCA deliberately closed or cancelled the popup — not an error. */
+      showGate('');
       return;
     }
     showGate('Sign-in failed (' + (code || 'unknown') + '). Try again.');
@@ -545,6 +550,7 @@ function logIt(i,l){
     } catch (_) { /* ignore */ }
 
     btn.textContent = 'Logged ✓';
+    btn.disabled = false;
     const closing = CLOSING_KEYS.indexOf(status) !== -1;
     fb.textContent = closing
       ? 'Saved. This lead drops off everyone’s tracker on the next hourly sync.'
