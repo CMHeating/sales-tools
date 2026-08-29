@@ -2,250 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CM Heating — Davis Diosdado — Follow-Up Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Davis Diosdado — Follow-Up Tracker | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f1f5f9;--white:#fff;--dark:#0f172a;--surface:#1e293b;--orange:#f97316;--muted:#64748b;--border:#e2e8f0;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--blue:#0891b2;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--dark);padding:32px;font-size:14px;line-height:1.6;max-width:1100px;margin:0 auto;}
-.page-header{background:var(--surface);border-radius:12px;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
-.page-header img{height:48px;}
-.header-center{text-align:center;}
-.header-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;line-height:1;}
-.header-sub{font-size:13px;color:#94a3b8;font-weight:500;margin-top:4px;}
-.print-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
-.summary-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
-.lead-card.stale{border-color:#f87171;}
-.stale-banner{background:#fef2f2;border-bottom:1px solid #fecaca;padding:8px 20px;font-size:12px;font-weight:600;color:#b91c1c;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.stale-flag{display:inline-block;background:#dc2626;color:#fff;border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
-.filter-btn.stale-btn{border-color:#fecaca;color:#b91c1c;}
-.filter-btn.stale-btn.active{background:#dc2626;border-color:#dc2626;color:#fff;}
-.summary-tile{background:var(--white);border-radius:8px;border:1px solid var(--border);padding:16px;text-align:center;}
-.tile-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1;margin-bottom:4px;}
-.tile-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-.filter-btn{padding:8px 16px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;}
-.filter-btn.active{background:var(--surface);color:white;border-color:var(--surface);}
-.filter-btn .count{display:inline-block;background:var(--bg);color:var(--dark);border-radius:10px;padding:0 6px;font-size:11px;font-weight:700;margin-left:4px;}
-.filter-btn.active .count{background:rgba(255,255,255,.2);color:white;}
-.leads-list{display:flex;flex-direction:column;gap:12px;}
-.lead-card{background:var(--white);border-radius:10px;border:1px solid var(--border);overflow:hidden;}
-.lead-card.hidden{display:none;}
-.lead-card.saved{border-color:#bbf7d0;}
-.lead-header{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border);}
-.urgency-bar{width:5px;align-self:stretch;border-radius:3px;flex-shrink:0;min-height:52px;}
-.urg-green{background:#16a34a;}.urg-yellow{background:#d97706;}.urg-orange{background:#f97316;}.urg-red{background:#dc2626;}.urg-black{background:#1e293b;}
-.lead-info{flex:1;min-width:0;}
-.lead-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.lead-meta{font-size:12px;color:var(--muted);margin-top:3px;}
-.lead-stats{display:flex;gap:24px;align-items:center;flex-shrink:0;}
-.stat-block{text-align:right;}
-.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;line-height:1;}
-.stat-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-.status-badge{display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;}
-.badge-Contacted{background:#dcfce7;color:#16a34a;}.badge-Unreachable{background:#fef3c7;color:#d97706;}.badge-NotAttempted{background:#f1f5f9;color:#64748b;}.badge-Lost{background:#fee2e2;color:#dc2626;}.badge-Sold{background:#dbeafe;color:#0891b2;}
-.lead-body{padding:16px 20px;display:flex;gap:16px;align-items:flex-start;}
-.status-group{min-width:190px;}
-.field-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
-.status-select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--dark);background:var(--white);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
-.status-select:focus{outline:none;border-color:var(--orange);}
-.notes-group{flex:1;}
-.notes-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--dark);resize:vertical;min-height:72px;}
-.notes-input:focus{outline:none;border-color:var(--orange);}
-.save-group{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:140px;padding-top:22px;}
-.save-btn{padding:10px 20px;background:var(--orange);color:white;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;transition:background .15s;}
-.save-btn:hover{background:#ea6c10;}.save-btn.success{background:var(--green);cursor:default;}.save-btn:disabled{background:var(--muted);cursor:not-allowed;}
-.save-feedback{font-size:11px;font-weight:700;text-align:center;min-height:16px;width:100%;}
-.save-feedback.ok{color:var(--green);}.save-feedback.err{color:var(--red);}
-.st-reminder{display:none;width:100%;background:#fef3c7;border:1px solid #d97706;border-radius:6px;padding:10px;}
-.st-reminder.visible{display:block;}
-.st-reminder-title{font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;}
-.copy-btn{width:100%;padding:8px 10px;background:#d97706;color:white;border:none;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
-.copy-btn:hover{background:#b45309;}.copy-btn.copied{background:#16a34a;cursor:default;}
-.copy-note-preview{font-size:10px;color:#92400e;margin-top:5px;line-height:1.4;word-break:break-word;font-style:italic;}
-.prior-notes-section{border-top:1px solid var(--border);}
-.prior-notes-toggle{width:100%;padding:10px 20px;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-align:left;transition:background .15s;}
-.prior-notes-toggle:hover{background:#f8fafc;}
-.prior-notes-toggle .toggle-label{display:flex;align-items:center;gap:6px;}
-.prior-notes-toggle .note-count{display:inline-block;background:var(--surface);color:white;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;}
-.prior-notes-toggle .chevron{font-size:10px;transition:transform .2s;}
-.prior-notes-toggle.open .chevron{transform:rotate(180deg);}
-.prior-notes-body{display:none;padding:12px 20px 16px;background:#f8fafc;}
-.prior-notes-body.open{display:block;}
-.prior-note-entry{padding:8px 12px;background:white;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;}
-.prior-note-entry:last-child{margin-bottom:0;}
-.prior-note-ts{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
-.prior-note-text{font-size:12px;color:var(--dark);line-height:1.5;}
-.no-notes{font-size:12px;color:var(--muted);font-style:italic;}
-.empty-state{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:48px;text-align:center;color:var(--muted);}
-.footer{text-align:center;font-size:12px;color:var(--muted);margin-top:28px;padding-top:16px;border-top:1px solid var(--border);}
-@media print{body{padding:16px;background:white;}.print-btn,.save-btn,.filters,.st-reminder{display:none;}.prior-notes-body{display:block!important;}}
+  :root{--bg:#f1f5f9;--card:#ffffff;--text:#0f172a;--muted:#475569;--orange:#f58220;--border:#e2e8f0}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--border)}
+  header img{height:34px}
+  header a{margin-left:auto;color:var(--orange);text-decoration:none;font-weight:600}
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:520px;width:100%;box-shadow:0 4px 16px rgba(15,23,42,.06)}
+  h1{margin:0 0 6px;font-size:22px}
+  .sub{color:var(--muted);margin:0 0 18px}
+  p{line-height:1.5;margin:0 0 12px}
+  .btn{display:inline-block;margin-top:8px;background:var(--orange);color:#fff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:10px}
 </style>
 </head>
 <body>
-<div class="page-header">
+<header>
   <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
-  <div class="header-center">
-    <div class="header-title" id="hcaTitle"></div>
-    <div class="header-sub" id="dateLabel"></div>
+  <a href="index.html">← HCA Toolkit</a>
+</header>
+<main>
+  <div class="card">
+    <h1>Davis Diosdado</h1>
+    <p class="sub">Follow-Up Tracker — being rebuilt</p>
+    <p>The lead list that used to live on this page was a snapshot from May and has been taken down while the tracker is rebuilt.</p>
+    <p>Your open leads and follow-up notes live in ServiceTitan. The new follow-up tracker will appear on the HCA Toolkit when it is ready.</p>
+    <a class="btn" href="index.html">Back to the HCA Toolkit</a>
   </div>
-  <button class="print-btn" onclick="window.print()">&#8982; Print / PDF</button>
-</div>
-<div id="dataNotice"></div>
-<div class="summary-bar" id="summaryBar"></div>
-<div class="filters" id="filters"></div>
-<div class="leads-list" id="leadsList"></div>
-<div class="footer">CM Heating Sales Operations &nbsp;&middot;&nbsp; Follow-Up Tracker &nbsp;&middot;&nbsp; <span id="footerDate"></span></div>
-<script>
-const HCA_NAME='Davis Diosdado',SCRIPT_URL='https://script.google.com/macros/s/AKfycbwQax9xn0kEEhb9zVeHpmJ2_fixr0Me13xuz3huXPBWFlbWKVVVyCQK2kjuTDY2Ufz_dw/exec';
-const leads=[
-  {"customer":"Michelle Petelle","address":"4301 224th Place Southwest, Mountlake Terrace, WA 98043 USA","phone":"(253) 651-3080","estimate":"$23K","estimateRaw":22526,"daysOld":127,"createdOn":"12/31/2025","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Mike Meiers Icon Dental","address":"1820 100th Place Southeast, Everett, WA 98208 USA","phone":"(206) 999-7056","estimate":"$19K","estimateRaw":19201,"daysOld":119,"createdOn":"01/08/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"William Paige","address":"2323 141st Street Northwest, Marysville, WA 98271 USA","phone":"(480) 215-4304","estimate":"$5K","estimateRaw":5262,"daysOld":119,"createdOn":"01/08/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Megan Kile","address":"5518 129th Place Southeast, Everett, WA 98208 USA","phone":"(509) 528-7759","estimate":"$19K","estimateRaw":19277,"daysOld":118,"createdOn":"01/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Thomas Aitchison","address":"14050 160th Avenue Northeast, Woodinville, WA 98072 USA","phone":"(206) 422-9186","estimate":"$8K","estimateRaw":8072,"daysOld":118,"createdOn":"01/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Carole Hare","address":"815 124th Street Southwest #151, Everett, WA 98204 USA","phone":"(906) 286-0505","estimate":"$16K","estimateRaw":15576,"daysOld":108,"createdOn":"01/19/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"J Roe","address":"16008 27th Drive Southeast, Mill Creek, WA 98012 USA","phone":"(425) 293-6671","estimate":"$20K","estimateRaw":19715,"daysOld":106,"createdOn":"01/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Matt Berger","address":"820 148th Street Northeast, Arlington, WA 98223 USA","phone":"(425) 269-5536","estimate":"$7K","estimateRaw":7301,"daysOld":101,"createdOn":"01/26/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Jack and Valerie Jorgenson","address":"12419 21st Avenue Southeast, Everett, WA 98208 USA","phone":"(414) 935-8254","estimate":"$18K","estimateRaw":18020,"daysOld":101,"createdOn":"01/26/2026","status":"Contacted","lastFollowUp":"02/19/2026","followUps":1,"notes":""},
-  {"customer":"Carla Berry","address":"918 94th Street Southeast, Everett, WA 98208 USA","phone":"(425) 231-4324","estimate":"$10K","estimateRaw":9889,"daysOld":100,"createdOn":"01/27/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Rebekah Naab","address":"13505 239th Place Southeast, Snohomish, WA 98296 USA","phone":"(360) 529-1686","estimate":"$17K","estimateRaw":17131,"daysOld":92,"createdOn":"02/04/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Chris Gill","address":"6521 Cascade Drive Southeast, Snohomish, WA 98296 USA","phone":"(512) 557-2711","estimate":"$26K","estimateRaw":25547,"daysOld":87,"createdOn":"02/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Heather and Danen Barnhart 0000730","address":"1003 118th Street Northeast, Tulalip Bay, WA 98271 USA","phone":"(425) 350-5508","estimate":"$19K","estimateRaw":19109,"daysOld":85,"createdOn":"02/11/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Judy Haywood","address":"23825 15th Avenue Southeast #UNIT 324, Bothell, WA 98021 USA","phone":"(206) 330-4411","estimate":"$15K","estimateRaw":15362,"daysOld":83,"createdOn":"02/13/2026","status":"Contacted","lastFollowUp":"02/19/2026","followUps":1,"notes":""},
-  {"customer":"Sarah Smith","address":"10309 35th Street Northeast, Lake Stevens, WA 98258 USA","phone":"(253) 576-3909","estimate":"$14K","estimateRaw":14278,"daysOld":81,"createdOn":"02/15/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Jenna Harvey","address":"1307 6th Street, Anacortes, WA 98221 USA","phone":"(843) 437-0932","estimate":"$11K","estimateRaw":10671,"daysOld":78,"createdOn":"02/18/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Ana Engleberg","address":"1025 North Park Drive, Everett, WA 98203 USA","phone":"(858) 519-4322","estimate":"$21K","estimateRaw":21377,"daysOld":75,"createdOn":"02/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Emily Klesick","address":"20774 English Road, Mount Vernon, WA 98274 USA","phone":"(360) 913-0886","estimate":"$16K","estimateRaw":16245,"daysOld":71,"createdOn":"02/25/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Dawn Apuan","address":"3421 102nd Place Southwest, Everett, WA 98275 USA","phone":"(253) 720-2965","estimate":"$10K","estimateRaw":9978,"daysOld":60,"createdOn":"03/08/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"An Hong","address":"1214 167th Place Southwest, Lynnwood, WA 98037 USA","phone":"(206) 290-6316","estimate":"$24K","estimateRaw":24308,"daysOld":59,"createdOn":"03/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Abigail Minor","address":"15926 82nd Place Northeast, Kenmore, WA 98028 USA","phone":"(541) 556-4069","estimate":"$28K","estimateRaw":27681,"daysOld":58,"createdOn":"03/10/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Kirill Chervets","address":"8420 8th Place Southeast, Lake Stevens, WA 98258 USA","phone":"(206) 390-4525","estimate":"$14K","estimateRaw":13790,"daysOld":57,"createdOn":"03/11/2026","status":"Contacted","lastFollowUp":"04/07/2026","followUps":1,"notes":""},
-  {"customer":"Calvin Ingram","address":"2612 Rainbolt Place, Mount Vernon, WA 98274 USA","phone":"(360) 661-9586","estimate":"$6K","estimateRaw":6230,"daysOld":51,"createdOn":"03/17/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Teasha Corrado","address":"22606 22nd Place West, Brier, WA 98036 USA","phone":"(360) 581-5836","estimate":"$31K","estimateRaw":30830,"daysOld":50,"createdOn":"03/18/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Shruti Karmakar","address":"1236 Northeast 117th Street, Seattle, WA 98125 USA","phone":"(929) 200-2425","estimate":"$25K","estimateRaw":24601,"daysOld":48,"createdOn":"03/20/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Elizabeth lam","address":"212 217th Place Southwest, Bothell, WA 98021 USA","phone":"(206) 250-7185","estimate":"$17K","estimateRaw":17496,"daysOld":38,"createdOn":"03/30/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Andrew Sale","address":"11302 4th Avenue Northeast, Tulalip Bay, WA 98271 USA","phone":"(503) 975-8061","estimate":"$20K","estimateRaw":20316,"daysOld":34,"createdOn":"04/03/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Asrat Damena","address":"5029 Wilmington Avenue, Everett, WA 98203 USA","phone":"(206) 643-7025","estimate":"$17K","estimateRaw":17068,"daysOld":31,"createdOn":"04/06/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"David Weymouth","address":"2301 South 19th Street, Mount Vernon, WA 98274 USA","phone":"(360) 661-0585","estimate":"$15K","estimateRaw":14579,"daysOld":28,"createdOn":"04/09/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Jonas Malm","address":"3105 Glacier Peak Avenue, Everett, WA 98208 USA","phone":"(304) 237-9380","estimate":"$13K","estimateRaw":12924,"daysOld":27,"createdOn":"04/10/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Craig Bernhard","address":"21211 Happy Valley Road, Stanwood, WA 98292 USA","phone":"(360) 652-8732","estimate":"$24K","estimateRaw":24465,"daysOld":27,"createdOn":"04/10/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"David and Natalie Warner","address":"19706 12th Avenue Northwest, Shoreline, WA 98177 USA","phone":"(206) 327-3774","estimate":"$8K","estimateRaw":7565,"daysOld":23,"createdOn":"04/14/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Kathy Jensen","address":"13914 26th Avenue Southeast, Mill Creek, WA 98012 USA","phone":"(206) 849-0249","estimate":"$10K","estimateRaw":9608,"daysOld":22,"createdOn":"04/15/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Amanda Pugh","address":"3814 226th Place Northeast, Arlington, WA 98223 USA","phone":"(404) 923-5168","estimate":"$27K","estimateRaw":26566,"daysOld":21,"createdOn":"04/16/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Sudeep Vaka","address":"9207 Park Road, Edmonds, WA 98020 USA","phone":"(857) 999-1605","estimate":"$16K","estimateRaw":16062,"daysOld":17,"createdOn":"04/20/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Ziwei Xiao","address":"13015 Northeast 197th Place, Woodinville, WA 98072 USA","phone":"(984) 322-8576","estimate":"$18K","estimateRaw":17813,"daysOld":17,"createdOn":"04/20/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Nav Thanka Nadar","address":"3914 168th Place Southeast, Bothell, WA 98012 USA","phone":"(425) 922-0374","estimate":"$7K","estimateRaw":6559,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Regina Gilmore","address":"4120 259th Street Northeast, Arlington, WA 98223 USA","phone":"(425) 299-1991","estimate":"$14K","estimateRaw":13895,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Matt Chomjak","address":"9730 31st Avenue Southeast, Everett, WA 98208 USA","phone":"(425) 346-1313","estimate":"$17K","estimateRaw":16609,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Justin and Heather Leach","address":"18193 West Chinook Drive, Burlington, WA 98233 USA","phone":"(360) 202-4099","estimate":"$26K","estimateRaw":25621,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Claire Hanser","address":"8823 Holly Drive #APT K103, Everett, WA 98208 USA","phone":"(206) 473-2287","estimate":"$9K","estimateRaw":8679,"daysOld":16,"createdOn":"04/21/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"John Wick","address":"375 Tillicum Way, Camano, WA 98282 USA","phone":"(425) 417-9454","estimate":"$26K","estimateRaw":25804,"daysOld":10,"createdOn":"04/27/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Tommie Kay Kasnick","address":"19653 Cedardale Road, Mount Vernon, WA 98274 USA","phone":"(360) 616-6011","estimate":"$37K","estimateRaw":37131,"daysOld":10,"createdOn":"04/27/2026","status":"Contacted","lastFollowUp":"05/07/2026","followUps":1,"notes":""},
-  {"customer":"David Toop","address":"20521 81st Drive Northeast, Arlington, WA 98223 USA","phone":"(425) 299-7338","estimate":"$17K","estimateRaw":17432,"daysOld":6,"createdOn":"05/01/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"Liam Shissler","address":"18621 Blueberry Lane #B212, Monroe, WA 98272 USA","phone":"(425) 905-5396","estimate":"$19K","estimateRaw":19190,"daysOld":4,"createdOn":"05/03/2026","status":"NotAttempted","lastFollowUp":"Never","followUps":0,"notes":""},
-  {"customer":"William Thomas","address":"1111 East Casino Road, Everett, WA 98203 USA","phone":"(425) 399-0077","estimate":"$7K","estimateRaw":7018,"daysOld":3,"createdOn":"05/04/2026","status":"Contacted","lastFollowUp":"05/07/2026","followUps":1,"notes":""}
-];
-function getUrgency(d){if(d<=3)return{cls:'urg-green',filter:'fresh'};if(d<=7)return{cls:'urg-yellow',filter:'fresh'};if(d<=14)return{cls:'urg-orange',filter:'hot'};if(d<=21)return{cls:'urg-red',filter:'critical'};return{cls:'urg-black',filter:'critical'};}
-/* ---- Stale-lead detection (work-schedule aware) ----------------------------
-   A lead is stale when it has gone untouched past its threshold, counting only
-   the days this HCA actually works. Scheduled days off never count against a
-   rep. Sold and Lost leads are closed and are never flagged.
-     - never followed up + status NotAttempted : 7 work days
-     - any other open lead                     : 14 work days since last touch
-   Note: thresholds run off createdOn / lastFollowUp real dates, not the
-   daysOld snapshot field, so they stay correct as the export ages.          */
-const WORK_DAYS=[0,1,2,3,4];/* Sun–Thu; 0=Sun .. 6=Sat */
-const WORK_DAYS_LABEL='Sun–Thu';
-const STALE_NEW_LIMIT=7,STALE_FOLLOWUP_LIMIT=14;
-function parseTrackerDate(s){if(!s)return null;const m=String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!m)return null;const d=new Date(+m[3],+m[1]-1,+m[2]);return isNaN(d.getTime())?null:d;}
-function workDaysSince(from){if(!from)return 0;const end=new Date();end.setHours(0,0,0,0);const cur=new Date(from.getFullYear(),from.getMonth(),from.getDate());cur.setDate(cur.getDate()+1);let n=0;while(cur<=end){if(WORK_DAYS.indexOf(cur.getDay())!==-1)n++;cur.setDate(cur.getDate()+1);}return n;}
-function getStale(lead){
-  if(lead.status==='Sold'||lead.status==='Lost')return null;
-  const fu=parseTrackerDate(lead.lastFollowUp);
-  if(fu){const w=workDaysSince(fu);return w>=STALE_FOLLOWUP_LIMIT?{days:w,limit:STALE_FOLLOWUP_LIMIT,reason:w+' work days since last follow-up'}:null;}
-  const created=parseTrackerDate(lead.createdOn);
-  if(!created)return null;
-  const w=workDaysSince(created);
-  const limit=lead.status==='NotAttempted'?STALE_NEW_LIMIT:STALE_FOLLOWUP_LIMIT;
-  if(w<limit)return null;
-  return{days:w,limit:limit,reason:lead.status==='NotAttempted'?w+' work days old, never attempted':w+' work days old, no follow-up logged'};
-}
-function staleBanner(st){return`<div class="stale-banner"><span class="stale-flag">Stale</span><span>${st.reason} &middot; threshold ${st.limit} work days &middot; ${WORK_DAYS_LABEL}, days off not counted</span></div>`;}
-
-function getDaysColor(d){if(d<=7)return'#16a34a';if(d<=14)return'#f97316';return'#dc2626';}
-function fmtK(n){if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+Math.round(n/1e3)+'K';return'$'+n;}
-/* ---- Live recompute of daysOld -------------------------------------------
-   The exported daysOld is a snapshot taken the day this file was generated and
-   drifts further from reality every day the export sits unrefreshed. Recompute
-   it from createdOn so Days Old, the urgency bars, the Critical count and the
-   averages stay true. The snapshot value is kept only where createdOn is
-   missing or unparseable. DATA_AS_OF is derived before the overwrite, so the
-   page can still say how old the underlying export is.                      */
-const DATA_AS_OF=(function(){let newest=null;leads.forEach(l=>{const c=parseTrackerDate(l.createdOn);if(!c)return;const n=Number(l.daysOld);if(!isFinite(n))return;const d=new Date(c.getTime()+n*86400000);if(!newest||d>newest)newest=d;});return newest;})();
-(function(){const t=new Date();t.setHours(0,0,0,0);leads.forEach(l=>{const c=parseTrackerDate(l.createdOn);if(!c)return;const d=Math.round((t-c)/86400000);if(d>=0)l.daysOld=d;});})();
-(function(){
-  if(!DATA_AS_OF)return;
-  const t=new Date();t.setHours(0,0,0,0);
-  const age=Math.round((t-DATA_AS_OF)/86400000);
-  if(age<14)return;
-  const el=document.getElementById('dataNotice');
-  if(!el)return;
-  const asOf=DATA_AS_OF.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  el.innerHTML='<div style="background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.5">'
-    +'<strong>Lead data exported '+asOf+' \u2014 '+age+' days ago.</strong> '
-    +'Days Old, urgency and the Critical count are calculated live from each lead\u2019s Created date, so those are current. '
-    +'The list of leads itself is not \u2014 anything booked, sold or closed since '+asOf+' will not appear here until the export is refreshed.'
-    +'</div>';
-})();
-leads.sort((a,b)=>a.daysOld-b.daysOld);
-const now=new Date();
-document.getElementById('hcaTitle').textContent=HCA_NAME+' — Follow-Up Tracker';
-document.getElementById('dateLabel').textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-document.getElementById('footerDate').textContent=now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-const totalPipeline=leads.reduce((s,l)=>s+l.estimateRaw,0);
-const criticalCount=leads.filter(l=>l.daysOld>14).length;
-const avgDays=leads.length?Math.round(leads.reduce((s,l)=>s+l.daysOld,0)/leads.length):0;
-const staleCount=leads.filter(l=>!!getStale(l)).length;
-document.getElementById('summaryBar').innerHTML=`
-  <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${leads.length}</div><div class="tile-lbl">Open Leads</div></div>
-  <div class="summary-tile"><div class="tile-val" style="color:var(--orange)">${fmtK(totalPipeline)}</div><div class="tile-lbl">Pipeline Value</div></div>
-  <div class="summary-tile"><div class="tile-val" style="color:${criticalCount>0?'#dc2626':'#16a34a'}">${criticalCount}</div><div class="tile-lbl">Critical (15+ Days)</div></div>
-  <div class="summary-tile"><div class="tile-val" style="color:var(--muted)">${avgDays}d</div><div class="tile-lbl">Avg Days Old</div></div>
-  <div class="summary-tile"><div class="tile-val" style="color:${staleCount>0?'#dc2626':'#16a34a'}">${staleCount}</div><div class="tile-lbl" title="Counts only this HCA's working days">Stale \u2014 Needs Attention</div></div>`;
-const counts={all:leads.length,stale:leads.filter(l=>!!getStale(l)).length,critical:leads.filter(l=>l.daysOld>14).length,hot:leads.filter(l=>l.daysOld>7&&l.daysOld<=14).length,fresh:leads.filter(l=>l.daysOld<=7).length};
-let activeFilter='all';
-function renderFilters(){document.getElementById('filters').innerHTML=[{key:'all',label:'All Leads'},{key:'stale',label:'Stale \u2014 Needs Attention'},{key:'critical',label:'Critical (15+ days)'},{key:'hot',label:'Hot (8-14 days)'},{key:'fresh',label:'Fresh (0-7 days)'}].map(f=>`<button class="filter-btn ${f.key==='stale'?'stale-btn ':''}${f.key===activeFilter?'active':''}" onclick="setFilter('${f.key}')">${f.label} <span class="count">${counts[f.key]}</span></button>`).join('');}
-function setFilter(key){activeFilter=key;renderFilters();document.querySelectorAll('.lead-card').forEach(c=>{const show=key==='all'?true:(key==='stale'?c.dataset.stale==='1':c.dataset.urg===key);c.classList.toggle('hidden',!show);});}
-renderFilters();
-const listEl=document.getElementById('leadsList');
-const savedNotes={};
-function togglePriorNotes(i){const toggle=document.getElementById(`pnToggle-${i}`);const body=document.getElementById(`pnBody-${i}`);toggle.classList.toggle('open');body.classList.toggle('open');}
-function buildPriorNotesHTML(lead,i){
-  const notes=lead.notes||'';const lines=notes.split('\n').filter(l=>l.trim());const count=lines.length;
-  const entriesHTML=count>0?lines.map(line=>{const match=line.match(/^\[(.+?)\]\s*(.*)$/);const ts=match?match[1]:'';const txt=match?match[2]:line;return`<div class="prior-note-entry"><div class="prior-note-ts">${ts}</div><div class="prior-note-text">${txt}</div></div>`;}).join(''):'<div class="no-notes">No prior notes logged yet.</div>';
-  return`<div class="prior-notes-section"><button class="prior-notes-toggle" id="pnToggle-${i}" onclick="togglePriorNotes(${i})"><span class="toggle-label">Prior Notes <span class="note-count">${count}</span></span><span class="chevron">▼</span></button><div class="prior-notes-body" id="pnBody-${i}">${entriesHTML}</div></div>`;
-}
-if(leads.length===0){listEl.innerHTML='<div class="empty-state"><div style="font-size:48px">✅</div><div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;margin-top:12px">No Open Leads</div><p style="margin-top:8px;font-size:13px">You have no open leads this week.</p></div>';}
-else{leads.forEach((lead,i)=>{const urg=getUrgency(lead.daysOld);const st=getStale(lead);const card=document.createElement('div');card.className='lead-card';card.id=`card-${i}`;card.dataset.urg=urg.filter;card.dataset.stale=st?'1':'0';if(st)card.classList.add('stale');
-card.innerHTML=`${st?staleBanner(st):''}<div class="lead-header"><div class="urgency-bar ${urg.cls}"></div><div class="lead-info"><div class="lead-name">${lead.customer}</div><div class="lead-meta">${lead.address} &middot; ${lead.phone} &middot; Created ${lead.createdOn} &middot; ${lead.followUps} follow-up${lead.followUps!==1?'s':''} logged</div></div><div class="lead-stats"><div class="stat-block"><div class="stat-val" style="color:${getDaysColor(lead.daysOld)}">${lead.daysOld}d</div><div class="stat-lbl">Days Old</div></div><div class="stat-block"><div class="stat-val">${lead.estimate}</div><div class="stat-lbl">Estimate</div></div><div class="stat-block"><span class="status-badge badge-${lead.status}" id="badge-${i}">${lead.status}</span></div></div></div><div class="lead-body"><div class="status-group"><div class="field-label">Update Status</div><select class="status-select" id="status-${i}"><option value="Contacted" ${lead.status==='Contacted'?'selected':''}>Contacted</option><option value="Unreachable" ${lead.status==='Unreachable'?'selected':''}>Unreachable</option><option value="NotAttempted" ${lead.status==='NotAttempted'?'selected':''}>Not Attempted</option><option value="Lost" ${lead.status==='Lost'?'selected':''}>Lost</option><option value="Sold" ${lead.status==='Sold'?'selected':''}>Sold ✓</option></select></div><div class="notes-group"><div class="field-label">Follow-Up Notes (required to save)</div><textarea class="notes-input" id="notes-${i}" placeholder="What happened? Any objections? Next step?"></textarea></div><div class="save-group"><button class="save-btn" id="saveBtn-${i}" onclick="logFollowUp(${i})">Log Follow-Up</button><div class="save-feedback" id="saveFeedback-${i}"></div><div class="st-reminder" id="stReminder-${i}"><div class="st-reminder-title">📋 Paste into ServiceTitan:</div><button class="copy-btn" id="copyBtn-${i}" onclick="copyNote(${i})">📋 Copy Note</button><div class="copy-note-preview" id="notePreview-${i}"></div></div></div></div>${buildPriorNotesHTML(lead,i)}`;
-listEl.appendChild(card);});}
-function logFollowUp(i){
-  const lead=leads[i],status=document.getElementById(`status-${i}`).value,notes=document.getElementById(`notes-${i}`).value.trim();
-  const btn=document.getElementById(`saveBtn-${i}`),feedback=document.getElementById(`saveFeedback-${i}`),badge=document.getElementById(`badge-${i}`),reminder=document.getElementById(`stReminder-${i}`),preview=document.getElementById(`notePreview-${i}`);
-  if(!notes){feedback.textContent='Add a note before saving.';feedback.className='save-feedback err';return;}
-  btn.disabled=true;btn.textContent='Saving...';feedback.textContent='';feedback.className='save-feedback';
-  const ts=new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
-  const stNote=`[${ts}] Status: ${status} | ${notes}`;savedNotes[i]=stNote;
-  fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({hca:HCA_NAME,customer:lead.customer,status,notes,timestamp:ts,daysOld:lead.daysOld,estimate:lead.estimate})})
-  .then(()=>{btn.textContent='Logged ✓';btn.className='save-btn success';feedback.textContent='Saved '+ts;feedback.className='save-feedback ok';document.getElementById(`notes-${i}`).value='';badge.textContent=status;badge.className=`status-badge badge-${status}`;document.getElementById(`card-${i}`).classList.add('saved');preview.textContent=stNote;reminder.classList.add('visible');
-    const body=document.getElementById(`pnBody-${i}`),toggle=document.getElementById(`pnToggle-${i}`),noNotes=body.querySelector('.no-notes');if(noNotes)noNotes.remove();
-    const entry=document.createElement('div');entry.className='prior-note-entry';entry.innerHTML=`<div class="prior-note-ts">${ts}</div><div class="prior-note-text">Status: ${status} | ${notes}</div>`;body.insertBefore(entry,body.firstChild);
-    const countEl=toggle.querySelector('.note-count');countEl.textContent=parseInt(countEl.textContent||0)+1;if(!body.classList.contains('open')){toggle.classList.add('open');body.classList.add('open');}})
-  .catch(()=>{btn.disabled=false;btn.textContent='Log Follow-Up';feedback.textContent='Error — try again.';feedback.className='save-feedback err';});
-}
-function copyNote(i){const copyBtn=document.getElementById(`copyBtn-${i}`),note=savedNotes[i]||'';if(!note)return;navigator.clipboard.writeText(note).then(()=>{copyBtn.textContent='✓ Copied!';copyBtn.className='copy-btn copied';}).catch(()=>{const ta=document.createElement('textarea');ta.value=note;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);copyBtn.textContent='✓ Copied!';copyBtn.className='copy-btn copied';});}
-</script>
+</main>
 </body>
 </html>

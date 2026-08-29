@@ -187,11 +187,17 @@ firebase.database-spark-only.json
 Roughly 18 `.before-xxx.html` files exist as named snapshots before significant changes (e.g., `install-availability.before-slot-locks.html`). Leave these in place — they are intentional recovery points, not clutter.
 
 Separately, some tools have **superseded originals under older names** that
-still sit in the repo and have since diverged: `<first>-<last>.html` (e.g.
-`kyle-mcalister.html`) predates `tracker-<first>.html`, and
-`CM-Heating-Leaderboard.html` / `CM-Heating-Daily-Brief.html` /
-`CM-Heating-Exec-Summary.html` predate their short-named replacements. Edit the
-current file, not the old one.
+still sit in the repo and have since diverged: `CM-Heating-Leaderboard.html` /
+`CM-Heating-Daily-Brief.html` / `CM-Heating-Exec-Summary.html` predate their
+short-named replacements. Edit the current file, not the old one.
+
+**The rule above does not apply to files carrying customer data.** The nine
+`<first>-<last>.html` follow-up pages (the May originals of `tracker-<first>.html`)
+and `unsold-followup-report.xlsx` were removed on 2026-08-29: every one embedded
+customer names, street addresses, phone numbers and quote amounts in a public
+page. Do not restore them from history, and never regenerate any page with a
+customer record in it — the follow-up tracker is being rebuilt to read its data
+at runtime behind sign-in.
 
 ## Key Tools
 
@@ -214,7 +220,7 @@ The repo holds ~50 non-backup HTML files; these are the ones in active use.
 | `sold-report.html` | Same-day vs earlier-lead sold split, month to date |
 | `sold-job-tracker.html` | HCA sold job tracker |
 | `system-overview.html` | Sales operations system overview |
-| `tracker-[name].html` | Per-HCA activity trackers — adam, amber, chester, davis, jay, joe, joseph, kyle, samir, trevor |
+| `tracker-[name].html` | Per-HCA follow-up trackers — adam, amber, chester, davis, jay, joe, joseph, kyle, samir, trevor. **Stubs since 2026-08-29**: the embedded May lead lists (customer PII) were taken down; each page now only points back to the toolkit until the rebuilt tracker ships. Do not put lead data back in these files. |
 
 ## HCA Roster
 
@@ -222,11 +228,12 @@ Ten HCAs. Adam Weberg, Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Ja
 
 Note the two names that differ between systems: the scheduler says **Jay Milo**, ServiceTitan and the recap roster say **Javierre Milo**; the COMBO LOG says **JOE RUBLE** where the roster says **Joseph Ruble**. Match on email where possible.
 
-Adam is the newest HCA. `tracker-adam.html` now exists and `index.html` links to
-it, so he is no longer the "No jobs yet" case. The **data-regenerated** tools are
-a different matter: `daily-brief.html` and `exec-summary.html` still carry no card
-for him and pick him up on their next refresh. Do not hand-add him to those —
-`daily-brief.html`'s dropdown crashes on an HCA with no generated card.
+Adam is the newest HCA. `tracker-adam.html` exists (as a stub, like the other
+nine) and `index.html` links to it. The **data-regenerated** tools are a
+different matter: `daily-brief.html` and `exec-summary.html` still carry no card
+for him. Do not hand-add him to those — `daily-brief.html`'s dropdown crashes on
+an HCA with no generated card — and do not regenerate them with customer names
+or dollar amounts; that is the same exposure the tracker pages just lost.
 
 Two crews, confirmed 2026-08-03:
 

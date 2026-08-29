@@ -9,6 +9,15 @@ install-auth-users.spark.private.json
 firebase.hosting-install-only.json
 firebase.database-spark-only.json
 
+# Spreadsheet exports at the repo root. unsold-followup-report.xlsx was committed
+# here on 2026-05-18 carrying customer names, addresses and phone numbers and was
+# served by GitHub Pages until 2026-08-29. Exports go to the Daily Uploads Drive
+# folder, never here. Scoped to the root on purpose: data/vendor-pricing/ holds a
+# tracked vendor pricebook that must keep working.
+/*.xlsx
+/*.xlsm
+/*.csv
+
 # Deploy staging directory. The Hosting deploy recipe in
 # INSTALL-AVAILABILITY-SECURITY.md rebuilds this with rm -rf on every deploy,
 # so nothing in it may be tracked — anything tracked here gets destroyed.
