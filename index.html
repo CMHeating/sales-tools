@@ -31,7 +31,7 @@
     <a class="tool-card c2" href="hca-caas-quoting.html"><div class="card-icon">🧾</div><div class="card-body"><div class="card-title">HCA CaaS Quoting Tool</div><div class="card-desc">Governed COD + rental pricing for every AHRI-verified package — locked MSRPs, monthly payments, and residuals by size.</div><span class="card-tag">Governed pricing</span></div><div class="card-arrow">›</div></a>
     <a class="tool-card c3" href="hca-top-sellers.html"><div class="card-icon">🏆</div><div class="card-body"><div class="card-title">HCA Top Sellers — Laminated</div><div class="card-desc">Print-ready field reference: top-20 sold products with governed rental monthly, plus the full COD MSRP grid by size.</div><span class="card-tag">Print &amp; laminate</span></div><div class="card-arrow">›</div></a>
     <a class="tool-card c2" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener"><div class="card-icon">📅</div><div class="card-body"><div class="card-title">Install Availability</div><div class="card-desc">Grab open install slots in real time — close with a confirmed date on the spot.</div><span class="card-tag">Close the deal</span></div><div class="card-arrow">›</div></a>
-    <div class="tool-card c3" onclick="openFollowUpPicker()"><div class="card-icon">📋</div><div class="card-body"><div class="card-title">My Follow-Up Tracker</div><div class="card-desc">Your unsold lead pipeline, activity log, and leaderboard standing.</div><span class="card-tag">Post consult</span></div><div class="card-arrow">›</div></div>
+    <div class="tool-card c3" onclick="openFollowUpPicker()"><div class="card-icon">📋</div><div class="card-body"><div class="card-title">My Follow-Up Tracker</div><div class="card-desc">Being rebuilt behind sign-in — your leads and notes live in ServiceTitan for now.</div><span class="card-tag">Post consult</span></div><div class="card-arrow">›</div></div>
     <div class="tool-card c4" onclick="openSoldPicker()"><div class="card-icon">✅</div><div class="card-body"><div class="card-title">My Sold Job Tracker</div><div class="card-desc">Track sold jobs after the sale — TBD blockers, financing, permits, install dates, registration, duct cleaning, and done follow-up.</div><span class="card-tag">After sale</span></div><div class="card-arrow">›</div></div>
     <a class="tool-card c1" href="clearance.html"><div class="card-icon">🏷️</div><div class="card-body"><div class="card-title">Clearance Inventory</div><div class="card-desc">Warehouse equipment ready to move — live from the inventory sheet. Filter available vs. committed, spot aging stock, and copy a sell list. HCA login required.</div><span class="card-tag">Sell from stock</span></div><div class="card-arrow">›</div></a>
     <a class="tool-card c9" href="hca-1on1.html"><div class="card-icon">🤝</div><div class="card-body"><div class="card-title">Book HCA 1:1</div><div class="card-desc">Book your required biweekly 20-minute 1:1 with Geoff. Amy can see booked times and protect the dispatch board.</div><span class="card-tag">Every 2 weeks</span></div><div class="card-arrow">›</div></a>
@@ -47,16 +47,16 @@
 <script>
 function tick(){var now=new Date(),h=now.getHours(),m=now.getMinutes(),ampm=h>=12?'PM':'AM';h=h%12||12;document.getElementById('clock-time').textContent=h+':'+(m<10?'0':'')+m+' '+ampm;var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];document.getElementById('clock-date').textContent=days[now.getDay()]+' '+months[now.getMonth()]+' '+now.getDate()}tick();setInterval(tick,10000);
 var FOLLOW_UP_HCAS=[
-  {name:'Adam Weberg',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Adam%20Weberg'},
-  {name:'Amber Maddalena',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Amber%20Maddalena'},
-  {name:'Chester Granard',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Chester%20Granard'},
-  {name:'Davis Diosdado',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Davis%20Diosdado'},
-  {name:'Javierre Milo',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Javierre%20Milo'},
-  {name:'Joe Chounramany',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Joe%20Chounramany'},
-  {name:'Joseph Ruble',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Joseph%20Ruble'},
-  {name:'Kyle McAlister',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Kyle%20McAlister'},
-  {name:'Samir Khoury',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Samir%20Khoury'},
-  {name:'Trevor Bohm',url:'https://cmheating.github.io/sales-tools/follow-up-tracker.html?hca=Trevor%20Bohm'}
+  {name:'Adam Weberg',url:'https://cmheating.github.io/sales-tools/tracker-adam.html'},
+  {name:'Amber Maddalena',url:'https://cmheating.github.io/sales-tools/tracker-amber.html'},
+  {name:'Chester Granard',url:'https://cmheating.github.io/sales-tools/tracker-chester.html'},
+  {name:'Davis Diosdado',url:'https://cmheating.github.io/sales-tools/tracker-davis.html'},
+  {name:'Javierre Milo',url:'https://cmheating.github.io/sales-tools/tracker-jay.html'},
+  {name:'Joe Chounramany',url:'https://cmheating.github.io/sales-tools/tracker-joe.html'},
+  {name:'Joseph Ruble',url:'https://cmheating.github.io/sales-tools/tracker-joseph.html'},
+  {name:'Kyle McAlister',url:'https://cmheating.github.io/sales-tools/tracker-kyle.html'},
+  {name:'Samir Khoury',url:'https://cmheating.github.io/sales-tools/tracker-samir.html'},
+  {name:'Trevor Bohm',url:'https://cmheating.github.io/sales-tools/tracker-trevor.html'}
 ];
 var SOLD_HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
 /* A11y: sequential top-to-bottom stagger (so the reordered cards animate in
