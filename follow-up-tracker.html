@@ -4,6 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Follow-Up Tracker | CM Heating</title>
+<!--
+  CM Heating — HCA Follow-Up Tracker
+
+  WHAT IS IN THIS FILE: markup, styling, and the code that asks Firebase for
+  data. No customer data of any kind is stored here. Every lead shown on screen
+  is fetched at runtime from the Realtime Database, only after the person using
+  the page has signed in with their CM Heating Google account, and it is gone
+  again as soon as they sign out or close the tab. This repository is public, so
+  nothing customer-identifying may ever be pasted into it.
+
+  WHY GOOGLE SIGN-IN: the previous version minted an ANONYMOUS Firebase token in
+  the browser using the public web API key that is visible in this very file.
+  That key is not a secret and is not meant to be one — which meant anybody who
+  viewed source could mint the same token and read every HCA's entire lead list,
+  including phone numbers and home addresses. The anonymous sign-up call has been
+  deleted. Reads now use the signed-in user's own ID token, so the database rule
+  can require a verified cmheating.com account.
+
+  IMPORTANT: the domain check below is a courtesy, not a security control. A
+  browser check can be bypassed by anyone willing to edit their own page. The
+  control that actually protects the data is the Realtime Database rule on
+  cmh_followup_tracker and cmh_followup_log. See FOLLOW-UP-TRACKER.md for the
+  rules Geoff has to paste into the Firebase console.
+
+  Phone numbers and street addresses are deliberately not rendered anywhere on
+  this page. Use the "Open in ServiceTitan" link on the card to reach the
+  customer record.
+-->
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f4f6f9;--card:#fff;--ink:#1a2433;--sub:#5b6b7f;--line:#e3e8ef;--brand:#c8102e;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--black:#111827}
@@ -12,14 +40,23 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);paddi
 .wrap{max-width:880px;margin:0 auto}
 h1{font-size:22px;font-weight:800}
 .sub{color:var(--sub);font-size:13px;margin-top:2px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.who{font-size:12px;color:var(--sub);text-align:right;line-height:1.6;word-break:break-all}
+.who b{display:block;color:var(--ink);font-weight:600}
+.linkbtn{background:none;border:none;font-family:inherit;font-size:12px;font-weight:600;color:#2a6cc4;cursor:pointer;padding:0;text-decoration:underline}
 .notice{border-radius:10px;padding:12px 16px;margin:14px 0;font-size:13px;line-height:1.5}
 .notice.warn{background:#fef3c7;border:1px solid var(--warn);color:#92400e}
 .notice.err{background:#fee2e2;border:1px solid var(--bad);color:#991b1b}
+.gate{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 20px;margin-top:22px;text-align:center}
+.gate p{color:var(--sub);font-size:13px;line-height:1.6;margin-bottom:16px}
+.gbtn{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:12px 22px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.gbtn:disabled{opacity:.5;cursor:default}
+.gmsg{margin-top:14px;font-size:13px;color:var(--bad);font-weight:600;min-height:18px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 6px}
 .chip{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--sub)}
 .chip b{display:block;font-size:18px;color:var(--ink)}
 .filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px}
-.fbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer}
+.fbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit}
 .fbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
 .card.closing{opacity:.45}
@@ -34,12 +71,13 @@ h1{font-size:22px;font-weight:800}
 .b-stale{background:#fee2e2;color:#991b1b;border:1px dashed #991b1b}
 .b-status{background:#e0e7ff;color:#3730a3}
 .b-snooze{background:#e0f2fe;color:#075985}
+.stlink{display:inline-block;margin-top:10px;background:#eef4ff;border:1px solid #c7dbff;color:#1e4fa3;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none}
 input[type=date]{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#fff;color:var(--sub)}
 .notes{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--sub);margin-top:10px;white-space:pre-line}
 .logrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 select,input[type=text]{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
 input[type=text]{flex:1;min-width:180px}
-.save{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer}
+.save{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
 .save:disabled{opacity:.5}
 .fb{font-size:12px;margin-top:6px}.fb.ok{color:var(--ok)}.fb.err{color:var(--bad)}
 .lb{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px;margin-top:8px}
@@ -54,8 +92,20 @@ h2{font-size:15px;margin:26px 0 4px}
 </head>
 <body>
 <div class="wrap">
-  <h1 id="title">Follow-Up Tracker</h1>
-  <div class="sub" id="subtitle">Loading…</div>
+  <div class="head">
+    <div>
+      <h1 id="title">Follow-Up Tracker</h1>
+      <div class="sub" id="subtitle">Checking your sign-in…</div>
+    </div>
+    <div class="who" id="who" style="display:none"><b id="whoEmail"></b><button class="linkbtn" id="signOutBtn" type="button">Sign out</button></div>
+  </div>
+
+  <div id="gate" class="gate" style="display:none">
+    <p>This tracker shows live customer leads, so it is behind your CM Heating Google account.</p>
+    <button class="gbtn" id="signInBtn" type="button">Sign in with Google</button>
+    <div class="gmsg" id="gateMsg"></div>
+  </div>
+
   <div id="dataNotice"></div>
   <div id="picker"></div>
   <div id="app" style="display:none">
@@ -67,133 +117,459 @@ h2{font-size:15px;margin:26px 0 4px}
   </div>
   <div class="footer">Data: BI leads export + ServiceTitan alerts + Combo Log removals + your logged outcomes. Sold, installed, and closed-out leads drop off automatically. CM Heating · Internal HCA Tool</div>
 </div>
-<script>
-var FIREBASE_WEB_API_KEY='AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0';
-var DATA_BASE='https://install-availability-tracker-default-rtdb.firebaseio.com/cmh_followup_tracker.json';
-var LOG_URL='https://script.google.com/macros/s/AKfycbwshtoPM_b2DLqogtxYXuZ0LnxP_ztIPR29hDXiCsTq1T4fJ_HPSp3CYuRp0qFoZXp74w/exec';
-var HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
-var OPEN_STATUSES=[['Attempted','Attempted — no contact yet'],['Contacted','Contacted — spoke with customer'],['Unreachable','Unreachable'],['QuotedFollowUp','Quoted — following up']];
-var CLOSE_STATUSES=[['PurchasedElsewhere','Closed: purchased elsewhere'],['RepairedInstead','Closed: repaired equipment instead'],['Lost','Closed: lost — other'],['DeadOther','Closed: dead lead (note why)']];
-var WORK_DAYS=[2,3,4,5,6]; /* Tue–Sat */
-var data=null, hca=null, filter='all';
 
-function qs(name){var m=new URLSearchParams(location.search).get(name);return m?decodeURIComponent(m):null}
-function getFirebaseIdToken(){return fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+encodeURIComponent(FIREBASE_WEB_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})}).then(function(r){return r.text().then(function(t){if(!r.ok)throw new Error('Firebase auth '+r.status);var p=JSON.parse(t);if(!p.idToken)throw new Error('No token');return p.idToken})})}
-function fetchData(token){return fetch(DATA_BASE+'?auth='+encodeURIComponent(token),{cache:'no-store'}).then(function(r){return r.text().then(function(t){if(!r.ok)throw new Error('Firebase read '+r.status);return t?JSON.parse(t):null})})}
-function parseIso(s){if(!s)return null;var d=new Date(String(s).slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?null:d}
-function daysOld(l){var c=parseIso(l.createdOn);if(!c)return 0;var t=new Date();t.setHours(12,0,0,0);return Math.max(0,Math.round((t-c)/86400000))}
-function workDaysBetween(a,b){if(!a||!b||b<=a)return 0;var n=0,d=new Date(a);d.setHours(12,0,0,0);var end=new Date(b);end.setHours(12,0,0,0);while(d<end){d.setDate(d.getDate()+1);if(WORK_DAYS.indexOf(d.getDay())!==-1)n++}return n}
-function urgency(d){if(d<=3)return{cls:'b-green',f:'fresh',label:d+'d'};if(d<=7)return{cls:'b-yellow',f:'fresh',label:d+'d'};if(d<=14)return{cls:'b-orange',f:'hot',label:d+'d'};if(d<=21)return{cls:'b-red',f:'critical',label:d+'d'};return{cls:'b-black',f:'critical',label:d+'d'}}
-function isSnoozed(l){if(!l.snoozeUntil)return false;var t=new Date();t.setHours(0,0,0,0);var su=parseIso(l.snoozeUntil);return su?su>t:false}
-function isStale(l){if(isSnoozed(l))return false;var t=new Date();var last=l.lastFollowUp?new Date(l.lastFollowUp):null;if(!l.followUps){var c=parseIso(l.createdOn);return c?workDaysBetween(c,t)>7:false}return last?workDaysBetween(last,t)>14:false}
-function fmt(s){if(!s)return '—';var d=parseIso(s)||new Date(s);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
-function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-function boot(){
-  hca=qs('hca');
-  if(!hca||HCAS.indexOf(hca)===-1){renderPicker();return}
-  document.getElementById('title').textContent=hca+' — Follow-Up Tracker';
-  getFirebaseIdToken().then(fetchData).then(function(json){data=json;render()}).catch(function(e){
-    document.getElementById('subtitle').textContent='';
-    document.getElementById('dataNotice').innerHTML='<div class="notice err"><b>Could not load data.</b> '+esc(e.message)+' — pull to refresh or try again.</div>';
+/* The web API key is a public client identifier, not a credential. It is safe in
+   a public repo; it is NOT an access control. Access control lives in the
+   Realtime Database rules. */
+const FIREBASE_WEB_API_KEY = 'AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0';
+const FIREBASE_CONFIG = {
+  apiKey: FIREBASE_WEB_API_KEY,
+  authDomain: 'install-availability-tracker.firebaseapp.com',
+  databaseURL: 'https://install-availability-tracker-default-rtdb.firebaseio.com',
+  projectId: 'install-availability-tracker',
+  storageBucket: 'install-availability-tracker.firebasestorage.app',
+  messagingSenderId: '187871662912',
+  appId: '1:187871662912:web:1d52671de23c4f38d620a5'
+};
+
+const RTDB = 'https://install-availability-tracker-default-rtdb.firebaseio.com';
+const DATA_BASE = RTDB + '/cmh_followup_tracker.json';
+const LOG_BASE  = RTDB + '/cmh_followup_log.json';
+/* Existing Apps Script receiver that the hourly sync still reads. Public /exec URL. */
+const LOG_URL = 'https://script.google.com/macros/s/AKfycbwshtoPM_b2DLqogtxYXuZ0LnxP_ztIPR29hDXiCsTq1T4fJ_HPSp3CYuRp0qFoZXp74w/exec';
+
+/* Company Google Workspace domain. Used as the `hd` sign-in hint and for the
+   client-side sanity check; the database rules enforce it for real. */
+const COMPANY_DOMAIN = 'cmheating.com';
+const EMAIL_SUFFIX = '@' + COMPANY_DOMAIN;
+
+const HCAS = ['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
+const OPEN_STATUSES = [['Attempted','Attempted — no contact yet'],['Contacted','Contacted — spoke with customer'],['Unreachable','Unreachable'],['QuotedFollowUp','Quoted — following up']];
+const CLOSE_STATUSES = [['PurchasedElsewhere','Closed: purchased elsewhere'],['RepairedInstead','Closed: repaired equipment instead'],['Lost','Closed: lost — other'],['DeadOther','Closed: dead lead (note why)']];
+const CLOSING_KEYS = CLOSE_STATUSES.map(function(s){return s[0]});
+
+/* Work-day calendars. Two crews plus one individual schedule; anyone not listed
+   works Tue–Sat. Day numbers are JS getDay(): 0=Sun … 6=Sat. */
+const DEFAULT_WORK_DAYS = [2,3,4,5,6];                 /* Tue–Sat */
+const WORK_DAYS_BY_HCA = {
+  'Amber Maddalena':  [0,1,2,3,4],                     /* Sun–Thu */
+  'Chester Granard':  [0,1,2,3,4],                     /* Sun–Thu */
+  'Davis Diosdado':   [0,1,2,3,4],                     /* Sun–Thu */
+  'Trevor Bohm':      [1,3,4,6]                        /* Mon, Wed, Thu, Sat */
+};
+const STALE_HOURS = 52; /* no export lands on Sundays, so a ~2 day gap is normal */
+
+let data = null, hca = null, filter = 'all', user = null;
+
+const $ = function(id){ return document.getElementById(id) };
+
+/* ---------- helpers ---------- */
+function qs(name){ const m = new URLSearchParams(location.search).get(name); return m ? decodeURIComponent(m) : null }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] }) }
+function parseIso(s){ if(!s) return null; const d = new Date(String(s).slice(0,10) + 'T12:00:00'); return Number.isNaN(d.getTime()) ? null : d }
+function noon(){ const t = new Date(); t.setHours(12,0,0,0); return t }
+
+/* Leads may arrive as an array or as a keyed object map. */
+function allLeads(d){
+  const raw = d && d.leads;
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (raw && typeof raw === 'object') return Object.values(raw).filter(Boolean);
+  return [];
+}
+/* notes may be an array of lines or a single string. Never call .join on a string. */
+function notesText(n){
+  if (Array.isArray(n)) return n.filter(Boolean).join('\n');
+  if (typeof n === 'string') return n;
+  return '';
+}
+/* The consult is the clock that matters, not the day the lead row was created. */
+function consultDate(l){
+  const appt = parseIso(l.lastApptDate);
+  if (appt && appt <= noon()) return appt;
+  return parseIso(l.createdOn);
+}
+function daysOld(l){
+  const c = consultDate(l);
+  if (!c) return 0;
+  return Math.max(0, Math.round((noon() - c) / 86400000));
+}
+function workDays(){ return WORK_DAYS_BY_HCA[hca] || DEFAULT_WORK_DAYS }
+function workDaysBetween(a,b){
+  if(!a || !b || b <= a) return 0;
+  const days = workDays();
+  let n = 0;
+  const d = new Date(a); d.setHours(12,0,0,0);
+  const end = new Date(b); end.setHours(12,0,0,0);
+  while (d < end){ d.setDate(d.getDate()+1); if (days.indexOf(d.getDay()) !== -1) n++ }
+  return n;
+}
+function urgency(d){
+  if (d <= 3)  return {cls:'b-green',  f:'fresh',    label:d+'d'};
+  if (d <= 7)  return {cls:'b-yellow', f:'fresh',    label:d+'d'};
+  if (d <= 14) return {cls:'b-orange', f:'hot',      label:d+'d'};
+  if (d <= 21) return {cls:'b-red',    f:'critical', label:d+'d'};
+  return {cls:'b-black', f:'critical', label:d+'d'};
+}
+function isSnoozed(l){
+  if (!l.snoozeUntil) return false;
+  const t = new Date(); t.setHours(0,0,0,0);
+  const su = parseIso(l.snoozeUntil);
+  return su ? su > t : false;
+}
+function isStale(l){
+  if (isSnoozed(l)) return false;
+  const t = new Date();
+  if (!l.followUps){ const c = parseIso(l.createdOn); return c ? workDaysBetween(c,t) > 7 : false }
+  const last = l.lastFollowUp ? new Date(l.lastFollowUp) : null;
+  return last ? workDaysBetween(last,t) > 14 : false;
+}
+function fmt(s){
+  if(!s) return '—';
+  const d = parseIso(s) || new Date(s);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+/* Only ever build a ServiceTitan URL out of digits. */
+function jobNumber(l){
+  const raw = l.jobNumber || l.job || l.jobId || (/^\d{6,}$/.test(String(l.key || '')) ? l.key : null);
+  if (!raw) return null;
+  const digits = String(raw).replace(/\D/g,'');
+  return digits.length >= 5 ? digits : null;
+}
+
+/* ---------- auth ---------- */
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ hd: COMPANY_DOMAIN, prompt: 'select_account' });
+
+function gateMsg(msg){ $('gateMsg').textContent = msg || '' }
+/* showGate never blanks an existing message. Rejecting a non-company account
+   calls signOut(), which fires onAuthStateChanged(null) a moment later — if that
+   callback cleared the box, the reason would vanish before it was read. Clearing
+   is explicit: gateMsg('') on a fresh click and on a successful sign-in. */
+function showGate(msg){
+  $('gate').style.display = 'block';
+  $('signInBtn').disabled = false;
+  if (msg) gateMsg(msg);
+}
+/* Signing out has to take the customer data off the screen too, not just hide it. */
+function clearScreen(){
+  data = null;
+  $('app').style.display = 'none';
+  $('list').innerHTML = '';
+  $('chips').innerHTML = '';
+  $('filters').innerHTML = '';
+  $('leaderboard').innerHTML = '';
+  $('picker').innerHTML = '';
+  $('picker').className = '';
+  $('dataNotice').innerHTML = '';
+}
+
+$('signInBtn').addEventListener('click', function(){
+  gateMsg('');
+  $('signInBtn').disabled = true;
+  signInWithPopup(auth, provider).catch(function(err){
+    const code = (err && err.code) || '';
+    const popupFailed = /popup-blocked|popup-closed-by-user|cancelled-popup-request|operation-not-supported-in-this-environment|web-storage-unsupported/.test(code);
+    if (popupFailed){
+      /* Some in-app browsers and locked-down iOS setups will not open a popup. */
+      signInWithRedirect(auth, provider).catch(function(e2){
+        showGate('Sign-in could not start (' + ((e2 && e2.code) || 'unknown') + '). Try Chrome or Safari.');
+      });
+      return;
+    }
+    showGate('Sign-in failed (' + (code || 'unknown') + '). Try again.');
   });
-}
-function renderPicker(){
-  document.getElementById('subtitle').textContent='Select your name to open your pipeline.';
-  var p=document.getElementById('picker');p.className='picker';
-  HCAS.forEach(function(n){var b=document.createElement('button');b.className='pbtn';b.textContent=n;
-    b.onclick=function(){location.search='?hca='+encodeURIComponent(n)};p.appendChild(b)});
-}
-function render(){
-  document.getElementById('app').style.display='block';
-  var leads=(data&&data.leads?data.leads:[]).filter(function(l){return l.hca===hca});
-  var updated=data&&data.updated?new Date(data.updated):null;
-  document.getElementById('subtitle').textContent=updated?('Data refreshed '+updated.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' · refreshes hourly on workdays'):'';
-  if(updated&&(Date.now()-updated.getTime())>26*3600000){
-    document.getElementById('dataNotice').innerHTML='<div class="notice warn"><b>Data is more than a day old.</b> The hourly sync may not have run — flag Geoff.</div>';
+});
+
+$('signOutBtn').addEventListener('click', function(){
+  signOut(auth).catch(function(){ /* onAuthStateChanged still clears the screen */ });
+});
+
+getRedirectResult(auth).catch(function(err){
+  showGate('Sign-in failed (' + ((err && err.code) || 'unknown') + '). Try again.');
+});
+
+onAuthStateChanged(auth, function(u){
+  if (!u){
+    user = null;
+    $('who').style.display = 'none';
+    $('title').textContent = 'Follow-Up Tracker';
+    $('subtitle').textContent = 'Sign in to see your pipeline.';
+    clearScreen();
+    showGate('');
+    return;
   }
-  var crit=leads.filter(function(l){return daysOld(l)>14}).length;
-  var never=leads.filter(function(l){return !l.followUps}).length;
-  var canceled=leads.filter(function(l){return l.canceled}).length;
-  var stale=leads.filter(isStale).length;
-  var snoozed=leads.filter(isSnoozed).length;
-  document.getElementById('chips').innerHTML=
-    '<div class="chip">Open leads<b>'+leads.length+'</b></div>'+
-    '<div class="chip">Critical (>14d)<b>'+crit+'</b></div>'+
-    '<div class="chip">Never touched<b>'+never+'</b></div>'+
-    '<div class="chip">Canceled consults<b>'+canceled+'</b></div>'+
-    '<div class="chip">Gone stale<b>'+stale+'</b></div>'+
-    '<div class="chip">Snoozed<b>'+snoozed+'</b></div>';
-  var defs=[['all','All'],['fresh','Fresh ≤7d'],['hot','Hot 8–14d'],['critical','Critical >14d'],['canceled','Canceled'],['never','Never touched'],['stale','Stale']];
-  document.getElementById('filters').innerHTML=defs.map(function(d){
-    return '<button class="fbtn'+(filter===d[0]?' on':'')+'" onclick="setFilter(\''+d[0]+'\')">'+d[1]+'</button>'}).join('');
-  var list=document.getElementById('list');list.innerHTML='';
-  var shown=leads.filter(function(l){
-    var u=urgency(daysOld(l));
-    if(filter==='all')return true;
-    if(filter==='canceled')return l.canceled;
-    if(filter==='never')return !l.followUps;
-    if(filter==='stale')return isStale(l);
-    return u.f===filter;
+  const email = String(u.email || '').toLowerCase();
+  if (!email.endsWith(EMAIL_SUFFIX) || u.emailVerified !== true){
+    user = null;
+    clearScreen();
+    $('who').style.display = 'none';
+    signOut(auth).catch(function(){});
+    showGate('Use your CM Heating Google account.');
+    return;
+  }
+  user = u;
+  $('gate').style.display = 'none';
+  gateMsg('');
+  $('whoEmail').textContent = u.email;
+  $('who').style.display = 'block';
+  start();
+});
+
+/* ---------- boot after sign-in ---------- */
+function start(){
+  hca = qs('hca');
+  if (hca && HCAS.indexOf(hca) === -1) hca = null;
+  if (!hca){
+    const dn = String((user && user.displayName) || '').trim().toLowerCase();
+    const match = HCAS.filter(function(n){ return n.toLowerCase() === dn })[0];
+    if (match) hca = match;
+  }
+  if (!hca){ renderPicker(); return }
+  load();
+}
+
+function renderPicker(){
+  $('app').style.display = 'none';
+  $('title').textContent = 'Follow-Up Tracker';
+  $('subtitle').textContent = 'Select your name to open your pipeline.';
+  const p = $('picker');
+  p.innerHTML = '';
+  p.className = 'picker';
+  HCAS.forEach(function(n){
+    const b = document.createElement('button');
+    b.className = 'pbtn'; b.type = 'button'; b.textContent = n;
+    b.addEventListener('click', function(){
+      hca = n;
+      history.replaceState(null, '', location.pathname + '?hca=' + encodeURIComponent(n));
+      p.innerHTML = ''; p.className = '';
+      load();
+    });
+    p.appendChild(b);
   });
-  if(!shown.length){list.innerHTML='<div class="notice warn">Nothing in this view. '+(leads.length?'Try another filter.':'No open leads — either the pipeline is clear or the sync hasn\u2019t published yet.')+'</div>'}
-  shown.sort(function(a,b){var sa=isSnoozed(a)?1:0,sb=isSnoozed(b)?1:0;if(sa!==sb)return sa-sb;return daysOld(b)-daysOld(a)});
-  shown.forEach(function(l,i){list.appendChild(card(l,i))});
+}
+
+function fetchData(token){
+  return fetch(DATA_BASE + '?auth=' + encodeURIComponent(token), {cache:'no-store'}).then(function(r){
+    if (r.status === 401 || r.status === 403){ const e = new Error('denied'); e.denied = true; throw e }
+    return r.text().then(function(t){
+      if (!r.ok) throw new Error('Firebase read ' + r.status);
+      return t ? JSON.parse(t) : null;
+    });
+  });
+}
+
+function load(){
+  $('title').textContent = hca + ' — Follow-Up Tracker';
+  $('subtitle').textContent = 'Loading…';
+  $('dataNotice').innerHTML = '';
+  user.getIdToken().then(fetchData).then(function(json){
+    data = json;
+    render();
+  }).catch(function(e){
+    $('subtitle').textContent = '';
+    $('app').style.display = 'none';
+    if (e && e.denied){
+      $('dataNotice').innerHTML = '<div class="notice err"><b>Signed in, but this account isn’t allowed to read the tracker yet — ask Geoff.</b></div>';
+    } else {
+      $('dataNotice').innerHTML = '<div class="notice err"><b>Could not load data.</b> ' + esc(e && e.message) + ' — pull to refresh or try again.</div>';
+    }
+  });
+}
+
+/* ---------- render ---------- */
+function render(){
+  $('app').style.display = 'block';
+  const leads = allLeads(data).filter(function(l){ return l.hca === hca });
+  const updated = data && data.updated ? new Date(data.updated) : null;
+  const updatedOk = updated && !Number.isNaN(updated.getTime());
+  $('subtitle').textContent = updatedOk
+    ? ('Data refreshed ' + updated.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' · refreshes hourly on workdays')
+    : '';
+  if (updatedOk && (Date.now() - updated.getTime()) > STALE_HOURS * 3600000){
+    $('dataNotice').innerHTML = '<div class="notice warn"><b>This data is more than two days old.</b> No export lands on Sundays, so a Sunday gap is normal — but a longer one means the hourly sync has not run. Flag Geoff.</div>';
+  } else {
+    $('dataNotice').innerHTML = '';
+  }
+
+  const crit = leads.filter(function(l){ return daysOld(l) > 14 }).length;
+  const never = leads.filter(function(l){ return !l.followUps }).length;
+  const canceled = leads.filter(function(l){ return l.canceled }).length;
+  const stale = leads.filter(isStale).length;
+  const snoozed = leads.filter(isSnoozed).length;
+  $('chips').innerHTML =
+    '<div class="chip">Open leads<b>' + leads.length + '</b></div>' +
+    '<div class="chip">Critical (&gt;14d)<b>' + crit + '</b></div>' +
+    '<div class="chip">Never touched<b>' + never + '</b></div>' +
+    '<div class="chip">Canceled consults<b>' + canceled + '</b></div>' +
+    '<div class="chip">Gone stale<b>' + stale + '</b></div>' +
+    '<div class="chip">Snoozed<b>' + snoozed + '</b></div>';
+
+  const defs = [['all','All'],['fresh','Fresh ≤7d'],['hot','Hot 8–14d'],['critical','Critical >14d'],['canceled','Canceled'],['never','Never touched'],['stale','Stale']];
+  const fx = $('filters');
+  fx.innerHTML = '';
+  defs.forEach(function(d){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fbtn' + (filter === d[0] ? ' on' : '');
+    b.textContent = d[1];
+    b.addEventListener('click', function(){ filter = d[0]; render() });
+    fx.appendChild(b);
+  });
+
+  const list = $('list');
+  list.innerHTML = '';
+  const shown = leads.filter(function(l){
+    if (filter === 'all') return true;
+    if (filter === 'canceled') return !!l.canceled;
+    if (filter === 'never') return !l.followUps;
+    if (filter === 'stale') return isStale(l);
+    return urgency(daysOld(l)).f === filter;
+  });
+  if (!shown.length){
+    list.innerHTML = '<div class="notice warn">Nothing in this view. ' + (leads.length ? 'Try another filter.' : 'No open leads — either the pipeline is clear or the sync hasn’t published yet.') + '</div>';
+  }
+  shown.sort(function(a,b){
+    const sa = isSnoozed(a) ? 1 : 0, sb = isSnoozed(b) ? 1 : 0;
+    if (sa !== sb) return sa - sb;
+    return daysOld(b) - daysOld(a);
+  });
+  shown.forEach(function(l,i){ list.appendChild(card(l,i)) });
   leaderboard();
 }
-function setFilter(f){filter=f;render()}
+
 function card(l,i){
-  var d=daysOld(l),u=urgency(d);
-  var el=document.createElement('div');el.className='card';el.id='card-'+i;
-  var badges='<span class="badge '+u.cls+'">'+u.label+' old</span>';
-  if(l.canceled)badges+=' <span class="badge b-cancel">CANCELED CONSULT — rebook?</span>';
-  if(isStale(l))badges+=' <span class="badge b-stale">STALE</span>';
-  if(isSnoozed(l))badges+=' <span class="badge b-snooze">Snoozed until '+fmt(l.snoozeUntil)+'</span>';
-  badges+=' <span class="badge b-status">'+esc(l.status)+(l.followUps?' · '+l.followUps+' touch'+(l.followUps>1?'es':''):'')+'</span>';
-  var opts=OPEN_STATUSES.concat(CLOSE_STATUSES).map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>'}).join('');
-  el.innerHTML='<div class="row1"><div><div class="cname">'+esc(l.customer)+'</div>'+
-    '<div class="meta">Consult created '+fmt(l.createdOn)+' · last visit '+fmt(l.lastApptDate)+(l.visits>1?' · '+l.visits+' visits':'')+
-    '<br>'+esc(l.leadType||'')+(l.campaign?' · '+esc(l.campaign):'')+
-    (l.phone?'<br>📞 <a href="tel:'+esc(l.phone.replace(/[^0-9+]/g,''))+'" style="color:#2a6cc4;font-weight:600">'+esc(l.phone)+'</a>':'')+
-    (l.address?'<br>📍 '+esc(l.address):'')+
-    (l.lastFollowUp?'<br>Last follow-up: '+fmt(l.lastFollowUp):'')+'</div></div>'+
-    '<div style="text-align:right">'+badges+'</div></div>'+
-    (l.notes&&l.notes.length?'<div class="notes">'+esc(l.notes.join('\n'))+'</div>':'')+
-    '<div class="logrow"><select id="st-'+i+'">'+opts+'</select>'+
-    '<input type="text" id="nt-'+i+'" placeholder="What happened? (required)">'+
-    '<input type="date" id="fd-'+i+'" title="Next follow-up (optional — snoozes the card until then)">'+
-    '<button class="save" id="sv-'+i+'" onclick="logIt('+i+')">Log it</button></div>'+
-    '<div class="fb" id="fb-'+i+'"></div>';
-  el.dataset.customer=l.customer;el.dataset.key=l.key||'';
+  const d = daysOld(l), u = urgency(d);
+  const el = document.createElement('div');
+  el.className = 'card'; el.id = 'card-' + i;
+
+  let badges = '<span class="badge ' + u.cls + '">' + u.label + ' since consult</span>';
+  if (l.canceled) badges += ' <span class="badge b-cancel">CANCELED CONSULT — rebook?</span>';
+  if (isStale(l)) badges += ' <span class="badge b-stale">STALE</span>';
+  if (isSnoozed(l)) badges += ' <span class="badge b-snooze">Snoozed until ' + esc(fmt(l.snoozeUntil)) + '</span>';
+  badges += ' <span class="badge b-status">' + esc(l.status) + (l.followUps ? ' · ' + esc(l.followUps) + ' touch' + (l.followUps > 1 ? 'es' : '') : '') + '</span>';
+
+  const opts = OPEN_STATUSES.concat(CLOSE_STATUSES).map(function(o){
+    return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + '</option>';
+  }).join('');
+
+  /* No phone number and no address are rendered anywhere on this card, by design.
+     The ServiceTitan link is how you get to the contact details. */
+  const job = jobNumber(l);
+  const stBtn = job
+    ? '<a class="stlink" target="_blank" rel="noopener noreferrer" href="https://go.servicetitan.com/#/Job/Index/' + esc(job) + '">Open in ServiceTitan</a>'
+    : '';
+  const note = notesText(l.notes);
+
+  el.innerHTML =
+    '<div class="row1"><div><div class="cname">' + esc(l.customer) + '</div>' +
+      '<div class="meta">Consult created ' + esc(fmt(l.createdOn)) + ' · last visit ' + esc(fmt(l.lastApptDate)) + (l.visits > 1 ? ' · ' + esc(l.visits) + ' visits' : '') +
+      '<br>' + esc(l.leadType || '') + (l.campaign ? ' · ' + esc(l.campaign) : '') +
+      (l.lastFollowUp ? '<br>Last follow-up: ' + esc(fmt(l.lastFollowUp)) : '') +
+      '</div></div>' +
+      '<div style="text-align:right">' + badges + '</div></div>' +
+    stBtn +
+    (note ? '<div class="notes">' + esc(note) + '</div>' : '') +
+    '<div class="logrow"><select id="st-' + i + '">' + opts + '</select>' +
+      '<input type="text" id="nt-' + i + '" placeholder="What happened? (optional)">' +
+      '<input type="date" id="fd-' + i + '" title="Next follow-up (optional — snoozes the card until then)">' +
+      '<button class="save" type="button" id="sv-' + i + '">Log it</button></div>' +
+    '<div class="fb" id="fb-' + i + '"></div>';
+
+  el.querySelector('#sv-' + i).addEventListener('click', function(){ logIt(i,l) });
   return el;
 }
-function logIt(i){
-  var el=document.getElementById('card-'+i);
-  var status=document.getElementById('st-'+i).value;
-  var notes=document.getElementById('nt-'+i).value.trim();
-  var fb=document.getElementById('fb-'+i),btn=document.getElementById('sv-'+i);
-  if(!notes){fb.textContent='Add a note before saving.';fb.className='fb err';return}
-  btn.disabled=true;btn.textContent='Saving…';
-  fetch(LOG_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({hca:hca,customer:el.dataset.customer,leadKey:el.dataset.key,status:status,notes:notes,followUpDate:(document.getElementById('fd-'+i)?document.getElementById('fd-'+i).value:'')||''})})
-  .then(function(){
-    btn.textContent='Logged ✓';
-    var closing=['PurchasedElsewhere','RepairedInstead','Lost','DeadOther'].indexOf(status)!==-1;
-    fb.textContent=closing?'Saved. This lead drops off everyone\u2019s tracker on the next hourly sync.':'Saved '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    fb.className='fb ok';
-    document.getElementById('nt-'+i).value='';
-    if(closing)el.className='card closing';
-  })
-  .catch(function(){btn.disabled=false;btn.textContent='Log it';fb.textContent='Save failed — check connection and retry.';fb.className='fb err'});
+
+/* ---------- write path ----------
+   Honest reporting: the card only says "Logged" when the Realtime Database
+   accepted the write and handed back a generated key. The old version printed
+   a checkmark for a no-cors POST whose response it could not read, so a failed
+   save looked identical to a good one. */
+function logIt(i,l){
+  const el = $('card-' + i);
+  const status = $('st-' + i).value;
+  const notes = $('nt-' + i).value.trim();
+  const followUpDate = ($('fd-' + i) ? $('fd-' + i).value : '') || '';
+  const fb = $('fb-' + i), btn = $('sv-' + i);
+
+  if (!status){ fb.textContent = 'Pick an outcome before saving.'; fb.className = 'fb err'; return }
+  if (!user){ fb.textContent = 'Signed out — sign in again to save.'; fb.className = 'fb err'; return }
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  fb.textContent = ''; fb.className = 'fb';
+
+  const entry = {
+    hca: hca,
+    customer: l.customer,
+    leadKey: l.key || '',
+    status: status,
+    notes: notes,
+    followUpDate: followUpDate,
+    by: user.email,
+    at: new Date().toISOString(),
+    source: 'follow-up-tracker'
+  };
+
+  function failed(why){
+    btn.disabled = false; btn.textContent = 'Log it';
+    fb.textContent = 'Save failed (' + why + ') — nothing was recorded. Retry.';
+    fb.className = 'fb err';
+  }
+
+  user.getIdToken().then(function(token){
+    return fetch(LOG_BASE + '?auth=' + encodeURIComponent(token), {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(entry)
+    }).then(function(r){
+      return r.text().then(function(t){
+        let body = null;
+        try { body = t ? JSON.parse(t) : null } catch (_) { body = null }
+        if (!r.ok) throw new Error(String(r.status));
+        if (!body || !body.name) throw new Error('no id');
+        return body;
+      });
+    });
+  }).then(function(){
+    /* TRANSITIONAL: remove once the sync reads cmh_followup_log.
+       Fire and forget to the existing sheet receiver so today's hourly sync keeps
+       seeing outcomes. no-cors means the response is opaque, so this can never
+       decide the message the HCA sees — the Realtime Database write above already did. */
+    try {
+      fetch(LOG_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(entry)}).catch(function(){});
+    } catch (_) { /* ignore */ }
+
+    btn.textContent = 'Logged ✓';
+    const closing = CLOSING_KEYS.indexOf(status) !== -1;
+    fb.textContent = closing
+      ? 'Saved. This lead drops off everyone’s tracker on the next hourly sync.'
+      : 'Saved ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    fb.className = 'fb ok';
+    $('nt-' + i).value = '';
+    if (closing) el.className = 'card closing';
+  }).catch(function(e){
+    failed((e && e.message) ? e.message : 'network');
+  });
 }
+
 function leaderboard(){
-  var lb=data&&data.leaderboard?data.leaderboard:{};
-  var rows=HCAS.map(function(n){var r=lb[n]||{open:0,neverTouched:0,logged7:0,logged30:0};return{n:n,r:r}});
-  rows.sort(function(a,b){return b.r.logged7-a.r.logged7||b.r.logged30-a.r.logged30});
-  document.getElementById('leaderboard').innerHTML=
-    '<tr><th>HCA</th><th>Open</th><th>Never touched</th><th>Logged 7d</th><th>Logged 30d</th></tr>'+
-    rows.map(function(x){return '<tr class="'+(x.n===hca?'me':'')+'"><td>'+esc(x.n)+'</td><td>'+x.r.open+'</td><td>'+x.r.neverTouched+'</td><td><b>'+x.r.logged7+'</b></td><td>'+x.r.logged30+'</td></tr>'}).join('');
+  const lb = (data && data.leaderboard) ? data.leaderboard : {};
+  const rows = HCAS.map(function(n){
+    const r = lb[n] || {};
+    return {n:n, open:r.open||0, neverTouched:r.neverTouched||0, logged7:r.logged7||0, logged30:r.logged30||0};
+  });
+  rows.sort(function(a,b){ return b.logged7 - a.logged7 || b.logged30 - a.logged30 });
+  $('leaderboard').innerHTML =
+    '<tr><th>HCA</th><th>Open</th><th>Never touched</th><th>Logged 7d</th><th>Logged 30d</th></tr>' +
+    rows.map(function(x){
+      return '<tr class="' + (x.n === hca ? 'me' : '') + '"><td>' + esc(x.n) + '</td><td>' + esc(x.open) + '</td><td>' + esc(x.neverTouched) + '</td><td><b>' + esc(x.logged7) + '</b></td><td>' + esc(x.logged30) + '</td></tr>';
+    }).join('');
 }
-boot();
 </script>
 </body>
 </html>
