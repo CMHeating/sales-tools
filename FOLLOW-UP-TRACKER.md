@@ -5,7 +5,7 @@ Pages, which is public, so the page itself contains no customer data at all —
 it asks Firebase for the data at runtime, after the person using it signs in
 with their CM Heating Google account.
 
-This file explains what the page reads, what it writes, the three console
+This file explains what the page reads, what it writes, the four console
 settings that have to be turned on before it works, and what the hourly sync
 has to change next.
 
@@ -13,9 +13,61 @@ has to change next.
 
 ## What the page reads
 
-One node in the Realtime Database:
+Two nodes in the Realtime Database.
 
-    cmh_followup_tracker
+### `cmh_followup_roster` — who the signed-in account is
+
+The page does not guess who you are. It asks. Immediately after sign-in it reads
+its own entry out of the roster and gets back either an HCA key, admin, or
+nothing at all.
+
+    cmh_followup_roster/hcas/<emailKey>   = "<hcaKey>"    // an HCA -> their own list, and nothing else
+    cmh_followup_roster/admins/<emailKey> = true          // an admin -> the picker, any HCA
+
+Two key formats, and they matter — a mismatch is a rejected write, not a silent
+one:
+
+- **`emailKey`** is the lowercased email address with **every `.` replaced by a
+  `,`**. Realtime Database keys cannot contain a dot; `@` is fine. So an address
+  of the form `<first>.<last>@cmheating.com` is stored under the key
+  `<first,last@cmheating,com>`. A middle initial gets replaced too —
+  `<first>.<m>.<last>@cmheating.com` becomes `<first,m,last@cmheating,com>`.
+- **`hcaKey`** is the HCA's display name lowercased with runs of non-alphanumeric
+  characters collapsed to a single `-`.
+
+The ten `hcaKey` values this page expects, one per HCA on the roster:
+
+| HCA | `hcaKey` |
+|---|---|
+| Adam Weberg | `adam-weberg` |
+| Amber Maddalena | `amber-maddalena` |
+| Chester Granard | `chester-granard` |
+| Davis Diosdado | `davis-diosdado` |
+| Javierre Milo | `javierre-milo` |
+| Joe Chounramany | `joe-chounramany` |
+| Joseph Ruble | `joseph-ruble` |
+| Kyle McAlister | `kyle-mcalister` |
+| Samir Khoury | `samir-khoury` |
+| Trevor Bohm | `trevor-bohm` |
+
+Note the two names that differ between systems. The roster follows this page's
+own HCA list: it is **Javierre Milo** (`javierre-milo`), not "Jay Milo", and
+**Joseph Ruble** (`joseph-ruble`), not "Joe Ruble". `joe-chounramany` is a
+different person.
+
+What each outcome does:
+
+| Roster says | The page does |
+|---|---|
+| `hcas/<you>` is an hcaKey | Loads that HCA's list. No picker. `?hca=` in the URL is ignored outright |
+| `admins/<you>` is `true` | Shows the picker; may view any HCA and log on their behalf |
+| neither | "You're signed in but not on the tracker roster yet — ask Geoff." and loads nothing |
+
+The roster is written **only in the Firebase console**, by hand. No email address
+is committed to this repository, and the rules make the node write-proof from the
+page. A read denial is treated as "not on the roster" — the page fails closed.
+
+### `cmh_followup_tracker` — the lead data
 
 Shape:
 
@@ -36,7 +88,7 @@ Fields the page uses on each lead:
 | `lastApptDate` | Shown as "last visit"; **primary** source for the age badge |
 | `visits` | "· 3 visits" |
 | `leadType`, `campaign` | The grey line under the name |
-| `notes` | The grey note box. Array of lines or a single string, both work |
+| `notes` | The grey note box — **read-only history from the sync.** Array of lines or a single string, both work. The page has no note input of its own |
 | `status`, `followUps`, `lastFollowUp` | The status chip and the stale test |
 | `snoozeUntil` | Sorts the card to the bottom of the list and pauses the stale test until that date |
 | `canceled` | "CANCELED CONSULT — rebook?" badge |
@@ -55,23 +107,35 @@ That is the message to expect until the rule below is pasted in.
 
 ## What the page writes
 
-**Primary — the Realtime Database.** Every "Log it" click POSTs one entry to:
+**Primary — the Realtime Database.** Every "Log it" click POSTs one entry into
+that HCA's own bucket:
 
-    cmh_followup_log
+    cmh_followup_log/<hcaKey>
 
-Entry shape (Firebase generates the key):
+Bucketing per HCA is what makes ownership enforceable. A flat node cannot be
+constrained — a rule can only see the path it is being written to, so the writer
+has to be bound to a path.
+
+Entry shape (Firebase generates the child key):
 
     {
+      hcaKey:       "kyle-mcalister",        // must equal the bucket it is written to
       hca:          "Kyle McAlister",
       customer:     "<customer name>",
       leadKey:      "<the lead's key>",
       status:       "Contacted",
-      notes:        "",                      // optional, may be empty
       followUpDate: "",                      // optional, may be empty
       by:           "<signer's email>",      // filled in from the Google account
       at:           "2026-08-29T17:04:11.902Z",
       source:       "follow-up-tracker"
     }
+
+**The log is status-only. There is no free-text note field, on purpose.** The
+card offers an outcome dropdown and an optional next-follow-up date (which
+snoozes the card until then) and nothing else. What was actually said on a call
+belongs in ServiceTitan where the rest of the company can see it, not in a second
+private log that only this page writes and nobody reads. The `notes` the card
+displays come *down* from the sync and are read-only.
 
 The card says "Logged" **only** when Firebase returns 2xx and a generated key.
 Anything else and the HCA sees "Save failed (…) — nothing was recorded. Retry."
@@ -89,7 +153,7 @@ the sync reads `cmh_followup_log` instead.
 
 ## Console steps for Geoff
 
-Three things, all in the Firebase console for the **install-availability-tracker**
+Four things, all in the Firebase console for the **install-availability-tracker**
 project. Nothing here touches the Install Availability tool.
 
 **1. Turn on Google sign-in**
@@ -136,21 +200,38 @@ service account for the sync, so revoking it later doesn't lock a human out.
       ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'WRITER-ACCOUNT-EMAIL-HERE'"
     },
 
+    "cmh_followup_roster": {
+      "hcas": {
+        "$emailKey": {
+          ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase().replace('.', ',') == $emailKey",
+          ".write": false
+        }
+      },
+      "admins": {
+        "$emailKey": {
+          ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase().replace('.', ',') == $emailKey",
+          ".write": false
+        }
+      }
+    },
+
     "cmh_followup_log": {
-      ".read": "auth != null && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com')",
-      "$entry": {
-        ".write": "auth != null && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && !data.exists() && newData.child('by').val() == auth.token.email",
-        ".validate": "newData.hasChildren(['hca','customer','status','at','by'])",
-        "hca":      { ".validate": "newData.isString() && newData.val().length <= 80" },
-        "customer": { ".validate": "newData.isString() && newData.val().length <= 200" },
-        "status":   { ".validate": "newData.isString() && newData.val().length <= 40" },
-        "at":       { ".validate": "newData.isString() && newData.val().length <= 40" },
-        "by":       { ".validate": "newData.isString() && newData.val() == auth.token.email" },
-        "leadKey":      { ".validate": "newData.isString() && newData.val().length <= 120" },
-        "notes":        { ".validate": "newData.isString() && newData.val().length <= 2000" },
-        "followUpDate": { ".validate": "newData.isString() && newData.val().length <= 20" },
-        "source":       { ".validate": "newData.isString() && newData.val().length <= 40" },
-        "$other": { ".validate": false }
+      "$hcaKey": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com')",
+        "$entry": {
+          ".write": "auth != null && auth.token.email_verified == true && !data.exists() && newData.child('by').val() == auth.token.email && newData.child('hcaKey').val() == $hcaKey && (root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey || root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+          ".validate": "newData.hasChildren(['hcaKey','hca','customer','status','at','by'])",
+          "hcaKey":   { ".validate": "newData.isString() && newData.val() == $hcaKey" },
+          "hca":      { ".validate": "newData.isString() && newData.val().length <= 80" },
+          "customer": { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "status":   { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "at":       { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "by":       { ".validate": "newData.isString() && newData.val() == auth.token.email" },
+          "leadKey":      { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "followUpDate": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "source":       { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "$other": { ".validate": false }
+        }
       }
     }
 
@@ -160,27 +241,87 @@ service account for the sync, so revoking it later doesn't lock a human out.
 
 What each line is doing, in plain terms:
 
+- **Read your roster entry:** you may read the entry whose key is your own
+  address, and no other. Because there is no `.read` at `cmh_followup_roster` or
+  at `hcas` / `admins`, and read rules only cascade downward, nobody can list the
+  roster — you can look yourself up and that is all.
+- **Write the roster:** `false` everywhere. The console ignores rules, so Geoff
+  can still edit it there; the page and every signed-in account cannot. This is
+  what stops an HCA from promoting themselves.
 - **Read the tracker:** any signed-in, email-verified `cmheating.com` account.
   Nobody outside the company, and no anonymous token, gets in.
 - **Write the tracker:** only the sync's own writer account. An HCA cannot
   rewrite the lead list, only log against it.
-- **Write a log entry:** any company account may add an entry, but `!data.exists()`
-  means an entry can be created and never edited or deleted afterwards — the log
-  is append-only, so nobody can quietly rewrite history. `newData.child('by')`
-  must equal the signer's own email, so an HCA cannot log an outcome under
-  somebody else's name.
-- **`$other: false`** rejects any field not on the list, so a modified page
-  cannot stuff extra data into the database.
+- **Write a log entry:** four conditions, all required.
+  `!data.exists()` means an entry can be created and never edited or deleted
+  afterwards — the log is append-only, so nobody can quietly rewrite history.
+  `by` must equal the signer's own email. `hcaKey` must equal the bucket the
+  entry is being written into, so the field cannot disagree with the path. And
+  the roster lookup must return either *this* `$hcaKey` for the signer, or admin
+  — which is the condition that binds an HCA to their own bucket.
+- **`$other`** rejects any field not on the list, so a modified page cannot stuff
+  extra data into the database. Note there is no longer a `notes` field: the page
+  writes status only.
+
+Two things about the rules language that this snippet leans on, both documented
+Firebase behaviour:
+
+- `String.replace(a, b)` in database rules replaces **every** occurrence, not
+  just the first. That is what makes a multi-dot address like
+  `<first>.<m>.<last>@cmheating.com` produce the same key on both sides. (The
+  page deliberately uses `split('.').join(',')` for this, because JavaScript's
+  own `String.replace` with a string pattern would only swap the first dot and
+  the two keys would not match.)
+- `toLowerCase()` is available on strings in rules, so the comparison does not
+  depend on how the address was capitalised when the token was minted.
 
 Rules are text — paste, click **Publish**, and it is live in seconds. There is a
 **Rules Playground** on the same screen if you want to test one before publishing.
+These rules have **not** been run through the Playground yet; do that before
+trusting them.
 
-### What this does NOT do yet
+**4. Create the roster node**
 
-Any signed-in company account can read **every** HCA's leads, not just their own,
-and can view any HCA through the picker. That is deliberate for now — the leads
-live in one flat node, and a rule cannot filter rows out of a node. Splitting the
-data into per-HCA sub-nodes (below) is what makes own-list-only enforceable.
+Firebase console → **Realtime Database** → **Data**. Create `cmh_followup_roster`
+by hand. Nothing in this repository contains an email address, and nothing should
+— this node is the only place the mapping exists.
+
+Shape, with placeholders standing in for the real addresses:
+
+    cmh_followup_roster
+      hcas
+        <first,last@cmheating,com>       : "kyle-mcalister"
+        <first,last@cmheating,com>       : "amber-maddalena"
+        …one line per HCA, ten in total…
+      admins
+        <first,last@cmheating,com>       : true
+
+Remember the key rewrite: **every dot in the address becomes a comma**, and the
+address is lowercased first. The value on the `hcas` side must be exactly one of
+the ten `hcaKey` strings in the table near the top of this file — a typo there
+does not fail loudly, it just leaves that HCA looking like they are not on the
+roster.
+
+Add yourself under `admins` so you keep the picker. An admin can view any HCA's
+list and log on their behalf, which is intentional — that is the covering-for-
+someone case.
+
+### What this does and does not enforce
+
+**Enforced now:** writer identity *and* ownership. An entry's `by` field must be
+the signer's own address, and the bucket it lands in must be the one the roster
+assigns to that signer. An HCA cannot log an outcome against another HCA's key —
+not by editing the page, not by calling the REST endpoint directly, because the
+rule re-derives the mapping server-side from a node the page cannot write. Admins
+can log on anyone's behalf, by design.
+
+**Not enforced yet:** *read* scoping of the lead data. Any signed-in company
+account can still read every HCA's leads out of `cmh_followup_tracker`, because
+the leads live in one flat node and a rule cannot filter rows out of a node.
+Splitting them into per-HCA sub-nodes (below) is what would make own-list-only
+reads enforceable, the same way bucketing made own-key-only writes enforceable.
+Until then the read control is "verified `@cmheating.com` account", not "your
+leads only".
 
 ---
 
@@ -196,16 +337,20 @@ changes. Roughly in order of how much they matter:
    the sync rewrite it, or the old copies stay.
 
 2. **Emit `jobNumber`.** The "Open in ServiceTitan" button only appears when the
-   lead carries a job number. Right now most leads will not have one, so most
-   cards will not show the button and the HCA has no way to reach the contact
-   details from the page. This is the piece that makes removing phone and address
-   painless instead of annoying.
+   lead carries a job number of **six or more digits** — anything shorter is
+   ignored rather than turned into a link to somebody else's job. Right now most
+   leads will not have one, so most cards will not show the button and the HCA
+   has no way to reach the contact details from the page. This is the piece that
+   makes removing phone and address painless instead of annoying.
 
-3. **Read `cmh_followup_log` as the source of logged outcomes**, then retire the
-   sheet receiver. Once the sync reads the database node, the transitional
-   `no-cors` post to the Apps Script `/exec` URL comes out of the page. That
-   receiver is unauthenticated — anyone who has seen the page source can post
-   fake outcomes into it — so retiring it is a real fix, not tidying.
+3. **Read `cmh_followup_log/<hcaKey>/…` as the source of logged outcomes**, then
+   retire the sheet receiver. Note the entries are bucketed per HCA now, so the
+   sync has to walk the buckets rather than read one flat list. Once the sync
+   reads the database node, the transitional `no-cors` post to the Apps Script
+   `/exec` URL comes out of the page. That receiver is unauthenticated — anyone
+   who has seen the page source can post fake outcomes into it — so retiring it
+   is a real fix, not tidying. It is also the last place a forged `hca` value can
+   still get in, since the database path no longer accepts one.
 
 4. **Write the node as a signed-in writer account, not an anonymous token.** The
    rule above requires it. Create a dedicated Firebase Auth user for the sync and
@@ -217,7 +362,7 @@ changes. Roughly in order of how much they matter:
 
 ## Why any of this
 
-Three things were true at once, and together they were the problem.
+Four things were true at once, and together they were the problem.
 
 **The repository is public.** Everything committed to it is readable by anyone on
 the internet. Ten older per-HCA tracker pages had customer data baked directly
@@ -238,7 +383,18 @@ response, so the page printed "Logged" whether the save worked or not. An HCA wh
 logged a call into a dropped request would have every reason to believe it was
 recorded. Now the checkmark means Firebase confirmed the write.
 
-One thing worth being clear about: the domain check inside the page is a
-courtesy, not a lock. Anyone can edit a page in their own browser. The database
-rules are the actual protection, which is why step 3 above is the step that
-matters most.
+**Anyone could log as anyone.** The first cut of this page took the HCA name from
+the URL and the Google profile's display name, and sent it along with the entry.
+Both are things the person at the keyboard controls, so any verified company
+account could append an outcome under another HCA's name, against any customer
+it liked. The roster fixes that: identity now comes from a node only Geoff can
+write, and the database rule re-derives the same mapping on every single write
+rather than trusting what the page sent.
+
+One thing worth being clear about: the domain check inside the page, the roster
+lookup the page performs, and the "you can only log against your own leads"
+message are all courtesies, not locks. Anyone can edit a page in their own
+browser. **Steps 3 and 4 above — the rules and the roster node — are the actual
+protection**, and neither exists until they are pasted into the console. Until
+then the page fails closed: with no roster, nobody matches, and everybody sees
+"not on the tracker roster yet".

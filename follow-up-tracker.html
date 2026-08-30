@@ -137,8 +137,9 @@ const FIREBASE_CONFIG = {
 };
 
 const RTDB = 'https://install-availability-tracker-default-rtdb.firebaseio.com';
-const DATA_BASE = RTDB + '/cmh_followup_tracker.json';
-const LOG_BASE  = RTDB + '/cmh_followup_log.json';
+const DATA_BASE   = RTDB + '/cmh_followup_tracker.json';
+const LOG_BASE    = RTDB + '/cmh_followup_log';
+const ROSTER_BASE = RTDB + '/cmh_followup_roster';
 /* Existing Apps Script receiver that the hourly sync still reads. Public /exec URL. */
 const LOG_URL = 'https://script.google.com/macros/s/AKfycbwshtoPM_b2DLqogtxYXuZ0LnxP_ztIPR29hDXiCsTq1T4fJ_HPSp3CYuRp0qFoZXp74w/exec';
 
@@ -164,11 +165,30 @@ const WORK_DAYS_BY_HCA = {
 const STALE_HOURS = 52; /* no export lands on Sundays, so a ~2 day gap is normal */
 
 let data = null, hca = null, filter = 'all', user = null;
+/* Who the roster says the signed-in account is. Both null/false until the roster
+   read comes back; nothing loads until then. */
+let myHcaKey = null, isAdmin = false;
 
 const $ = function(id){ return document.getElementById(id) };
 
 /* ---------- helpers ---------- */
 function qs(name){ const v = new URLSearchParams(location.search).get(name); return v ? v : null; }
+
+/* Realtime Database keys may not contain '.', so the roster is keyed by the
+   lowercased email with every dot turned into a comma ('@' is a legal key
+   character). split/join rather than .replace('.', ',') on purpose: JS replace
+   with a string pattern only swaps the FIRST match, while the identical-looking
+   expression in the database rules swaps them all. A multi-dot address of the
+   form (first).(middle).(last) at the company domain has to produce the same key
+   on both sides or the write is rejected. */
+function emailKey(email){ return String(email == null ? '' : email).toLowerCase().split('.').join(','); }
+
+/* An HCA's display name as a node key: lowercased, runs of non-alphanumerics
+   collapsed to a single '-'. "Kyle McAlister" -> "kyle-mcalister". This is the
+   bucket log entries are written under and the value the rules compare against. */
+function hcaKey(name){
+  return String(name == null ? '' : name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] }) }
 function parseIso(s){ if(!s) return null; const d = new Date(String(s).slice(0,10) + 'T12:00:00'); return Number.isNaN(d.getTime()) ? null : d }
 function noon(){ const t = new Date(); t.setHours(12,0,0,0); return t }
@@ -237,7 +257,9 @@ function jobNumber(l){
   const raw = l.jobNumber || l.job || l.jobId || (/^\d{6,}$/.test(String(l.key || '')) ? l.key : null);
   if (!raw) return null;
   const digits = String(raw).replace(/\D/g,'');
-  return digits.length >= 5 ? digits : null;
+  /* ServiceTitan job numbers are six digits or more. Five was too loose — it let
+     a stray short number build a link to somebody else's job. */
+  return digits.length >= 6 ? digits : null;
 }
 
 /* ---------- auth ---------- */
@@ -292,7 +314,18 @@ $('signInBtn').addEventListener('click', function(){
 });
 
 $('signOutBtn').addEventListener('click', function(){
-  signOut(auth).catch(function(){ /* onAuthStateChanged still clears the screen */ });
+  /* Wipe first, sign out second. signOut() is a network call and it can fail —
+     on a dead connection the old order left every customer name still painted on
+     the screen of someone who had just asked to leave. Clearing up front means
+     the DOM is empty no matter what the call does. onAuthStateChanged(null)
+     repeats all of this a moment later, harmlessly. */
+  user = null; hca = null; myHcaKey = null; isAdmin = false;
+  clearScreen();
+  $('who').style.display = 'none';
+  $('title').textContent = 'Follow-Up Tracker';
+  $('subtitle').textContent = 'Sign in to see your pipeline.';
+  showGate('');
+  signOut(auth).catch(function(){});
 });
 
 getRedirectResult(auth).catch(function(err){
@@ -301,7 +334,7 @@ getRedirectResult(auth).catch(function(err){
 
 onAuthStateChanged(auth, function(u){
   if (!u){
-    user = null;
+    user = null; hca = null; myHcaKey = null; isAdmin = false;
     $('who').style.display = 'none';
     $('title').textContent = 'Follow-Up Tracker';
     $('subtitle').textContent = 'Sign in to see your pipeline.';
@@ -311,7 +344,7 @@ onAuthStateChanged(auth, function(u){
   }
   const email = String(u.email || '').toLowerCase();
   if (!email.endsWith(EMAIL_SUFFIX) || u.emailVerified !== true){
-    user = null;
+    user = null; hca = null; myHcaKey = null; isAdmin = false;
     clearScreen();
     $('who').style.display = 'none';
     signOut(auth).catch(function(){});
@@ -326,17 +359,77 @@ onAuthStateChanged(auth, function(u){
   start();
 });
 
-/* ---------- boot after sign-in ---------- */
+/* ---------- boot after sign-in ----------
+   Who you are is a fact the database holds, not something the page guesses. The
+   old version matched the Google displayName against the HCA list, which is both
+   fragile (any HCA who renames their Google profile falls through to the picker)
+   and worthless as a control — displayName is user-editable. Now the page asks
+   cmh_followup_roster, and the database rules re-derive exactly the same mapping
+   on every write, so a tampered page cannot log against another HCA's key.
+
+   The roster is populated by Geoff in the Firebase console. No email address
+   ever enters this repository. */
+function rosterRead(path, token){
+  return fetch(ROSTER_BASE + '/' + path + '.json?auth=' + encodeURIComponent(token), {cache:'no-store'})
+    .then(function(r){
+      /* A rule denial means "not on the roster" as far as the page is concerned.
+         Fail closed: no entry, no list. */
+      if (r.status === 401 || r.status === 403) return null;
+      if (!r.ok) throw new Error('Roster read ' + r.status);
+      return r.text().then(function(t){ return t ? JSON.parse(t) : null });
+    });
+}
+
+function notOnRoster(msg){
+  hca = null;
+  $('app').style.display = 'none';
+  $('picker').innerHTML = ''; $('picker').className = '';
+  $('title').textContent = 'Follow-Up Tracker';
+  $('subtitle').textContent = '';
+  $('dataNotice').innerHTML = '<div class="notice err"><b>' +
+    esc(msg || 'You’re signed in but not on the tracker roster yet — ask Geoff.') + '</b></div>';
+}
+
 function start(){
-  hca = qs('hca');
-  if (hca && HCAS.indexOf(hca) === -1) hca = null;
-  if (!hca){
-    const dn = String((user && user.displayName) || '').trim().toLowerCase();
-    const match = HCAS.filter(function(n){ return n.toLowerCase() === dn })[0];
-    if (match) hca = match;
-  }
-  if (!hca){ renderPicker(); return }
-  load();
+  hca = null; myHcaKey = null; isAdmin = false;
+  $('title').textContent = 'Follow-Up Tracker';
+  $('subtitle').textContent = 'Checking the roster…';
+  $('dataNotice').innerHTML = '';
+
+  const ek = encodeURIComponent(emailKey(user.email));
+
+  user.getIdToken().then(function(token){
+    return rosterRead('hcas/' + ek, token).then(function(mine){
+      if (typeof mine === 'string' && mine) { myHcaKey = mine; return }
+      return rosterRead('admins/' + ek, token).then(function(a){ isAdmin = (a === true) });
+    });
+  }).then(function(){
+    if (myHcaKey){
+      /* An HCA sees exactly one list: their own. ?hca= is ignored outright. */
+      const match = HCAS.filter(function(n){ return hcaKey(n) === myHcaKey })[0];
+      if (!match){
+        notOnRoster('Your roster entry doesn’t match an HCA on this page — ask Geoff.');
+        return;
+      }
+      hca = match;
+      load();
+      return;
+    }
+    if (isAdmin){
+      /* Admins may look at anyone and log on their behalf, so ?hca= is honoured
+         here — it is a shortcut to something the picker already allows. */
+      const asked = qs('hca');
+      if (asked && HCAS.indexOf(asked) !== -1){ hca = asked; load(); return }
+      renderPicker();
+      return;
+    }
+    notOnRoster();
+  }).catch(function(e){
+    $('app').style.display = 'none';
+    $('subtitle').textContent = '';
+    $('dataNotice').innerHTML = '<div class="notice err"><b>Could not check the roster.</b> ' +
+      esc(e && e.message) + ' — try again, or tell Geoff if it keeps happening.</div>';
+  });
 }
 
 function renderPicker(){
@@ -480,8 +573,11 @@ function card(l,i){
       '<div style="text-align:right">' + badges + '</div></div>' +
     stBtn +
     (note ? '<div class="notes">' + esc(note) + '</div>' : '') +
+    /* Status only. There is deliberately no free-text box: the narrative of a
+       call belongs in ServiceTitan, where the rest of the company can see it,
+       not in a second private log nobody reads. The note box above is the
+       read-only history the sync sends down. */
     '<div class="logrow"><select id="st-' + i + '">' + opts + '</select>' +
-      '<input type="text" id="nt-' + i + '" placeholder="What happened? (optional)">' +
       '<input type="date" id="fd-' + i + '" title="Next follow-up (optional — snoozes the card until then)">' +
       '<button class="save" type="button" id="sv-' + i + '">Log it</button></div>' +
     '<div class="fb" id="fb-' + i + '"></div>';
@@ -498,22 +594,28 @@ function card(l,i){
 function logIt(i,l){
   const el = $('card-' + i);
   const status = $('st-' + i).value;
-  const notes = $('nt-' + i).value.trim();
   const followUpDate = ($('fd-' + i) ? $('fd-' + i).value : '') || '';
   const fb = $('fb-' + i), btn = $('sv-' + i);
 
   if (!status){ fb.textContent = 'Pick an outcome before saving.'; fb.className = 'fb err'; return }
   if (!user){ fb.textContent = 'Signed out — sign in again to save.'; fb.className = 'fb err'; return }
 
+  const key = hcaKey(hca);
+  /* Belt and braces. The database rule is the control that actually holds; this
+     just stops a confusing round trip when the page state has drifted. */
+  if (!key || (!isAdmin && key !== myHcaKey)){
+    fb.textContent = 'You can only log against your own leads.'; fb.className = 'fb err'; return;
+  }
+
   btn.disabled = true; btn.textContent = 'Saving…';
   fb.textContent = ''; fb.className = 'fb';
 
   const entry = {
+    hcaKey: key,
     hca: hca,
     customer: l.customer,
     leadKey: l.key || '',
     status: status,
-    notes: notes,
     followUpDate: followUpDate,
     by: user.email,
     at: new Date().toISOString(),
@@ -527,7 +629,9 @@ function logIt(i,l){
   }
 
   user.getIdToken().then(function(token){
-    return fetch(LOG_BASE + '?auth=' + encodeURIComponent(token), {
+    /* Entries are bucketed per HCA so a rule can bind the writer to the bucket.
+       POST makes Firebase generate the child key. */
+    return fetch(LOG_BASE + '/' + encodeURIComponent(key) + '.json?auth=' + encodeURIComponent(token), {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(entry)
@@ -556,7 +660,6 @@ function logIt(i,l){
       ? 'Saved. This lead drops off everyone’s tracker on the next hourly sync.'
       : 'Saved ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
     fb.className = 'fb ok';
-    $('nt-' + i).value = '';
     if (closing) el.className = 'card closing';
   }).catch(function(e){
     failed((e && e.message) ? e.message : 'network');
