@@ -80,13 +80,17 @@ else
   log "graphify installed at $(command -v graphify)"
 fi
 
-# Build the graph if it is missing. graphify's own docs describe `update` as
-# AST-only with no API cost, but it is still bounded and fail-soft here: a slow
-# or broken graph build must not cost the session either.
+# Build the graph if it is missing — the same LLM-free pair the local post-commit
+# hook runs (see CLAUDE.md "graphify"): AST re-extraction without clustering, then
+# clustering with placeholder community names. Plain `graphify update` would also
+# try to *name* communities through whatever model API key it finds, which sends
+# repo content to a model; `--no-cluster` + `cluster-only --no-label` never does.
+# Still bounded and fail-soft: a slow or broken graph build must not cost the session.
 GRAPH="${CLAUDE_PROJECT_DIR:-$PWD}/graphify-out/graph.json"
 if [ ! -f "$GRAPH" ]; then
   log "building graphify-out/ ..."
-  if timeout 300 graphify update "${CLAUDE_PROJECT_DIR:-$PWD}" >&2; then
+  if timeout 300 graphify update "${CLAUDE_PROJECT_DIR:-$PWD}" --no-cluster >&2 \
+     && timeout 300 graphify cluster-only "${CLAUDE_PROJECT_DIR:-$PWD}" --no-label >&2; then
     log "graph built"
   else
     log "graph build failed or timed out — graphify queries will fall back to grep"
