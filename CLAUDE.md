@@ -309,6 +309,23 @@ say that you did. The PreToolUse advisory in `.claude/settings.json`
 (`.claude/hooks/graph-advisory.sh`) restates this before every Grep/Glob/Read; it is
 advisory, not a gate.
 
+**Why the caveat exists — the silent-drop test, reproduced 2026-08-30 (no LLM):** the same
+three-function logic written once as `logic.py` and once as `logic.gs`, each run through
+`graphify extract . --code-only` in an otherwise empty directory:
+
+```
+logic.py  →  found 1 code … wrote graphify-out/graph.json: 4 nodes, 5 edges, 1 communities
+logic.gs  →  found 0 code … 1 file(s) not classified (no supported extension or shebang),
+             skipped: logic.gs   —  graph.json never written, exit code 0
+logic.js  →  (identical .gs content, renamed)  4 nodes, 5 edges
+```
+
+Identical logic: `.py` indexed, `.gs` dropped with a one-line notice and a **zero** exit code.
+In a real repo that notice is one line among many ("13 file(s) not classified … (+3 more)")
+and the graph still builds, so a query that is blind to a file and an honest empty result
+look identical. That indistinguishability — not the missing extension itself — is why an
+empty `affected` result must never be read as "nothing references this".
+
 Rules:
 - First check the CLI is available: `command -v graphify`. Remote/web sessions usually don't
   have it — fall back to normal search and say so, rather than reporting the graph as missing.
