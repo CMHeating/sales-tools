@@ -288,14 +288,26 @@ model — do not run those here without saying so.
 
 **Coverage caveat — the graph's blind spot is most of the logic.** The AST extractor does
 not parse the inline `<script>` blocks inside the ~68 self-contained HTML tools, and it does
-not classify `.gs` (Apps Script) files at all. Measured 2026-08-30: inline `<script>` is
-~24,900 lines (60% of the repo's logic), `apps-script/*.gs` ~15,400 lines (37%), and the
-extracted code — `.js`/`.mjs`/`.py`/`.sh` under `scripts/`, `plugins/`, `.claude/` — ~1,350
-lines (3%). **About 97% of the real logic is not in the graph.** Operationally: **an empty or
-"clean" `graphify affected` result is NOT proof that nothing else touches a thing** — it only
-means nothing in the 3% does. Before changing anything an HTML tool or a `.gs` backend reads
-(a Firebase path, an Apps Script endpoint, a field name, a points formula), grep the `*.html`
-and `apps-script/*.gs` files directly and say that you did.
+not classify `.gs` (Apps Script) files at all. Two measures, 2026-08-30, because line count
+overstated it:
+
+- *By raw line:* inline `<script>` ~24,900 lines (60%), `apps-script/*.gs` ~15,400 (37%),
+  extracted `.js`/`.mjs`/`.py`/`.sh` under `scripts/`, `plugins/`, `.claude/` ~1,350 (3%).
+  That 97% is inflated by the 24 `install-availability` snapshot copies (11,851 lines, only
+  1,679 unique).
+- *By unique substantive line* (≥12 chars, comments dropped, duplicates collapsed — the
+  number that means something): the 31 live HTML tools hide **~4,300** unique lines, the
+  `.gs` backends **~8,400** (83% of their lines are unique — almost all real logic), against
+  **~1,350** extracted. **About 90% of the repo's unique logic is not in the graph, and the
+  biggest, cleanest missing piece is Apps Script.**
+
+Operationally: **an empty or "clean" `graphify affected` result is NOT proof that nothing
+else touches a thing** — it only means nothing in the indexed 10% does. Before changing
+anything an HTML tool or a `.gs` backend reads (a Firebase path, an Apps Script endpoint, a
+field name, a points formula), grep the `*.html` and `apps-script/*.gs` files directly and
+say that you did. The PreToolUse advisory in `.claude/settings.json`
+(`.claude/hooks/graph-advisory.sh`) restates this before every Grep/Glob/Read; it is
+advisory, not a gate.
 
 Rules:
 - First check the CLI is available: `command -v graphify`. Remote/web sessions usually don't
