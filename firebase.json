@@ -1,8 +1,13 @@
 {
+  "database": {
+    "rules": "database.rules.json"
+  },
   "hosting": {
     "public": ".",
     "ignore": [
       "firebase.json",
+      "database.rules.json",
+      "database.install-availability.spark.rules.json",
       "**/.*",
       "**/node_modules/**"
     ]

@@ -1,0 +1,46 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "cmh_followup_tracker": {
+      ".read": false,
+      ".write": false
+    },
+
+    "cmh_sold_tracker": {
+      ".read": false,
+      ".write": false
+    },
+
+    "cmh_schedule": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "cmh_availability": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "cmh_edit_locks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "cmh_audit_logs": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "cmh_financing": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "cmh_install_checks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
