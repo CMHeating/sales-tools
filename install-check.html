@@ -113,6 +113,9 @@
       </div>
       <div><label>In a critical area?</label>
         <select id="critical"><option value="">Select…</option><option>No</option><option>Yes — needs review</option></select></div>
+      <div><label>Job type</label>
+        <select id="jobtype"><option value="">Select…</option><option>HVAC</option><option>Fireplace</option></select>
+        <div id="jobtypeHint" style="font-size:12px;color:var(--mut);margin-top:6px;line-height:1.35"></div></div>
       <div class="full" style="margin-top:2px"><a class="link" href="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0" target="_blank" rel="noopener">📋 Jurisdictions sheet (live) ↗</a></div>
       <div class="full" id="jbanner" style="display:none"></div>
     </div>
@@ -124,7 +127,7 @@
     <div class="grid2">
       <div><label>Materials list complete & ordered?</label>
         <select id="mat"><option value="">Select…</option><option>✔ Yes — complete & ordered</option><option>⚠ Partial — see notes</option><option>✖ No</option><option>N/A</option></select></div>
-      <div><label>Heat load calc completed?</label>
+      <div class="hv-only"><label>Heat load calc completed?</label>
         <select id="heatload"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option><option>N/A</option></select></div>
       <div><label>Layout photos taken?</label>
         <select id="photos"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Partial — see notes</option><option>✖ No</option></select></div>
@@ -138,7 +141,7 @@
   <div class="card">
     <h2><span class="n">2</span> Electrical — Jon</h2>
     <div class="grid2">
-      <div><label>Disconnect over 24&quot;?</label>
+      <div class="hv-only"><label>Disconnect over 24&quot;?</label>
         <select id="disconnect"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option><option>N/A</option></select></div>
       <div><label>Service outlet within 25&#39;?</label>
         <select id="outlet"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option><option>N/A</option></select></div>
@@ -164,12 +167,42 @@
         <select id="disc"><option value="">Select…</option><option>✔ Yes — verified</option><option>⚠ Needs review</option><option>None on this job</option></select></div>
       <div><label>Rebate submitted / eligible?</label>
         <select id="rebate"><option value="">Select…</option><option>✔ Yes — submitted / eligible</option><option>⚠ Pending</option><option>✖ No</option><option>N/A — not applicable</option></select></div>
-      <div><label>AHRI match on file?</label>
+      <div class="hv-only"><label>AHRI match on file?</label>
         <select id="ahri"><option value="">Select…</option><option>✔ Yes — AHRI match on file</option><option>⚠ Needs review</option><option>✖ No</option><option>N/A</option></select></div>
-      <div><label>Equipment matches the load?</label>
+      <div class="hv-only"><label>Equipment matches the load?</label>
         <select id="sizematch"><option value="">Select…</option><option>✔ Yes — correctly sized</option><option>⚠ Review</option><option>✖ Mismatch</option></select></div>
+      <div class="full"><label>Payment readiness</label>
+        <select id="pay"><option value="">Select…</option>
+          <option>✔ Financed — approved &amp; sales slip signed</option>
+          <option>⚠ Financed — approved, slip NOT signed</option>
+          <option>⚠ Financed — not yet approved</option>
+          <option>✔ Check/cash — half down received</option>
+          <option>⚠ Check/cash — half down NOT received</option>
+          <option>✔ Credit card — run / authorized</option>
+          <option>⚠ Credit card — not yet run</option>
+          <option>✔ Comfort Club rental — agreement signed</option>
+          <option>⚠ Comfort Club rental — agreement NOT signed</option>
+          <option>✔ Paid in full</option>
+          <option>N/A</option></select></div>
       <div class="full"><label>Equipment / model</label><input type="text" id="equip" placeholder="e.g. AMS 3-ton heat pump + variable-speed AH"></div>
       <div class="full"><label>Discount / rebate / sizing notes</label><textarea id="disc-notes" placeholder="Discounts applied, rebate program & status, AHRI cert #, sizing rationale."></textarea></div>
+    </div>
+  </div>
+  <!-- FIREPLACE (only rendered when Job type = Fireplace) -->
+  <div class="card fp-only" id="fireplaceCard" style="display:none">
+    <h2><span class="n">🔥</span> Fireplace</h2>
+    <p class="sub" style="margin:2px 2px 12px;font-size:12px">Replaces heat load, AHRI, sizing and disconnect — none of those apply to a fireplace.</p>
+    <div class="grid2">
+      <div><label>Gas line run &amp; sized?</label>
+        <select id="gasline"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Needs review</option><option>✖ No</option><option>N/A</option></select></div>
+      <div><label>Venting / liner confirmed?</label>
+        <select id="venting"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Needs review</option><option>✖ No</option><option>N/A</option></select></div>
+      <div><label>Gas permit pulled?</label>
+        <select id="gaspermit"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Pending</option><option>✖ No</option><option>N/A</option></select></div>
+      <div><label>Gas inspection scheduled?</label>
+        <select id="gasinspect"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Pending</option><option>✖ No</option><option>N/A</option></select></div>
+      <div class="full"><label>Finish work scoped (drywall / tile / mantel)?</label>
+        <select id="finish"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Needs review</option><option>✖ No</option><option>N/A</option></select></div>
     </div>
   </div>
   <!-- OVERALL (auto-verdict, just above approvals) -->
@@ -204,7 +237,8 @@
 <div id="printout"></div>
 <script>
 var el=function(id){return document.getElementById(id)};
-var FIELDS=['customer','idate','hca','by','city','critical','ready','d-elec','d-install','d-sales','mat','mat-notes','photos','video','heatload','disconnect','outlet','b-elec','bill-notes','b-labor','size-notes','disc','rebate','ahri','sizematch','equip','disc-notes'];
+var FIELDS=['customer','idate','hca','by','city','critical','jobtype','ready','pay',
+  'gasline','venting','gaspermit','gasinspect','finish','d-elec','d-install','d-sales','mat','mat-notes','photos','video','heatload','disconnect','outlet','b-elec','bill-notes','b-labor','size-notes','disc','rebate','ahri','sizematch','equip','disc-notes'];
 var SOLD={};
 var COMBO_REP='';  /* SALES REP pulled from the Combo Log, kept for the HCA cross-check */
 var QUEUE=[],qIdx=-1,qDone={};  /* morning review queue, handed in via the link's #q= payload */
@@ -215,11 +249,34 @@ var SHEET_URL="https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evT
 var BLOCK={'d-elec':'✖ Not ready','d-install':'✖ Not ready','d-sales':'✖ Not ready',
   'mat':'✖ No','photos':'✖ No','video':'✖ No','b-elec':'✖ Not billed','b-labor':'✖ Not billed',
   'heatload':'✖ No','sizematch':'✖ Mismatch'};
-var WARNVALS=['⚠ Needs attention','⚠ Partial — see notes','⚠ Needs fix','⚠ Review','⚠ Needs review','⚠ Pending','✖ No'];
+var WARNVALS=['⚠ Needs attention','⚠ Partial — see notes','⚠ Needs fix','⚠ Review','⚠ Needs review','⚠ Pending','✖ No',
+  '⚠ Financed — approved, slip NOT signed','⚠ Financed — not yet approved',
+  '⚠ Check/cash — half down NOT received','⚠ Credit card — not yet run',
+  '⚠ Comfort Club rental — agreement NOT signed'];
+/* Job-type scoping. A fireplace has no heat load, no AHRI cert, no equipment-to-load
+   sizing and no disconnect, so those are dropped from the verdict entirely rather than
+   answered "N/A" by hand — 36 rows in the log show that workaround happening today.
+   Values are kept, not cleared, so toggling job type never destroys an entry. */
+var HVAC_ONLY=['heatload','ahri','sizematch','disconnect'];
+var FIRE_ONLY=['gasline','venting','gaspermit','gasinspect','finish'];
+function isFireplace(){return v('jobtype')==='Fireplace';}
+function fieldActive(id){
+  if(isFireplace())return HVAC_ONLY.indexOf(id)===-1;
+  return FIRE_ONLY.indexOf(id)===-1;
+}
+function applyJobType(){
+  var fp=isFireplace();
+  Array.prototype.forEach.call(document.querySelectorAll('.hv-only'),function(e){e.style.display=fp?'none':'';});
+  Array.prototype.forEach.call(document.querySelectorAll('.fp-only'),function(e){e.style.display=fp?'':'none';});
+  var h=el('jobtypeHint');
+  if(h)h.textContent=fp?'Heat load, AHRI, sizing and disconnect are hidden — they do not apply.':'';
+}
 var VREL={'d-elec':'Electrical sign-off','d-install':'Install sign-off','d-sales':'Sales sign-off',
   'mat':'Materials list','photos':'Layout photos','video':'Walkthrough video','heatload':'Heat load calc',
   'disconnect':'Disconnect over 24"','outlet':"Service outlet within 25'",'b-elec':'Electrical labor billed',
-  'b-labor':'Install labor billed','disc':'Discounts','rebate':'Rebate','ahri':'AHRI match','sizematch':'Equipment sizing'};
+  'b-labor':'Install labor billed','disc':'Discounts','rebate':'Rebate','ahri':'AHRI match','sizematch':'Equipment sizing',
+  'pay':'Payment readiness',
+  'gasline':'Gas line','venting':'Venting / liner','gaspermit':'Gas permit','gasinspect':'Gas inspection','finish':'Finish work'};
 var BLOCKLABEL={'d-elec':'Electrical — Not ready','d-install':'Install — Not ready','d-sales':'Sales — Not ready',
   'mat':'Materials not complete','photos':'Layout photos not taken','video':'Walkthrough video not taken',
   'b-elec':'Electrical labor not billed','b-labor':'Install labor not billed','heatload':'No heat load calc',
@@ -252,6 +309,7 @@ var manualStatus=null; /* checker override — only allowed to RAISE severity, n
 function computeVerdict(){
   var blockers=[],warnings=[],unanswered=[];
   for(var id in VREL){if(!VREL.hasOwnProperty(id))continue;
+    if(!fieldActive(id))continue;
     var val=v(id);
     if(val===''){unanswered.push(VREL[id]);continue;}
     if(BLOCK[id]&&val===BLOCK[id]){blockers.push(BLOCKLABEL[id]);continue;}
@@ -273,6 +331,7 @@ function computeVerdict(){
   return {rank:rank,status:BYRANK[rank],blockers:blockers,warnings:warnings,unanswered:unanswered,juris:j,anyAnswered:anyAnswered};
 }
 function renderVerdict(){
+  applyJobType();
   var r=computeVerdict();
   var jb=el('jbanner');
   if(r.juris){jb.style.display='block';jb.className='banner '+(r.juris.lvl==='no'?'red':'amber');
@@ -308,10 +367,12 @@ function checkText(){
   if(rr.blockers.length){out.push("BLOCKERS — HCA to update:");out.push(rr.blockers.map(function(x){return "  "+x;}).join("\n"));out.push("");}
   var soft=rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';}));
   if(soft.length){out.push("NOTES / CONFIRM:");out.push(soft.map(function(x){return "  "+x;}).join("\n"));out.push("");}
-  out.push(block("HCA UPLOADS",[line("Materials",v('mat')),line("Heat load calc",v('heatload')),line("Layout photos",v('photos')),line("Walkthrough video",v('video')),line("Notes",v('mat-notes'))]));
-  out.push(block("ELECTRICAL (Jon)",[line("Disconnect over 24\"",v('disconnect')),line("Service outlet within 25'",v('outlet')),line("Electrical labor billed",v('b-elec')),line("Notes",v('bill-notes'))]));
+  if(v('jobtype'))out.push(block("JOB TYPE",[line("Type",v('jobtype'))]));
+  out.push(block("HCA UPLOADS",[line("Materials",v('mat')),fieldActive('heatload')?line("Heat load calc",v('heatload')):'',line("Layout photos",v('photos')),line("Walkthrough video",v('video')),line("Notes",v('mat-notes'))]));
+  if(isFireplace())out.push(block("FIREPLACE",[line("Gas line run & sized",v('gasline')),line("Venting / liner",v('venting')),line("Gas permit",v('gaspermit')),line("Gas inspection",v('gasinspect')),line("Finish work scoped",v('finish'))]));
+  out.push(block("ELECTRICAL (Jon)",[fieldActive('disconnect')?line("Disconnect over 24\"",v('disconnect')):'',line("Service outlet within 25'",v('outlet')),line("Electrical labor billed",v('b-elec')),line("Notes",v('bill-notes'))]));
   out.push(block("INSTALL (Lyle)",[line("Install labor billed",v('b-labor')),line("Notes",v('size-notes'))]));
-  out.push(block("SALES (Geoff)",[line("Discounts",v('disc')),line("Rebate",v('rebate')),line("AHRI match",v('ahri')),line("Equipment matches load",v('sizematch')),line("Equipment",v('equip')),line("Notes",v('disc-notes'))]));
+  out.push(block("SALES (Geoff)",[line("Payment readiness",v('pay')),line("Discounts",v('disc')),line("Rebate",v('rebate')),fieldActive('ahri')?line("AHRI match",v('ahri')):'',fieldActive('sizematch')?line("Equipment matches load",v('sizematch')):'',line("Equipment",v('equip')),line("Notes",v('disc-notes'))]));
   out.push(block("APPROVALS",[line("Electrical — Jon",v('d-elec')),line("Install — Lyle",v('d-install')),line("Sales — Geoff",v('d-sales'))]));
   return out.filter(function(x){return x!==''}).join("\n").replace(/\n{3,}/g,"\n\n").trim();
 }
@@ -463,7 +524,7 @@ function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=St
    last name so "Joe Ruble" (Combo Log) still matches "Joseph Ruble" (HCA list). */
 function lastNameOf(s){var t=String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);return t[t.length-1]||'';}
 function repCrossCheck(rep){var hc=el('hcaCheck');if(!hc)return;rep=String(rep||'').trim();if(!rep){hc.textContent='';hc.style.color='';return;}var hca=v('hca');var match=hca&&lastNameOf(hca)===lastNameOf(rep);hc.textContent=(match?'✓ ':'⚠ ')+'Combo Log rep: '+rep+(hca?(match?' — matches HCA':' — differs from selected HCA ('+hca+')'):' — no HCA selected yet');hc.style.color=match?'var(--mut)':'#e9960f';}
-function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;if(d.installDate){var _di=el('idate');if(_di)_di.value=d.installDate;}if(d.installCity){var _ci=el('city');if(_ci&&(_ci.value.trim()===''||_ci.dataset.auto==='1')){_ci.value=d.installCity;_ci.dataset.auto='1';}}COMBO_REP=d.installRep||'';repCrossCheck(COMBO_REP);var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.installDate)bits+=' · install '+d.installDate;if(d.installCity)bits+=' · '+d.installCity;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;renderVerdict();}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
+function matchSold(){var name=v('customer');var info=el('matchInfo');if(!name){info.textContent='Type the customer name first.';return;}var b=el('matchBtn');b.textContent='Matching…';b.disabled=true;info.textContent='';api({action:'soldlookup',name:name}).then(function(d){b.disabled=false;b.textContent='🔎 Match sold job';if(d&&d.ok&&d.found){SOLD={customer:d.customer||'',soldby:d.soldBy||'',amount:d.amount||'',soldon:d.soldOn||'',est:d.estimate||'',job:d.job||''};var mapped=d.soldBy?setHca(d.soldBy):false;if(d.jobtype){var _jt=el('jobtype');if(_jt&&!_jt.value)_jt.value=(/fire/i.test(d.jobtype)?'Fireplace':'HVAC');}if(d.installDate){var _di=el('idate');if(_di)_di.value=d.installDate;}if(d.installCity){var _ci=el('city');if(_ci&&(_ci.value.trim()===''||_ci.dataset.auto==='1')){_ci.value=d.installCity;_ci.dataset.auto='1';}}COMBO_REP=d.installRep||'';repCrossCheck(COMBO_REP);var bits='✓ '+(d.customer||name);if(d.soldOn)bits+=' — sold '+d.soldOn;if(d.soldBy)bits+=' by '+d.soldBy;if(d.amount)bits+=' · '+d.amount;if(d.installDate)bits+=' · install '+d.installDate;if(d.installCity)bits+=' · '+d.installCity;if(d.matchCount>1)bits+='  ('+d.matchCount+' matches — newest shown)';if(d.soldBy&&!mapped)bits+='  ⚠ pick HCA manually';info.textContent=bits;renderVerdict();}else if(d&&d.ok){SOLD={};info.textContent='No sold alert found for “'+name+'.” Fill it in manually.';}else{SOLD={};info.textContent=(d&&d.error)?('Lookup error: '+d.error):'Couldn’t reach the lookup — fill it in manually.';}}).catch(function(){b.disabled=false;b.textContent='🔎 Match sold job';info.textContent='Couldn’t reach the lookup — fill it in manually.';});}
 /* ---- send + email the HCA, via the same Apps Script web app the clearance tool uses (JSONP) ---- */
 var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
 function api(params){return new Promise(function(resolve,reject){
@@ -500,6 +561,8 @@ function sendToHca(handoff){
     belec:v('b-elec'),blabor:v('b-labor'),billnotes:cap(v('bill-notes'),300),
     heatload:v('heatload'),sizematch:v('sizematch'),equip:cap(v('equip'),120),sizenotes:cap(v('size-notes'),300),
     disc:v('disc'),rebate:v('rebate'),ahri:v('ahri'),discnotes:cap(v('disc-notes'),300),
+    jobtype:v('jobtype'),pay:v('pay'),
+    gasline:v('gasline'),venting:v('venting'),gaspermit:v('gaspermit'),gasinspect:v('gasinspect'),finish:v('finish'),
     soldcustomer:SOLD.customer||'',soldby:SOLD.soldby||'',soldamount:SOLD.amount||'',soldon:SOLD.soldon||'',soldest:SOLD.est||'',soldjob:SOLD.job||''
   }).then(function(d){
     b.disabled=false;b.textContent=lbl;if(other)other.disabled=false;
