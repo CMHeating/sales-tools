@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comparison Sheet | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#00529b;      /* header band + title, matches the .xlsx */
+  --blue-dk:#003d75;
+  --orange:#f58220;    /* CM accent */
+  --ink:#1a1a1a;
+  --band:#f4f8fb;      /* alternating row fill, matches the .xlsx */
+  --line:#d7e0e8;
+  --muted:#8a8a8a;
+  --check:#0f7a34;
+}
+body{font-family:'IBM Plex Sans',Arial,Helvetica,sans-serif;background:#eef2f6;color:var(--ink);padding:26px 16px 60px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* ---- screen-only toolbar ---- */
+.bar{max-width:8.5in;margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.bar-note{flex:1 1 320px;font-size:13px;color:#5a6b7a;line-height:1.5}
+.bar-note strong{color:var(--blue);font-weight:600}
+.actions{flex:0 0 auto;display:flex;gap:9px}
+button{font-family:inherit;font-size:14px;font-weight:600;border-radius:8px;padding:10px 18px;cursor:pointer;border:1px solid transparent;transition:background .15s,border-color .15s}
+.btn-print{background:var(--orange);color:#fff}
+.btn-print:hover{background:#d96f10}
+.btn-clear{background:#fff;color:#5a6b7a;border-color:#c9d4de}
+.btn-clear:hover{background:#f4f8fb}
+
+/* ---- the sheet ---- */
+.sheet{max-width:8.5in;margin:0 auto;background:#fff;padding:0.55in 0.6in 0.5in;box-shadow:0 2px 18px rgba(20,40,70,.13);border-radius:3px}
+.logo{display:block;margin:0 auto 14px;width:1.5in;height:auto}
+h1{text-align:center;font-size:21px;font-weight:700;color:var(--blue);letter-spacing:.01em;margin-bottom:22px}
+
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+col.c-mark{width:12%}
+col.c-feature{width:47%}
+col.c-omark{width:11%}
+col.c-other{width:30%}
+
+thead th{background:var(--blue);color:#fff;font-size:14px;font-weight:600;text-align:left;padding:11px 12px}
+thead th.mark-head{background:var(--blue)}
+thead th .oth{display:inline-flex;align-items:baseline;gap:7px;width:100%}
+thead th .oth-lbl{white-space:nowrap}
+
+tbody td{border-bottom:1px solid var(--line);padding:0 12px;height:30px;font-size:13.5px}
+tbody tr:nth-child(odd) td{background:var(--band)}
+td.mark{text-align:center;font-size:17px;font-weight:700;line-height:1}
+td.feature{font-weight:600;color:var(--ink)}
+
+.tick{color:var(--check)}
+
+/* click-to-toggle box for the competitor column and the write-in rows */
+.box{display:inline-block;width:15px;height:15px;border:1.6px solid #7d8b97;border-radius:2px;vertical-align:middle;cursor:pointer;position:relative;background:#fff}
+.box:hover{border-color:var(--blue)}
+.box:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.box.on{border-color:var(--check)}
+.box.on::after{content:'';position:absolute;left:4px;top:0;width:5px;height:10px;border:solid var(--check);border-width:0 2.4px 2.4px 0;transform:rotate(45deg)}
+
+/* write-in fields */
+.fill{display:block;width:100%;min-height:18px;border-bottom:1px solid #b9c6d1;font:inherit;font-size:13px;font-weight:400;color:var(--ink);outline:none;padding:1px 2px}
+.fill:focus{border-bottom-color:var(--orange);background:#fffdf7}
+.fill:empty::before{content:'';display:inline-block}
+thead .fill{border-bottom-color:rgba(255,255,255,.75);color:#fff;font-weight:600}
+thead .fill:focus{border-bottom-color:#fff;background:rgba(255,255,255,.14)}
+td.feature .fill{font-weight:600}
+
+@media (max-width:640px){
+  body{padding:16px 10px 44px}
+  .sheet{padding:22px 16px}
+  tbody td{font-size:12.5px;padding:0 7px}
+  col.c-mark{width:13%}col.c-feature{width:44%}col.c-omark{width:13%}col.c-other{width:30%}
+}
+
+@media print{
+  @page{size:letter portrait;margin:0.5in}
+  body{background:#fff;padding:0}
+  .bar{display:none}
+  .sheet{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0}
+  .logo{width:1.5in;margin-bottom:10px}
+  h1{font-size:19px;margin-bottom:16px}
+  thead th{padding:9px 12px;font-size:13px}
+  tbody td{height:27px;font-size:12.5px}
+  tbody tr{page-break-inside:avoid}
+  .fill:focus{background:none}
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-note">
+    Fill in the competitor's name and tick what they <strong>don't</strong> include, then print or hand it to the customer.
+    Nothing you type here is saved or sent anywhere.
+  </div>
+  <div class="actions">
+    <button class="btn-clear" type="button" onclick="resetSheet()">Clear</button>
+    <button class="btn-print" type="button" onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div class="sheet">
+  <img class="logo" src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating — Heating, Cooling, Plumbing, Electrical" />
+  <h1>CM HEATING — COMPARISON SHEET</h1>
+
+  <table>
+    <colgroup>
+      <col class="c-mark" /><col class="c-feature" /><col class="c-omark" /><col class="c-other" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="mark-head" scope="col"><span class="sr-only"></span></th>
+        <th scope="col">CM Heating</th>
+        <th scope="col"></th>
+        <th scope="col">
+          <span class="oth"><span class="oth-lbl">Other:</span>
+          <span class="fill" contenteditable="true" role="textbox" aria-label="Competitor name"></span></span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Parts Warranty (10/12 Years)</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Labor Warranty (10/12 Years)</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Lifetime Craftsmanship Warranty</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">No Lemon Guarantee</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">2 Year Money Back Guarantee</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">100% Satisfaction Guarantee</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">No Frustration Guarantee</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Final Price Guarantee</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Duct Cleaning</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Permits</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Over 43 Years in Business</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Everett, WA</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">No Sub Contractors</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">8k+ 5-Star Reviews (#1 in the State)</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Open 365 / 24/7</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">SnoPud / PSE Certified Contractors</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">Mitsubishi Diamond Dealer</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark tick">&#10004;</td><td class="feature">A+ Rating with BBB</td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td class="feature"><span class="fill" contenteditable="true"></span></td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td class="feature"><span class="fill" contenteditable="true"></span></td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td class="feature"><span class="fill" contenteditable="true"></span></td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+      <tr><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td class="feature"><span class="fill" contenteditable="true"></span></td><td class="mark"><span class="box" role="checkbox" aria-checked="false" tabindex="0"></span></td><td><span class="fill" contenteditable="true"></span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggle(box){
+  var on = box.classList.toggle('on');
+  box.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+document.addEventListener('click', function(e){
+  var box = e.target.closest('.box');
+  if (box) toggle(box);
+});
+document.addEventListener('keydown', function(e){
+  if ((e.key === ' ' || e.key === 'Enter') && e.target.classList && e.target.classList.contains('box')){
+    e.preventDefault();
+    toggle(e.target);
+  }
+});
+// keep pasted text plain so the printed sheet stays consistent
+document.addEventListener('paste', function(e){
+  if (!e.target.classList || !e.target.classList.contains('fill')) return;
+  e.preventDefault();
+  var text = (e.clipboardData || window.clipboardData).getData('text');
+  document.execCommand('insertText', false, text.replace(/\s+/g, ' '));
+});
+function resetSheet(){
+  document.querySelectorAll('.box.on').forEach(function(b){
+    b.classList.remove('on');
+    b.setAttribute('aria-checked','false');
+  });
+  document.querySelectorAll('.fill').forEach(function(f){ f.textContent = ''; });
+}
+</script>
+</body>
+</html>
