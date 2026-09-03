@@ -95,6 +95,8 @@ node_modules/
 
 # graphify knowledge graph — rebuild locally; commit only a full graph (needs LLM key for the HTML tools)
 graphify-out/
+# root copy of the report is a one-off convenience (T-1.2); the post-commit hook refreshes graphify-out/GRAPH_REPORT.md, not this
+GRAPH_REPORT.md
 
 # --- Session handoffs: never commit ---
 # HANDOFF.local.md is the rolling handoff between sessions. It routinely names
