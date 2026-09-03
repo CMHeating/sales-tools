@@ -81,7 +81,7 @@ Joe and Joseph should type their full first name because partial names like Jo a
 | Jay | javierre.milo@cmheating.com |
 | Joe | jchounramany@cmheating.com |
 | Joseph | joseph.ruble@cmheating.com |
-| Kyle | kmcalistar@cmheating.com |
+| Kyle | kmcalister@cmheating.com |
 | Samir | samir.khoury@cmheating.com |
 | Trevor | trevor.bohm@cmheating.com |
 

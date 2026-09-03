@@ -207,7 +207,7 @@ if (output.includes("@install-availability.cmheating.com")) {
   throw new Error("Secure output still contains placeholder install-availability emails.");
 }
 
-if (!output.includes("kmcalistar@cmheating.com")) {
+if (!output.includes("kmcalister@cmheating.com")) {
   throw new Error("Secure output missing corrected Kyle email.");
 }
 
