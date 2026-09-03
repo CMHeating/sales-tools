@@ -47,16 +47,16 @@
 <script>
 function tick(){var now=new Date(),h=now.getHours(),m=now.getMinutes(),ampm=h>=12?'PM':'AM';h=h%12||12;document.getElementById('clock-time').textContent=h+':'+(m<10?'0':'')+m+' '+ampm;var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];document.getElementById('clock-date').textContent=days[now.getDay()]+' '+months[now.getMonth()]+' '+now.getDate()}tick();setInterval(tick,10000);
 var FOLLOW_UP_HCAS=[
-  {name:'Adam Weberg',url:'https://cmheating.github.io/sales-tools/tracker-adam.html'},
-  {name:'Amber Maddalena',url:'https://cmheating.github.io/sales-tools/tracker-amber.html'},
-  {name:'Chester Granard',url:'https://cmheating.github.io/sales-tools/tracker-chester.html'},
-  {name:'Davis Diosdado',url:'https://cmheating.github.io/sales-tools/tracker-davis.html'},
-  {name:'Javierre Milo',url:'https://cmheating.github.io/sales-tools/tracker-jay.html'},
-  {name:'Joe Chounramany',url:'https://cmheating.github.io/sales-tools/tracker-joe.html'},
-  {name:'Joseph Ruble',url:'https://cmheating.github.io/sales-tools/tracker-joseph.html'},
-  {name:'Kyle McAlister',url:'https://cmheating.github.io/sales-tools/tracker-kyle.html'},
-  {name:'Samir Khoury',url:'https://cmheating.github.io/sales-tools/tracker-samir.html'},
-  {name:'Trevor Bohm',url:'https://cmheating.github.io/sales-tools/tracker-trevor.html'}
+  {name:'Adam Weberg'},
+  {name:'Amber Maddalena'},
+  {name:'Chester Granard'},
+  {name:'Davis Diosdado'},
+  {name:'Javierre Milo'},
+  {name:'Joe Chounramany'},
+  {name:'Joseph Ruble'},
+  {name:'Kyle McAlister'},
+  {name:'Samir Khoury'},
+  {name:'Trevor Bohm'}
 ];
 var SOLD_HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
 /* A11y: sequential top-to-bottom stagger (so the reordered cards animate in
@@ -72,7 +72,7 @@ var SOLD_HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado
     }
   });
 })();
-function openFollowUpPicker(){var list=document.getElementById('followup-name-list');list.innerHTML='';FOLLOW_UP_HCAS.forEach(function(hca){var btn=document.createElement('button');btn.className='name-btn'+(hca.url?'':' pending');btn.innerHTML=hca.name+'<span>'+(hca.url?'Open ›':'No jobs yet')+'</span>';btn.onclick=function(){if(hca.url){window.open(hca.url,'_blank')}else{alert('Adam is loaded in the HCA list. No follow-up tracker page/jobs yet.')}closeModal('modal-followup')};list.appendChild(btn)});document.getElementById('modal-followup').classList.add('open')}
+function openFollowUpPicker(){var list=document.getElementById('followup-name-list');list.innerHTML='';FOLLOW_UP_HCAS.forEach(function(hca){var btn=document.createElement('button');btn.className='name-btn'+(hca.url?'':' pending');btn.innerHTML=hca.name+'<span>'+(hca.url?'Open ›':'Rebuilding')+'</span>';btn.onclick=function(){if(hca.url){window.open(hca.url,'_blank')}else{alert('The follow-up tracker is being rebuilt behind sign-in. Your leads are in ServiceTitan for now.')}closeModal('modal-followup')};list.appendChild(btn)});document.getElementById('modal-followup').classList.add('open')}
 function openSoldPicker(){var list=document.getElementById('sold-name-list');list.innerHTML='';SOLD_HCAS.forEach(function(name){var btn=document.createElement('button');btn.className='name-btn';btn.innerHTML=name+'<span>Open ›</span>';btn.onclick=function(){window.open('sold-job-tracker.html?hca='+encodeURIComponent(name),'_blank');closeModal('modal-sold')};list.appendChild(btn)});document.getElementById('modal-sold').classList.add('open')}
 function openRise(){document.getElementById('modal-rise').classList.add('open')}function openRiseApp(){window.open('https://riseapp-prod.reliancecomfort.com/','_blank');closeModal('modal-rise')}function closeModal(id){document.getElementById(id).classList.remove('open')}function closeOnOverlay(e,id){if(e.target===document.getElementById(id))closeModal(id)}
 </script>
