@@ -4,35 +4,196 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Follow-Up Tracker | CM Heating</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f1f5f9;--card:#ffffff;--text:#0f172a;--muted:#475569;--orange:#f58220;--border:#e2e8f0}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
-  header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--border)}
-  header img{height:34px}
-  header a{margin-left:auto;color:var(--orange);text-decoration:none;font-weight:600}
-  main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:520px;width:100%;box-shadow:0 4px 16px rgba(15,23,42,.06)}
-  h1{margin:0 0 6px;font-size:22px}
-  .sub{color:var(--muted);margin:0 0 18px}
-  p{line-height:1.5;margin:0 0 12px}
-  .btn{display:inline-block;margin-top:8px;background:var(--orange);color:#fff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:10px}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1a2433;--sub:#5b6b7f;--line:#e3e8ef;--brand:#c8102e;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--black:#111827}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);padding:18px 14px 60px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-size:22px;font-weight:800}
+.sub{color:var(--sub);font-size:13px;margin-top:2px}
+.notice{border-radius:10px;padding:12px 16px;margin:14px 0;font-size:13px;line-height:1.5}
+.notice.warn{background:#fef3c7;border:1px solid var(--warn);color:#92400e}
+.notice.err{background:#fee2e2;border:1px solid var(--bad);color:#991b1b}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 6px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--sub)}
+.chip b{display:block;font-size:18px;color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px}
+.fbtn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer}
+.fbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.card.closing{opacity:.45}
+.row1{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.cname{font-size:16px;font-weight:700}
+.meta{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.6}
+.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+.b-green{background:#dcfce7;color:#166534}.b-yellow{background:#fef9c3;color:#854d0e}
+.b-orange{background:#ffedd5;color:#9a3412}.b-red{background:#fee2e2;color:#991b1b}
+.b-black{background:#111827;color:#fff}
+.b-cancel{background:#ede9fe;color:#5b21b6}
+.b-stale{background:#fee2e2;color:#991b1b;border:1px dashed #991b1b}
+.b-status{background:#e0e7ff;color:#3730a3}
+.b-snooze{background:#e0f2fe;color:#075985}
+input[type=date]{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#fff;color:var(--sub)}
+.notes{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--sub);margin-top:10px;white-space:pre-line}
+.logrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+select,input[type=text]{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+input[type=text]{flex:1;min-width:180px}
+.save{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer}
+.save:disabled{opacity:.5}
+.fb{font-size:12px;margin-top:6px}.fb.ok{color:var(--ok)}.fb.err{color:var(--bad)}
+.lb{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px;margin-top:8px}
+.lb th,.lb td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.lb th{background:#f8fafc;color:var(--sub);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.lb tr.me{background:#fff7ed}
+h2{font-size:15px;margin:26px 0 4px}
+.footer{color:var(--sub);font-size:11px;margin-top:30px;text-align:center}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:20px}
+.pbtn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-align:left}
 </style>
 </head>
 <body>
-<header>
-  <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
-  <a href="index.html">← HCA Toolkit</a>
-</header>
-<main>
-  <div class="card">
-    <h1>Follow-Up Tracker</h1>
-    <p class="sub">Temporarily offline — being rebuilt</p>
-    <p>This page has been taken down while the follow-up tracker is rebuilt with proper access controls. Your open leads and follow-up notes live in ServiceTitan.</p>
-    <p>The new follow-up tracker will appear on the HCA Toolkit when it is ready.</p>
-    <a class="btn" href="index.html">Back to the HCA Toolkit</a>
+<div class="wrap">
+  <h1 id="title">Follow-Up Tracker</h1>
+  <div class="sub" id="subtitle">Loading…</div>
+  <div id="dataNotice"></div>
+  <div id="picker"></div>
+  <div id="app" style="display:none">
+    <div class="chips" id="chips"></div>
+    <div class="filters" id="filters"></div>
+    <div id="list"></div>
+    <h2>Team Activity — last 7 / 30 days</h2>
+    <table class="lb" id="leaderboard"></table>
   </div>
-</main>
+  <div class="footer">Data: BI leads export + ServiceTitan alerts + Combo Log removals + your logged outcomes. Sold, installed, and closed-out leads drop off automatically. CM Heating · Internal HCA Tool</div>
+</div>
+<script>
+var FIREBASE_WEB_API_KEY='AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0';
+var DATA_BASE='https://install-availability-tracker-default-rtdb.firebaseio.com/cmh_followup_tracker.json';
+var LOG_URL='https://script.google.com/macros/s/AKfycbwshtoPM_b2DLqogtxYXuZ0LnxP_ztIPR29hDXiCsTq1T4fJ_HPSp3CYuRp0qFoZXp74w/exec';
+var HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
+var OPEN_STATUSES=[['Attempted','Attempted — no contact yet'],['Contacted','Contacted — spoke with customer'],['Unreachable','Unreachable'],['QuotedFollowUp','Quoted — following up']];
+var CLOSE_STATUSES=[['PurchasedElsewhere','Closed: purchased elsewhere'],['RepairedInstead','Closed: repaired equipment instead'],['Lost','Closed: lost — other'],['DeadOther','Closed: dead lead (note why)']];
+var WORK_DAYS=[2,3,4,5,6]; /* Tue–Sat */
+var data=null, hca=null, filter='all';
+
+function qs(name){var m=new URLSearchParams(location.search).get(name);return m?decodeURIComponent(m):null}
+function getFirebaseIdToken(){return fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+encodeURIComponent(FIREBASE_WEB_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})}).then(function(r){return r.text().then(function(t){if(!r.ok)throw new Error('Firebase auth '+r.status);var p=JSON.parse(t);if(!p.idToken)throw new Error('No token');return p.idToken})})}
+function fetchData(token){return fetch(DATA_BASE+'?auth='+encodeURIComponent(token),{cache:'no-store'}).then(function(r){return r.text().then(function(t){if(!r.ok)throw new Error('Firebase read '+r.status);return t?JSON.parse(t):null})})}
+function parseIso(s){if(!s)return null;var d=new Date(String(s).slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?null:d}
+function daysOld(l){var c=parseIso(l.createdOn);if(!c)return 0;var t=new Date();t.setHours(12,0,0,0);return Math.max(0,Math.round((t-c)/86400000))}
+function workDaysBetween(a,b){if(!a||!b||b<=a)return 0;var n=0,d=new Date(a);d.setHours(12,0,0,0);var end=new Date(b);end.setHours(12,0,0,0);while(d<end){d.setDate(d.getDate()+1);if(WORK_DAYS.indexOf(d.getDay())!==-1)n++}return n}
+function urgency(d){if(d<=3)return{cls:'b-green',f:'fresh',label:d+'d'};if(d<=7)return{cls:'b-yellow',f:'fresh',label:d+'d'};if(d<=14)return{cls:'b-orange',f:'hot',label:d+'d'};if(d<=21)return{cls:'b-red',f:'critical',label:d+'d'};return{cls:'b-black',f:'critical',label:d+'d'}}
+function isSnoozed(l){if(!l.snoozeUntil)return false;var t=new Date();t.setHours(0,0,0,0);var su=parseIso(l.snoozeUntil);return su?su>t:false}
+function isStale(l){if(isSnoozed(l))return false;var t=new Date();var last=l.lastFollowUp?new Date(l.lastFollowUp):null;if(!l.followUps){var c=parseIso(l.createdOn);return c?workDaysBetween(c,t)>7:false}return last?workDaysBetween(last,t)>14:false}
+function fmt(s){if(!s)return '—';var d=parseIso(s)||new Date(s);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+function boot(){
+  hca=qs('hca');
+  if(!hca||HCAS.indexOf(hca)===-1){renderPicker();return}
+  document.getElementById('title').textContent=hca+' — Follow-Up Tracker';
+  getFirebaseIdToken().then(fetchData).then(function(json){data=json;render()}).catch(function(e){
+    document.getElementById('subtitle').textContent='';
+    document.getElementById('dataNotice').innerHTML='<div class="notice err"><b>Could not load data.</b> '+esc(e.message)+' — pull to refresh or try again.</div>';
+  });
+}
+function renderPicker(){
+  document.getElementById('subtitle').textContent='Select your name to open your pipeline.';
+  var p=document.getElementById('picker');p.className='picker';
+  HCAS.forEach(function(n){var b=document.createElement('button');b.className='pbtn';b.textContent=n;
+    b.onclick=function(){location.search='?hca='+encodeURIComponent(n)};p.appendChild(b)});
+}
+function render(){
+  document.getElementById('app').style.display='block';
+  var leads=(data&&data.leads?data.leads:[]).filter(function(l){return l.hca===hca});
+  var updated=data&&data.updated?new Date(data.updated):null;
+  document.getElementById('subtitle').textContent=updated?('Data refreshed '+updated.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' · refreshes hourly on workdays'):'';
+  if(updated&&(Date.now()-updated.getTime())>26*3600000){
+    document.getElementById('dataNotice').innerHTML='<div class="notice warn"><b>Data is more than a day old.</b> The hourly sync may not have run — flag Geoff.</div>';
+  }
+  var crit=leads.filter(function(l){return daysOld(l)>14}).length;
+  var never=leads.filter(function(l){return !l.followUps}).length;
+  var canceled=leads.filter(function(l){return l.canceled}).length;
+  var stale=leads.filter(isStale).length;
+  var snoozed=leads.filter(isSnoozed).length;
+  document.getElementById('chips').innerHTML=
+    '<div class="chip">Open leads<b>'+leads.length+'</b></div>'+
+    '<div class="chip">Critical (>14d)<b>'+crit+'</b></div>'+
+    '<div class="chip">Never touched<b>'+never+'</b></div>'+
+    '<div class="chip">Canceled consults<b>'+canceled+'</b></div>'+
+    '<div class="chip">Gone stale<b>'+stale+'</b></div>'+
+    '<div class="chip">Snoozed<b>'+snoozed+'</b></div>';
+  var defs=[['all','All'],['fresh','Fresh ≤7d'],['hot','Hot 8–14d'],['critical','Critical >14d'],['canceled','Canceled'],['never','Never touched'],['stale','Stale']];
+  document.getElementById('filters').innerHTML=defs.map(function(d){
+    return '<button class="fbtn'+(filter===d[0]?' on':'')+'" onclick="setFilter(\''+d[0]+'\')">'+d[1]+'</button>'}).join('');
+  var list=document.getElementById('list');list.innerHTML='';
+  var shown=leads.filter(function(l){
+    var u=urgency(daysOld(l));
+    if(filter==='all')return true;
+    if(filter==='canceled')return l.canceled;
+    if(filter==='never')return !l.followUps;
+    if(filter==='stale')return isStale(l);
+    return u.f===filter;
+  });
+  if(!shown.length){list.innerHTML='<div class="notice warn">Nothing in this view. '+(leads.length?'Try another filter.':'No open leads — either the pipeline is clear or the sync hasn\u2019t published yet.')+'</div>'}
+  shown.sort(function(a,b){var sa=isSnoozed(a)?1:0,sb=isSnoozed(b)?1:0;if(sa!==sb)return sa-sb;return daysOld(b)-daysOld(a)});
+  shown.forEach(function(l,i){list.appendChild(card(l,i))});
+  leaderboard();
+}
+function setFilter(f){filter=f;render()}
+function card(l,i){
+  var d=daysOld(l),u=urgency(d);
+  var el=document.createElement('div');el.className='card';el.id='card-'+i;
+  var badges='<span class="badge '+u.cls+'">'+u.label+' old</span>';
+  if(l.canceled)badges+=' <span class="badge b-cancel">CANCELED CONSULT — rebook?</span>';
+  if(isStale(l))badges+=' <span class="badge b-stale">STALE</span>';
+  if(isSnoozed(l))badges+=' <span class="badge b-snooze">Snoozed until '+fmt(l.snoozeUntil)+'</span>';
+  badges+=' <span class="badge b-status">'+esc(l.status)+(l.followUps?' · '+l.followUps+' touch'+(l.followUps>1?'es':''):'')+'</span>';
+  var opts=OPEN_STATUSES.concat(CLOSE_STATUSES).map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>'}).join('');
+  el.innerHTML='<div class="row1"><div><div class="cname">'+esc(l.customer)+'</div>'+
+    '<div class="meta">Consult created '+fmt(l.createdOn)+' · last visit '+fmt(l.lastApptDate)+(l.visits>1?' · '+l.visits+' visits':'')+
+    '<br>'+esc(l.leadType||'')+(l.campaign?' · '+esc(l.campaign):'')+
+    (l.phone?'<br>📞 <a href="tel:'+esc(l.phone.replace(/[^0-9+]/g,''))+'" style="color:#2a6cc4;font-weight:600">'+esc(l.phone)+'</a>':'')+
+    (l.address?'<br>📍 '+esc(l.address):'')+
+    (l.lastFollowUp?'<br>Last follow-up: '+fmt(l.lastFollowUp):'')+'</div></div>'+
+    '<div style="text-align:right">'+badges+'</div></div>'+
+    (l.notes&&l.notes.length?'<div class="notes">'+esc(l.notes.join('\n'))+'</div>':'')+
+    '<div class="logrow"><select id="st-'+i+'">'+opts+'</select>'+
+    '<input type="text" id="nt-'+i+'" placeholder="What happened? (required)">'+
+    '<input type="date" id="fd-'+i+'" title="Next follow-up (optional — snoozes the card until then)">'+
+    '<button class="save" id="sv-'+i+'" onclick="logIt('+i+')">Log it</button></div>'+
+    '<div class="fb" id="fb-'+i+'"></div>';
+  el.dataset.customer=l.customer;el.dataset.key=l.key||'';
+  return el;
+}
+function logIt(i){
+  var el=document.getElementById('card-'+i);
+  var status=document.getElementById('st-'+i).value;
+  var notes=document.getElementById('nt-'+i).value.trim();
+  var fb=document.getElementById('fb-'+i),btn=document.getElementById('sv-'+i);
+  if(!notes){fb.textContent='Add a note before saving.';fb.className='fb err';return}
+  btn.disabled=true;btn.textContent='Saving…';
+  fetch(LOG_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({hca:hca,customer:el.dataset.customer,leadKey:el.dataset.key,status:status,notes:notes,followUpDate:(document.getElementById('fd-'+i)?document.getElementById('fd-'+i).value:'')||''})})
+  .then(function(){
+    btn.textContent='Logged ✓';
+    var closing=['PurchasedElsewhere','RepairedInstead','Lost','DeadOther'].indexOf(status)!==-1;
+    fb.textContent=closing?'Saved. This lead drops off everyone\u2019s tracker on the next hourly sync.':'Saved '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    fb.className='fb ok';
+    document.getElementById('nt-'+i).value='';
+    if(closing)el.className='card closing';
+  })
+  .catch(function(){btn.disabled=false;btn.textContent='Log it';fb.textContent='Save failed — check connection and retry.';fb.className='fb err'});
+}
+function leaderboard(){
+  var lb=data&&data.leaderboard?data.leaderboard:{};
+  var rows=HCAS.map(function(n){var r=lb[n]||{open:0,neverTouched:0,logged7:0,logged30:0};return{n:n,r:r}});
+  rows.sort(function(a,b){return b.r.logged7-a.r.logged7||b.r.logged30-a.r.logged30});
+  document.getElementById('leaderboard').innerHTML=
+    '<tr><th>HCA</th><th>Open</th><th>Never touched</th><th>Logged 7d</th><th>Logged 30d</th></tr>'+
+    rows.map(function(x){return '<tr class="'+(x.n===hca?'me':'')+'"><td>'+esc(x.n)+'</td><td>'+x.r.open+'</td><td>'+x.r.neverTouched+'</td><td><b>'+x.r.logged7+'</b></td><td>'+x.r.logged30+'</td></tr>'}).join('');
+}
+boot();
+</script>
 </body>
 </html>
