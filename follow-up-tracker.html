@@ -71,6 +71,7 @@ h2{font-size:15px;margin:26px 0 4px}
 var FIREBASE_WEB_API_KEY='AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0';
 var DATA_BASE='https://install-availability-tracker-default-rtdb.firebaseio.com/cmh_followup_tracker.json';
 var LOG_URL='https://script.google.com/macros/s/AKfycbwshtoPM_b2DLqogtxYXuZ0LnxP_ztIPR29hDXiCsTq1T4fJ_HPSp3CYuRp0qFoZXp74w/exec';
+var LOG_SECRET='PASTE-YOUR-SECRET-HERE';
 var HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
 var OPEN_STATUSES=[['Attempted','Attempted — no contact yet'],['Contacted','Contacted — spoke with customer'],['Unreachable','Unreachable'],['QuotedFollowUp','Quoted — following up']];
 var CLOSE_STATUSES=[['PurchasedElsewhere','Closed: purchased elsewhere'],['RepairedInstead','Closed: repaired equipment instead'],['Lost','Closed: lost — other'],['DeadOther','Closed: dead lead (note why)']];
@@ -174,7 +175,7 @@ function logIt(i){
   var fb=document.getElementById('fb-'+i),btn=document.getElementById('sv-'+i);
   if(!notes){fb.textContent='Add a note before saving.';fb.className='fb err';return}
   btn.disabled=true;btn.textContent='Saving…';
-  fetch(LOG_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({hca:hca,customer:el.dataset.customer,leadKey:el.dataset.key,status:status,notes:notes,followUpDate:(document.getElementById('fd-'+i)?document.getElementById('fd-'+i).value:'')||''})})
+  fetch(LOG_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({secret:LOG_SECRET,hca:hca,customer:el.dataset.customer,leadKey:el.dataset.key,status:status,notes:notes,followUpDate:(document.getElementById('fd-'+i)?document.getElementById('fd-'+i).value:'')||''})})
   .then(function(){
     btn.textContent='Logged ✓';
     var closing=['PurchasedElsewhere','RepairedInstead','Lost','DeadOther'].indexOf(status)!==-1;
