@@ -1,0 +1,760 @@
+<title>AR Collections</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+:root {
+  --bg: #F4F6F9;
+  --surface: #FFFFFF;
+  --text: #1E2A38;
+  --text-secondary: #5A6776;
+  --accent: #3A6FA0;
+  --accent-light: #E8F0F8;
+  --border: #DDE3EA;
+  --green: #2A7D4F;
+  --green-bg: #E6F4ED;
+  --amber: #B8860B;
+  --amber-bg: #FFF8E6;
+  --orange: #C05621;
+  --orange-bg: #FFF0E6;
+  --red: #C53030;
+  --red-bg: #FEE8E8;
+  --input-bg: #F4F6F9;
+  --shadow: 0 1px 3px rgba(30,42,56,0.08);
+  --shadow-lg: 0 4px 12px rgba(30,42,56,0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1419;
+    --surface: #1A2332;
+    --text: #E1E6EB;
+    --text-secondary: #8899AA;
+    --accent: #5B9BD5;
+    --accent-light: #1A2D42;
+    --border: #2A3544;
+    --green: #4ADE80;
+    --green-bg: #0D2818;
+    --amber: #FBBF24;
+    --amber-bg: #2A2008;
+    --orange: #FB923C;
+    --orange-bg: #2A1808;
+    --red: #F87171;
+    --red-bg: #2A0F0F;
+    --input-bg: #0F1419;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0F1419;
+  --surface: #1A2332;
+  --text: #E1E6EB;
+  --text-secondary: #8899AA;
+  --accent: #5B9BD5;
+  --accent-light: #1A2D42;
+  --border: #2A3544;
+  --green: #4ADE80;
+  --green-bg: #0D2818;
+  --amber: #FBBF24;
+  --amber-bg: #2A2008;
+  --orange: #FB923C;
+  --orange-bg: #2A1808;
+  --red: #F87171;
+  --red-bg: #2A0F0F;
+  --input-bg: #0F1419;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: var(--shadow);
+}
+
+.app-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.app-header .subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.rep-selector {
+  padding: 16px 20px;
+}
+
+.rep-selector select {
+  width: 100%;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235A6776' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.rep-selector select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.stat-tile .stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.stat-tile .stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.invoice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 24px;
+}
+
+.invoice-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.15s ease;
+}
+
+.invoice-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.card-main {
+  padding: 14px 16px;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.card-customer {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-meta span {
+  white-space: nowrap;
+}
+
+.card-balance {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.card-balance .amount {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.days-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.days-green { background: var(--green-bg); color: var(--green); }
+.days-amber { background: var(--amber-bg); color: var(--amber); }
+.days-orange { background: var(--orange-bg); color: var(--orange); }
+.days-red { background: var(--red-bg); color: var(--red); }
+
+.card-detail {
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.card-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.detail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.notes-section {
+  margin-top: 10px;
+}
+
+.notes-section label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.existing-notes {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.note-input-row input {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.note-input-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.note-input-row input::placeholder {
+  color: var(--text-secondary);
+}
+
+.btn-save {
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.btn-save:hover { opacity: 0.9; }
+.btn-save:active { opacity: 0.8; }
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-save:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.paid-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-state .icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  font-size: 14px;
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.25s ease;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.toast.visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.updated-stamp {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 8px 20px 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 640px) {
+  .stats-row { max-width: 500px; }
+  .invoice-list { max-width: 600px; }
+  .rep-selector { max-width: 600px; }
+}
+</style>
+
+<header class="app-header">
+  <h1>AR Collections</h1>
+  <div class="subtitle">CM Heating — Install</div>
+</header>
+
+<div class="rep-selector">
+  <select id="repSelect" disabled>
+    <option value="">Loading...</option>
+  </select>
+</div>
+
+<div class="stats-row" id="statsRow" hidden>
+  <div class="stat-tile">
+    <div class="stat-value" id="statBalance">—</div>
+    <div class="stat-label">Balance</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-value" id="statCount">—</div>
+    <div class="stat-label">Invoices</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-value" id="statOldest">—</div>
+    <div class="stat-label">Oldest</div>
+  </div>
+</div>
+
+<div id="content">
+  <div class="empty-state">
+    <div class="icon">&#9776;</div>
+    <p>Select your name to see outstanding collections</p>
+  </div>
+</div>
+
+<div class="updated-stamp" id="updatedStamp" hidden></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Configuration ──────────────────────────────────────────────────────────
+// After deploying the Apps Script web app, paste the URL here:
+var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec';
+
+// ── State ──────────────────────────────────────────────────────────────────
+var allData = null;
+var expandedInvoice = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(function init() {
+  if (!WEB_APP_URL) {
+    showConfigNeeded();
+    return;
+  }
+  loadData();
+})();
+
+function showConfigNeeded() {
+  var sel = document.getElementById('repSelect');
+  sel.innerHTML = '<option value="">Web App URL not configured</option>';
+  document.getElementById('content').innerHTML =
+    '<div class="empty-state">' +
+    '<div class="icon">&#9881;</div>' +
+    '<p>Set the WEB_APP_URL in this page\'s script to the deployed Apps Script web app URL.</p>' +
+    '</div>';
+}
+
+function loadData() {
+  var sel = document.getElementById('repSelect');
+  sel.innerHTML = '<option value="">Loading...</option>';
+
+  fetch(WEB_APP_URL + '?action=list', { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      allData = data;
+      populateReps(data.reps || []);
+      // Check localStorage for last selected rep
+      var lastRep = '';
+      try { lastRep = localStorage.getItem('ar_selected_rep') || ''; } catch(e) {}
+      if (lastRep && data.reps && data.reps.indexOf(lastRep) > -1) {
+        sel.value = lastRep;
+        filterAndRender(lastRep);
+      }
+    })
+    .catch(function(err) {
+      sel.innerHTML = '<option value="">Error loading data</option>';
+      document.getElementById('content').innerHTML =
+        '<div class="empty-state"><div class="icon">&#9888;</div>' +
+        '<p>Could not load AR data. Check the web app URL and try again.</p></div>';
+    });
+}
+
+function populateReps(reps) {
+  var sel = document.getElementById('repSelect');
+  sel.disabled = false;
+  sel.innerHTML = '<option value="">Select your name</option>';
+  reps.forEach(function(rep) {
+    var opt = document.createElement('option');
+    opt.value = rep;
+    opt.textContent = rep;
+    sel.appendChild(opt);
+  });
+
+  sel.addEventListener('change', function() {
+    var rep = sel.value;
+    try { localStorage.setItem('ar_selected_rep', rep); } catch(e) {}
+    filterAndRender(rep);
+  });
+}
+
+function filterAndRender(rep) {
+  if (!rep || !allData) {
+    document.getElementById('statsRow').hidden = true;
+    document.getElementById('updatedStamp').hidden = true;
+    document.getElementById('content').innerHTML =
+      '<div class="empty-state"><div class="icon">&#9776;</div>' +
+      '<p>Select your name to see outstanding collections</p></div>';
+    return;
+  }
+
+  var rows = (allData.rows || []).filter(function(r) {
+    return r.salesRep.toLowerCase() === rep.toLowerCase();
+  });
+
+  // Sort by balance descending
+  rows.sort(function(a, b) { return b.balance - a.balance; });
+
+  updateStats(rows);
+  renderCards(rows);
+
+  var stamp = document.getElementById('updatedStamp');
+  stamp.hidden = false;
+  var now = new Date();
+  stamp.textContent = 'Data as of ' + now.toLocaleDateString('en-US', {
+    month: 'numeric', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit'
+  });
+}
+
+function updateStats(rows) {
+  var statsRow = document.getElementById('statsRow');
+  statsRow.hidden = false;
+
+  var totalBal = 0;
+  var oldest = 0;
+  rows.forEach(function(r) {
+    totalBal += r.balance;
+    if (r.days > oldest) oldest = r.days;
+  });
+
+  document.getElementById('statBalance').textContent = formatCurrency(totalBal);
+  document.getElementById('statCount').textContent = rows.length;
+  document.getElementById('statOldest').textContent = oldest + 'd';
+}
+
+function renderCards(rows) {
+  var container = document.getElementById('content');
+
+  if (rows.length === 0) {
+    container.innerHTML =
+      '<div class="empty-state"><div class="icon">&#10003;</div>' +
+      '<p>No outstanding install invoices. Nice work!</p></div>';
+    return;
+  }
+
+  var html = '<div class="invoice-list">';
+  rows.forEach(function(r) {
+    var daysClass = getDaysClass(r.days);
+    var isExpanded = expandedInvoice === r.invoice;
+
+    html += '<div class="invoice-card">';
+    html += '<div class="card-main" onclick="toggleCard(\'' + r.invoice + '\')">';
+    html += '<div>';
+    html += '<div class="card-customer">' + esc(r.customer) + '</div>';
+    html += '<div class="card-meta">';
+    html += '<span>#' + esc(r.invoice) + '</span>';
+    html += '<span>' + esc(r.date) + '</span>';
+    html += '<span>' + esc(r.bu) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="card-balance">';
+    html += '<div class="amount">' + formatCurrency(r.balance) + '</div>';
+    html += '<div class="days-badge ' + daysClass + '">' + r.days + 'd</div>';
+    html += '</div>';
+    html += '</div>';
+
+    if (isExpanded) {
+      html += '<div class="card-detail">';
+      html += '<div class="card-detail-grid">';
+      html += detailCell('Invoice Total', formatCurrency(r.total));
+      html += detailCell('Balance', formatCurrency(r.balance));
+      html += detailCell('Revenue', r.revenue || '—');
+      html += detailCell('Sold $', r.sold || '—');
+      html += detailCell('Job #', r.jobNum || '—');
+      html += detailCell('Days', r.days + '');
+      html += '</div>';
+
+      html += '<div class="notes-section">';
+      html += '<label>Notes</label>';
+      if (r.notes) {
+        html += '<div class="existing-notes">' + esc(r.notes) + '</div>';
+      }
+      html += '<div class="note-input-row">';
+      html += '<input type="text" id="note-' + r.invoice + '" placeholder="Add a note...">';
+      html += '<button class="btn-save" onclick="saveNote(\'' + r.invoice + '\')">Save</button>';
+      html += '</div>';
+      html += '</div>';
+
+      if (!r.paid) {
+        html += '<div class="paid-row">';
+        html += '<input type="text" id="paid-' + r.invoice + '" placeholder="Mark paid (e.g. pd 9/4 gs)">';
+        html += '<button class="btn-save" onclick="markPaid(\'' + r.invoice + '\')">Paid</button>';
+        html += '</div>';
+      } else {
+        html += '<div style="margin-top:8px;font-size:13px;color:var(--green);font-weight:600;">';
+        html += 'Paid: ' + esc(r.paid);
+        html += '</div>';
+      }
+
+      html += '</div>';
+    }
+
+    html += '</div>';
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+function toggleCard(invoice) {
+  expandedInvoice = expandedInvoice === invoice ? null : invoice;
+  var rep = document.getElementById('repSelect').value;
+  filterAndRender(rep);
+}
+
+function saveNote(invoice) {
+  var input = document.getElementById('note-' + invoice);
+  var note = (input.value || '').trim();
+  if (!note) return;
+
+  var btn = input.nextElementSibling;
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  fetch(WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'note', invoice: invoice, note: note }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      // Update local data
+      var row = findRow(invoice);
+      if (row) row.notes = data.notes;
+      input.value = '';
+      showToast('Note saved');
+    } else {
+      showToast('Error: ' + (data.error || 'unknown'));
+    }
+  })
+  .catch(function() {
+    showToast('Network error — try again');
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+    var rep = document.getElementById('repSelect').value;
+    filterAndRender(rep);
+  });
+}
+
+function markPaid(invoice) {
+  var input = document.getElementById('paid-' + invoice);
+  var paid = (input.value || '').trim();
+  if (!paid) return;
+
+  var btn = input.nextElementSibling;
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  fetch(WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'paid', invoice: invoice, paid: paid }),
+    redirect: 'follow'
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      var row = findRow(invoice);
+      if (row) row.paid = data.paid;
+      showToast('Marked as paid');
+    } else {
+      showToast('Error: ' + (data.error || 'unknown'));
+    }
+  })
+  .catch(function() {
+    showToast('Network error — try again');
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Paid';
+    var rep = document.getElementById('repSelect').value;
+    filterAndRender(rep);
+  });
+}
+
+function findRow(invoice) {
+  if (!allData || !allData.rows) return null;
+  for (var i = 0; i < allData.rows.length; i++) {
+    if (allData.rows[i].invoice === invoice) return allData.rows[i];
+  }
+  return null;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function formatCurrency(n) {
+  if (n >= 1000) {
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function getDaysClass(d) {
+  if (d < 30) return 'days-green';
+  if (d < 60) return 'days-amber';
+  if (d < 90) return 'days-orange';
+  return 'days-red';
+}
+
+function detailCell(label, value) {
+  return '<div><div class="detail-label">' + label + '</div>' +
+         '<div class="detail-value">' + esc(value) + '</div></div>';
+}
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(function() { t.classList.remove('visible'); }, 2500);
+}
+</script>
