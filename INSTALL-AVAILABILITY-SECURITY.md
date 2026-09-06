@@ -67,9 +67,9 @@ Joe and Joseph should type their full first name because partial names like Jo a
 | Laura | laura.weiss@cmheating.com |
 | Jazryn | jazryn.delacruz@cmheating.com |
 | Sabrina | sabrina.kennard@cmheating.com |
-| Lily | lily.sarrazin@cmheating.com |
 | Jen | jennifer@cmheating.com |
 | Brittny | bmiller@cmheating.com |
+| Vanessa | vanessa.williams@cmheating.com |
 
 ## Approved HCAs
 

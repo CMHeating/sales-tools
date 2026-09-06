@@ -4,9 +4,9 @@ module.exports = [
   { role: "ADMIN", name: "Laura",   email: "laura.weiss@cmheating.com" },
   { role: "ADMIN", name: "Jazryn",  email: "jazryn.delacruz@cmheating.com" },
   { role: "ADMIN", name: "Sabrina", email: "sabrina.kennard@cmheating.com" },
-  { role: "ADMIN", name: "Lily",    email: "lily.sarrazin@cmheating.com" },
   { role: "ADMIN", name: "Jen",     email: "jennifer@cmheating.com" },
   { role: "ADMIN", name: "Brittny", email: "bmiller@cmheating.com" },
+  { role: "ADMIN", name: "Vanessa", email: "vanessa.williams@cmheating.com" },
 
   { role: "HCA", name: "Amber",   email: "amber.maddalena@cmheating.com" },
   { role: "HCA", name: "Chester", email: "chester.granard@cmheating.com" },
