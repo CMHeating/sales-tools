@@ -14,6 +14,46 @@
  *   4. Run buildL2CTabPlus  -> confirms the Daily / L2C tabs still paint.
  *   Your triggers keep working (they reference function names, all still here).
  * ============================================================================ */
+/* ============================================================================
+ * ▲ RUN THESE — shortcuts to the top of the function picker.
+ *
+ * This project has 450+ functions and the Apps Script picker is one long
+ * unsearchable scroll, so the handful you actually run by hand are aliased
+ * here. The "aa" prefix keeps them first whether the picker sorts by source
+ * order or alphabetically.
+ *
+ * ONE-TIME SETUP, in this order:
+ *   aa1_setupGrowthConfig     — create the Growth Config tab
+ *   aa2_previewGrowthAdvance  — dry run, writes nothing
+ *   aa3_applyGrowthAdvance    — commit day installs + MTD figures
+ *   aa4_previewPipeline       — dry run for the Backlog Pipeline tab
+ *   aa5_applyPipeline         — commit it
+ *
+ * EVERY MORNING, after dropping the three exports in Drive:
+ *   aa6_growthMorningRefresh  — pipeline, then day rows, then MTD figures
+ *
+ * READ-ONLY CHECKS:
+ *   aa7_previewGrowthDays     — what the day rows currently say
+ *
+ * REPAINT:
+ *   aa10_buildL2CTabPlus      — repaint Daily/L2C after aa6 (aa6 doesn't repaint itself)
+ *
+ * UNATTENDED:
+ *   aa8_installMorningTrigger — run aa6 automatically each morning
+ *   aa9_resetMorningLatch     — force a re-read after a corrected re-upload
+ * 
+ * ========================================================================== */
+function aa1_setupGrowthConfig()    { return setupGrowthConfigSheet(); }
+function aa2_previewGrowthAdvance() { return previewGrowthAutoAdvance(); }
+function aa3_applyGrowthAdvance()   { return applyGrowthAutoAdvance(); }
+function aa4_previewPipeline()      { return previewPipelineFromDrive(); }
+function aa5_applyPipeline()        { return applyPipelineFromDrive(); }
+function aa6_growthMorningRefresh() { return growthMorningRefresh(); }
+function aa7_previewGrowthDays()    { return previewGrowthDays(); }
+function aa8_installMorningTrigger(){ return installGrowthMorningTrigger(); }
+function aa9_resetMorningLatch()   { return resetGrowthMorningLatch(); }
+function aa10_buildL2CTabPlus()     { return buildL2CTabPlus(); }
+
 const PAUSE_HCA_NAME = "Trevor Bohm";
 const PAUSE_HCA_REASON = "Off for a week or so";
 const GROWTH_SHEET_DATE = "";
@@ -1372,8 +1412,8 @@ function parseBookedAlert_(rawBody, received) {
     rep reported. */
     sourceHint: tech ? "Tech Flip" : (viaPro ? "Web" : ""),
     /* The CSR writes the customer's number on a COW: line, in whatever order
-    suits them — "COW: (206) 427-5394 Michael", "COW: Syed (425) 205-3567",
-    "COW: JOHN 206-972-1766". Pull the number, ignore the arrangement. */
+    suits them — "COW: (206) 555-0142 Michael", "COW: Syed (425) 555-0187",
+    "COW: JOHN 206-555-0163". Pull the number, ignore the arrangement. */
     phone: (body.match(/COW:[^\n]*?(\(?\d{3}\)?[\s.-]*\d{3}[\s.-]*\d{4})/i) || [])[1] || "",
     hoa: (body.match(/HOA[^\n]*?\(([^)]*)\)/i) || [])[1] || "",
     timeline: cleanValue_((body.match(/timeline[^\n?:]*[?:]\s*([^\n]*)/i) || [])[1] || ""),
@@ -1589,9 +1629,8 @@ function installDailyRecapTriggers() {
     .timeBased().everyDays(1).atHour(22).inTimezone(cfg.timeZone).create();
   ScriptApp.newTrigger("refreshJobStatus")
     .timeBased().everyDays(1).atHour(9).inTimezone(cfg.timeZone).create();
-  /* Fills yesterday's growth column and MTD, an hour after the morning rush.
-  Silent unless a human is needed — see writeGrowthSheetForYesterday. */
-  ScriptApp.newTrigger("writeGrowthSheetForYesterday")
+  /* Refreshes the Growth tabs through the single locked pipeline. */
+  ScriptApp.newTrigger("runGrowthDailyPipeline")
     .timeBased().everyDays(1).atHour(cfg.growthWriteHour)
     .inTimezone(cfg.timeZone).create();
   Logger.log("Installed daily recap triggers (send " + cfg.sendHour + ":00, collect " +
@@ -2143,7 +2182,23 @@ function buildRecapBody_(hca, dateLabel, owed) {
     || (typeof enFormUrl_ === "function" && enFormUrl_())
     || "https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform";
   var nudge = owed ? "You haven't logged " + owed + " yet — please add those appointments too.\n\n" : "";
-  return "Hi " + hca.first + ",\n\n" + nudge + "Fill out the recap form for each appointment today (" + dateLabel + ") as you finish it:\n\n" + url + "\n\n" + "One submission per appointment, as many as you run. Nothing today? Nothing to submit.\n\n" + "Thanks,\n" + "Geoff\n";
+  return "Hi " + hca.first + ",\n\n" + nudge +
+    "Fill out the recap form for each appointment today (" + dateLabel + ") as you finish it:\n\n" +
+    url + "\n\n" +
+    "One submission per appointment, as many as you run.\n\n" +
+    /* The 7pm nudge has always offered this fallback; the 6am mail did not, so
+    the only reps who learned email was an option were the ones who got nagged.
+    When the Form was down that left everyone else with no stated way to report.
+    Field list comes from TEMPLATE_FIELD_ORDER so it cannot drift away from what
+    the reply parser expects. */
+    "Can't reach the form? Just reply to this email with what you ran:\n\n" +
+    TEMPLATE_FIELD_ORDER.map(function (f) { return f + ":"; }).join("\n") + "\n\n" +
+    "Either way counts — the form and a reply are the same to me.\n\n" +
+    "No consults on the schedule today? You still submit one. Log what you " +
+    "actually did — follow-ups, callbacks, tech ride-alongs, install-day " +
+    "visits, self-gen. Every working day gets an entry.\n\n" +
+    "Thanks,\n" +
+    "Geoff\n";
 }
 var RECAP_ACTIVITIES = [ "Tech Ride Along", "Follow-up Unsold", "Self-Generated Leads", "Install Day Visit", "Previously-Sold Referrals", "Social Media Networking", "Realtor / Property Management Networking" ];
 var ACTIVITY_LOG_TAB = "Activity Log";
@@ -2188,7 +2243,18 @@ function monthStartIso_() {
   catch (e) {
     tz = "America/Los_Angeles";
   }
-  return Utilities.formatDate(new Date(), tz, "yyyy-MM") + "-01";
+  var now = new Date();
+  var day = parseInt(Utilities.formatDate(now, tz, "d"), 10);
+  if (day >= 2) {
+    // 2nd or later: report THIS calendar month, from the 1st.
+    return Utilities.formatDate(now, tz, "yyyy-MM") + "-01";
+  }
+  // The 1st: the prior month's final day (e.g. 8/31) only posts in BI today,
+  // so keep reporting the PRIOR calendar month for this one day. Rollover to
+  // the new month happens on the 2nd, once the new month's data has posted.
+  var prior = new Date(now.getTime());
+  prior.setMonth(prior.getMonth() - 1);
+  return Utilities.formatDate(prior, tz, "yyyy-MM") + "-01";
 }
 var SOLD_MTD_TAB = "Sold MTD";
 function installSoldMTDLive() {
@@ -2216,7 +2282,12 @@ function renameRecapForm() {
   return form.getPublishedUrl();
 }
 function pad2_(n) {
-  return (n < 10 ? " " : "") + n;
+  return String(n).length < 2 ? "0" + n : String(n);
+}
+/* Space-padded variant — ONLY for aligning columns in Logger output.
+ * Never use it to build a date or time: that was the pad2_ bug. */
+function pad2sp_(n) {
+  return String(n).length < 2 ? " " + n : String(n);
 }
 const ACTIVITY_LOG_HEADERS_RICH = [ "Date", "HCA", "Activity", "Customer", "Source", "Package offered", "Price offered", "Water heater", "Level of interest", "Outcome", "Next follow-up", "Objection", "Objection notes", "What did you do", "Logged At", "Key" ];
 function fmtDay_(v) {
@@ -2384,12 +2455,16 @@ function l2cLabelIso_(label, yearHint) {
 }
 function buildL2CTab() {
   var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  /* MTD lead figures: Growth Config tab if it has been migrated, otherwise the
+     code constants. Read once so every row on the tab uses one consistent set. */
+  var bi = growthBiMtd_(ss);
   var NAVY = "#0f172a", AMBER = "#fff7ed", MUT = "#64748b", GOLD = "#ffc000", BLUE = "#4aa3df", GRAY = "#bfbfbf";
   var numF = "#,##0", pctF = "0.0%", moneyF = "$#,##0", div = function (n, dd) {
     return dd ? n / dd : "";
   };
   var mL = 0, tL = 0, sgL = 0, mI = 0, tI = 0, sgI = 0, sold = 0, dollars = 0;
-  var perDay = L2C_DAYS.map(function (x) {
+  var growthDays = readGrowthDays_(ss);
+  var perDay = growthDays.map(function (x) {
     mL += x[1];
     tL += x[2];
     sgL += x[3];
@@ -2404,7 +2479,7 @@ function buildL2CTab() {
   }
   );
   var Leads = mL + tL + sgL, Inst = mI + tI + sgI;
-  var d = L2C_DAYS.length ? L2C_DAYS[L2C_DAYS.length - 1] : ["-", 0, 0, 0, 0, 0, 0, 0, 0];
+  var d = growthDays.length ? growthDays[growthDays.length - 1] : ["-", 0, 0, 0, 0, 0, 0, 0, 0];
   var dInst = d[4] + d[5] + d[6];
   var dLeads = d[1] + d[2] + d[3];
   /* ---- LIVE sold from the ServiceTitan engine (same as Same-Day Sold) ---- */
@@ -2424,6 +2499,7 @@ function buildL2CTab() {
     tz = "America/Los_Angeles";
   }
   var soldDayVal = d[7], soldMtdVal = sold, sold$DayVal = "", sold$MtdVal = "";
+  var soldSourceNote = "stored";
   var todayN = 0, today$ = 0, todayLabel = "", todayIsBIday = false;
   if (live) {
     var year = String(eng.fromIso).slice(0, 4);
@@ -2435,6 +2511,31 @@ function buildL2CTab() {
     );
     soldMtdVal = mtdN;
     sold$MtdVal = mtd$;
+    /* ---- per-day sold now comes from the live engine, not the day rows ----
+       The day rows' sold column was hand-entered over weeks without the $2,000
+       threshold, the approved-seller filter, or re-quote collapsing, so it drifted
+       from the engine (56 vs 53 on 8/17). The engine already feeds the Daily tab
+       and the Same-Day Sold tab, so reading it here means the three can no longer
+       disagree — and it drops a field from the daily entry.
+
+       A day inside the engine's window with no entry genuinely sold nothing, so it
+       becomes 0 rather than keeping a stale hand-entered figure. Rows OUTSIDE the
+       window (a prior month) keep their stored value, because the engine cannot
+       speak to them. Installed dollars are deliberately untouched:
+       eng.days[].dollars is SOLD dollars, a different metric from the BI installed
+       revenue in column 9. */
+    var liveSold = 0, fromLive = 0, keptStored = 0;
+    perDay.forEach(function (p) {
+      var pIso = l2cLabelIso_(p.label, year);
+      if (pIso && eng.days[pIso]) { p.sold = eng.days[pIso].total; fromLive++; }
+      else if (pIso && pIso >= eng.fromIso && pIso <= eng.toIso) { p.sold = 0; fromLive++; }
+      else { keptStored++; }
+      liveSold += p.sold;
+    });
+    sold = liveSold;
+    soldSourceNote = fromLive + " live" +
+      (keptStored ? (", " + keptStored + " stored (outside engine window)") : "");
+
     var dIso = l2cLabelIso_(d[0], year);
     soldDayVal = eng.days[dIso] ? eng.days[dIso].total : 0;
     sold$DayVal = eng.days[dIso] ? eng.days[dIso].dollars : 0;
@@ -2491,7 +2592,16 @@ function buildL2CTab() {
   if (!sh) sh = ss.insertSheet("daily");
   sh.clear();
   /* Day column = that day's ACTIVITY (counts & $). Conversion rates are MTD only — a single day's installs come from earlier leads, so a day-level L2C isn't a real rate. Blank day cells ("") are simply not written. */
-  var rows = [ ["Total Leads", dLeads, BI_MTD_LEADS, "", numF], ["Total Sold", soldDayVal, soldMtdVal, "15%", numF], ["HVAC Sold $ (live)", sold$DayVal, sold$MtdVal, "", moneyF], ["Total Installs", dInst, Inst, "", numF], ["Total L2C %", "", div(Inst, BI_MTD_LEADS), "", pctF], ["Marketed L2C %", "", div(mI, BI_MTD_MKT_LEADS), "50%", pctF], ["HVAC Tech Flip Leads", d[2], BI_MTD_TECH_LEADS, 50, numF], ["HVAC Tech Flip Deals", d[5], tI, 28, numF], ["HVAC Tech Flip L2C %", "", div(tI, BI_MTD_TECH_LEADS), "55%", pctF], ["NPS Sales Overall", "", "", 85, numF], ["HVAC Rev (installed)", d[8], dollars, "$2.58M", moneyF], ["HVAC AVG Ticket", div(d[8], dInst), div(dollars, Inst), "$", moneyF], ["Self Gen", d[3], BI_MTD_SG_LEADS, "", numF] ];
+  /* Fix 5 — L2C split date window. The headline MTD L2C now uses bi.installs
+     (from the same BI export as bi.leads) so numerator and denominator cover
+     the same date range. Per-source L2C likewise uses bi.instMkt etc.
+     The day column and L2C tab per-day rows still use the Daily Data counts
+     (Inst, mI, tI) which are internally consistent day-by-day. */
+  var biInst = bi.installs || Inst;  // graceful fallback if config not yet populated
+  /* Fix 6: rentals are $0 deferred revenue, excluded from the avg-ticket denominator. */
+  var rentalInst = bi.rentalInstalls || 0;
+  var cashInst = Inst - rentalInst;
+  var rows = [ ["Total Leads", dLeads, bi.leads, "", numF], ["Total Sold", soldDayVal, soldMtdVal, "15%", numF], ["HVAC Sold $ (live)", sold$DayVal, sold$MtdVal, "", moneyF], ["Total Installs", dInst, biInst, "", numF], ["Total L2C %", "", div(biInst, bi.leads), "", pctF], ["Marketed L2C %", "", div(bi.instMkt || mI, bi.mkt), "50%", pctF], ["HVAC Tech Flip Leads", d[2], bi.tech, 50, numF], ["HVAC Tech Flip Deals", d[5], bi.instTech || tI, 28, numF], ["HVAC Tech Flip L2C %", "", div(bi.instTech || tI, bi.tech), "55%", pctF], ["NPS Sales Overall", "", "", 85, numF], ["HVAC Rev (installed)", d[8], dollars, "$1.62M", moneyF], ["HVAC AVG Ticket", div(d[8], dInst), div(dollars, cashInst), "$9.0K", moneyF], ["Self Gen", d[3], bi.sg, "", numF], ["Rentals (deferred rev)", "", rentalInst, "", numF] ];
   sh.getRange(1, 2).setValue("CM Sales Growth");
   sh.getRange(1, 4).setValue("Daily");
   sh.getRange(2, 2).setValue("Sales Manager");
@@ -2512,7 +2622,7 @@ function buildL2CTab() {
     if (row[2] !== "") sh.getRange(r, 4).setValue(row[2]);
     sh.getRange(r, 5).setValue(row[3]);
     sh.getRange(r, 3, 1, 2).setNumberFormat(row[4]);
-    /* Budget/target cell: force a plain number format for numeric targets so a leftover percent format can't turn 28 into "2800%". String targets like "15%" / "$2.58M" are left alone (their format is irrelevant as text). */
+    /* Budget/target cell: force a plain number format for numeric targets so a leftover percent format can't turn 28 into "2800%". String targets like "15%" / "$1.62M" are left alone (their format is irrelevant as text). */
     if (typeof row[3] === "number") sh.getRange(r, 5).setNumberFormat("#,##0");
     sh.getRange(r, 3).setBackground(BLUE);
     sh.getRange(r, 4).setBackground(GOLD);
@@ -2528,8 +2638,10 @@ function buildL2CTab() {
   else if (live) {
     sh.getRange(base + 1, 2).setValue("LIVE — sold side refreshes hourly from ServiceTitan.") .setFontColor("#0a7d33").setFontWeight("bold");
   }
-  sh.getRange(base + 2, 2).setValue("Day column = consults that RAN that day (board) + sold/$. MTD L2C = Installs / BI leads (" + Inst + " / " + BI_MTD_LEADS + ") - the BI figure Paul sees. Day leads are consults-ran; MTD leads are BI (received). Sold count/$ are LIVE (ServiceTitan, pre-tax), ahead of Installs; HVAC Rev = installed (BI).").setFontColor(MUT).setFontStyle("italic");
+  sh.getRange(base + 2, 2).setValue("Day column = consults that RAN that day (board) + sold/$. MTD L2C = Installs / BI leads (" + Inst + " / " + bi.leads + ") - the BI figure Paul sees. Day leads are consults-ran; MTD leads are BI (received). Sold count/$ are LIVE (ServiceTitan, pre-tax), ahead of Installs; HVAC Rev = installed (BI).").setFontColor(MUT).setFontStyle("italic");
   var stamp = Utilities.formatDate(new Date(), tz, "EEE M/d h:mm a");
+  var corrNote = (typeof growthCorrectionNote_ === "function") ? growthCorrectionNote_() : "";
+  if (corrNote) sh.getRange(base + 4, 2).setValue(corrNote).setFontColor(MUT).setFontStyle("italic");
   sh.getRange(base + 3, 2).setValue("Updated " + stamp + (live ? "" : " · sold engine unreadable, showing BI fallback") + (eng && eng.complete === false ? " · PARTIAL Gmail read" : "")).setFontColor(MUT);
   [30, 210, 110, 110, 110].forEach(function (w, i) {
     sh.setColumnWidth(i + 1, w);
@@ -2537,7 +2649,7 @@ function buildL2CTab() {
   );
   sh.setFrozenRows(3);
   /* No setActiveSheet — an hourly trigger shouldn't yank whatever tab you're on. */
-  Logger.log('Built "L2C" + "daily" (hybrid) - MTD L2C ' + (BI_MTD_LEADS ? Math.round(Inst * 1000 / BI_MTD_LEADS) / 10 : 0) + '% (' + Inst + '/' + BI_MTD_LEADS + ') Sold ' + (live ? "LIVE " : "BI ") + soldMtdVal + ' $' + Math.round(live ? sold$MtdVal : dollars) + (live && !todayIsBIday ? ' today ' + todayN + '/$' + Math.round(today$) : '') + '.');
+  Logger.log('Built "L2C" + "daily" (hybrid) - MTD L2C ' + (bi.leads ? Math.round(Inst * 1000 / bi.leads) / 10 : 0) + '% (' + Inst + '/' + bi.leads + ') Sold ' + (live ? "LIVE " : "BI ") + soldMtdVal + ' [per-day ' + soldSourceNote + ']' + ' $' + Math.round(live ? sold$MtdVal : dollars) + (live && !todayIsBIday ? ' today ' + todayN + '/$' + Math.round(today$) : '') + '.');
   return ss.getUrl();
 }
 function matchRosterName_(formName) {
@@ -2792,52 +2904,555 @@ function previewBIPipeline() {
 function importBIPipeline() {
   return bipipe_(false);
 }
-/* L2C_DAYS - CONSULTS-RAN basis (by appointment date), 8/1-8/10/2026
- * Leads (cols 2-4) = consults that RAN each day = lastApptDate in All Leads 08.10,
- *   status Completed/InProgress. Reconciled to the 8/10 dispatch board EXACTLY -- 6 ran Mon:
- *   Fisher, Kegley, Moengkhom (booked earlier) + Mathena, Gardner[tech], Malmgren[tech].
- *   This is NOT the BI created-date count (that was 64 / 42.2%); it excludes leads booked
- *   for FUTURE appt dates. MTD consults-ran = 44  ->  L2C 27/44 = 61.4%.
- * Installs (cols 5-7) and $ (col 9) UNCHANGED -- install-date basis, tie to BI 27 installs / $421,100.
- * Sold (col 8) overridden live by ServiceTitan; 8/10 set to 3 per board.
- * Row: [label, mktLeads, techLeads, sgLeads, mktInst, techInst, sgInst, sold, $installed]
- */
-var L2C_DAYS = [
-  ["Sat 8/1", 0, 0, 0, 0, 0, 0, 1, 0],
-  ["Sun 8/2", 2, 0, 0, 0, 0, 0, 0, 0],
-  ["Mon 8/3", 4, 1, 0, 2, 0, 0, 2, 32630],
-  ["Tue 8/4", 4, 2, 0, 3, 3, 0, 10, 114140],
-  ["Wed 8/5", 6, 2, 0, 6, 1, 0, 7, 92550],
-  ["Thu 8/6", 3, 3, 0, 4, 2, 1, 4, 117970],
-  ["Fri 8/7", 3, 1, 0, 2, 2, 0, 3, 56290],
-  ["Sat 8/8", 3, 1, 0, 0, 0, 0, 0, 0],
-  ["Sun 8/9", 2, 1, 0, 0, 0, 0, 0, 0],
-  ["Mon 8/10", 4, 2, 0, 1, 0, 0, 3, 7520],
-  ["Tue 8/11", 5, 2, 0, 4, 0, 0, 10, 87020],
-  ["Wed 8/12", 5, 4, 0, 3, 1, 0, 5, 54070]
+/* ============================================================================
+ * STAGE 2a — the BI MTD constants move out of source code.
+ *
+ * Stage 1 moved the day rows onto a tab because a script cannot append to its
+ * own source. The four BI_MTD_* constants have exactly the same problem: the
+ * Drive advisor can compute them but could only ever PRINT them for a human to
+ * paste back into the editor. On a tab, a script can write them.
+ *
+ * Same safety shape as stage 1: growthBiMtd_() prefers the tab and falls back
+ * to the constants below whenever the tab is missing, empty or unreadable. So
+ * pasting this changes nothing until setupGrowthConfigSheet() is run once, and
+ * deleting the tab reverts to the constants.
+ * ========================================================================== */
+
+var GROWTH_CONFIG_TAB = "Growth Config";
+var GROWTH_CONFIG_HEADER = ["Key", "Value", "Updated", "Note"];
+var GROWTH_CONFIG_KEYS = [
+  ["BI_MTD_LEADS",      "Total leads RECEIVED month-to-date (BI). Denominator of MTD L2C."],
+  ["BI_MTD_MKT_LEADS",  "Marketed = Inbound + Webform."],
+  ["BI_MTD_TECH_LEADS", "Tech flip leads."],
+  ["BI_MTD_SG_LEADS",   "Self-generated leads."],
+  ["BI_MTD_INSTALLS",      "Total installs month-to-date (BI). Numerator of MTD L2C."],
+  ["BI_MTD_MKT_INSTALLS",  "Marketed installs."],
+  ["BI_MTD_TECH_INSTALLS", "Tech flip installs."],
+  ["BI_MTD_SG_INSTALLS",   "Self-generated installs."],
+  ["BI_MTD_RENTAL_INSTALLS", "Rental installs MTD (job.type contains 'Rental'). Excluded from avg ticket."],
+  ["BI_MONTH_START",    "Business-month start (yyyy-mm-dd). Used to detect month rollover."],
+  ["BI_THROUGH_ISO",    "Last date the exports actually cover (yyyy-mm-dd)."]
 ];
+var GROWTH_BI_CACHE_ = null;
+
+/* The four MTD lead figures, tab first and the constants as the fallback.
+   Returns numbers plus `source` so callers can say where they came from. */
+function growthBiMtd_OLD_20260828(ss) {
+  if (GROWTH_BI_CACHE_) return GROWTH_BI_CACHE_;
+
+  var fb = {
+    leads: (typeof BI_MTD_LEADS === "number") ? BI_MTD_LEADS : 0,
+    mkt:   (typeof BI_MTD_MKT_LEADS === "number") ? BI_MTD_MKT_LEADS : 0,
+    tech:  (typeof BI_MTD_TECH_LEADS === "number") ? BI_MTD_TECH_LEADS : 0,
+    sg:    (typeof BI_MTD_SG_LEADS === "number") ? BI_MTD_SG_LEADS : 0,
+    throughIso: "", source: "code constants"
+  };
+
+  var sh = null;
+  try {
+    sh = (ss || SpreadsheetApp.openById(GROWTH_SHEET_ID)).getSheetByName(GROWTH_CONFIG_TAB);
+  } catch (e) { sh = null; }
+  if (!sh || sh.getLastRow() < 2) { GROWTH_BI_CACHE_ = fb; return fb; }
+
+  var map = {};
+  try {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().forEach(function (r) {
+      var k = String(r[0] || "").trim();
+      if (k) map[k] = r[1];
+    });
+  } catch (e) {
+    Logger.log("Growth Config unreadable (" + e + "); using the code constants.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+
+  /* A key that is PRESENT but unparseable means someone typed into the tab.
+     That is a corrupted config, not a missing one, so it rejects the whole tab
+     rather than silently mixing a hand-edited value with the code constants. */
+  var bad = [];
+  function num(key, fallbackVal) {
+    if (!(key in map) || map[key] === "" || map[key] === null) return fallbackVal;
+    var n = Number(map[key]);
+    if (!isFinite(n) || n < 0 || Math.floor(n) !== n) { bad.push(key + "=" + map[key]); return fallbackVal; }
+    return n;
+  }
+  /* A zero total-leads reading would silently blank every L2C percentage, so
+     it is treated as an unset tab rather than a real zero. */
+  var leads = num("BI_MTD_LEADS", fb.leads);
+  if (!leads) { GROWTH_BI_CACHE_ = fb; return fb; }
+
+  var out = {
+    leads: leads,
+    mkt:   num("BI_MTD_MKT_LEADS", fb.mkt),
+    tech:  num("BI_MTD_TECH_LEADS", fb.tech),
+    sg:    num("BI_MTD_SG_LEADS", fb.sg),
+    throughIso: String(map["BI_THROUGH_ISO"] || "").slice(0, 10),
+    source: "'" + GROWTH_CONFIG_TAB + "' tab"
+  };
+  if (bad.length) {
+    Logger.log("Growth Config has non-numeric value(s): " + bad.join(", ") +
+      ". Falling back to the code constants.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+  /* The parts must equal the whole. If they do not, the tab was hand-edited
+     into an inconsistent state and the constants are the safer read. */
+  if (out.mkt + out.tech + out.sg !== out.leads) {
+    Logger.log("Growth Config: " + out.mkt + "+" + out.tech + "+" + out.sg + " != " + out.leads +
+      " — the source split does not sum to total leads. Falling back to the code constants.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+  GROWTH_BI_CACHE_ = out;
+  return out;
+}
+
+/* Run ONCE to migrate. Idempotent — an existing tab with values is left alone. */
+function setupGrowthConfigSheet() {
+  var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  var sh = ss.getSheetByName(GROWTH_CONFIG_TAB);
+  var created = false;
+  if (!sh) { sh = ss.insertSheet(GROWTH_CONFIG_TAB); created = true; }
+
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, GROWTH_CONFIG_HEADER.length)
+      .setValues([GROWTH_CONFIG_HEADER]).setFontWeight("bold");
+    sh.setFrozenRows(1);
+  }
+  if (sh.getLastRow() > 1) {
+    var msg = GROWTH_CONFIG_TAB + " already holds " + (sh.getLastRow() - 1) +
+      " row(s) — left untouched. Nothing migrated.";
+    Logger.log(msg); return msg;
+  }
+
+  var seed = {
+    BI_MTD_LEADS:      (typeof BI_MTD_LEADS === "number") ? BI_MTD_LEADS : 0,
+    BI_MTD_MKT_LEADS:  (typeof BI_MTD_MKT_LEADS === "number") ? BI_MTD_MKT_LEADS : 0,
+    BI_MTD_TECH_LEADS: (typeof BI_MTD_TECH_LEADS === "number") ? BI_MTD_TECH_LEADS : 0,
+    BI_MTD_SG_LEADS:   (typeof BI_MTD_SG_LEADS === "number") ? BI_MTD_SG_LEADS : 0,
+    BI_MTD_INSTALLS:      0,
+    BI_MTD_MKT_INSTALLS:  0,
+    BI_MTD_TECH_INSTALLS: 0,
+    BI_MTD_SG_INSTALLS:   0,
+    BI_MONTH_START:       "",
+    BI_THROUGH_ISO:    ""
+  };
+  var stamp = Utilities.formatDate(new Date(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd HH:mm");
+  var rows = GROWTH_CONFIG_KEYS.map(function (kv) {
+    return [kv[0], seed[kv[0]], stamp, kv[1]];
+  });
+  sh.getRange(2, 1, rows.length, GROWTH_CONFIG_HEADER.length).setValues(rows);
+  [190, 90, 140, 470].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+
+  var out = "Migrated " + rows.length + " config key(s) into '" + GROWTH_CONFIG_TAB + "'" +
+    (created ? " (tab created)" : "") + ". Seeded from the code constants: leads " +
+    seed.BI_MTD_LEADS + " (mkt " + seed.BI_MTD_MKT_LEADS + ", tech " + seed.BI_MTD_TECH_LEADS +
+    ", sg " + seed.BI_MTD_SG_LEADS + "). The constants stay as a fallback — delete the tab to revert.";
+  Logger.log(out);
+  return out;
+}
+
+/* Writes the BI figures back to the tab. Returns false if the tab is absent,
+   so callers can tell "not migrated yet" from "written". */
+function growthWriteBiMtd_(ss, vals, throughIso) {
+  var sh = ss.getSheetByName(GROWTH_CONFIG_TAB);
+  if (!sh || sh.getLastRow() < 2) return false;
+  var stamp = Utilities.formatDate(new Date(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd HH:mm");
+  var grid = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+  var want = {
+    BI_MTD_LEADS: vals.leads, BI_MTD_MKT_LEADS: vals.mkt,
+    BI_MTD_TECH_LEADS: vals.tech, BI_MTD_SG_LEADS: vals.sg,
+    BI_MTD_INSTALLS: vals.installs, BI_MTD_MKT_INSTALLS: vals.instMkt,
+    BI_MTD_TECH_INSTALLS: vals.instTech, BI_MTD_SG_INSTALLS: vals.instSg,
+    BI_MTD_RENTAL_INSTALLS: vals.rentalInstalls || 0,  // Fix 6: rental installs for avg-ticket exclusion
+    BI_MONTH_START: vals.monthStart || "",
+    BI_THROUGH_ISO: throughIso || ""
+  };
+  var wrote = 0;
+  var found = {};
+  grid.forEach(function (r, i) {
+    var k = String(r[0] || "").trim();
+    if (!(k in want)) return;
+    found[k] = true;
+    if (String(r[1]) === String(want[k])) return;
+    sh.getRange(i + 2, 2).setValue(want[k]);
+    sh.getRange(i + 2, 3).setValue(stamp);
+    wrote++;
+  });
+  /* Append any new keys that do not yet have a row on the tab.
+     This lets the install keys auto-provision on the first run after
+     Fix 5 is deployed, without needing to re-run setupGrowthConfigSheet. */
+  var descMap = {};
+  GROWTH_CONFIG_KEYS.forEach(function (kv) { descMap[kv[0]] = kv[1]; });
+  Object.keys(want).forEach(function (k) {
+    if (found[k]) return;
+    var nextRow = sh.getLastRow() + 1;
+    sh.getRange(nextRow, 1, 1, 4).setValues([[k, want[k], stamp, descMap[k] || ""]]);
+    wrote++;
+  });
+  GROWTH_BI_CACHE_ = null;
+  return wrote;
+}
 
 /* ============================================================================
- * BI MONTH-TO-DATE - the corporate headline (what BI / Paul report).
- * L2C_DAYS above are consults that RAN each day (dispatch board). BI counts
- * leads RECEIVED. The Daily scorecard MTD column reads its LEAD counts from
- * here, so the MTD L2C tile matches BI exactly. Installs and $ still come from
- * the array (they already tie to BI 27 installs / $421,100), so each morning
- * you only update these four lead numbers from the BI dashboard.
- *   Total 64 = Inbound 38 + Webform 8 + Self Gen 0 + Tech 18.
+ * STAGE 1 — the day rows move out of source code and into a sheet tab.
+ *
+ * L2C_DAYS below is a hardcoded array, which is why the Daily tab goes stale:
+ * a script cannot append to its own source, so advancing a day has always meant
+ * a human editing code. Once the rows live on a tab, adding a day is a sheet
+ * append — which a script CAN do, and which stage 2 automates.
+ *
+ * MIGRATION IS SAFE AND REVERSIBLE. readGrowthDays_() prefers the tab and falls
+ * back to the L2C_DAYS array whenever the tab is missing, empty, or unreadable.
+ * So pasting this changes nothing until setupGrowthDailyDataSheet() is run once,
+ * and deleting the tab reverts to the array.
+ * ========================================================================== */
+
+var GROWTH_DAILY_DATA_TAB = "Daily Data";
+var GROWTH_DAILY_DATA_HEADER = ["Label", "Mkt Leads", "Tech Leads", "SG Leads",
+  "Mkt Inst", "Tech Inst", "SG Inst", "Sold", "Installed $"];
+
+/* Memoized for the life of one execution. buildL2CTab reads the days twice and
+   there is no reason to hit the sheet twice for it. Apps Script globals do not
+   survive between executions, so this can never serve a stale day. */
+var GROWTH_DAYS_CACHE_ = null;
+
+function growthDaysSheet_(ss) {
+  try {
+    return (ss || SpreadsheetApp.openById(GROWTH_SHEET_ID))
+      .getSheetByName(GROWTH_DAILY_DATA_TAB);
+  } catch (e) { return null; }
+}
+
+/* ===== KNOWN SOURCE MIS-TAGS ==============================================
+ * ServiceTitan derives Lead Type from the CAMPAIGN on the job, so a job that
+ * was self-generated but opened as a tech diagnostic carries "Tech Lead" and
+ * nothing downstream can tell the difference. There IS a "Self Gen" campaign
+ * (Trainor job 405445353 uses it) — these rows just did not get moved onto it.
+ * This table restates the correct split until the source is fixed.
+ *
+ * An entry declares the ABSOLUTE split for one metric on one day, never a
+ * delta. So applying it twice equals applying it once, and it turns into a
+ * self-announcing no-op the moment the export is fixed and the day row is
+ * re-derived to agree with it.
+ *
+ * HARD RULE: an entry may only REDISTRIBUTE a day's total, never change it.
+ * If the stored row's total for that metric stops matching the override's
+ * total, the day moved underneath the override and the override is stale — it
+ * is skipped and logged rather than applied. That is what keeps install count,
+ * revenue and avg ticket tied to BI no matter what ends up in this table.
+ *
+ * Corrections touch the SOURCE SPLIT only. Lead-source counts that BI reports
+ * MTD (BI_MTD_TECH_LEADS, BI_MTD_SG_LEADS) are a leads-RECEIVED measure and
+ * are not touched here — a job whose lead arrived in a prior month has no row
+ * in this month's lead columns to correct.
+ * ========================================================================= */
+var GROWTH_SOURCE_CORRECTIONS = [
+  {
+    label: "Mon 8/24",
+    metric: "inst",
+    set: { mkt: 3, tech: 1, sg: 0 },
+    customer: "Meltem Winn",
+    hca: "Chester Granard",
+    jobNumber: "411193716",
+    loggedIso: "2026-08-25",
+    reason: "Tech flip from Emmanuel Maldonado. The 8/23 sales-quote job 411084030 " +
+      "was moved to campaign 391790726 'Tech Lead - Same Day', but the INSTALL job " +
+      "411193716 still carries campaign 151970127 '*Unsold Estimates | Install V2', " +
+      "which BI reads as Inbound. Fix at source by moving install job 411193716 to a " +
+      "Tech Lead campaign, then delete this entry."
+  }
+]
+
+/* Column offsets into a day row for each metric: [mkt, tech, sg]. */
+var GROWTH_CORRECTION_COLS_ = { lead: [1, 2, 3], inst: [4, 5, 6] };
+
+/* Filled in by applyGrowthSourceCorrections_ so the Daily tab can footnote
+   exactly why its source split differs from the raw BI export. */
+var GROWTH_CORRECTIONS_APPLIED_ = [];
+
+function applyGrowthSourceCorrections_(days) {
+  GROWTH_CORRECTIONS_APPLIED_ = [];
+  var list = (typeof GROWTH_SOURCE_CORRECTIONS !== "undefined" && GROWTH_SOURCE_CORRECTIONS) || [];
+  if (!days || !days.length || !list.length) return days;
+
+  /* Clone. On the fallback path `days` IS the L2C_DAYS array, and correcting
+     it in place would rewrite the literal for the rest of the execution. */
+  var out = days.map(function (r) { return r.slice(); });
+  var byLabel = {};
+  out.forEach(function (r, i) { byLabel[String(r[0]).trim()] = i; });
+
+  list.forEach(function (c) {
+    var i = byLabel[String((c && c.label) || "").trim()];
+    if (i == null) {
+      Logger.log("Source correction skipped — no day row labelled '" + (c && c.label) + "'.");
+      return;
+    }
+    var cols = GROWTH_CORRECTION_COLS_[c.metric];
+    if (!cols) {
+      Logger.log("Source correction on " + c.label + " skipped — unknown metric '" + c.metric + "'.");
+      return;
+    }
+    var want = [Number(c.set.mkt), Number(c.set.tech), Number(c.set.sg)];
+    if (want.some(function (n) { return !isFinite(n) || n < 0; })) {
+      Logger.log("Source correction on " + c.label + " skipped — set{} is not three non-negative numbers.");
+      return;
+    }
+
+    var row = out[i];
+    var have = cols.map(function (k) { return Number(row[k]) || 0; });
+    var sumHave = have[0] + have[1] + have[2], sumWant = want[0] + want[1] + want[2];
+
+    if (sumHave !== sumWant) {
+      Logger.log("STALE source correction on " + c.label + " (" + c.metric + "): the stored row totals " +
+        sumHave + " but the override totals " + sumWant + ". SKIPPED — that day changed since the " +
+        "override was written, so re-derive it from the current export.");
+      return;
+    }
+    if (have[0] === want[0] && have[1] === want[1] && have[2] === want[2]) {
+      Logger.log("Source correction on " + c.label + " (" + c.metric + ") already matches the stored row — " +
+        "the source has been fixed, so delete this entry from GROWTH_SOURCE_CORRECTIONS.");
+      return;
+    }
+
+    cols.forEach(function (k, n) { row[k] = want[n]; });
+    GROWTH_CORRECTIONS_APPLIED_.push({
+      label: c.label, metric: c.metric, from: have, to: want,
+      customer: c.customer || "", hca: c.hca || ""
+    });
+    Logger.log("Applied source correction " + c.label + " " + c.metric + " mkt/tech/sg " +
+      have.join("/") + " -> " + want.join("/") + (c.customer ? " (" + c.customer + ")" : "") + ".");
+  });
+  return out;
+}
+
+/* One-line summary of what actually got moved, for the Daily tab footnote. */
+function growthCorrectionNote_() {
+  if (!GROWTH_CORRECTIONS_APPLIED_.length) return "";
+  return "Source split adjusted: " + GROWTH_CORRECTIONS_APPLIED_.map(function (a) {
+    var kind = a.metric === "inst" ? "installs" : "leads";
+    return a.label + " " + kind + " tech " + a.from[1] + "->" + a.to[1] +
+      ", self gen " + a.from[2] + "->" + a.to[2] +
+      (a.customer ? " (" + a.customer + (a.hca ? ", " + a.hca : "") + ")" : "");
+  }).join("; ") + ". Totals are unchanged and still tie to BI; only the source " +
+    "columns differ, because ServiceTitan tags source from the job's campaign.";
+}
+
+/* The day rows, tab first and array as the fallback. Shape is identical to
+   L2C_DAYS: [label, mktLeads, techLeads, sgLeads, mktInst, techInst, sgInst,
+   sold, dollars]. The label must keep its "Fri 8/14" form — the BI-thru date on
+   the Daily tab is parsed out of the LAST label, so a reformatted label breaks
+   the staleness indicator. */
+function readGrowthDaysRaw_OLD_20260818(ss) {
+  var fallback = (typeof L2C_DAYS !== "undefined" && L2C_DAYS) ? L2C_DAYS : [];
+  var sh = growthDaysSheet_(ss);
+  if (!sh) return fallback;
+
+  var rows;
+  try {
+    var last = sh.getLastRow();
+    if (last < 2) return fallback;
+    rows = sh.getRange(2, 1, last - 1, GROWTH_DAILY_DATA_HEADER.length).getValues();
+  } catch (e) {
+    Logger.log("Daily Data tab unreadable (" + e + "); using the L2C_DAYS array.");
+    return fallback;
+  }
+
+  var out = [], skipped = 0;
+  rows.forEach(function (r) {
+    var label = String(r[0] == null ? "" : r[0]).trim();
+    /* A label with no M/D in it cannot drive the BI-thru date, so it is not a
+       day row — blank rows and stray notes land here and are skipped, not
+       guessed at. */
+    if (!label || !/\d{1,2}\/\d{1,2}/.test(label)) { if (label) skipped++; return; }
+    var nums = [];
+    for (var i = 1; i <= 8; i++) {
+      var n = Number(r[i]);
+      nums.push(isFinite(n) ? n : 0);
+    }
+    out.push([label].concat(nums));
+  });
+
+  if (!out.length) return fallback;
+  if (skipped) Logger.log("Daily Data: skipped " + skipped + " row(s) with no M/D in the label.");
+  return out;
+}
+
+/* Public reader: raw rows, corrected, memoized for the life of one execution. */
+function readGrowthDays_(ss) {
+  if (GROWTH_DAYS_CACHE_) return GROWTH_DAYS_CACHE_;
+  GROWTH_DAYS_CACHE_ = applyGrowthSourceCorrections_(readGrowthDaysRaw_(ss));
+  return GROWTH_DAYS_CACHE_;
+}
+
+/* Run ONCE to migrate. Creates the tab and seeds it from the current L2C_DAYS
+   array. Idempotent: if the tab already holds day rows it leaves them alone and
+   reports, so a second run cannot duplicate or clobber anything. */
+function setupGrowthDailyDataSheet() {
+  var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  var sh = ss.getSheetByName(GROWTH_DAILY_DATA_TAB);
+  var created = false;
+  if (!sh) { sh = ss.insertSheet(GROWTH_DAILY_DATA_TAB); created = true; }
+
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, GROWTH_DAILY_DATA_HEADER.length)
+      .setValues([GROWTH_DAILY_DATA_HEADER]).setFontWeight("bold");
+    sh.setFrozenRows(1);
+  }
+
+  var existing = sh.getLastRow() > 1
+    ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues()
+        .filter(function (r) { return String(r[0] || "").trim(); }).length
+    : 0;
+  if (existing) {
+    var msg = GROWTH_DAILY_DATA_TAB + " already holds " + existing +
+      " row(s) — left untouched. Nothing migrated.";
+    Logger.log(msg); return msg;
+  }
+
+  /* Seed from the RAW array on purpose. The tab mirrors what the export says;
+     GROWTH_SOURCE_CORRECTIONS stays in code so a mis-tag is never silently
+     baked into the data and then forgotten. */
+  var src = (typeof L2C_DAYS !== "undefined" && L2C_DAYS) ? L2C_DAYS : [];
+  if (!src.length) { var m2 = "L2C_DAYS is empty; nothing to migrate."; Logger.log(m2); return m2; }
+  sh.getRange(2, 1, src.length, GROWTH_DAILY_DATA_HEADER.length).setValues(src);
+  sh.getRange(2, 9, src.length, 1).setNumberFormat("$#,##0");
+  [110, 80, 80, 70, 75, 75, 65, 60, 95].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+
+  var out = "Migrated " + src.length + " row(s) from the L2C_DAYS array into '" +
+    GROWTH_DAILY_DATA_TAB + "'" + (created ? " (tab created)" : "") +
+    ". readGrowthDays_ will now prefer the tab. The array stays as a fallback — " +
+    "delete the tab to revert. Last row: " + src[src.length - 1][0] + ".";
+  Logger.log(out);
+  return out;
+}
+
+/* Read-only: shows which source is live and what the last day is. */
+function previewGrowthDays() {
+  var sh = growthDaysSheet_();
+  var days = readGrowthDays_();
+  var usingTab = !!(sh && sh.getLastRow() > 1);
+  var lines = ["GROWTH DAY ROWS",
+    "source: " + (usingTab ? ("'" + GROWTH_DAILY_DATA_TAB + "' tab") : "L2C_DAYS array (fallback)"),
+    "rows:   " + days.length];
+  var mL = 0, tL = 0, sgL = 0, mI = 0, tI = 0, sgI = 0, sold = 0, dollars = 0;
+  days.forEach(function (d) {
+    mL += d[1]; tL += d[2]; sgL += d[3];
+    mI += d[4]; tI += d[5]; sgI += d[6];
+    sold += d[7]; dollars += d[8];
+  });
+  lines.push("last:   " + days[days.length - 1][0]);
+  lines.push("leads:  " + (mL + tL + sgL) + "  (mkt " + mL + " tech " + tL + " sg " + sgL + ")");
+  lines.push("installs: " + (mI + tI + sgI) + "  (mkt " + mI + " tech " + tI + " sg " + sgI + ")");
+  lines.push("sold:   " + sold + "   installed $: " + dollars);
+  lines.push("");
+  lines.push("Installs and installed $ should match BI exactly. Leads are the");
+  lines.push("consults-ran basis and are NOT expected to match BI's lead count.");
+  var corr = (typeof GROWTH_SOURCE_CORRECTIONS !== "undefined" && GROWTH_SOURCE_CORRECTIONS) || [];
+  if (corr.length) {
+    lines.push("");
+    lines.push("SOURCE CORRECTIONS declared: " + corr.length + ", applied this run: " +
+      GROWTH_CORRECTIONS_APPLIED_.length + " (see the log for any skipped as stale).");
+    corr.forEach(function (c) {
+      lines.push("  " + c.label + " " + c.metric + " -> mkt " + c.set.mkt + " tech " + c.set.tech +
+        " sg " + c.set.sg + "  " + (c.customer || "") + (c.jobNumber ? " job " + c.jobNumber : ""));
+      if (c.reason) lines.push("    " + c.reason);
+    });
+    lines.push("These move counts BETWEEN source columns only — a day's total can");
+    lines.push("never change, so the BI tie-out on installs and revenue holds.");
+  }
+  var msg = lines.join("\n");
+  Logger.log(msg);
+  return msg;
+}
+
+/* ============================================================================
+ * L2C_DAYS - FALLBACK DAY ROWS. FROZEN SNAPSHOT, NOT CURRENT.
+ *
+ * WHAT THIS IS. A hand-built array covering 2026-08-01 through 2026-08-16.
+ * Nothing updates it. The live source is the "Daily Data" tab on the growth
+ * sheet, read by readGrowthDaysRaw_(). This array is only what that read falls
+ * back to, and it pairs with the BI_MTD_* constants below, frozen at the same
+ * date.
+ *
+ * HOW YOU WOULD KNOW IT FIRED. The Daily panel parses its BI-thru date out of
+ * the LAST label in whatever it was handed. In this array that label is
+ * "Sun 8/16", so a panel showing a through-date of 8/16 in any later month
+ * means the tab read failed and this array is being reported as current. That
+ * is the only tell. It is read off the parsing code, not observed firing.
+ *
+ * ROW SHAPE
+ *   [label, mktLeads, techLeads, sgLeads, mktInst, techInst, sgInst, sold, $installed]
+ *
+ * WHAT THE COLUMNS MEAN
+ *   Leads (2-4) are consults that RAN that day - lastApptDate in the All Leads
+ *   export, status Completed or InProgress. This is NOT the BI created-date
+ *   count. They differ because created-date includes leads booked for FUTURE
+ *   appointment dates. Do not subtract one from the other and call the
+ *   difference a capture gap.
+ *   Installs (5-7) and dollars (col 9) are on an install-date basis.
+ *   Sold (col 8) is overridden live by the ServiceTitan engine at run time, so
+ *   the value stored here matters only if that engine is unavailable.
+ *
+ * HISTORICAL NOTE, kept because it records how the basis was established: the
+ * 8/10 rows were reconciled to the 8/10 dispatch board exactly - 6 ran Monday,
+ * Fisher, Kegley and Moengkhom (booked earlier) plus Mathena, Gardner[tech]
+ * and Malmgren[tech]. Point-in-time totals that used to sit in this header
+ * have been removed - they were true in mid-August and misleading after.
  * ============================================================================ */
-var BI_MTD_LEADS = 85;        // BI dashboard Total Leads
-var BI_MTD_MKT_LEADS = 58;    // Marketed = Inbound + Webform
-var BI_MTD_TECH_LEADS = 27;   // Tech
-var BI_MTD_SG_LEADS = 0;      // Self Gen
+var L2C_DAYS = [];
+
+/* ============================================================================
+ * BI MONTH-TO-DATE - FALLBACK CONSTANTS. FROZEN SNAPSHOT, NOT CURRENT.
+ *
+ * WHAT THESE ARE. The four values below are a hand-entered snapshot taken
+ * 2026-08-16. Nothing updates them and they do not track BI. The live source
+ * is the "Growth Config" tab on the growth sheet, read by growthBiMtd_().
+ * These constants are used only when that read does not produce a value.
+ *
+ * The L2C_DAYS array immediately above is the matching fallback for the day
+ * rows and is frozen at the same date - its last row is "Sun 8/16".
+ *
+ * WHAT THE NUMBERS MEAN. L2C_DAYS counts consults that RAN each day (the
+ * dispatch board). BI counts leads RECEIVED. The Daily scorecard MTD column
+ * takes its LEAD counts from here so the MTD L2C tile matches BI exactly.
+ * The two measures are not interchangeable - do not subtract one from the
+ * other and call the difference a capture gap.
+ *
+ * FIVE BRANCHES RETURN THESE CONSTANTS. Two used to do it in total silence,
+ * and the first of those two swallows three separate causes:
+ *   1. Tab missing / tab empty / spreadsheet unreachable ... was NO LOG
+ *        the catch on openById turned a bad id or revoked access into
+ *        "no tab", so all three failures looked identical
+ *   2. BI_MTD_LEADS resolving to a literal 0 .............. was NO LOG
+ *   3. The range read throws .............................. logs
+ *   4. A value in the tab is non-numeric .................. logs
+ *   5. mkt + tech + sg does not equal leads ............... logs
+ *
+ * BRANCH 2 FIRES ONLY ON A LITERAL ZERO. An ABSENT BI_MTD_LEADS key does not
+ * come here - num() hands back the code constant, which is truthy. See below.
+ *
+ * A SIXTH CASE TAKES NONE OF THOSE BRANCHES AND IS WORSE THAN ANY OF THEM.
+ * A tab that exists and reads cleanly but holds no BI_MTD rows: num() returns
+ * the code constants one at a time, they sum consistently (71 + 29 + 1 = 101)
+ * so the parts-equal-whole check in branch 5 passes, and the result is handed
+ * back with `source` reporting the tab. Frozen mid-August numbers wearing a
+ * label that says they came from the tab. That is a false provenance claim,
+ * not a missing log line, and nothing downstream could tell.
+ *
+ * ALL OF THE ABOVE NOW LOGS, as of 2026-08-28. See growthBiMtd_ at the end of
+ * this file; the pre-fix version is parked as growthBiMtd_OLD_20260828. On a
+ * healthy tab it still says nothing - it speaks only when something is wrong.
+ *
+ * BEFORE YOU "UPDATE" THESE. Refreshing them to current figures makes a
+ * fallback less wrong but harder to notice, and a stale-but-plausible number
+ * is more dangerous than an obviously stale one. That is a judgment call, not
+ * a chore. Make it deliberately.
+ * ============================================================================ */
+var BI_MTD_LEADS = 101;       // BI dashboard Total Leads  (thru 8/16)
+var BI_MTD_MKT_LEADS = 71;    // Marketed = Inbound 59 + Webform 12
+var BI_MTD_TECH_LEADS = 29;   // Tech
+var BI_MTD_SG_LEADS = 1;      // Self Gen
 var L2CPLUS_SHEET_ID = "1WFeRFKvdyYLMJf1Q9iBVzWjFIrOH22KIkrM6_4Zsoww";
 var L2CPLUS_PIPE_TAB = "Backlog Pipeline";
 var L2CPLUS_MARKER = "Awaiting Install — BI Backlog & Pipeline";
-var RAN_DAY_LABEL = "8/7";
-var RAN_LEADS = 4;
-var RAN_INSTALLS = 4;
-var RAN_LEADS_NOTE = "LIVE estimate — 4 consults ran 8/7 (dispatch board, not BI): " + "Paul Priebe (Tech), Michael Stevens (Inbound), Kunjan Dayal (Inbound), " + "Sua Tan & Sandi Nagata (Inbound). Monday's BI replaces this.";
-var RAN_INSTALLS_NOTE = "LIVE estimate — 4 installs ran 8/7 (Completed Form Alerts [HVAC Sales]): " + "Brassette, Drake, Corn, Lewis. Not the reconciled BI count (can be ±1 on " + "multi-day installs). Monday's BI replaces this.";
 function buildL2CTabPlus() {
   var url = buildL2CTab();
   // untouched -- runs your live version
@@ -2845,13 +3460,7 @@ function buildL2CTabPlus() {
     Logger.log("L2C decorations: " + decorateL2C_());
   }
   catch (e) {
-    Logger.log("decorateL2C_ skipped (scorecard fine, 8/7 unaffected): " + e);
-  }
-  try {
-    Logger.log(applyDayRanEstimates_());
-  }
-  catch (e2) {
-    Logger.log("day estimates skipped (scorecard fine): " + e2);
+    Logger.log("decorateL2C_ skipped (scorecard fine): " + e);
   }
   return url;
 }
@@ -3034,7 +3643,7 @@ function addTotalSoldRow() {
     "\nMTD total sold = " + mtd + " (deduped, all sold this month). Each tab's MTD cell sums the day counts.");
   return out.join("\n");
 }
-function appendComplianceRows_(ss, plan, byHca, responded, followUpsByHca) {
+function appendComplianceRows_(ss, plan, byHca, responded, followUpsByHca, formCounts) {
   const sheet = ensureSheet_(ss, DAILY_RECAP_CONFIG.complianceSheetName, COMPLIANCE_HEADERS);
   const existing = readExistingKeys_(sheet, COMPLIANCE_HEADERS.length, 0, 1);
   const stamp = new Date();
@@ -3047,11 +3656,21 @@ function appendComplianceRows_(ss, plan, byHca, responded, followUpsByHca) {
     /* Replied is about whether they answered, not whether they had anything to
     report. A rep with no appointments still replied. */
     const didReply = responded ? !!responded[hca.name] : !!group;
+    /* Appointments Reported must count BOTH channels. byHca is built from email
+    replies only, so a rep who filed four Forms and sent no email used to read
+    "Yes / 0" — credited for answering but shown as having reported nothing,
+    which then flowed into the weekly 1:1 aggregate. Getting the recap is the
+    win; the channel is not the point. Summing is right because the ordinary
+    case is one channel or the other (the other side is 0), and a rep who used
+    both in one day is covering different appointments, not re-filing the same
+    one. */
+    const emailCount = group ? group.entries.length : 0;
+    const formCount = (formCounts && formCounts[hca.name]) ? formCounts[hca.name] : 0;
     rows.push([
       plan.isoDate,
       hca.name,
       didReply ? "Yes" : "No",
-      group ? group.entries.length : 0,
+      emailCount + formCount,
       (followUpsByHca && followUpsByHca[hca.name]) ? followUpsByHca[hca.name] : "",
       stamp
     ]);
@@ -3123,62 +3742,6 @@ function appendRecapRows_(ss, plan, byHca) {
   };
 }
 // flush-first version: commits Leads/Installs before the flow line so a flow hiccup can't roll them back.
-function applyDayRanEstimates_() {
-  var ss = SpreadsheetApp.openById(L2CPLUS_SHEET_ID);
-  var sh = null;
-  ss.getSheets().forEach(function (s) {
-    if (String(s.getName()).toLowerCase().trim() === "daily") sh = s;
-  });
-  if (!sh) { Logger.log("day estimates: no Daily tab."); return "no Daily tab."; }
-  var c3 = String(sh.getRange(3, 3).getDisplayValue() || "");
-  if (c3.indexOf(RAN_DAY_LABEL) < 0) {
-    var skip = "day estimates: day column is '" + c3 + "' (no '" + RAN_DAY_LABEL + "') — skipped.";
-    Logger.log(skip); return skip;
-  }
-  var dv = sh.getRange(1, 2, sh.getLastRow(), 1).getValues();   // col B labels
-  function rowOf(pred) {
-    for (var r = 0; r < dv.length; r++) {
-      if (pred(String(dv[r][0] || "").trim().toLowerCase())) return r + 1;
-    }
-    return -1;
-  }
-  var rLeads = rowOf(function (s) { return s === "total leads"; });
-  var rInst  = rowOf(function (s) { return s.indexOf("total installs") === 0; });
-  var out = [];
-  if (rLeads > 0) {
-    sh.getRange(rLeads, 3).setValue(RAN_LEADS).setNote(RAN_LEADS_NOTE);
-    out.push("Leads " + RAN_LEADS + " (row " + rLeads + ")");
-  } else out.push("leads row NOT FOUND");
-  if (rInst > 0) {
-    sh.getRange(rInst, 3).setValue(RAN_INSTALLS).setNote(RAN_INSTALLS_NOTE);
-    out.push("Installs " + RAN_INSTALLS + " (row " + rInst + ")");
-  } else out.push("installs row NOT FOUND");
-  SpreadsheetApp.flush();   // <<< commit the numbers to the sheet NOW
-  // ---- flow line: isolated so it can never wipe the numbers above ----
-  try {
-    var sd = readSameDaySplit_(ss, RAN_DAY_LABEL);
-    var flow = RAN_DAY_LABEL + " flow — " + RAN_LEADS + " consults ran · ";
-    flow += sd
-      ? (sd.sameDay + " sold same-day · " + sd.total + " sold total (" +
-         sd.followUp + " follow-up" + (sd.unknown ? ", " + sd.unknown + " unknown" : "") + ") · ")
-      : "sold split n/a · ";
-    flow += RAN_INSTALLS + " installed (prior sales).  Separate cohorts — today's sold & " +
-            "installs trace to earlier leads, not today's " + RAN_LEADS + ".";
-    var upRow = -1;
-    for (var u = 0; u < dv.length; u++) {
-      if (String(dv[u][0] || "").indexOf("Updated ") === 0) upRow = u + 1;
-    }
-    var flowRow = (upRow > 0 ? upRow : sh.getLastRow()) + 1;
-    sh.getRange(flowRow, 2).setValue(flow).setFontColor("#475569").setFontStyle("italic");
-    out.push(sd ? "flow (same-day " + sd.sameDay + "/" + sd.total + ")" : "flow (no split)");
-    SpreadsheetApp.flush();
-  } catch (e) {
-    out.push("flow skipped (numbers safe): " + e);
-  }
-  var msg = RAN_DAY_LABEL + " day estimates: C3='" + c3 + "' → " + out.join(", ") + ".";
-  Logger.log(msg);
-  return msg;
-}
 function applyJobStatus_(ss, byName, ensure, wanted, fromIso, toIso) {
   const cfg = DAILY_RECAP_CONFIG;
   const refreshedIso = readScriptProperty_("jobStatusRefreshedIso") || "";
@@ -5279,7 +5842,8 @@ function deleteDailyRecapTriggers_() {
     if (fn === "sendDailyRecap" || fn === "collectRecapReplies" ||
         fn === "sendMorningNudgeWorkingToday" || fn === "sendMorningNudgeOffToday" ||
         fn === "sweepRecapReplies" || fn === "sendMorningSalesBrief" ||
-        fn === "refreshJobStatus" || fn === "writeGrowthSheetForYesterday") {
+        fn === "refreshJobStatus" || fn === "writeGrowthSheetForYesterday" ||
+        fn === "runGrowthDailyPipeline") {
       ScriptApp.deleteTrigger(trigger);
     }
   })
@@ -7165,13 +7729,13 @@ function l2cReport(fromIso, toIso) {
     tInst += i;
     tLead += l;
     var l2c = l ? Math.round(i * 1000 / l) / 10 : 0;
-    lines.push("  " + iso + "    " + pad2_(s) + "     " + pad2_(i) + "      " + pad2_(l) + "     " +
+    lines.push("  " + iso + "    " + pad2sp_(s) + "     " + pad2sp_(i) + "      " + pad2sp_(l) + "     " +
       (l ? (l2c + "%") : "-") + "       " + (s - i));
   })
   ;
   var totL2C = tLead ? Math.round(tInst * 1000 / tLead) / 10 : 0;
   lines.push("  ------------------------------------------------------------");
-  lines.push("  TOTAL         " + pad2_(tSold) + "     " + pad2_(tInst) + "      " + pad2_(tLead) + "     " +
+  lines.push("  TOTAL         " + pad2sp_(tSold) + "     " + pad2sp_(tInst) + "      " + pad2sp_(tLead) + "     " +
     (tLead ? (totL2C + "%") : "-") + "       " + (tSold - tInst) + "   pipeline");
   lines.push("");
   lines.push("  Leads = booked Sales-Quote appts by appointment day (deduped by job#). If leads or install is off vs the leaderboard, tell me the gap and I'll tune before writing to the sheet.");
@@ -8113,7 +8677,7 @@ function probeRecapDates() {
   })
   ;
 }
-function readBiLeads_() {
+function readBiLeads_OLD_20260821() {
   if (!BI_LEADS_SHEET_ID) return {
   };
   const out = {
@@ -8336,10 +8900,31 @@ function readComboInstalls_() {
         salesRep: at(col("SALES REP")),
         jobNotes: at(col("JOB NOTES")),
         permitNotes: at(col("PERMIT NOTES")),
+          /* Needed to judge whether a permit is actually late — the answer is
+          entirely jurisdiction-dependent. Additive: existing callers ignore it. */
+          jurisdiction: at(col("JURISDICTION")),
+          /* The COMBO LOG carries all trades. Growth reporting is HVAC only, so
+          every consumer must be able to tell them apart. Additive fields. */
+          department: at(col("DEPARTMENT")),
+          mechanical: at(col("MECHANICAL")),
           /* On the TBD tab this column is repurposed as a live action note —
           "EMAILED JAY 7/29 AL", "AMBER IS WORKING ON THIS 7/29 AL" — which
           is the most current word on the job anywhere. */
           jobCompleted: at(col("JOB COMPLETED")),
+          /* The COMPLETED tab is not the only signal. 199 of 227 sampled rows
+          carry "DONE-LW" / "DONE-SK" / "DONE AL 7/21" in JOB COMPLETED, and 52
+          of those still read "REQUESTED" in PERMIT NOTES — the permit cell is
+          simply never updated once the crew finishes. Reading only the tab name
+          reports every one of those as an overdue permit.
+          Prefix test on purpose: on the TBD tab this column is repurposed as a
+          live action note ("AMBER IS WORKING ON THIS 7/29 AL", "EMAILED JAY"),
+          and genuine holds read "Not completed - waiting for...". Neither
+          starts with DONE, so both correctly stay open. */
+          isDone: /^\s*DONE\b/i.test(at(col("JOB COMPLETED"))),
+          /* The office flags commercial-zoned property in JOB NOTES as the bare
+          word COMMERCIAL — a dentist office or storefront in a house. That is
+          the only place zoning is recorded anywhere. */
+          isCommercial: /\bCOMMERCIAL\b/i.test(at(col("JOB NOTES"))),
         sourceSheet: name
         })
         ;
@@ -8493,12 +9078,19 @@ function readInstallCompletions_(days) {
     sales business unit is picked up if one exists. */
     if (String(msg.getSubject() || "").indexOf("Sales") === -1) return;
     const body = String(msg.getPlainBody() || "");
-    const m = body.match(/^[ \t]*(\d{1,2}\/\d{1,2})\s+\d{1,2}:\d{2}\s*[AP]M\s+(.+?)\s+\d{2,}\s/m);
+    /* The trailing number was always matched and thrown away — it is the
+    ServiceTitan job number, and it is the cleanest evidence of how many REAL
+    jobs a customer has. Two genuine jobs file two Completed Form Alerts with
+    two different numbers; a re-quote of one job files one. Capturing it costs
+    nothing and gives a third independent check alongside sold alerts and
+    COMBO LOG rows. */
+    const m = body.match(/^[ \t]*(\d{1,2}\/\d{1,2})\s+\d{1,2}:\d{2}\s*[AP]M\s+(.+?)\s+(\d{2,})\s/m);
     if (!m) return;
     const desc = (body.match(/INSTALL DESCRIPTION:\s*(.+)/i) || [])[1] || "";
     out.push({
       customer: m[2].replace(/\(M\)\s*$/i, "").trim(),
       installedOn: m[1],
+      jobNumber: m[3],
       description: String(desc).trim(),
       received: msg.getDate()
     })
@@ -8649,6 +9241,179 @@ const REVENUE_ALSO_SELLERS = [
   { name: "Aaron Johnson", aliases: [] },
   { name: "Geoff Simons",  aliases: ["Geoffrey Simons"] }
 ];
+
+/* Growth headline qualification only. Other recap/sold/1:1 readers keep
+   their existing definitions. Strictly greater than $2,000 means a $2,000
+   alert is excluded along with smaller accessories and service work. */
+var GROWTH_HVAC_SOLD_MIN_DOLLARS = 2000;
+function growthSoldSellerAllowed_(name) {
+  var key = normName_(name).replace(/\s+(office|field|admin|sales)$/, "").trim();
+  if (!key) return false;
+  for (var i = 0; i < RECAP_ROSTER.length; i++) {
+    if (normName_(RECAP_ROSTER[i].name) === key) return true;
+  }
+  for (var j = 0; j < REVENUE_ALSO_SELLERS.length; j++) {
+    var seller = REVENUE_ALSO_SELLERS[j];
+    if (normName_(seller.name) === key) return true;
+    var aliases = seller.aliases || [];
+    for (var k = 0; k < aliases.length; k++) {
+      if (normName_(aliases[k]) === key) return true;
+    }
+  }
+  return false;
+}
+
+function growthSoldQualification_(alert) {
+  var amount = Number(alert && alert.amount);
+  if (!growthSoldSellerAllowed_(alert && alert.hca)) {
+    return { included: false, reason: "seller", amount: isFinite(amount) ? amount : 0 };
+  }
+  if (!isFinite(amount) || amount <= GROWTH_HVAC_SOLD_MIN_DOLLARS) {
+    return { included: false, reason: "amount", amount: isFinite(amount) ? amount : 0 };
+  }
+  return { included: true, reason: "", amount: amount };
+}
+
+/* Growth re-quotes use the CURRENT sold alert. The global collapse helper
+   intentionally keeps an earlier in-month sold date for other reports, so it
+   is not used here. Groups link by opportunity, job, or estimate (with the
+   customer included where appropriate), then keep the latest received alert
+   with its own amount and sold date. */
+function growthCollapseLatestSoldAlerts_OLD_20260821(alerts) {
+  var parent = alerts.map(function (_, i) { return i; });
+  var firstSeen = {};
+  function find(i) {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  }
+  function link(key, i) {
+    if (!key) return;
+    if (firstSeen[key] === undefined) {
+      firstSeen[key] = i;
+      return;
+    }
+    var a = find(firstSeen[key]), b = find(i);
+    if (a !== b) parent[b] = a;
+  }
+  alerts.forEach(function (alert, i) {
+    var customer = normName_(alert.customer);
+    if (alert.opportunityNumber) link("opp|" + alert.opportunityNumber + "|" + customer, i);
+    if (alert.jobNumber) link("job|" + alert.jobNumber + "|" + customer, i);
+    if (alert.estimateNumber) link("est|" + alert.estimateNumber, i);
+  });
+
+  var groups = {};
+  alerts.forEach(function (alert, i) {
+    var root = find(i);
+    (groups[root] = groups[root] || []).push({ alert: alert, index: i });
+  });
+
+  var revisedGroups = 0;
+  var out = Object.keys(groups).map(function (root) {
+    var members = groups[root];
+    if (members.length > 1) revisedGroups++;
+    members.sort(function (x, y) {
+      var xt = x.alert.received && x.alert.received.getTime ? x.alert.received.getTime() : 0;
+      var yt = y.alert.received && y.alert.received.getTime ? y.alert.received.getTime() : 0;
+      if (xt !== yt) return xt - yt;
+      var xd = String(x.alert.soldOnIso || ""), yd = String(y.alert.soldOnIso || "");
+      return xd === yd ? x.index - y.index : xd.localeCompare(yd);
+    });
+    var latest = members[members.length - 1].alert;
+    var kept = Object.assign({}, latest);
+    kept.growthRevisionCount = members.length;
+    kept.growthRevisionMembers = members.map(function (member) { return member.alert; });
+    kept.growthJobCandidates = [];
+    kept.growthOpportunityCandidates = [];
+    members.forEach(function (member) {
+      var a = member.alert;
+      if (a.jobNumber && kept.growthJobCandidates.indexOf(String(a.jobNumber)) < 0) {
+        kept.growthJobCandidates.push(String(a.jobNumber));
+      }
+      if (a.opportunityNumber && kept.growthOpportunityCandidates.indexOf(String(a.opportunityNumber)) < 0) {
+        kept.growthOpportunityCandidates.push(String(a.opportunityNumber));
+      }
+    });
+    return kept;
+  });
+  return {
+    alerts: out,
+    diagnostics: {
+      rawAlerts: alerts.length,
+      uniqueSales: out.length,
+      revisedGroups: revisedGroups,
+      supersededAlerts: alerts.length - out.length
+    }
+  };
+}
+
+function growthClassifyLatestSale_(alert, bookedMap) {
+  var keys = [];
+  function addKey(value) {
+    var key = String(value || "").replace(/\D/g, "");
+    if (key && keys.indexOf(key) < 0) keys.push(key);
+  }
+  addKey(alert.jobNumber);
+  (alert.growthJobCandidates || []).forEach(addKey);
+  var opportunities = [];
+  if (alert.opportunityNumber) opportunities.push(alert.opportunityNumber);
+  (alert.growthOpportunityCandidates || []).forEach(function (x) {
+    if (opportunities.indexOf(x) < 0) opportunities.push(x);
+  });
+  opportunities.forEach(function (opp) {
+    addKey(opp);
+    var n = Number(String(opp).replace(/\D/g, ""));
+    if (isFinite(n) && n > 2) addKey(String(n - 2));
+  });
+
+  var runs = [];
+  keys.forEach(function (key) {
+    (bookedMap[key] || []).forEach(function (run) {
+      var sig = String(run.ranIso || "") + "|" + String(run.ranTime || "");
+      if (!runs.some(function (x) { return x.sig === sig; })) runs.push({ sig: sig, run: run });
+    });
+  });
+  var dated = runs.map(function (x) { return x.run; })
+    .filter(function (run) { return !!run.ranIso; })
+    .sort(function (a, b) { return a.ranIso.localeCompare(b.ranIso); });
+  var original = dated.length ? dated[0] : null;
+
+  /* Same-day is a question about when the deal was WON, so it must be asked of
+     the EARLIEST sold alert in a collapsed re-quote group — never the retained
+     latest one. A job sold the day its consult ran and then re-papered days
+     later because the scope changed is still a same-day win; comparing the
+     revision date demotes it to Follow-Up and understates same-day close rate,
+     worst on the big jobs that get re-scoped most. Amount and sold date stay on
+     the latest alert (current contract value); only the classification looks
+     back. Combel: consult and sale both 8/13, re-signed 8/16 at a lower amount
+     — SAME-DAY on 8/13's run, still carrying the 8/16 figure. */
+  var wonIso = String(alert.soldOnIso || "");
+  (alert.growthRevisionMembers || []).forEach(function (member) {
+    var iso = String((member && member.soldOnIso) || "");
+    if (iso && (!wonIso || iso < wonIso)) wonIso = iso;
+  });
+
+  if (original && original.ranIso === wonIso) {
+    return {
+      tag: "SAME-DAY", ranIso: original.ranIso, matched: true,
+      matchKeys: keys, wonIso: wonIso
+    };
+  }
+  /* Growth is binary by definition. Without a positive original-run match on
+     the earliest sold date, the sale is Follow-Up and remains visible for
+     reconciliation instead of leaking into an Unknown bucket. */
+  return {
+    tag: "FOLLOW-UP",
+    ranIso: original ? original.ranIso : "",
+    matched: !!original,
+    matchKeys: keys,
+    wonIso: wonIso
+  };
+}
+
 function soldSellerName_(soldBy) {
   var key = normName_(soldBy);
   if (!key) return "";
@@ -8670,7 +9435,7 @@ function soldSellerName_(soldBy) {
   return "";
 }
 
-function readSoldAlerts_(days) {
+function readSoldAlerts_OLD_20260821(days) {
   const out = [];
   const res = searchAllThreads_(
     'from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' +
@@ -8732,8 +9497,9 @@ function readSoldForSameday_(fromIso, toIso, days) {
     if (soldIso < fromIso || soldIso > toIso) return;
     var repM = text.match(/Sold by:\s*(.+?)\s*(?=Date:|Amount:|Customer:|Job\s*#|$)/i);
     var custM = text.match(/Customer:\s*(.+?)\s*(?=Job\s*#|$)/i);
+        var estM = text.match(/Estimate\s*#?\s*:?\s*(\d{6,})/i);
     out.push({
-      job: jobM[1], amount: amount, soldIso: soldIso, soldMD: dateM[1],
+      job: jobM[1], est: estM ? estM[1] : "", amount: amount, soldIso: soldIso, soldMD: dateM[1],
       rep: repM ? repM[1].trim() : "(rep?)", customer: custM ? custM[1].trim() : "",
       at: msg.getDate()
     })
@@ -9499,17 +10265,22 @@ function refreshSameDaySoldTab() {
   var m = sameDaySoldMonthData_();
   var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
   var sh = ss.getSheetByName("Same-Day Sold") || ss.insertSheet("Same-Day Sold");
+  /* Keep the last known-good table if Gmail failed or hit its ceiling. A
+     partial read looks plausible and must never replace complete sales. */
+  if (!m.ok || m.complete === false) {
+    var why = !m.ok ? "read failed" : "partial Gmail read";
+    Logger.log("Same-Day Sold tab NOT refreshed — " + why + "; previous values preserved.");
+    return why;
+  }
   sh.clear();
   var NAVY = "#0f172a", AMBER = "#fff7ed", MUT = "#64748b";
   sh.getRange("A1").setValue("Same-Day Sold — booked appt matched to sold alert by Job #")
     .setFontWeight("bold").setFontSize(13);
-  sh.getRange("A2").setValue("Same pipeline as the Sold Today tab: HCA only · re-quotes counted once · wrong-click exclusions honored. SAME-DAY = appointment ran the day it sold.")
+  sh.getRange("A2").setValue("Growth HVAC projects only: sold amount > $" +
+    GROWTH_HVAC_SOLD_MIN_DOLLARS.toLocaleString() +
+    " · approved HCA/manager sellers · latest re-quote amount/date wins · exclusions honored. " +
+    "SAME-DAY = latest sold date equals original booked run; otherwise FOLLOW-UP.")
     .setFontColor(MUT);
-  if (!m.ok) {
-    sh.getRange("A4").setValue("Sold-alert read FAILED — numbers not refreshed. Try again shortly.");
-    Logger.log("Same-Day Sold tab: read failed; left a notice.");
-    return "read failed";
-  }
   var head = ["Date", "Total Sold", "Same-Day", "Follow-Up", "Unknown", "Same-Day %", "$ Sold"];
   sh.getRange(4, 1, 1, head.length).setValues([head])
     .setFontWeight("bold").setBackground(NAVY).setFontColor("#ffffff");
@@ -9543,9 +10314,26 @@ function refreshSameDaySoldTab() {
   sh.getRange(6 + rows.length, 1).setValue("Updated " + stamp +
     (m.complete === false ? "  ·  ! PARTIAL Gmail read, numbers may be low" : ""))
     .setFontColor(MUT);
+  var excluded = m.excluded || { count: 0, dollars: 0 };
+  sh.getRange(7 + rows.length, 1).setValue(
+    "Excluded from Growth headline: " + excluded.count + " alert(s) · $" +
+    Math.round(excluded.dollars).toLocaleString() +
+    " (amount <= $" + GROWTH_HVAC_SOLD_MIN_DOLLARS.toLocaleString() +
+    " or seller outside the approved list)."
+  ).setFontColor(MUT).setFontStyle("italic");
+  var dedupe = m.dedupe || {};
+  sh.getRange(8 + rows.length, 1).setValue(
+    "Growth re-quote audit: " + (dedupe.mtdRevisedGroups || 0) + " revised MTD sale group(s) · " +
+    (dedupe.mtdSupersededAlerts || 0) + " superseded alert(s) removed · latest alert retained." +
+    (m.unmatchedFollowUp ? " " + m.unmatchedFollowUp +
+      " sale(s) had no booked-job match and were conservatively classified Follow-Up." : "")
+  ).setFontColor(MUT).setFontStyle("italic");
   var msg = "Same-Day Sold tab updated (tied to Sold Today): MTD " + t.total + " sold · " +
     t.same + " same-day · " + t.follow + " follow-up" +
-    (t.unknown ? " · " + t.unknown + " unknown" : "") + " · $" + Math.round(t.dollars);
+    (t.unknown ? " · " + t.unknown + " unknown" : "") + " · $" + Math.round(t.dollars) +
+    " · excluded " + excluded.count + " / $" + Math.round(excluded.dollars) +
+    " · revised MTD groups " + (dedupe.mtdRevisedGroups || 0) +
+    " · unmatched-as-follow-up " + (m.unmatchedFollowUp || 0);
   Logger.log(msg);
   return msg;
 }
@@ -10309,6 +11097,9 @@ function runCollection_(when, isBackfill) {
     responded[nm] = true;
   })
   ;
+  /* formCounts carries a per-HCA submission count, not just a name set, and it
+     is passed to appendComplianceRows_ so the Appointments Reported column
+     reflects Form submissions too — not only email replies. */
   /* Silence only. Someone who replied to say they ran nothing has reported,
   and grouping them with people who ignored the email misrepresents them. */
   const missing = plan.working.filter(h => !responded[h.name]);
@@ -10319,7 +11110,7 @@ function runCollection_(when, isBackfill) {
   try {
     const book = getLogSpreadsheet_();
     const wrote = appendRecapRows_(book.ss, plan, byHca);
-    appendComplianceRows_(book.ss, plan, byHca, responded, followUpsByHca);
+    appendComplianceRows_(book.ss, plan, byHca, responded, followUpsByHca, formCounts);
     const lateRes = late.length
       ? logRepliesByNight_(book.ss, late)
       : {
@@ -10445,7 +11236,7 @@ function runMorningFollowUp_(workingToday) {
     acked: toAck.length, nudged: toNudge.length
   };
 }
-function sameDaySoldMonthData_() {
+function sameDaySoldMonthData_OLD_20260821() {
   var tz;
   try {
     tz = DAILY_RECAP_CONFIG.timeZone;
@@ -10463,39 +11254,67 @@ function sameDaySoldMonthData_() {
     },
     tz: tz
   };
-  var collapsed = collapseResoldAlerts_(res.alerts)
+  var collapse = growthCollapseLatestSoldAlerts_(res.alerts);
+  var collapsed = collapse.alerts
     .filter(function (a) {
     return a.soldOnIso >= fromIso && a.soldOnIso <= toIso;
   })
   .filter(function (a) {
     /* honor the approval-guard rulings (phantom rentals / phantom CODs) */
-    return (typeof stExcluded_ === "function") ? !stExcluded_(a) : true;
+    if (typeof stExcluded_ !== "function") return true;
+    return !(a.growthRevisionMembers || [a]).some(function (member) {
+      return stExcluded_(member);
+    });
   })
   ;
+  var mtdRevisedGroups = 0, mtdSupersededAlerts = 0;
+  collapsed.forEach(function (alert) {
+    var revisions = Number(alert.growthRevisionCount) || 1;
+    if (revisions > 1) mtdRevisedGroups++;
+    mtdSupersededAlerts += Math.max(0, revisions - 1);
+  });
+  var qualifying = [];
+  var excluded = { count: 0, dollars: 0, amountCount: 0, sellerCount: 0 };
+  collapsed.forEach(function (alert) {
+    var decision = growthSoldQualification_(alert);
+    if (decision.included) {
+      qualifying.push(alert);
+      return;
+    }
+    excluded.count++;
+    excluded.dollars += decision.amount;
+    if (decision.reason === "seller") excluded.sellerCount++;
+    else excluded.amountCount++;
+  });
   var booked = readBookedJobs_((typeof BOOKED_LOOKBACK_DAYS !== "undefined") ? BOOKED_LOOKBACK_DAYS : 60);
   var days = {
   };
-  collapsed.forEach(function (a) {
+  var unmatchedFollowUp = 0;
+  qualifying.forEach(function (a) {
     var amt = (isFinite(Number(a.amount)) && a.amount) ? Number(a.amount) : 0;
-    var jobKey = (typeof stJobKey_ === "function") ? stJobKey_(a.jobNumber) : String(a.jobNumber || "").trim();
-    var cls = jobKey ? classifySameDay_({
-      job: jobKey, soldIso: a.soldOnIso
-    },
-    booked) : {
-      tag: "UNKNOWN", ranIso: ""
-    };
+    var cls = growthClassifyLatestSale_(a, booked);
     var d = days[a.soldOnIso] = days[a.soldOnIso] || {
       total: 0, same: 0, follow: 0, unknown: 0, dollars: 0
     };
     d.total++;
     d.dollars += amt;
     if (cls.tag === "SAME-DAY") d.same++;
-    else if (cls.tag === "FOLLOW-UP") d.follow++;
-    else d.unknown++;
+    else d.follow++;
+    if (!cls.matched) unmatchedFollowUp++;
   })
   ;
   return {
-    ok: true, complete: res.complete, fromIso: fromIso, toIso: toIso, days: days, tz: tz
+    ok: true, complete: res.complete, fromIso: fromIso, toIso: toIso,
+    days: days, tz: tz, includedCount: qualifying.length, excluded: excluded,
+    dedupe: Object.assign({}, collapse.diagnostics, {
+      mtdUniqueBeforeQualification: collapsed.length,
+      mtdIncluded: qualifying.length,
+      mtdRevisedGroups: mtdRevisedGroups,
+      mtdSupersededAlerts: mtdSupersededAlerts
+    }),
+    unmatchedFollowUp: unmatchedFollowUp,
+    qualification: "amount > $" + GROWTH_HVAC_SOLD_MIN_DOLLARS +
+      " and seller in RECAP_ROSTER / approved manager sellers"
   };
 }
 function sameDayVsFollowup(fromIso, toIso) {
@@ -10507,11 +11326,12 @@ function sameDayVsFollowup(fromIso, toIso) {
   var to = String(toIso || from).slice(0, 10);
   var sold = readSoldForSameday_(from, to, BOOKED_LOOKBACK_DAYS);
   var booked = readBookedJobs_(BOOKED_LOOKBACK_DAYS);
-  // de-dupe superseded/duplicate: one row per Job#, keep the highest amount
+    // de-dupe superseded/duplicate: one row per Job# + Estimate#, keep the highest amount
   var byJob = {
   };
   sold.forEach(function (s) {
-    if (!byJob[s.job] || s.amount > byJob[s.job].amount) byJob[s.job] = s;
+    var key = s.job + "|" + (s.est || "");
+    if (!byJob[key] || s.amount > byJob[key].amount) byJob[key] = s;
   })
   ;
   var rows = Object.keys(byJob).map(function (j) {
@@ -10626,7 +11446,6 @@ function scorecardAudit() {
     ", l2cLabelIso_=" + (typeof l2cLabelIso_);
   var layer = "buildL2CTabPlus=" + (typeof buildL2CTabPlus) +
     ", decorateL2C_=" + (typeof decorateL2C_) +
-    ", applyDayRanEstimates_=" + (typeof applyDayRanEstimates_) +
     ", readSameDaySplit_=" + (typeof readSameDaySplit_) +
     ", installL2CPlus=" + (typeof installL2CPlus) +
     ", removeL2CPlus=" + (typeof removeL2CPlus);
@@ -11843,7 +12662,10 @@ function wireDailySold() {
   daily.getRange("D" + rSold).setFormula('=IFERROR(INDEX(' + totCol + ',' + mtdM + '),0)');
   daily.getRange("C" + rDol).setFormula('=IFERROR(INDEX(' + dolCol + ',' + dayM + '),0)').setNumberFormat("$#,##0");
   daily.getRange("D" + rDol).setFormula('=IFERROR(INDEX(' + dolCol + ',' + mtdM + '),0)').setNumberFormat("$#,##0");
-  if (rAvg > 0) daily.getRange("C" + rAvg).setFormula('=IFERROR(C' + rDol + '/C' + rSold + ',"")').setNumberFormat("$#,##0");
+  if (rAvg > 0) {
+    daily.getRange("C" + rAvg).setFormula('=IFERROR(C' + rDol + '/C' + rSold + ',"")').setNumberFormat("$#,##0");
+    daily.getRange("D" + rAvg).setFormula('=IFERROR(D' + rDol + '/D' + rSold + ',"")').setNumberFormat("$#,##0");
+  }
   var clearLabels = ["total leads", "total installs", "hvac tech flip leads", "hvac tech flip deals", "hvac rev", "self gen"];
   var cleared = [];
   clearLabels.forEach(function (lab) {
@@ -12709,43 +13531,35 @@ function backfillObjectionNotes() {
 }
 
 /* =====================================================================
-   TIME-OFF / PTO MODULE  — re-authored 8/14/2026
+   TIME-OFF / PTO MODULE
    ---------------------------------------------------------------------
-   NOTE: the original module was lost in the 8/13 truncation and could not
-   be found in any backup, so this is a REWRITE against the same eight
-   function names, not a byte-for-byte restore. Behaviour is deliberately
+   NOTE: the original module was lost in the 8/13 truncation and was not
+   in any backup, so this is a REWRITE against the same eight function
+   names, not a byte-for-byte restore. Behaviour is deliberately
    conservative:
 
      - Nothing here writes to the Schedule Exceptions sheet unless YOU
        call applyApprovedTimeOff() yourself. The scheduled tick only
        proposes (emails you a digest).
      - Only "Approved" rows are ever proposed.
-     - Only people on RECAP_ROSTER are touched. Everyone else in the HR
-       report is ignored.
+     - Only people on RECAP_ROSTER are touched.
      - Writes are de-duplicated against rows already in the sheet, and
        past dates are skipped.
 
    It writes into the SAME sheet the recap already reads via
-   readExceptionsForDate_(): columns Date | HCA Name | Type | Notes,
-   spreadsheet DAILY_RECAP_CONFIG.exceptionsSpreadsheetId. So the manual
-   path you have been using keeps working exactly as before — this just
-   fills the rows in for you.
+   readExceptionsForDate_(): columns Date | HCA Name | Type | Notes.
+   The manual path you already use keeps working exactly as before.
+
+   Run testTimeOffScan() first - it logs what it sees and sends nothing.
    ===================================================================== */
 
-/* Config for the module. Change TIME_OFF_QUERY if the HR mail changes. */
 var TIME_OFF_CONFIG = {
-  /* Gmail search used to find the payroll time-off mail. Broad on purpose:
-     scanTimeOffCandidates_ does the real filtering. */
   query: 'subject:("time off" OR "PTO" OR "vacation" OR "sick") newer_than:{DAYS}d',
   lookbackDays: 14,
-  /* Only propose days this far ahead; keeps a year-long vacation request
-     from carpet-bombing the sheet. */
   horizonDays: 60
 };
 
-/* Map whatever the HR system calls it onto the two words the recap's
-   schedule logic understands: "Vacation" or "Sick". Returns "" for
-   anything we should not act on (denied/cancelled types etc). */
+/* Map whatever HR calls it onto the two words the schedule logic knows. */
 function timeOffType_(raw) {
   var t = String(raw || "").toLowerCase().trim();
   if (!t) return "";
@@ -12759,29 +13573,22 @@ function timeOffType_(raw) {
   return "";
 }
 
-/* Pull ISO dates out of a chunk of text.
-   Handles "9/17/2026 - 9/18/2026" ranges and bare "9/17/2026" dates.
-   A range is expanded to every calendar day it covers (inclusive).
-   Returns a de-duplicated, sorted array of "yyyy-MM-dd" strings. */
+/* Pull ISO dates out of text. Handles "9/17/2026 - 9/18/2026" ranges and
+   bare dates. Ranges expand to every day inclusive. */
 function extractTimeOffDates_(text) {
   var s = String(text || "");
   var out = {};
   var D = "(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})";
-  var rangeRe = new RegExp(D + "\\s*(?:-|–|—|to|through)\\s*" + D, "g");
+  var rangeRe = new RegExp(D + "\\s*(?:-|\u2013|\u2014|to|through)\\s*" + D, "g");
   var seenSpan = [];
   var m;
 
-  function iso(mm, dd, yyyy) {
-    return yyyy + "-" + pad2_(mm) + "-" + pad2_(dd);
-  }
+  function iso(mm, dd, yyyy) { return yyyy + "-" + pad2_(mm) + "-" + pad2_(dd); }
   function addSpan(a, b) {
-    /* Guard: never expand more than ~90 days, and never run backwards. */
-    var start = new Date(a + "T12:00:00");
-    var end = new Date(b + "T12:00:00");
+    var start = new Date(a + "T12:00:00"), end = new Date(b + "T12:00:00");
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
     if (end < start) return;
-    var guard = 0;
-    var cur = start;
+    var guard = 0, cur = start;
     while (cur <= end && guard < 90) {
       out[Utilities.formatDate(cur, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")] = true;
       cur = new Date(cur.getTime() + 24 * 60 * 60 * 1000);
@@ -12790,31 +13597,23 @@ function extractTimeOffDates_(text) {
   }
 
   while ((m = rangeRe.exec(s)) !== null) {
-    var a = iso(m[1], m[2], m[3]);
-    var b = iso(m[4], m[5], m[6]);
     seenSpan.push(m[0]);
-    addSpan(a, b);
+    addSpan(iso(m[1], m[2], m[3]), iso(m[4], m[5], m[6]));
   }
-
-  /* Now the singles — but skip any that were already consumed by a range. */
   var singleRe = new RegExp(D, "g");
   var consumed = seenSpan.join(" | ");
   while ((m = singleRe.exec(s)) !== null) {
     if (consumed.indexOf(m[0]) !== -1) continue;
     out[iso(m[1], m[2], m[3])] = true;
   }
-
   return Object.keys(out).sort();
 }
 
-/* Read recent time-off mail and turn it into structured candidates.
-   Returns [{ name, roster, type, status, dates:[iso], subject, msgId, date }]
-   Only rows whose person is on RECAP_ROSTER survive. */
+/* Read recent time-off mail into structured candidates. Roster only. */
 function scanTimeOffCandidates_(days) {
   var lookback = days || TIME_OFF_CONFIG.lookbackDays;
   var q = TIME_OFF_CONFIG.query.replace("{DAYS}", String(lookback));
-  var out = [];
-  var threads;
+  var out = [], threads;
   try {
     threads = GmailApp.search(q, 0, 50);
   } catch (err) {
@@ -12829,48 +13628,30 @@ function scanTimeOffCandidates_(days) {
   threads.forEach(function (th) {
     th.getMessages().forEach(function (msg) {
       var body = "";
-      try {
-        body = msg.getPlainBody() || "";
-      } catch (e) {
-        return;
-      }
+      try { body = msg.getPlainBody() || ""; } catch (e) { return; }
       var subject = msg.getSubject() || "";
       var hay = subject + "\n" + body;
 
-      /* Walk the roster and look for each person by name in the text.
-         The HR report is a table, so we slice the line(s) mentioning them. */
       RECAP_ROSTER.forEach(function (hca) {
         var target = normName_(hca.name);
         if (!target) return;
-
         var lines = hay.split(/\r?\n/);
         for (var i = 0; i < lines.length; i++) {
           if (normName_(lines[i]).indexOf(target) === -1) continue;
-
-          /* Take this line plus the next two — the HR export wraps
-             dates and notes onto continuation lines. */
           var chunk = lines.slice(i, i + 3).join(" ");
           var status = /approved/i.test(chunk) ? "Approved"
             : /denied/i.test(chunk) ? "Denied"
               : /requested/i.test(chunk) ? "Requested" : "";
           if (/cancellation/i.test(chunk)) status = "Cancelled";
-
           var type = timeOffType_(chunk);
           if (!type) continue;
-
           var dates = extractTimeOffDates_(chunk).filter(function (d) {
             return d >= todayIso && d <= horizonIso;
           });
           if (!dates.length) continue;
-
           out.push({
-            name: hca.name,
-            roster: hca,
-            type: type,
-            status: status,
-            dates: dates,
-            subject: subject,
-            msgId: msg.getId(),
+            name: hca.name, roster: hca, type: type, status: status, dates: dates,
+            subject: subject, msgId: msg.getId(),
             date: Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")
           });
           break;
@@ -12878,70 +13659,16 @@ function scanTimeOffCandidates_(days) {
       });
     });
   });
-
   return out;
 }
 
-/* Read-only. Scans, then emails you a digest of what it WOULD write.
-   Nothing touches the sheet. This is what the trigger runs. */
-function proposeTimeOffFromEmail(days) {
-  var cands = scanTimeOffCandidates_(days);
-  var approved = cands.filter(function (c) { return c.status === "Approved"; });
-
-  if (!approved.length) {
-    Logger.log("Time-off scan: nothing approved and upcoming in the last " +
-      (days || TIME_OFF_CONFIG.lookbackDays) + " days.");
-    return { count: 0, candidates: [] };
-  }
-
-  var existing = timeOffExistingKeys_();
-  var lines = [];
-  var newCount = 0;
-
-  approved.forEach(function (c) {
-    var fresh = c.dates.filter(function (d) {
-      return !existing[d + "|" + c.name.toLowerCase()];
-    });
-    if (!fresh.length) return;
-    newCount += fresh.length;
-    lines.push("  " + c.name + " — " + c.type + " — " + fresh.join(", ") +
-      "\n      (from: " + c.subject + ")");
-  });
-
-  if (!newCount) {
-    Logger.log("Time-off scan: " + approved.length +
-      " approved request(s), all already in the Schedule Exceptions sheet.");
-    return { count: 0, candidates: approved };
-  }
-
-  var body = "Approved time off found in email that is NOT yet in the Schedule Exceptions sheet:\n\n" +
-    lines.join("\n") + "\n\n" +
-    "Nothing has been written. To apply these, run applyApprovedTimeOff() in the\n" +
-    "Apps Script editor, or add the rows by hand as usual.\n\n" +
-    "Sheet: https://docs.google.com/spreadsheets/d/" +
-    DAILY_RECAP_CONFIG.exceptionsSpreadsheetId + "/edit\n";
-
-  MailApp.sendEmail({
-    to: DAILY_RECAP_CONFIG.managerEmail,
-    subject: "Time off to review — " + newCount + " day(s) not on the schedule",
-    body: body,
-    name: DAILY_RECAP_CONFIG.fromName
-  });
-
-  Logger.log("Time-off scan: proposed " + newCount + " day(s) by email.");
-  return { count: newCount, candidates: approved };
-}
-
-/* Existing rows in the sheet, keyed "iso|lowercased name", so we never
-   write a duplicate. */
+/* Existing sheet rows keyed "iso|lowercased name" so we never duplicate. */
 function timeOffExistingKeys_() {
   var seen = {};
   try {
     var cfg = DAILY_RECAP_CONFIG;
     var ss = SpreadsheetApp.openById(cfg.exceptionsSpreadsheetId);
-    var sheet = cfg.exceptionsSheetName
-      ? ss.getSheetByName(cfg.exceptionsSheetName)
-      : ss.getSheets()[0];
+    var sheet = cfg.exceptionsSheetName ? ss.getSheetByName(cfg.exceptionsSheetName) : ss.getSheets()[0];
     if (!sheet) return seen;
     var values = sheet.getDataRange().getValues();
     if (values.length < 2) return seen;
@@ -12960,26 +13687,51 @@ function timeOffExistingKeys_() {
   return seen;
 }
 
-/* THE ONLY FUNCTION THAT WRITES. Appends approved, upcoming, not-already-
-   present time off into the Schedule Exceptions sheet. Run it by hand. */
+/* Read-only. Emails you what it WOULD write. This is what the trigger runs. */
+function proposeTimeOffFromEmail(days) {
+  var cands = scanTimeOffCandidates_(days);
+  var approved = cands.filter(function (c) { return c.status === "Approved"; });
+  if (!approved.length) {
+    Logger.log("Time-off scan: nothing approved and upcoming.");
+    return { count: 0, candidates: [] };
+  }
+  var existing = timeOffExistingKeys_();
+  var lines = [], newCount = 0;
+  approved.forEach(function (c) {
+    var fresh = c.dates.filter(function (d) { return !existing[d + "|" + c.name.toLowerCase()]; });
+    if (!fresh.length) return;
+    newCount += fresh.length;
+    lines.push("  " + c.name + " - " + c.type + " - " + fresh.join(", ") +
+      "\n      (from: " + c.subject + ")");
+  });
+  if (!newCount) {
+    Logger.log("Time-off scan: " + approved.length + " approved request(s), all already on the sheet.");
+    return { count: 0, candidates: approved };
+  }
+  var body = "Approved time off found in email that is NOT yet in the Schedule Exceptions sheet:\n\n" +
+    lines.join("\n") + "\n\n" +
+    "Nothing has been written. To apply these, run applyApprovedTimeOff() in the\n" +
+    "Apps Script editor, or add the rows by hand as usual.\n\n" +
+    "Sheet: https://docs.google.com/spreadsheets/d/" +
+    DAILY_RECAP_CONFIG.exceptionsSpreadsheetId + "/edit\n";
+  MailApp.sendEmail({
+    to: DAILY_RECAP_CONFIG.managerEmail,
+    subject: "Time off to review - " + newCount + " day(s) not on the schedule",
+    body: body, name: DAILY_RECAP_CONFIG.fromName
+  });
+  Logger.log("Time-off scan: proposed " + newCount + " day(s) by email.");
+  return { count: newCount, candidates: approved };
+}
+
+/* THE ONLY FUNCTION THAT WRITES. Run it by hand. */
 function applyApprovedTimeOff(days) {
   var cfg = DAILY_RECAP_CONFIG;
-  var cands = scanTimeOffCandidates_(days).filter(function (c) {
-    return c.status === "Approved";
-  });
-  if (!cands.length) {
-    Logger.log("applyApprovedTimeOff: nothing approved to write.");
-    return { written: 0 };
-  }
+  var cands = scanTimeOffCandidates_(days).filter(function (c) { return c.status === "Approved"; });
+  if (!cands.length) { Logger.log("applyApprovedTimeOff: nothing approved to write."); return { written: 0 }; }
 
   var ss = SpreadsheetApp.openById(cfg.exceptionsSpreadsheetId);
-  var sheet = cfg.exceptionsSheetName
-    ? ss.getSheetByName(cfg.exceptionsSheetName)
-    : ss.getSheets()[0];
-  if (!sheet) {
-    Logger.log("applyApprovedTimeOff: exceptions sheet not found.");
-    return { written: 0 };
-  }
+  var sheet = cfg.exceptionsSheetName ? ss.getSheetByName(cfg.exceptionsSheetName) : ss.getSheets()[0];
+  if (!sheet) { Logger.log("applyApprovedTimeOff: exceptions sheet not found."); return { written: 0 }; }
 
   var values = sheet.getDataRange().getValues();
   var header = values[0].map(function (h) { return String(h || "").trim().toLowerCase(); });
@@ -12994,63 +13746,46 @@ function applyApprovedTimeOff(days) {
 
   var existing = timeOffExistingKeys_();
   var width = Math.max(cDate, cName, cType, cNote) + 1;
-  var rows = [];
-  var log = [];
-
+  var rows = [], log = [];
   cands.forEach(function (c) {
     c.dates.forEach(function (d) {
       var key = d + "|" + c.name.toLowerCase();
       if (existing[key]) return;
       existing[key] = true;
-      var row = new Array(width).fill("");
-      row[cDate] = d;
-      row[cName] = c.name;
-      row[cType] = c.type;
+      var row = [];
+      for (var w = 0; w < width; w++) row.push("");
+      row[cDate] = d; row[cName] = c.name; row[cType] = c.type;
       if (cNote !== -1) row[cNote] = "Auto-added from approved time-off email " + c.date;
       rows.push(row);
       log.push(c.name + " " + d + " " + c.type);
     });
   });
-
-  if (!rows.length) {
-    Logger.log("applyApprovedTimeOff: everything approved is already on the sheet.");
-    return { written: 0 };
-  }
-
+  if (!rows.length) { Logger.log("applyApprovedTimeOff: everything approved is already on the sheet."); return { written: 0 }; }
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, width).setValues(rows);
   Logger.log("applyApprovedTimeOff: wrote " + rows.length + " row(s):\n  " + log.join("\n  "));
   return { written: rows.length, rows: log };
 }
 
-/* Morning heads-up: who the schedule says is off today. Reads the sheet
-   only — this is the same data the recap uses to decide who to skip. */
+/* Morning heads-up: who the schedule says is off today. Reads only. */
 function sendTimeOffMorningCheck() {
   var iso = Utilities.formatDate(new Date(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
   var ex = readExceptionsForDate_(iso);
-
   if (!ex.ok) {
     MailApp.sendEmail({
       to: DAILY_RECAP_CONFIG.managerEmail,
-      subject: "Time off check — Schedule Exceptions sheet unreadable",
+      subject: "Time off check - Schedule Exceptions sheet unreadable",
       body: "Could not read the Schedule Exceptions sheet this morning, so nobody " +
         "was suppressed from the recap.\n\nError: " + ex.error + "\n",
       name: DAILY_RECAP_CONFIG.fromName
     });
     return { ok: false };
   }
-
   var names = Object.keys(ex.byName);
-  if (!names.length) {
-    Logger.log("Time off check " + iso + ": nobody off today.");
-    return { ok: true, count: 0 };
-  }
-
+  if (!names.length) { Logger.log("Time off check " + iso + ": nobody off today."); return { ok: true, count: 0 }; }
   var lines = names.map(function (k) {
     return "  " + k.replace(/\b\w/g, function (ch) { return ch.toUpperCase(); }) +
-      " — " + ex.byName[k].type +
-      (ex.byName[k].notes ? " (" + ex.byName[k].notes + ")" : "");
+      " - " + ex.byName[k].type + (ex.byName[k].notes ? " (" + ex.byName[k].notes + ")" : "");
   });
-
   MailApp.sendEmail({
     to: DAILY_RECAP_CONFIG.managerEmail,
     subject: "Off today (" + iso + "): " + names.length,
@@ -13058,47 +13793,4574 @@ function sendTimeOffMorningCheck() {
       "\n\nThese people will not be nagged for a recap.\n",
     name: DAILY_RECAP_CONFIG.fromName
   });
-
   Logger.log("Time off check " + iso + ": " + names.length + " off.");
   return { ok: true, count: names.length };
 }
 
-/* Trigger handler. Deliberately propose-only — see the header note. */
+/* Trigger handler. Propose-only by design. */
 function timeOffTick() {
-  try {
-    proposeTimeOffFromEmail();
-  } catch (err) {
-    Logger.log("timeOffTick failed: " + (err && err.message ? err.message : err));
-  }
+  try { proposeTimeOffFromEmail(); }
+  catch (err) { Logger.log("timeOffTick failed: " + (err && err.message ? err.message : err)); }
 }
 
 /* Install (or reinstall) the two time-off triggers. Idempotent. */
 function installTimeOffTriggers() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     var fn = t.getHandlerFunction();
-    if (fn === "timeOffTick" || fn === "sendTimeOffMorningCheck") {
-      ScriptApp.deleteTrigger(t);
-    }
+    if (fn === "timeOffTick" || fn === "sendTimeOffMorningCheck") ScriptApp.deleteTrigger(t);
   });
   var tz = DAILY_RECAP_CONFIG.timeZone;
-  /* Scan for new approved requests once a day, mid-afternoon — after
-     payroll has processed the morning's approvals. */
-  ScriptApp.newTrigger("timeOffTick")
-    .timeBased().everyDays(1).atHour(15).inTimezone(tz).create();
-  /* Heads-up before the 6am send goes out. */
-  ScriptApp.newTrigger("sendTimeOffMorningCheck")
-    .timeBased().everyDays(1).atHour(5).inTimezone(tz).create();
+  ScriptApp.newTrigger("timeOffTick").timeBased().everyDays(1).atHour(15).inTimezone(tz).create();
+  ScriptApp.newTrigger("sendTimeOffMorningCheck").timeBased().everyDays(1).atHour(5).inTimezone(tz).create();
   Logger.log("Installed time-off triggers (scan 15:00, morning check 05:00, " + tz + ").");
 }
 
-/* Safe dry run — logs what the scanner sees without emailing or writing. */
+/* Safe dry run - logs what the scanner sees, emails nothing, writes nothing. */
 function testTimeOffScan() {
   var c = scanTimeOffCandidates_();
   Logger.log("Time-off candidates found: " + c.length);
   c.forEach(function (x) {
-    Logger.log("  " + x.name + " | " + x.type + " | " + x.status + " | " +
-      x.dates.join(", ") + " | " + x.subject);
+    Logger.log("  " + x.name + " | " + x.type + " | " + x.status + " | " + x.dates.join(", ") + " | " + x.subject);
   });
   return c;
 }
 /* ================= END TIME-OFF / PTO MODULE ================= */
+
+/* =====================================================================
+   SELF-ADVANCING GROWTH BUILDER  —  v2
+   ---------------------------------------------------------------------
+   Reads the newest "All Leads*" and "All Installs*" exports in your Drive
+   and reports the four BI_MTD_* constants plus the day INSTALL columns,
+   along with any drift from what this script currently holds.
+
+   READ-ONLY. Nothing here writes to the growth sheet and nothing changes
+   L2C_DAYS. It reports; you paste.
+
+   It does NOT compute the day LEAD columns on purpose: the growth sheet
+   defines those as consults that RAN that day (dispatch board), while the
+   export counts leads RECEIVED. Different measures.
+
+   SETUP: Editor -> Services (+) -> Drive API -> Add.
+   ===================================================================== */
+
+var GROWTH_AUTO = {
+  /* The Daily Uploads folder. Its READ ME is the contract: drop the exports in,
+     do not rename them, dated "Uploads MM.DD" subfolders optional. */
+  uploadsFolderId: "1Ac4ApEHqxPUaYd9q2fnSTSPbPG15ifyR",
+  /* Filenames are the FALLBACK only — see gaResolveUploads_ for why. */
+  leadsTitlePrefix:    "All Leads",
+  installsTitlePrefix: "All Installs",
+  pipelineTitlePrefix: "HVAC Backlog and Pipeline Installs",
+  staleAfterDays: 2,
+  maxUploadReads: 10,
+  /* Window for the unattended run, Pacific, inclusive of both hours.
+     Uploads do not land at a fixed time — 8/17 arrived 06:39, 8/15 arrived
+     14:20 — so a single fixed trigger would miss on roughly half the days.
+     The handler polls across the window and goes quiet for the rest of the
+     day once it has loaded the operational date.
+
+     Starts at 7 because that is when the BI report lands; the poll interval
+     is 15 minutes so a 7:30 upload is live before the 7:45 huddle rather
+     than an hour later. Runs to 15:00 to catch an afternoon upload. */
+  autoFromHour: 7,
+  autoToHour: 15,
+  autoEveryMinutes: 15
+};
+
+/* ----------------------------------------------------------------------------
+ * WHICH FILE IS WHICH — by column header, never by filename.
+ *
+ * The Daily Uploads READ ME tells you not to rename anything, because these are
+ * identified by their headers. The old prefix matcher disagreed with that: it
+ * globbed all of Drive and had eleven "All Leads" candidates to guess between,
+ * resolving by Drive's modified timestamp — so re-uploading an old file would
+ * silently make it "newest". Headers cannot be gamed that way.
+ *
+ * Each signature requires EVERY field, and the three are mutually exclusive:
+ *   leads    — only it has businessUnit.name / DuplicateFlag
+ *   installs — only it has HVAC Type   (pipeline also carries SoldByName and
+ *              BU_name_without_geo, so HVAC Type is the discriminator)
+ *   pipeline — only it has zone        (leads also carries lastApptDate and
+ *              jobStatus, so zone is the discriminator)
+ * -------------------------------------------------------------------------- */
+var GROWTH_UPLOAD_SIGNATURES = {
+  leads:    ["lead type", "businessunit.name", "duplicateflag"],
+  installs: ["hvac type", "soldbyname", "business unit"],
+  pipeline: ["lastapptdate", "jobstatus", "zone"]
+};
+
+var GROWTH_UPLOADS_CACHE_ = null;
+
+/* Reads a Drive file into a value grid. Native Sheets open directly; anything
+   else goes through the xlsx converter. */
+function gaReadTabular_(file) {
+  if (String(file.getMimeType()) === MimeType.GOOGLE_SHEETS) {
+    return SpreadsheetApp.openById(file.getId()).getSheets()[0].getDataRange().getValues();
+  }
+  return gaReadXlsx_(file.getId());
+}
+
+function gaMatchSignature_(values) {
+  /* Headers are not always on row 1, so scan the first few rows. */
+  for (var r = 0; r < Math.min(values.length, 8); r++) {
+    var low = values[r].map(function (h) { return String(h || "").trim().toLowerCase(); });
+    if (!low.join("")) continue;
+    for (var kind in GROWTH_UPLOAD_SIGNATURES) {
+      var need = GROWTH_UPLOAD_SIGNATURES[kind];
+      var ok = need.every(function (h) { return low.indexOf(h) > -1; });
+      if (ok) return kind;
+    }
+  }
+  return "";
+}
+
+/* Every candidate in the uploads folder and one level of subfolders,
+   newest first. One level is deliberate — it matches "Uploads MM.DD" and
+   stops a stray nested archive from being pulled in. */
+function gaUploadCandidates_() {
+  var out = [];
+  var root;
+  try { root = DriveApp.getFolderById(GROWTH_AUTO.uploadsFolderId); }
+  catch (e) {
+    Logger.log("Uploads folder unreachable (" + e + ") — falling back to filename search.");
+    return out;
+  }
+  function take(folder, where) {
+    var it = folder.getFiles();
+    while (it.hasNext()) {
+      var f = it.next();
+      var mt = String(f.getMimeType());
+      if (mt !== MimeType.GOOGLE_SHEETS &&
+          mt !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") continue;
+      out.push({ file: f, id: f.getId(), title: f.getName(), updated: f.getLastUpdated(), where: where });
+    }
+  }
+  take(root, "(top level)");
+  var subs = root.getFolders();
+  while (subs.hasNext()) { var sf = subs.next(); take(sf, sf.getName()); }
+  out.sort(function (a, b) { return b.updated - a.updated; });
+  return out;
+}
+
+/* Resolves leads / installs / pipeline in ONE pass, memoized for the execution.
+   Reading an xlsx means converting it, which is slow, so candidates are taken
+   newest-first and the walk stops as soon as everything asked for is found.
+   In practice today's folder holds exactly three files and it costs three
+   reads — the same as the old prefix path, with none of the ambiguity. */
+function gaResolveUploads_(kinds) {
+  kinds = kinds || ["leads", "installs", "pipeline"];
+  if (!GROWTH_UPLOADS_CACHE_) GROWTH_UPLOADS_CACHE_ = { found: {}, log: [], scanned: false };
+  var C = GROWTH_UPLOADS_CACHE_;
+
+  var missing = kinds.filter(function (k) { return !C.found[k]; });
+  if (!missing.length) return C;
+
+  /* The folder scan latches via C.scanned, so it happens at most once per
+     execution — which means it must resolve ALL THREE kinds, not just the ones
+     this caller asked for. Before this fix, growthMorningRefresh called
+     gaResolveUploads_(["pipeline"]) first, the walk broke as soon as the
+     pipeline file was found, C.scanned went true, and the later
+     ["leads","installs"] call skipped the folder entirely and fell through to
+     the Drive-wide filename search. */
+  var ALL_KINDS = ["leads", "installs", "pipeline"];
+
+  if (!C.scanned) {
+    var cands = gaUploadCandidates_();
+    C.log.push("uploads folder: " + cands.length + " spreadsheet file(s) visible");
+    var reads = 0;
+    for (var i = 0; i < cands.length && reads < GROWTH_AUTO.maxUploadReads; i++) {
+      if (!ALL_KINDS.some(function (k) { return !C.found[k]; })) break;
+      var c = cands[i], vals;
+      try { vals = gaReadTabular_(c.file); reads++; }
+      catch (e) { C.log.push("  skipped " + c.title + " (" + e + ")"); continue; }
+      var kind = gaMatchSignature_(vals);
+      if (!kind) { C.log.push("  " + c.title + " — no known header signature, ignored"); continue; }
+      if (C.found[kind]) continue;
+      C.found[kind] = { id: c.id, title: c.title, updated: c.updated, values: vals, where: c.where };
+      C.log.push("  " + kind + ": " + c.title + "   [" + c.where + "]");
+    }
+    C.scanned = true;
+  }
+
+  /* Filename fallback for anything the folder did not yield. */
+  var prefixes = { leads: GROWTH_AUTO.leadsTitlePrefix, installs: GROWTH_AUTO.installsTitlePrefix,
+                   pipeline: GROWTH_AUTO.pipelineTitlePrefix };
+  kinds.forEach(function (k) {
+    if (C.found[k]) return;
+    var f = gaNewestExport_(prefixes[k]);
+    if (!f) { C.log.push("  " + k + ": NOT FOUND in the uploads folder or by filename"); return; }
+    try {
+      C.found[k] = { id: f.id, title: f.title, updated: f.updated,
+                     values: gaReadXlsx_(f.id), where: "(filename fallback)" };
+      C.log.push("  " + k + ": " + f.title + "   [filename fallback — newest by MODIFIED TIME across all of Drive, NOT from the uploads folder]");
+    } catch (e) { C.log.push("  " + k + ": found " + f.title + " but could not read it (" + e + ")"); }
+  });
+  return C;
+}
+
+function gaNewestExport_(prefix) {
+  var best = null, seen = [];
+  try {
+    var it = DriveApp.searchFiles('title contains "' + prefix.replace(/"/g, '') + '" and trashed = false');
+    while (it.hasNext()) {
+      var f = it.next();
+      if (String(f.getName() || "").indexOf(prefix) !== 0) continue;
+      seen.push(f.getName());
+      var when = f.getLastUpdated();
+      if (!best || when > best.updated) best = { id: f.getId(), title: f.getName(), updated: when };
+    }
+  } catch (err) {
+    Logger.log("Drive search failed for '" + prefix + "': " + (err && err.message ? err.message : err));
+  }
+  if (seen.length > 1) Logger.log("Candidates for '" + prefix + "': " + seen.join(", ") + "  -> using " + (best ? best.title : "(none)"));
+  return best;
+}
+
+function gaReadXlsx_(fileId) {
+  if (typeof Drive === "undefined" || !Drive.Files) {
+    throw new Error("Advanced Drive Service is off. Editor -> Services (+) -> Drive API -> Add.");
+  }
+  var blob = DriveApp.getFileById(fileId).getBlob();
+  var tempId = null, values = null;
+  try {
+    var made;
+    try { made = Drive.Files.insert({ title: "TEMP growth import", mimeType: MimeType.GOOGLE_SHEETS }, blob, { convert: true }); }
+    catch (e2) { made = Drive.Files.create({ name: "TEMP growth import", mimeType: MimeType.GOOGLE_SHEETS }, blob); }
+    tempId = made.id || made.getId();
+    values = SpreadsheetApp.openById(tempId).getSheets()[0].getDataRange().getValues();
+  } finally {
+    if (tempId) { try { DriveApp.getFileById(tempId).setTrashed(true); } catch (e3) {} }
+  }
+  return values;
+}
+
+function gaIso_(value) {
+  if (!value && value !== 0) return "";
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return Utilities.formatDate(value, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+  }
+  var t = String(value).trim();
+  var m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) { var yr = m[3].length === 2 ? ("20" + m[3]) : m[3]; return yr + "-" + pad2_(m[1]) + "-" + pad2_(m[2]); }
+  m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + "-" + pad2_(m[2]) + "-" + pad2_(m[3]);
+  return "";
+}
+
+function gaBucket_(leadType) {
+  var t = String(leadType || "").toLowerCase().trim();
+  if (!t) return "";
+  if (t.indexOf("self gen") !== -1) return "sg";
+  if (t.indexOf("tech") !== -1) return "tech";
+  if (t.indexOf("inbound") !== -1 || t.indexOf("webform") !== -1) return "mkt";
+  return "";
+}
+
+function gaCountByDay_(values, whatFor) {
+  var DATE_HEADERS = ["est", "export est", "date"];
+  var out = {}, header = null, cDate = -1, cType = -1, parsed = 0, unbucketed = {};
+  /* Fix 6: when processing installs, also detect rental rows via job.type column */
+  var cJobType = -1, rentalTotal = 0;
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    if (!header) {
+      var lower = row.map(function (h) { return String(h || "").trim().toLowerCase(); });
+      if (lower.indexOf("lead type") === -1) continue;
+      header = lower;
+      cType = lower.indexOf("lead type");
+      for (var k = 0; k < DATE_HEADERS.length && cDate === -1; k++) cDate = lower.indexOf(DATE_HEADERS[k]);
+      if (cDate === -1) {
+        throw new Error("No date column in the " + whatFor + " export. Looked for " +
+          DATE_HEADERS.join(" / ") + ". Header row was: [" + lower.join(" | ") + "]");
+      }
+      /* Fix 6: locate the job.type column for rental detection (installs only) */
+      if (whatFor === "installs") {
+        cJobType = lower.indexOf("job.type");
+      }
+      continue;
+    }
+    var iso = gaIso_(row[cDate]);
+    if (!iso) continue;
+    var b = gaBucket_(row[cType]);
+    if (!b) { var lt = String(row[cType] || "(blank)"); unbucketed[lt] = (unbucketed[lt] || 0) + 1; continue; }
+    if (!out[iso]) out[iso] = { mkt: 0, tech: 0, sg: 0, rental: 0 };
+    out[iso][b]++; parsed++;
+    /* Fix 6: count rental installs per day — job.type containing "rental" (case-insensitive) */
+    if (cJobType !== -1 && String(row[cJobType] || "").toLowerCase().indexOf("rental") !== -1) {
+      out[iso].rental++; rentalTotal++;
+    }
+  }
+  if (!header) throw new Error("No 'Lead Type' header found in the " + whatFor + " export.");
+  var ub = Object.keys(unbucketed);
+  if (ub.length) Logger.log(whatFor + ": ignored lead types -> " + ub.map(function (k) { return k + " x" + unbucketed[k]; }).join(", "));
+  Logger.log(whatFor + ": parsed " + parsed + " rows across " + Object.keys(out).length + " days.");
+  return out;
+}
+
+function growthPreview() {
+  var warn = [];
+  var today = Utilities.formatDate(new Date(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+  var fromIso = monthStartIso_();
+  var toIso   = today;
+
+  var res = gaResolveUploads_(["leads", "installs"]);
+  res.log.forEach(function (l) { Logger.log(l); });
+  var leadsFile = res.found.leads, instFile = res.found.installs;
+  if (!leadsFile) { Logger.log("No leads export found in the uploads folder."); return null; }
+  if (!instFile)  { Logger.log("No installs export found in the uploads folder."); return null; }
+  Logger.log("Leads file: " + leadsFile.title + "   Installs file: " + instFile.title);
+
+  function ageDays(d) { return Math.floor((new Date().getTime() - d.getTime()) / 86400000); }
+  var la = ageDays(leadsFile.updated), ia = ageDays(instFile.updated);
+  if (la > GROWTH_AUTO.staleAfterDays) warn.push("Leads export is " + la + "d old (" + leadsFile.title + ") - re-export.");
+  if (ia > GROWTH_AUTO.staleAfterDays) warn.push("Installs export is " + ia + "d old (" + instFile.title + ") - re-export.");
+
+  var leadsBy, instBy;
+  try {
+    /* Already read during resolution — identifying a file and parsing it are
+       the same expensive conversion, so it happens once. */
+    leadsBy = gaCountByDay_(leadsFile.values, "leads");
+    instBy  = gaCountByDay_(instFile.values, "installs");
+  } catch (err) {
+    var msg = "growthPreview failed: " + (err && err.message ? err.message : err);
+    Logger.log(msg); return { ok: false, error: msg };
+  }
+
+  var tot = { mkt: 0, tech: 0, sg: 0 }, lastDay = "";
+  Object.keys(leadsBy).forEach(function (d) {
+    if (d < fromIso || d > toIso) return;
+    tot.mkt += leadsBy[d].mkt; tot.tech += leadsBy[d].tech; tot.sg += leadsBy[d].sg;
+    if (d > lastDay) lastDay = d;
+  });
+  var totalLeads = tot.mkt + tot.tech + tot.sg;
+
+  var DN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var curByLabel = {};
+  {
+    /* RAW, deliberately. readGrowthDays_ applies GROWTH_SOURCE_CORRECTIONS, and
+       diffing corrected rows against the export would report every known
+       mis-tag as drift forever. Corrections belong on top of stored data, not
+       inside the comparison that maintains it. */
+    readGrowthDaysRaw_().forEach(function (r) { curByLabel[r[0]] = r; });
+  }
+  var instLines = [], drift = [];
+  Object.keys(instBy).sort().forEach(function (iso) {
+    if (iso < fromIso || iso > toIso) return;
+    if (iso > lastDay) lastDay = iso;
+    var p = iso.split("-");
+    var label = DN[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + " " + (+p[1]) + "/" + (+p[2]);
+    var I = instBy[iso];
+    instLines.push("  " + label + "  ->  mktInst " + I.mkt + ", techInst " + I.tech + ", sgInst " + I.sg);
+    var cur = curByLabel[label];
+    if (cur && (cur[4] !== I.mkt || cur[5] !== I.tech || cur[6] !== I.sg)) {
+      drift.push(label + ": script(" + cur[4] + "," + cur[5] + "," + cur[6] + ") vs export(" + I.mkt + "," + I.tech + "," + I.sg + ")");
+    }
+    if (!cur) drift.push(label + ": MISSING from L2C_DAYS - add a row (installs " + I.mkt + "," + I.tech + "," + I.sg + ")");
+  });
+
+  var consts =
+    "var BI_MTD_LEADS = " + totalLeads + ";\n" +
+    "var BI_MTD_MKT_LEADS = " + tot.mkt + ";\n" +
+    "var BI_MTD_TECH_LEADS = " + tot.tech + ";\n" +
+    "var BI_MTD_SG_LEADS = " + tot.sg + ";";
+
+  var curLeads = (typeof BI_MTD_LEADS === "number") ? BI_MTD_LEADS : null;
+  var constDrift = (curLeads !== null && curLeads !== totalLeads);
+
+  var body =
+    "GROWTH SHEET - computed from your Drive exports\n" +
+    "===============================================\n" +
+    "Leads   : " + leadsFile.title + "  (" + la + "d old)\n" +
+    "Installs: " + instFile.title + "  (" + ia + "d old)\n" +
+    "Latest day present in the data: " + (lastDay || "(none)") + "\n" +
+    "Today: " + today + "\n\n" +
+    (warn.length ? ("!! " + warn.join("\n!! ") + "\n\n") : "") +
+    (lastDay && lastDay < today ?
+      ("NOTE: the exports have no data for today (" + today + "). ServiceTitan's\n" +
+       "EST field posts a day late, so the newest complete day is " + lastDay + ".\n\n") : "") +
+    "MTD CONSTANTS" + (constDrift ? "  *** DIFFERENT FROM THE SCRIPT (script has " + curLeads + ") ***" : "  (matches the script)") + "\n\n" +
+    consts + "\n\n" +
+    "DAY INSTALL COLUMNS (positions 5,6,7 of each L2C_DAYS row):\n" +
+    (instLines.length ? instLines.join("\n") : "  (none)") + "\n\n" +
+    "DRIFT vs the script:\n" +
+    (drift.length ? ("  " + drift.join("\n  ")) : "  none - script matches the exports.") + "\n\n" +
+    "NOT COMPUTED, ON PURPOSE:\n" +
+    "  - day LEAD columns: the sheet defines those as consults that RAN\n" +
+    "    that day (dispatch board). The export counts leads RECEIVED.\n" +
+    "  - sold: overridden live by the sold engine.\n" +
+    "  - $installed: not in either export. Add a revenue column to the\n" +
+    "    ServiceTitan install report to make this fully automatic.\n\n" +
+    "Cross-check the MTD constants against BI before publishing the link.\n";
+
+  Logger.log(body);
+  try {
+    MailApp.sendEmail({
+      to: DAILY_RECAP_CONFIG.managerEmail,
+      subject: "Growth numbers - data through " + (lastDay || "?") +
+        (warn.length ? " (STALE EXPORT)" : (drift.length || constDrift ? " (DRIFT)" : " (in sync)")),
+      body: body, name: DAILY_RECAP_CONFIG.fromName
+    });
+  } catch (e) { Logger.log("Email failed: " + e); }
+
+  return { ok: true, totalLeads: totalLeads, mkt: tot.mkt, tech: tot.tech, sg: tot.sg,
+           lastDay: lastDay, drift: drift, constDrift: constDrift, warnings: warn };
+}
+
+function growthDriftCheck() { return growthPreview(); }
+/* ============== END SELF-ADVANCING GROWTH BUILDER v2 ============== */
+/* ============================================================================
+ * STAGE 2b — the exports write themselves in.
+ *
+ * growthPreview() already computes the day install columns and the four MTD
+ * lead figures from the newest Drive exports; it could only ever print them.
+ * This commits them: install columns onto the Daily Data tab, MTD figures onto
+ * the Growth Config tab.
+ *
+ * WHAT IT WILL NEVER WRITE, and why:
+ *   - day LEAD columns. The sheet counts consults that RAN off the dispatch
+ *     board; the export counts leads RECEIVED, and revisits are only visible
+ *     as board position. No export field distinguishes them. Human read.
+ *   - sold count / sold $. Owned by the live ServiceTitan engine, which is
+ *     ahead of BI, so writing them here would move numbers backwards.
+ *   - installed $. Not present in either export. Add a revenue column to the
+ *     ServiceTitan install report and this becomes automatic too.
+ *
+ * THE TRUNCATION GUARD is the point of this module. Apple Numbers silently
+ * truncates these exports, and a short export looks exactly like a real file.
+ * Within a month, leads and installs only ever accumulate — so a total that
+ * DROPS is proof the file is partial, never a real decline. Any drop aborts
+ * the whole run before a single cell is written.
+ * ========================================================================== */
+/* ---- NEW: per-day Completed lead counts, keyed by lastApptDate (NOT the
+   same thing as leadsBy above, which is keyed by EST/received-date and
+   includes every status -- that's the correct shape for the MTD total the
+   BI dashboard shows, but the wrong shape for "leads that ran this day". ---- */
+function gaCountCompletedLeadsByApptDay_(values) {
+  var out = {}, header = null, cDate = -1, cType = -1, cStatus = -1,
+      parsed = 0, skippedStatus = 0, unbucketed = {};
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    if (!header) {
+      var lower = row.map(function (h) { return String(h || "").trim().toLowerCase(); });
+      if (lower.indexOf("lead type") === -1 || lower.indexOf("lastapptdate") === -1) continue;
+      header = lower;
+      cType = lower.indexOf("lead type");
+      cDate = lower.indexOf("lastapptdate");
+      cStatus = lower.indexOf("jobstatus");
+      if (cStatus === -1) {
+        throw new Error("No jobStatus column in the leads export -- cannot filter to Completed.");
+      }
+      continue;
+    }
+    if (String(row[cStatus] || "").trim() !== "Completed") { skippedStatus++; continue; }
+    var iso = gaIso_(row[cDate]);
+    if (!iso) continue;
+    var b = gaBucket_(row[cType]);
+    if (!b) { var lt = String(row[cType] || "(blank)"); unbucketed[lt] = (unbucketed[lt] || 0) + 1; continue; }
+    if (!out[iso]) out[iso] = { mkt: 0, tech: 0, sg: 0 };
+    out[iso][b]++; parsed++;
+  }
+  if (!header) throw new Error("No 'Lead Type' + 'lastApptDate' headers found in the leads export.");
+  var ub = Object.keys(unbucketed);
+  if (ub.length) Logger.log("leads (by appt day, Completed only): ignored lead types -> " +
+    ub.map(function (k) { return k + " x" + unbucketed[k]; }).join(", "));
+  Logger.log("leads (by appt day, Completed only): parsed " + parsed + " Completed rows across " +
+    Object.keys(out).length + " days; skipped " + skippedStatus + " non-Completed rows.");
+  return out;
+}
+
+function growthAutoAdvance_(commit) {
+  var tz = DAILY_RECAP_CONFIG.timeZone;
+  var today = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+  var fromIso = monthStartIso_();   // business-month start (2nd of the month)
+  var toIso   = today;              // through today
+  var log = [], fatal = [];
+
+  var res = gaResolveUploads_(["leads", "installs"]);
+  log = log.concat(res.log);
+  var leadsFile = res.found.leads, instFile = res.found.installs;
+  if (!leadsFile) fatal.push("No leads export found — nothing in the uploads folder carries " +
+    GROWTH_UPLOAD_SIGNATURES.leads.join(" / ") + ".");
+  if (!instFile)  fatal.push("No installs export found — nothing in the uploads folder carries " +
+    GROWTH_UPLOAD_SIGNATURES.installs.join(" / ") + ".");
+  if (fatal.length) return growthAutoAbort_(fatal, log, commit);
+
+  function ageDays(d) { return Math.floor((new Date().getTime() - d.getTime()) / 86400000); }
+  var la = ageDays(leadsFile.updated), ia = ageDays(instFile.updated);
+  log.push("leads   : " + leadsFile.title + "  (" + la + "d old)");
+  log.push("installs: " + instFile.title + "  (" + ia + "d old)");
+  if (la > GROWTH_AUTO.staleAfterDays) fatal.push("Leads export is " + la + " days old — re-export before advancing.");
+  if (ia > GROWTH_AUTO.staleAfterDays) fatal.push("Installs export is " + ia + " days old — re-export before advancing.");
+  if (fatal.length) return growthAutoAbort_(fatal, log, commit);
+
+  var leadsBy, instBy, leadsByApptDay;
+  try {
+    /* Already read during resolution — identifying a file and parsing it are
+       the same expensive conversion, so it happens once. */
+    leadsBy = gaCountByDay_(leadsFile.values, "leads");
+    instBy  = gaCountByDay_(instFile.values, "installs");
+    leadsByApptDay = gaCountCompletedLeadsByApptDay_(leadsFile.values);
+  } catch (err) {
+    return growthAutoAbort_(["Could not parse an export: " + (err && err.message ? err.message : err)], log, commit);
+  }
+
+  /* ---- month totals from the exports ---- */
+  var lt = { mkt: 0, tech: 0, sg: 0 }, it = { mkt: 0, tech: 0, sg: 0 }, lastDay = "";
+  var mtdRentalInst = 0;  // Fix 6: sum only MTD rental installs
+  Object.keys(leadsBy).forEach(function (d) {
+    if (d < fromIso || d > toIso) return;
+    lt.mkt += leadsBy[d].mkt; lt.tech += leadsBy[d].tech; lt.sg += leadsBy[d].sg;
+    if (d > lastDay) lastDay = d;
+  });
+  Object.keys(instBy).forEach(function (d) {
+    if (d < fromIso || d > toIso) return;
+    it.mkt += instBy[d].mkt; it.tech += instBy[d].tech; it.sg += instBy[d].sg;
+    mtdRentalInst += instBy[d].rental || 0;  // Fix 6: date-filtered rental count
+    if (d > lastDay) lastDay = d;
+  });
+  var totalLeads = lt.mkt + lt.tech + lt.sg, totalInst = it.mkt + it.tech + it.sg;
+  log.push("export MTD: leads " + totalLeads + " (mkt " + lt.mkt + ", tech " + lt.tech + ", sg " + lt.sg +
+    ")  installs " + totalInst + " (mkt " + it.mkt + ", tech " + it.tech + ", sg " + it.sg + ")");
+  log.push("data through: " + (lastDay || "(none)"));
+  var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+
+  /* ---- TRUNCATION GUARD ---- */
+  var raw = readGrowthDaysRaw_(ss);
+  var curInst = 0;
+  raw.forEach(function (r) { curInst += (Number(r[4]) || 0) + (Number(r[5]) || 0) + (Number(r[6]) || 0); });
+  var curBi = growthBiMtd_(ss);
+
+  /* Detect business-month rollover: the stored BI_MONTH_START differs from
+     the current fromIso, so the counters are expected to reset. On the first
+     day of a new month EST usually has not posted yet, so 0 rows is normal —
+     exit gracefully rather than ABORT. */
+  var isNewMonth = !curBi.monthStart || curBi.monthStart !== fromIso;
+
+  if (isNewMonth && !totalLeads && !totalInst) {
+    log.push("");
+    log.push("New business month (" + fromIso + ") — no activity has posted for today yet. Nothing to write.");
+    var rep = log.join("\n"); Logger.log(rep);
+    return { ok: true, committed: false, updates: 0, appends: 0,
+             needsSoldAndDollars: [], dataThroughIso: "", report: rep };
+  }
+
+  if (!isNewMonth) {
+    if (!totalLeads) fatal.push("The leads export produced 0 rows for " + fromIso + " to " + toIso + ".");
+    if (!totalInst)  fatal.push("The installs export produced 0 rows for " + fromIso + " to " + toIso + ".");
+    if (totalInst < curInst) {
+      fatal.push("Installs would DROP from " + curInst + " to " + totalInst +
+        ". Within a month installs only accumulate, so this export is partial — " +
+        "almost always an Apple Numbers round-trip. Re-export from BI straight to Drive.");
+    }
+    if (curBi.leads && totalLeads < curBi.leads) {
+      fatal.push("MTD leads would DROP from " + curBi.leads + " to " + totalLeads +
+        ". Same cause — treat the export as truncated, not the month as shrinking.");
+    }
+  } else {
+    log.push("Month rollover detected (" + (curBi.monthStart || "none") + " -> " + fromIso +
+      ") — drop checks skipped.");
+  }
+  if (fatal.length) return growthAutoAbort_(fatal, log, commit);
+
+  /* ---- build the per-day plan ---- */
+  var DN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var byLabel = {};
+  raw.forEach(function (r, i) { byLabel[String(r[0]).trim()] = { row: i, vals: r }; });
+
+  /* Row creation still gated on installs, same as before: a day only gets a
+     row once an install has posted for it. Lead columns just ride along on
+     that same row once it exists, instead of being left at 0. */
+  var updates = [], appends = [], unchanged = 0;
+  Object.keys(instBy).sort().forEach(function (iso) {
+    if (iso < fromIso || iso > toIso) return;
+    var p = iso.split("-");
+    var label = DN[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + " " + (+p[1]) + "/" + (+p[2]);
+    var I = instBy[iso];
+    var L = leadsByApptDay[iso] || { mkt: 0, tech: 0, sg: 0 };
+    var cur = byLabel[label];
+    if (!cur) { appends.push({ label: label, iso: iso, I: I, L: L }); return; }
+    var v = cur.vals;
+    var instSame = (Number(v[4]) || 0) === I.mkt && (Number(v[5]) || 0) === I.tech && (Number(v[6]) || 0) === I.sg;
+    var leadSame = (Number(v[1]) || 0) === L.mkt && (Number(v[2]) || 0) === L.tech && (Number(v[3]) || 0) === L.sg;
+    if (instSame && leadSame) { unchanged++; return; }
+    updates.push({
+      label: label, row: cur.row,
+      instFrom: [Number(v[4]) || 0, Number(v[5]) || 0, Number(v[6]) || 0], instTo: [I.mkt, I.tech, I.sg], instChanged: !instSame,
+      leadFrom: [Number(v[1]) || 0, Number(v[2]) || 0, Number(v[3]) || 0], leadTo: [L.mkt, L.tech, L.sg], leadChanged: !leadSame
+    });
+  });
+
+  log.push("");
+  log.push("PLAN — install + lead columns");
+  log.push("  unchanged: " + unchanged + "   update: " + updates.length + "   append: " + appends.length);
+  updates.forEach(function (u) {
+    if (u.instChanged) log.push("  update " + u.label + "  installs mkt/tech/sg " + u.instFrom.join("/") + " -> " + u.instTo.join("/"));
+    if (u.leadChanged) log.push("  update " + u.label + "  leads    mkt/tech/sg " + u.leadFrom.join("/") + " -> " + u.leadTo.join("/") +
+      "  (job status caught up since it was last written — this is expected, not a correction to override)");
+  });
+  appends.forEach(function (a) {
+    log.push("  append " + a.label + "  installs " + a.I.mkt + "/" + a.I.tech + "/" + a.I.sg +
+      "   leads " + a.L.mkt + "/" + a.L.tech + "/" + a.L.sg +
+      "   *** sold count and installed $ still 0 — fill them in ***");
+  });
+
+  var biChanged = (curBi.leads !== totalLeads || curBi.mkt !== lt.mkt ||
+                   curBi.tech !== lt.tech || curBi.sg !== lt.sg);
+  log.push("");
+  log.push("PLAN — MTD lead figures  (current source: " + curBi.source + ")");
+  log.push("  leads " + curBi.leads + " -> " + totalLeads + ", mkt " + curBi.mkt + " -> " + lt.mkt +
+    ", tech " + curBi.tech + " -> " + lt.tech + ", sg " + curBi.sg + " -> " + lt.sg +
+    (biChanged ? "" : "   (no change)"));
+
+  if (!commit) {
+    log.push("");
+    log.push("PREVIEW ONLY — nothing written. Run applyGrowthAutoAdvance() to commit.");
+    var pv = log.join("\n"); Logger.log(pv);
+    return { ok: true, committed: false, updates: updates.length, appends: appends.length,
+             needsSoldAndDollars: appends.map(function (a) { return a.label; }),
+             dataThroughIso: lastDay, report: pv };
+  }
+
+  /* ---- commit ---- */
+  var sh = growthDaysSheet_(ss);
+  if (!sh) return growthAutoAbort_(["No '" + GROWTH_DAILY_DATA_TAB +
+    "' tab — run setupGrowthDailyDataSheet() first."], log, commit);
+
+  updates.forEach(function (u) {
+    if (u.instChanged) sh.getRange(u.row + 2, 5, 1, 3).setValues([u.instTo]);
+    if (u.leadChanged) sh.getRange(u.row + 2, 2, 1, 3).setValues([u.leadTo]);
+  });
+  if (appends.length) {
+    var startRow = sh.getLastRow() + 1;
+    var rows = appends.map(function (a) {
+      return [a.label, a.L.mkt, a.L.tech, a.L.sg, a.I.mkt, a.I.tech, a.I.sg, 0, 0];
+    });
+    sh.getRange(startRow, 1, rows.length, GROWTH_DAILY_DATA_HEADER.length).setValues(rows);
+    sh.getRange(startRow, 9, rows.length, 1).setNumberFormat("$#,##0");
+  }
+  var wroteBi = growthWriteBiMtd_(ss, {
+    leads: totalLeads, mkt: lt.mkt, tech: lt.tech, sg: lt.sg,
+    installs: totalInst, instMkt: it.mkt, instTech: it.tech, instSg: it.sg,
+    rentalInstalls: mtdRentalInst,  // Fix 6: rental installs within MTD date range
+    monthStart: fromIso
+  }, lastDay);
+  GROWTH_DAYS_CACHE_ = null;
+
+  log.push("");
+  log.push("COMMITTED — " + updates.length + " day(s) updated, " + appends.length + " appended.");
+  log.push(wroteBi === false
+    ? "MTD figures NOT written: no '" + GROWTH_CONFIG_TAB + "' tab. Run setupGrowthConfigSheet(), then re-run."
+    : "MTD figures written to '" + GROWTH_CONFIG_TAB + "': " + wroteBi + " cell(s) changed.");
+  if (appends.length) {
+    log.push("");
+    log.push("STILL NEEDS YOU — sold count and installed $ on: " +
+      appends.map(function (a) { return a.label; }).join(", "));
+  }
+  var rep = log.join("\n"); Logger.log(rep);
+  return { ok: true, committed: true, updates: updates.length, appends: appends.length,
+           needsSoldAndDollars: appends.map(function (a) { return a.label; }),
+           biWritten: wroteBi, dataThroughIso: lastDay, report: rep };
+}
+function growthAutoAbort_(fatal, log, commit) {
+  var body = log.concat(["", "ABORTED — nothing written:"])
+    .concat(fatal.map(function (f) { return "  !! " + f; })).join("\n");
+  Logger.log(body);
+  return { ok: false, committed: false, errors: fatal, report: body };
+}
+
+/* Dry run. Shows exactly what would change and writes nothing. */
+function previewGrowthAutoAdvance() { return growthAutoAdvance_(false).report; }
+
+/* Commits it. */
+function applyGrowthAutoAdvance() { return growthAutoAdvance_(true).report; }
+
+/* ============================================================================
+ * STAGE 2c — the Backlog Pipeline tab loads from Drive.
+ *
+ * That tab drives the "Awaiting Install" block, and it went ten days stale
+ * once without anything noticing: stale in, stale out, no error. It is a
+ * straight paste of a BI export, so a script can do it.
+ *
+ * The tab is REPLACED wholesale, so the guard runs first: the export has to
+ * carry the two headers the consumer needs before anything is cleared.
+ * ========================================================================== */
+
+function importPipelineFromDrive_(commit) {
+  var res = gaResolveUploads_(["pipeline"]);
+  var log = [].concat(res.log);
+  var f = res.found.pipeline;
+  if (!f) return growthAutoAbort_(["No backlog/pipeline export found — nothing in the uploads " +
+    "folder carries " + GROWTH_UPLOAD_SIGNATURES.pipeline.join(" / ") + "."], log, commit);
+
+  var age = Math.floor((new Date().getTime() - f.updated.getTime()) / 86400000);
+  log.push("pipeline: " + f.title + "  (" + age + "d old)");
+  if (age > GROWTH_AUTO.staleAfterDays)
+    return growthAutoAbort_(["Pipeline export is " + age + " days old — re-export."], log, commit);
+
+  var values = f.values;
+
+  /* The consumer looks for a row carrying both lastApptDate and Lead Type.
+     No header, no write — a cleared tab is worse than a stale one. */
+  var hr = -1;
+  for (var i = 0; i < values.length && hr < 0; i++) {
+    var low = values[i].map(function (x) { return String(x || "").trim().toLowerCase(); });
+    var hasDate = low.some(function (h) { return h === "lastapptdate" || (h.indexOf("appt") > -1 && h.indexOf("date") > -1); });
+    if (hasDate && low.indexOf("lead type") > -1) hr = i;
+  }
+  if (hr < 0) return growthAutoAbort_(["The pipeline export has no row containing both a " +
+    "lastApptDate-style column and 'Lead Type'. The Awaiting Install block could not read it, " +
+    "so the tab was left alone."], log, commit);
+
+  var body = values.slice(hr).filter(function (r) {
+    return r.some(function (c) { return String(c || "").trim(); });
+  });
+  var width = body.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+  log.push("header row " + (hr + 1) + ", " + (body.length - 1) + " data row(s), " + width + " column(s)");
+  if (body.length < 2) return growthAutoAbort_(["The pipeline export has a header but no data rows."], log, commit);
+
+  if (!commit) {
+    log.push("");
+    log.push("PREVIEW ONLY — '" + PIPE_TAB + "' not touched. Run applyPipelineFromDrive() to commit.");
+    var pv = log.join("\n"); Logger.log(pv);
+    return { ok: true, committed: false, rows: body.length - 1, report: pv };
+  }
+
+  var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  var sh = ss.getSheetByName(PIPE_TAB) || ss.insertSheet(PIPE_TAB);
+  sh.clearContents();
+  var grid = body.map(function (r) {
+    var row = r.slice();
+    while (row.length < width) row.push("");
+    return row;
+  });
+  sh.getRange(1, 1, grid.length, width).setValues(grid);
+  sh.getRange(1, 1, 1, width).setFontWeight("bold");
+
+  log.push("");
+  log.push("COMMITTED — '" + PIPE_TAB + "' replaced with " + (grid.length - 1) + " row(s) from " + f.title + ".");
+  log.push("Run buildL2CTabPlus() to rebuild the Awaiting Install block from it.");
+  var rep = log.join("\n"); Logger.log(rep);
+  return { ok: true, committed: true, rows: grid.length - 1, report: rep };
+}
+
+function previewPipelineFromDrive() { return importPipelineFromDrive_(false).report; }
+function applyPipelineFromDrive()   { return importPipelineFromDrive_(true).report; }
+
+/* One button for the morning: pipeline tab, then day rows + MTD figures. */
+function growthMorningRefresh() {
+  var out = ["GROWTH MORNING REFRESH", "======================", ""];
+  var p = importPipelineFromDrive_(true);
+  out.push(p.report, "");
+  if (!p.ok) {
+    out.push("Stopped: the pipeline import failed, so the day rows were left alone.");
+    var bad = out.join("\n"); Logger.log(bad); return bad;
+  }
+  var a = growthAutoAdvance_(true);
+  out.push(a.report, "");
+  out.push(a.ok ? "Next: run buildL2CTabPlus() (or let the 4am trigger do it)."
+                : "Day rows were NOT advanced — see above.");
+  var rep = out.join("\n"); Logger.log(rep);
+  return rep;
+}
+/* ============================================================================
+ * STAGE 2d — the unattended morning run.
+ *
+ * WHY THIS IS A WINDOW AND NOT A 5AM TRIGGER. The exports arrive whenever the
+ * BI pull actually gets done: 06:39 on 8/17, 14:20 on 8/15. A fixed early
+ * trigger would run before the files exist, find nothing new, and go back to
+ * sleep until the next morning — leaving the huddle on yesterday's numbers
+ * with nothing visibly broken. So this polls hourly across the window.
+ *
+ * IT IS CHEAP TO RUN OFTEN. Two gates come before any file is touched:
+ *   1. outside the window -> return immediately
+ *   2. already loaded through the operational date -> return immediately
+ * so a normal day costs one real run and a handful of no-ops. Reading is only
+ * attempted when there is plausibly something new.
+ *
+ * It rebuilds the Daily/L2C tabs ONLY when something actually changed —
+ * loading input tabs does not repaint anything by itself, and the 4am
+ * runGrowthDailyPipeline is long past by the time the files land.
+ *
+ * QUIET IS THE NORMAL OUTCOME. It emails on a real advance and on a failure,
+ * never on a no-op. A silent morning means there was nothing new, which is
+ * the same contract the Daily Uploads READ ME already sets.
+ * ========================================================================== */
+
+var GROWTH_AUTO_DONE_KEY = "growthAutoLoadedThroughIso";
+
+function growthMorningAuto() {
+  var tz = DAILY_RECAP_CONFIG.timeZone;
+  var now = new Date();
+  var hour = Number(Utilities.formatDate(now, tz, "H"));
+  var props = PropertiesService.getScriptProperties();
+
+  if (hour < GROWTH_AUTO.autoFromHour || hour > GROWTH_AUTO.autoToHour) {
+    return { ok: true, skipped: true, reason: "outside the " + GROWTH_AUTO.autoFromHour +
+      ":00-" + GROWTH_AUTO.autoToHour + ":00 window" };
+  }
+
+  /* BI posts a day late, so "current" means loaded through yesterday. The latch
+     now stores the ACTUAL date the exports covered, not the target date. So an
+     early poll that fires before today's export has landed (and therefore only
+     carries data through the day before yesterday) does NOT mark the day done —
+     later polls keep trying until a fresh file actually reaches yesterday. */
+  var wantIso = growthDailyYesterdayIso_();
+  var doneIso = props.getProperty(GROWTH_AUTO_DONE_KEY) || "";
+  if (doneIso && doneIso >= wantIso) {
+    return { ok: true, skipped: true, reason: "already loaded through " + doneIso };
+  }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return { ok: true, skipped: true, reason: "another run holds the lock" };
+
+  try {
+    var out = ["GROWTH MORNING AUTO — " + Utilities.formatDate(now, tz, "EEE M/d h:mm a"), ""];
+    var pipe = importPipelineFromDrive_(true);
+    out.push(pipe.report, "");
+    if (!pipe.ok) {
+      out.push("Stopped before touching the day rows.");
+      return growthMorningNotify_(out, "PIPELINE IMPORT FAILED", true);
+    }
+
+    var adv = growthAutoAdvance_(true);
+    out.push(adv.report, "");
+    if (!adv.ok) return growthMorningNotify_(out, "DAY ROWS NOT ADVANCED", true);
+
+    /* "Material" = a day row actually moved OR the export coverage advanced past
+       what we last latched. A re-poll that only re-stamps the same MTD figures
+       is NOT material — it exits quietly without repainting, emailing, or
+       re-latching, so it never falsely marks the day done. */
+    var reachedIso = adv.dataThroughIso || "";
+    var coverageAdvanced = reachedIso && reachedIso > doneIso;
+    var material = ((adv.updates || 0) + (adv.appends || 0)) > 0 || coverageAdvanced;
+    if (!material) {
+      Logger.log(out.join("\n") + "\nNo new coverage since " + (doneIso || "(never)") + " — quiet exit.");
+      return { ok: true, skipped: false, changed: 0, reason: "nothing new since " + (doneIso || "(never)") };
+    }
+
+    /* Something moved, so repaint. Loading the input tabs does not do this. */
+    try {
+      buildL2CTabPlus();
+      out.push("Rebuilt the Daily and L2C tabs.");
+    } catch (e) {
+      out.push("!! Data loaded but the rebuild failed: " + e);
+      return growthMorningNotify_(out, "LOADED BUT REBUILD FAILED", true);
+    }
+
+    /* Latch the ACTUAL coverage date, never the target. Fall back to the prior
+       latch if the advance reported no date, so we never move backward. */
+    var latchIso = reachedIso || doneIso;
+    if (latchIso) props.setProperty(GROWTH_AUTO_DONE_KEY, latchIso);
+
+    if ((adv.needsSoldAndDollars || []).length) {
+      out.push("");
+      out.push("NEEDS YOU before the huddle — sold count and installed $ on: " +
+        adv.needsSoldAndDollars.join(", "));
+    }
+    return growthMorningNotify_(out, "growth sheet advanced through " + (reachedIso || wantIso), false);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+function growthMorningNotify_(lines, subjectTail, isProblem) {
+  var body = lines.join("\n");
+  Logger.log(body);
+  try {
+    MailApp.sendEmail({
+      to: DAILY_RECAP_CONFIG.managerEmail,
+      subject: (isProblem ? "!! Growth auto — " : "Growth auto — ") + subjectTail,
+      body: body, name: DAILY_RECAP_CONFIG.fromName
+    });
+  } catch (e) { Logger.log("Email failed: " + e); }
+  return { ok: !isProblem, changed: !isProblem, report: body };
+}
+
+/* Hourly, gated in the handler. One trigger rather than eight hourly ones —
+   this project is already close to the per-script trigger ceiling. */
+function installGrowthMorningTrigger() {
+  var killed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === "growthMorningAuto") { ScriptApp.deleteTrigger(t); killed++; }
+  });
+  ScriptApp.newTrigger("growthMorningAuto").timeBased().everyMinutes(GROWTH_AUTO.autoEveryMinutes).create();
+  var msg = "Installed the growthMorningAuto trigger, every " + GROWTH_AUTO.autoEveryMinutes + " min" +
+    (killed ? " (replaced " + killed + " existing)" : "") +
+    ". It acts only between " + GROWTH_AUTO.autoFromHour + ":00 and " +
+    GROWTH_AUTO.autoToHour + ":00 Pacific, and only until it has loaded through " +
+    "the previous day. Quiet runs send nothing.";
+  Logger.log(msg);
+  return msg;
+}
+
+function removeGrowthMorningTrigger() {
+  var killed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === "growthMorningAuto") { ScriptApp.deleteTrigger(t); killed++; }
+  });
+  var msg = "Removed " + killed + " growthMorningAuto trigger(s).";
+  Logger.log(msg); return msg;
+}
+
+/* Clears the once-a-day latch, so the next run re-reads even if it already
+   loaded today. For when you re-upload a corrected export. */
+function resetGrowthMorningLatch() {
+  PropertiesService.getScriptProperties().deleteProperty(GROWTH_AUTO_DONE_KEY);
+  var msg = "Latch cleared — the next in-window run will re-read the exports.";
+  Logger.log(msg); return msg;
+}
+/* ================== END STAGE 2 ================== */
+
+/* ============================================================================
+ *  SKIP TONIGHT'S NUDGE - for people who are off
+ *
+ *  Paste this at the bottom of the HCA Daily Recap script, save, then run
+ *  skipNudgeToday(). That is it. No deploy, no trigger changes.
+ *
+ *  How it works: the 7pm nudge already keeps a "who has been nudged today"
+ *  list in Script Properties and skips anyone on it. This just writes a name
+ *  onto that list early, so 7pm passes them over. It is keyed to today's
+ *  date, so it clears itself overnight - you have to run it again for the
+ *  next person on the next day.
+ *
+ *  To use it again later: change the name in EN_OFF_TODAY, save, run it.
+ * ========================================================================== */
+
+var EN_OFF_TODAY = ["Joseph Ruble"];
+
+function skipNudgeToday() {
+  var tz = "America/Los_Angeles";
+  try { tz = DAILY_RECAP_CONFIG.timeZone || tz; } catch (e) {}
+  var iso = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+
+  /* Read the existing list first so anyone already nudged tonight stays on it. */
+  var names = enAlreadyNudged_(iso);
+  var added = [];
+
+  EN_OFF_TODAY.forEach(function (n) {
+    var key = enNorm_(n);
+    if (names.indexOf(key) < 0) { names.push(key); added.push(n); }
+  });
+
+  enRememberNudged_(iso, names);
+
+  Logger.log("Date            : " + iso);
+  Logger.log("Newly suppressed: " + (added.length ? added.join(", ") : "(nobody new - already on the list)"));
+  Logger.log("Skip list now   : " + names.join(", "));
+  Logger.log("");
+  Logger.log("Anyone NOT on that list who hasn't filed still gets nudged at 7pm.");
+  return names;
+}
+
+/* Undo it, in case you set the wrong person. Clears the whole list for today,
+ * which means everyone who hasn't filed is back in scope for the 7pm nudge. */
+function clearNudgeSkipToday() {
+  var tz = "America/Los_Angeles";
+  try { tz = DAILY_RECAP_CONFIG.timeZone || tz; } catch (e) {}
+  var iso = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+  enRememberNudged_(iso, []);
+  Logger.log("Skip list cleared for " + iso + ". Everyone unfiled is back in scope for 7pm.");
+}
+/* ============================================================================
+ *  ADD THE TIME OFF ROWS - from the Paychex list, 8/14/2026
+ *
+ *  THIS IS CODE. It goes at the BOTTOM of the HCA Daily Recap script file,
+ *  the same place the other blocks went. Do not paste it into the spreadsheet.
+ *
+ *  Paste -> Save -> pick addTimeOffRows from the dropdown -> Run.
+ *
+ *  It writes real Date objects, not text, so the pad2_ bug cannot bite.
+ *  It skips any row that is already there, so running it twice is harmless.
+ *  It touches nothing that is already in the sheet.
+ *  It finishes by reading every date back through readExceptionsForDate_ -
+ *  the exact function the 6am recap uses - so you see proof, not a promise.
+ * ========================================================================== */
+
+/* [year, month, day, roster name, type, notes] - month is 1-12, written plainly. */
+var TIME_OFF_TO_ADD = [
+  [2026, 8, 15, "Joseph Ruble",    "vacation", "PTO"],
+  [2026, 8, 18, "Javierre Milo",   "vacation", "PTO"],
+  [2026, 8, 19, "Javierre Milo",   "sick",     "Sick"],
+  [2026, 8, 20, "Javierre Milo",   "sick",     "Sick"],
+  [2026, 8, 21, "Kyle McAlister",  "vacation", "PTO"],
+  [2026, 8, 22, "Adam Weberg",     "vacation", "PTO"],
+  [2026, 8, 22, "Joe Chounramany", "vacation", "PTO"],
+  [2026, 8, 22, "Kyle McAlister",  "vacation", "PTO"],
+  [2026, 9,  5, "Javierre Milo",   "vacation", "PTO"],
+  [2026, 9,  8, "Javierre Milo",   "vacation", "PTO"]
+];
+
+function addTimeOffRows() {
+  var cfg = DAILY_RECAP_CONFIG;
+  var ss = SpreadsheetApp.openById(cfg.exceptionsSpreadsheetId);
+  var sh = cfg.exceptionsSheetName ? ss.getSheetByName(cfg.exceptionsSheetName) : ss.getSheets()[0];
+  if (!sh) { Logger.log("Could not open the exceptions sheet."); return; }
+
+  var values = sh.getDataRange().getValues();
+  var header = values[0].map(function (h) { return String(h || "").trim().toLowerCase(); });
+  var cDate = indexOfHeader_(header, ["date"]);
+  var cName = indexOfHeader_(header, ["hca name", "hca", "name"]);
+  var cType = indexOfHeader_(header, ["type"]);
+  var cNote = indexOfHeader_(header, ["notes", "note"]);
+  if (cDate === -1 || cName === -1 || cType === -1) {
+    Logger.log("Unexpected headers: " + header.join(", "));
+    return;
+  }
+
+  /* Build a set of what is already there so this is safe to run twice. */
+  var have = {};
+  for (var i = 1; i < values.length; i++) {
+    var iso = normalizeSheetDate_(values[i][cDate]);
+    var who = String(values[i][cName] || "").trim().toLowerCase();
+    if (iso && who) have[iso + "|" + who] = true;
+  }
+
+  var added = 0, skippedDup = 0, dates = {};
+  TIME_OFF_TO_ADD.forEach(function (r) {
+    var y = r[0], m = r[1], d = r[2], name = r[3], type = r[4], note = r[5];
+    var iso = y + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;
+    dates[iso] = true;
+
+    if (have[iso + "|" + name.toLowerCase()]) { skippedDup++; return; }
+
+    var row = new Array(sh.getLastColumn() || 4).fill("");
+    row[cDate] = new Date(y, m - 1, d);   /* a real Date, never a string */
+    row[cName] = name;
+    row[cType] = type;
+    if (cNote !== -1) row[cNote] = note;
+
+    sh.appendRow(row);
+    have[iso + "|" + name.toLowerCase()] = true;
+    added++;
+  });
+
+  /* Make the new date cells display like the rest of the column. */
+  if (added > 0) {
+    sh.getRange(2, cDate + 1, sh.getLastRow() - 1, 1).setNumberFormat("M/d/yyyy");
+  }
+
+  Logger.log("rows added   : " + added);
+  Logger.log("already there: " + skippedDup);
+  Logger.log("");
+  Logger.log("--- read back through the same function the 6am recap uses ---");
+
+  Object.keys(dates).sort().forEach(function (iso) {
+    var res = readExceptionsForDate_(iso);
+    var who = Object.keys(res.byName || {}).map(function (k) {
+      return k + " (" + res.byName[k].type + ")";
+    }).join(", ");
+    Logger.log(iso + "   rows=" + res.count + "   " + (who || "*** NOBODY - SOMETHING IS WRONG ***"));
+  });
+
+  Logger.log("");
+  Logger.log("Every line above should show at least rows=1 with a name.");
+  Logger.log("A rows=0 line means that date landed as text instead of a date - tell Claude.");
+}
+
+/* ============================================================================
+ * GROWTH DAILY PIPELINE — SAFE COORDINATOR
+ *
+ * Growth tabs only. This module does not read or write Firebase, Install
+ * Availability, Install Check, the 1:1 Scheduler, recap forms, or Job Status.
+ * ========================================================================== */
+
+var GROWTH_DAILY_OVERRIDES_TAB = "Daily Overrides";
+var GROWTH_DAILY_OVERRIDES_HEADERS = ["Date", "Consults Run", "Source / Note"];
+
+function growthDailyYesterdayIso_() {
+  var tz = (DAILY_RECAP_CONFIG && DAILY_RECAP_CONFIG.timeZone) || "America/Los_Angeles";
+  return Utilities.formatDate(new Date(Date.now() - 86400000), tz, "yyyy-MM-dd");
+}
+
+function growthDailyIso_(value, tz) {
+  if (value === null || value === undefined || value === "") return "";
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return isNaN(value.getTime()) ? "" : Utilities.formatDate(value, tz, "yyyy-MM-dd");
+  }
+  var text = String(value).trim();
+  var m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[3]).slice(-2);
+  m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) {
+    var year = m[3].length === 2 ? "20" + m[3] : m[3];
+    return year + "-" + ("0" + m[1]).slice(-2) + "-" + ("0" + m[2]).slice(-2);
+  }
+  return "";
+}
+
+function growthDailyFindSheet_(ss, wanted) {
+  var target = String(wanted || "").toLowerCase().trim();
+  var found = null;
+  ss.getSheets().some(function (sheet) {
+    if (String(sheet.getName()).toLowerCase().trim() === target) {
+      found = sheet;
+      return true;
+    }
+    return false;
+  });
+  return found;
+}
+
+function growthDailyEnsureOverrides_(ss) {
+  var sh = ss.getSheetByName(GROWTH_DAILY_OVERRIDES_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(GROWTH_DAILY_OVERRIDES_TAB);
+    sh.getRange(1, 1, 1, GROWTH_DAILY_OVERRIDES_HEADERS.length)
+      .setValues([GROWTH_DAILY_OVERRIDES_HEADERS])
+      .setFontWeight("bold")
+      .setBackground("#0f172a")
+      .setFontColor("#ffffff");
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(1, 110);
+    sh.setColumnWidth(2, 110);
+    sh.setColumnWidth(3, 420);
+    sh.getRange("A1").setNote(
+      "One row per operational date. Date may be a Sheet date or YYYY-MM-DD. " +
+      "Consults Run excludes revisits, service work, cancellations, and no-runs."
+    );
+  }
+  return sh;
+}
+
+function growthDailyReadOverride_(ss, iso, createIfMissing) {
+  var tz = ss.getSpreadsheetTimeZone() || "America/Los_Angeles";
+  var sh = ss.getSheetByName(GROWTH_DAILY_OVERRIDES_TAB);
+  if (!sh && createIfMissing) sh = growthDailyEnsureOverrides_(ss);
+  if (!sh || sh.getLastRow() < 2) return { found: false, iso: iso };
+
+  var values = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+  var matches = [];
+  values.forEach(function (row, index) {
+    if (growthDailyIso_(row[0], tz) !== iso) return;
+    matches.push({ row: index + 2, count: row[1], note: String(row[2] || "").trim() });
+  });
+  if (matches.length > 1) {
+    throw new Error("Daily Overrides has more than one row for " + iso +
+      " (rows " + matches.map(function (x) { return x.row; }).join(", ") + "). Keep one auditable answer.");
+  }
+  if (!matches.length) return { found: false, iso: iso };
+
+  var rawCount = matches[0].count;
+  var n = Number(rawCount);
+  if (rawCount === "" || rawCount === null || rawCount === undefined ||
+      !isFinite(n) || n < 0 || Math.floor(n) !== n) {
+    throw new Error("Daily Overrides row " + matches[0].row +
+      " needs a whole-number Consults Run value (zero is allowed).");
+  }
+  return {
+    found: true,
+    iso: iso,
+    count: n,
+    note: matches[0].note,
+    row: matches[0].row
+  };
+}
+
+function growthDailyLatestStageIso_(ss, tabName) {
+  var sh = ss.getSheetByName(tabName);
+  if (!sh || sh.getLastRow() < 2) return "";
+  var tz = ss.getSpreadsheetTimeZone() || "America/Los_Angeles";
+  var grid = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+  var headerRow = -1, dateCol = -1, typeCol = -1;
+  for (var r = 0; r < grid.length && headerRow < 0; r++) {
+    var header = grid[r].map(function (x) { return String(x || "").trim().toLowerCase(); });
+    dateCol = header.indexOf("est");
+    typeCol = header.indexOf("lead type");
+    if (dateCol > -1 && typeCol > -1) headerRow = r;
+  }
+  if (headerRow < 0) return "";
+
+  var latest = "";
+  for (var i = headerRow + 1; i < grid.length; i++) {
+    var leadType = String(grid[i][typeCol] || "").trim().toLowerCase();
+    var validType = leadType === "inbound" || leadType === "webform" ||
+      leadType === "tech lead" || leadType === "tech flip" || leadType.indexOf("self") === 0;
+    if (!validType) continue;
+    var iso = growthDailyIso_(grid[i][dateCol], tz);
+    if (iso && (!latest || iso > latest)) latest = iso;
+  }
+  return latest;
+}
+
+function growthDailyRenderedBiThroughIso_(operationalIso) {
+  var gd = readGrowthDays_();
+  if (!gd.length) return "";
+  var label = String(gd[gd.length - 1][0] || "");
+  var m = label.match(/(\d{1,2})\/(\d{1,2})/);
+  if (!m) return "";
+  var year = Number(String(operationalIso).slice(0, 4));
+  var iso = year + "-" + ("0" + m[1]).slice(-2) + "-" + ("0" + m[2]).slice(-2);
+  /* A December dataset viewed on a January operational day belongs to the
+     prior year, never to a future reporting period. */
+  if (iso > operationalIso) {
+    year--;
+    iso = year + "-" + ("0" + m[1]).slice(-2) + "-" + ("0" + m[2]).slice(-2);
+  }
+  return iso;
+}
+
+function growthDailyBiStatus_(ss, operationalIso) {
+  var stagedLeadsIso = growthDailyLatestStageIso_(ss, "All Leads");
+  var stagedInstallsIso = growthDailyLatestStageIso_(ss, "All Installs");
+  var stagedThrough = stagedLeadsIso && stagedInstallsIso ?
+    (stagedLeadsIso < stagedInstallsIso ? stagedLeadsIso : stagedInstallsIso) :
+    (stagedLeadsIso || stagedInstallsIso);
+  /* The displayed numbers still come from L2C_DAYS + BI_MTD_* constants.
+     Staging tabs are availability only until importBI_ is run and verified;
+     their newer dates must not make the rendered 92/38 appear current. */
+  var through = growthDailyRenderedBiThroughIso_(operationalIso);
+  return {
+    renderedThroughIso: through,
+    throughIso: through,
+    stale: !through || through < operationalIso,
+    stagedLeadsIso: stagedLeadsIso,
+    stagedInstallsIso: stagedInstallsIso,
+    stagedThroughIso: stagedThrough,
+    stagingAhead: !!(stagedThrough && (!through || stagedThrough > through))
+  };
+}
+
+function growthDailyPrettyIso_(iso, tz) {
+  if (!iso) return "unavailable";
+  var p = iso.split("-");
+  return Utilities.formatDate(new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12), tz, "EEE M/d");
+}
+
+function growthDailyRowByLabel_(sheet, labelPrefix) {
+  var grid = sheet.getRange(1, 1, sheet.getLastRow(), Math.min(2, sheet.getLastColumn())).getValues();
+  var wanted = String(labelPrefix).toLowerCase();
+  for (var r = 0; r < grid.length; r++) {
+    if (String(grid[r][1] || "").trim().toLowerCase().indexOf(wanted) === 0) return r + 1;
+  }
+  return -1;
+}
+
+function growthDailyApplyPresentation_(ss, operationalIso) {
+  var tz = ss.getSpreadsheetTimeZone() || "America/Los_Angeles";
+  var daily = growthDailyFindSheet_(ss, "Daily");
+  var l2c = growthDailyFindSheet_(ss, "L2C");
+  if (!daily) throw new Error('No "Daily" tab found after rebuilding Growth.');
+
+  var override = growthDailyReadOverride_(ss, operationalIso, false);
+  if (!override.found) {
+    throw new Error("No Daily Overrides row for " + operationalIso +
+      ". Growth presentation was not advanced; add the reviewed consult count and run again.");
+  }
+  var bi = growthDailyBiStatus_(ss, operationalIso);
+  var operationalLabel = growthDailyPrettyIso_(operationalIso, tz);
+  var biLabel = growthDailyPrettyIso_(bi.throughIso, tz);
+  var stagedDetail = bi.stagedThroughIso ?
+    (" · staging available through " + growthDailyPrettyIso_(bi.stagedThroughIso, tz) +
+      " (Leads " + growthDailyPrettyIso_(bi.stagedLeadsIso, tz) +
+      " · Installs " + growthDailyPrettyIso_(bi.stagedInstallsIso, tz) + ") — NOT IMPORTED") :
+    " · no staging data detected";
+  var detail = "Displayed BI metrics through " + biLabel +
+    " (rendered L2C dataset)" + (bi.stale ? " — STALE vs operational day" : "") +
+    stagedDetail;
+
+  daily.getRange("B1").setValue("CM Sales Growth — operational day " + operationalLabel);
+  daily.getRange("C3").setValue(new Date(
+    Number(operationalIso.slice(0, 4)), Number(operationalIso.slice(5, 7)) - 1,
+    Number(operationalIso.slice(8, 10)), 12
+  )).setNumberFormat("ddd m/d");
+  daily.getRange("D3").setValue("MTD (BI thru " + biLabel + ")");
+
+  var leadsRow = growthDailyRowByLabel_(daily, "total leads");
+  if (leadsRow < 0) throw new Error('Could not find the "Total Leads" row on Daily.');
+  var leadsCell = daily.getRange(leadsRow, 3);
+  leadsCell.setValue(override.count).setNote(
+    "Actual consults run for " + operationalLabel + " from Daily Overrides row " +
+    override.row + ". " + (override.note || "Source / Note was left blank.")
+  );
+
+  daily.getRange(daily.getLastRow() + 1, 2).setValue(detail)
+    .setFontWeight("bold")
+    .setFontColor(bi.stale ? "#b91c1c" : "#0a7d33");
+  if (l2c) {
+    l2c.getRange("A1").setValue("Lead-2-Cash — reconciled BI through " + biLabel)
+      .setFontWeight("bold").setFontSize(14);
+    l2c.getRange("A2").setValue(
+      "Cash = completed installs · L2C = installs ÷ BI leads · " + detail +
+      " · live sold is tracked separately on Same-Day Sold."
+    ).setFontColor(bi.stale ? "#b91c1c" : "#64748b");
+  }
+  return { override: override, bi: bi, detail: detail };
+}
+
+function previewGrowthDailyPipeline() {
+  var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  var operationalIso = growthDailyYesterdayIso_();
+  var override = growthDailyReadOverride_(ss, operationalIso, false);
+  var bi = growthDailyBiStatus_(ss, operationalIso);
+  var sold = sameDaySoldMonthData_();
+  var soldMtd = 0, soldDollars = 0;
+  if (sold && sold.ok) {
+    Object.keys(sold.days || {}).forEach(function (iso) {
+      soldMtd += sold.days[iso].total || 0;
+      soldDollars += sold.days[iso].dollars || 0;
+    });
+  }
+  var result = {
+    preview: true,
+    writes: false,
+    pending: !override.found,
+    operationalIso: operationalIso,
+    override: override,
+    bi: bi,
+    soldReadOk: !!(sold && sold.ok),
+    soldReadComplete: !!(sold && sold.ok && sold.complete !== false),
+    soldMtd: soldMtd,
+    soldDollarsMtd: soldDollars,
+    includedSoldMtd: soldMtd,
+    includedSoldDollarsMtd: soldDollars,
+    excludedSoldMtd: sold && sold.excluded ? sold.excluded.count : 0,
+    excludedSoldDollarsMtd: sold && sold.excluded ? sold.excluded.dollars : 0,
+    growthRequoteAudit: sold && sold.dedupe ? sold.dedupe : {},
+    unmatchedSalesClassifiedFollowUp: sold ? (sold.unmatchedFollowUp || 0) : 0,
+    growthSoldDefinition: "amount > $" + GROWTH_HVAC_SOLD_MIN_DOLLARS +
+      " and seller in RECAP_ROSTER plus Lyle Jones, Aaron Johnson, Geoff/Geoffrey Simons",
+    plannedOrder: override.found ? [
+        "refreshSameDaySoldTab",
+        "buildL2CTabPlus",
+        "wireDailySold",
+        "writeTitanRanEstimate",
+        "apply Daily Overrides and BI-through labels"
+      ] : ["pending review — no Growth writes until yesterday has a Daily Overrides row"]
+  };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function setupGrowthDailyOverridesSheet() {
+  var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+  var sh = growthDailyEnsureOverrides_(ss);
+  var msg = 'Ready: "' + sh.getName() + '". Add one row per day: Date, Consults Run, Source / Note.';
+  Logger.log(msg);
+  return msg;
+}
+
+function runGrowthDailyPipeline() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) {
+    var skipped = { ok: true, skipped: true, reason: "another Growth pipeline run holds ScriptLock" };
+    Logger.log(JSON.stringify(skipped));
+    return skipped;
+  }
+
+  try {
+    var operationalIso = growthDailyYesterdayIso_();
+    var preflightSs = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+    var preflightOverride = growthDailyReadOverride_(preflightSs, operationalIso, false);
+    if (!preflightOverride.found) {
+      var pending = {
+        ok: true,
+        pending: true,
+        skipped: true,
+        operationalIso: operationalIso,
+        reason: "Daily Overrides review is missing; all prior Growth tabs were preserved"
+      };
+      Logger.log(JSON.stringify(pending, null, 2));
+      return pending;
+    }
+    var sameDay = refreshSameDaySoldTab();
+    if (String(sameDay).indexOf("Same-Day Sold tab updated") !== 0) {
+      throw new Error("Same-Day Sold was not refreshed: " + sameDay + ". Previous good data was preserved.");
+    }
+    var rebuilt = buildL2CTabPlus();
+    var wired = wireDailySold();
+    var installs = writeTitanRanEstimate();
+    var ss = SpreadsheetApp.openById(GROWTH_SHEET_ID);
+    var presentation = growthDailyApplyPresentation_(ss, operationalIso);
+    SpreadsheetApp.flush();
+
+    var result = {
+      ok: true,
+      skipped: false,
+      operationalIso: operationalIso,
+      sameDaySold: sameDay,
+      rebuilt: rebuilt,
+      dailySold: wired,
+      installEstimate: installs,
+      overrideFound: presentation.override.found,
+      biThroughIso: presentation.bi.throughIso,
+      biStale: presentation.bi.stale
+    };
+    Logger.log(JSON.stringify(result, null, 2));
+    return result;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function installGrowthDailyPipelineTrigger() {
+  var growthHandlers = {
+    writeGrowthDays: true,
+    writeGrowthSheetForYesterday: true,
+    refreshTodayGrowth: true,
+    refreshDailyGrowth: true,
+    buildL2CTab: true,
+    buildL2CTabPlus: true,
+    refreshSameDaySoldTab: true,
+    wireDailySold: true,
+    writeTitanRanEstimate: true,
+    runGrowthDailyPipeline: true
+  };
+  var removed = [];
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    var fn = trigger.getHandlerFunction();
+    if (!growthHandlers[fn]) return;
+    ScriptApp.deleteTrigger(trigger);
+    removed.push(fn);
+  });
+
+  var cfg = DAILY_RECAP_CONFIG || {};
+  var hour = isFinite(Number(cfg.growthWriteHour)) ? Number(cfg.growthWriteHour) : 7;
+  var tz = cfg.timeZone || "America/Los_Angeles";
+  ScriptApp.newTrigger("runGrowthDailyPipeline")
+    .timeBased().everyDays(1).atHour(hour).inTimezone(tz).create();
+
+  var msg = "Installed one daily Growth trigger: runGrowthDailyPipeline at " +
+    hour + ":00 " + tz + ". Removed Growth-only trigger(s): " +
+    (removed.length ? removed.join(", ") : "none") +
+    ". Recap, reply, form, Job Status, 1:1, Install Check, and Firebase triggers were not touched.";
+  Logger.log(msg);
+  return msg;
+}
+
+
+function removeGrowthDailyPipelineTrigger() {
+  var removed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() !== "runGrowthDailyPipeline") return;
+    ScriptApp.deleteTrigger(trigger);
+    removed++;
+  });
+  var msg = "Removed " + removed + " runGrowthDailyPipeline trigger(s). No other trigger was touched.";
+  Logger.log(msg);
+  return msg;
+}
+
+/* ============================================================================
+ * STRANDED SOLD JOBS — the gap between "sold" and "on the board"
+ *
+ * A sold project reaches the install crews through a chain of hand-offs:
+ *   Sold Estimate Alert -> HCA adds it to the Install Availability page ->
+ *   the install coordinator moves it to a team -> COMBO LOG -> dispatch board.
+ *
+ * The HCA step is the one a human can simply forget. When they do, the job is
+ * sold, invoiced against nobody's schedule, and invisible: it never reaches the
+ * COMBO LOG, so it never reaches the board, so no report that reads the board
+ * can see that it is missing. It surfaces when the customer calls to ask when
+ * their furnace is going in.
+ *
+ * This check finds those by set difference: qualifying Growth sales that have
+ * no COMBO LOG row. It reads only — no writes, no email — so it is safe to run
+ * at any time.
+ *
+ * WHY NOT READ THE AVAILABILITY PAGE DIRECTLY: it would separate "the HCA never
+ * added it" from "the coordinator has not assigned it yet". Both are stranded
+ * and both need the same nudge, so the COMBO LOG is a sufficient oracle for
+ * v1. growthStrandedSoldJobs_ returns the matched rows, so an availability
+ * reader can be layered on later to split the two causes without reworking it.
+ * ========================================================================== */
+
+var GROWTH_STRANDED_CONFIG = {
+  /* Sales newer than this are not flagged. A job sold Friday afternoon has not
+     had a business day to be entered, and flagging it trains people to ignore
+     the report. */
+  graceDays: 3,
+  /* How far back to look. Bounded because the COMBO LOG is reorganised by hand
+     and old jobs move to COMPLETED tabs or age out; beyond this window an
+     absent row stops being evidence of anything. */
+  lookbackDays: 45
+};
+
+/* Name tokens for matching a Sold Estimate Alert customer against a COMBO LOG
+   row. Alerts carry the billing name in full — "James Combel and Mary Shil" —
+   while the log keeps FIRST and LAST, so neither string is a subset of the
+   other and a plain equality test finds nothing. Joining words are dropped so
+   they cannot manufacture an overlap. */
+var GROWTH_STRANDED_STOPWORDS = { "and": 1, "the": 1, "or": 1, "of": 1, "jr": 1, "sr": 1, "mr": 1, "mrs": 1, "ms": 1 };
+
+function growthStrandedTokens_(value) {
+  return normName_(value).split(" ").filter(function (t) {
+    /* Pure digits are ServiceTitan ids riding along on the name — "Laura
+       Richmond 0011389" — never a name token, and they would otherwise take
+       the surname position the single-token rule below depends on. */
+    if (!t || t.length < 2 || /^\d+$/.test(t)) return false;
+    return !GROWTH_STRANDED_STOPWORDS[t];
+  });
+}
+
+/* Two names refer to the same customer when they share two distinct tokens —
+   normally first + surname. A single shared token is not enough: "Mary" and
+   "Smith" each collide across unrelated households, and a false match here is
+   worse than a false miss, because it silently clears a genuinely stranded job.
+   A one-token COMBO LOG name — the log does carry rows with FIRST or LAST
+   blank — clears a job only when that token sits in the alert's SURNAME
+   position. Length alone is not enough: "Donald Searles" against a log row
+   reading just "Donald" would pass a 5-character test and silently mark a
+   genuinely stranded job as scheduled, which is the exact failure this whole
+   check exists to catch. Given the choice, miss forward: a false non-match
+   costs a glance at the report, a false match costs a forgotten install. */
+/* Trailing ServiceTitan customer id — "Laura Reynolds 0011389". It SURVIVES a
+   customer rename; the name does not. Laura Richmond 0011389 in the 8/13 sold
+   alert and the 8/15 backlog is Laura Reynolds 0011389 in the 8/17 exports —
+   same customer, renamed in between, and the alert email keeps the old spelling
+   forever. Name tokens share only "laura" across that pair, so a name-only
+   matcher silently reports a false stranded job. The id is checked FIRST and is
+   authoritative in both directions: same id matches whatever the names say,
+   different ids never match. Only when at least one side has no id do we fall
+   back to the token rules below. */
+function growthStrandedCustomerId_(value) {
+  var m = String(value || "").match(/\b(\d{5,})\b\s*$/);
+  return m ? m[1] : "";
+}
+
+function growthStrandedNameMatch_(alertName, comboName) {
+  var idA = growthStrandedCustomerId_(alertName);
+  var idB = growthStrandedCustomerId_(comboName);
+  if (idA && idB) return idA === idB;
+
+  var a = growthStrandedTokens_(alertName);
+  var b = growthStrandedTokens_(comboName);
+  if (!a.length || !b.length) return false;
+  var shared = b.filter(function (t) { return a.indexOf(t) !== -1; });
+  if (shared.length >= 2) return true;
+  if (b.length !== 1 || shared.length !== 1 || b[0].length < 5) return false;
+  return b[0] === a[a.length - 1];
+}
+
+function growthStrandedIsoDaysAgo_(days, tz) {
+  return Utilities.formatDate(new Date(new Date().getTime() - days * 86400000),
+                              tz, "yyyy-MM-dd");
+}
+
+/* The report. Returns data; prints nothing and sends nothing. */
+function growthStrandedSoldJobs_(opts) {
+  opts = opts || {};
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+
+  var graceDays = (opts.graceDays === undefined) ? GROWTH_STRANDED_CONFIG.graceDays : opts.graceDays;
+  var lookbackDays = (opts.lookbackDays === undefined) ? GROWTH_STRANDED_CONFIG.lookbackDays : opts.lookbackDays;
+  var newestIso = growthStrandedIsoDaysAgo_(graceDays, tz);
+  var oldestIso = growthStrandedIsoDaysAgo_(lookbackDays, tz);
+
+  var res = readSoldAlerts_(lookbackDays + 5);
+  if (!res.ok) {
+    return { ok: false, error: "sold alerts unreadable", stranded: [], tz: tz };
+  }
+
+  /* Collapse re-quotes first. Without this a job re-papered three times looks
+     like three stranded sales, and the COMBO LOG only ever holds one row. */
+  var collapse = growthCollapseLatestSoldAlerts_(res.alerts);
+  var inWindow = collapse.alerts.filter(function (a) {
+    return a.soldOnIso && a.soldOnIso >= oldestIso && a.soldOnIso <= newestIso;
+  });
+
+  /* Same qualification the Growth headline uses, so this report can never
+     disagree with the sold count about what a Growth project is. */
+  var qualifying = inWindow.filter(function (a) {
+    if (!growthSoldQualification_(a).included) return false;
+    if (typeof stExcluded_ !== "function") return true;
+    return !(a.growthRevisionMembers || [a]).some(function (m) { return stExcluded_(m); });
+  });
+
+  var combo = readComboInstalls_();
+  if (!combo.ok) {
+    return { ok: false, error: "COMBO LOG unreachable", stranded: [], tz: tz };
+  }
+
+  var stranded = [], scheduled = [], undated = [], cancelled = [];
+  /* Two sold alerts against one COMBO LOG row means one of the two never made
+     it, even though the customer "is on the board". VOA is the opposite case —
+     two sales, two rows, both fine — so a bare name match cannot tell them
+     apart and the counts have to be compared. */
+  var soldPerCustomer = {}, rowsPerCustomer = {}, saleByCustomer = {};
+  /* Third opinion. COMBO LOG rows say what was scheduled; Completed Form Alerts
+     say what was actually installed, each carrying its own ServiceTitan job
+     number. Distinct numbers = distinct jobs, which settles a duplicate the way
+     an address would if addresses were reliably recorded (they appear in JOB
+     NOTES on 3 rows out of 227). */
+  var completions = { ok: false, completions: [] };
+  try { completions = readInstallCompletions_(lookbackDays + 30); }
+  catch (e) { Logger.log("completion alerts unavailable: " + e); }
+
+  qualifying.forEach(function (a) {
+    var custKey = growthStrandedTokens_(a.customer).join(" ");
+    /* A cancelled sale is off the board on purpose. Missing this is what makes
+       a job read SOLD forever. */
+    /* Cancellations span trades — the tab carries SALES, HVAC, PLUMBING and
+       PLUMB rows. An explicitly plumbing or electrical cancellation must not
+       clear a stranded HVAC sale for the same household; a blank department is
+       treated as possibly-ours and still counts, which errs toward silence
+       rather than toward a false "forgotten job" accusation. */
+    var cancel = combo.cancellations.filter(function (c) {
+      var dep = String(c.department || "").trim().toUpperCase();
+      if (dep.indexOf("PLUM") === 0 || dep.indexOf("ELEC") === 0) return false;
+      return growthStrandedNameMatch_(a.customer, c.customer);
+    })[0];
+    if (cancel) {
+      cancelled.push({ sale: a, cancelledOn: cancel.cancelledOn, reason: cancel.reason });
+      return;
+    }
+
+    /* Match across ALL trades. An HCA who sells a water heater or an electrical
+       panel books a Growth sale — it qualifies on amount and seller by design —
+       and that job lands on a PLUM or ELECT row in the COMBO LOG. Narrowing to
+       HVAC here reported Volunteers of America's two E HWT water heaters as two
+       stranded jobs when both were installed 7/23. The question this check asks
+       is "did the sale reach the board", and any trade's row answers yes.
+       (growthComboRowIsHvacInstall_ still guards the PERMIT report, where the
+       question is about HVAC equipment timelines and the trade does matter.) */
+    var rows = combo.installs.filter(function (row) {
+      return growthStrandedNameMatch_(a.customer, row.customer);
+    });
+    soldPerCustomer[custKey] = (soldPerCustomer[custKey] || 0) + 1;
+    rowsPerCustomer[custKey] = rows.length;
+    saleByCustomer[custKey] = a;
+
+    if (!rows.length) {
+      stranded.push({
+        customer: a.customer, hca: a.hca, amount: a.amount, soldOnIso: a.soldOnIso,
+        jobNumber: a.jobNumber, estimateNumber: a.estimateNumber,
+        opportunityNumber: a.opportunityNumber,
+        ageDays: Math.round((new Date().getTime() - new Date(a.soldOnIso + "T12:00:00").getTime()) / 86400000),
+        state: "NOT ON THE BOARD"
+      });
+      return;
+    }
+    if (rows.every(function (r) { return r.isCompleted || r.isDone; })) { scheduled.push(a); return; }
+
+    /* Dated and open is the healthy end state. A row that exists but carries no
+       date is a milder problem than absence — somebody knows about it — and on
+       the TBD tab the JOB COMPLETED column is repurposed as a live action note,
+       which is the most current word on the job anywhere, so carry it through. */
+    var open = rows.filter(function (r) { return !r.isCompleted && !r.isDone; });
+    if (open.length && open.every(function (r) { return r.isTbd; })) {
+      undated.push({
+        customer: a.customer, hca: a.hca, amount: a.amount, soldOnIso: a.soldOnIso,
+        note: open.map(function (r) { return r.jobCompleted || r.jobNotes || ""; })
+                 .filter(Boolean).join(" · "),
+        sourceSheet: open.map(function (r) { return r.sourceSheet; }).join(", "),
+        state: "ON THE BOARD, NO DATE"
+      });
+      return;
+    }
+    scheduled.push(a);
+  });
+
+  stranded.sort(function (x, y) { return y.ageDays - x.ageDays; });
+  undated.sort(function (x, y) { return String(x.soldOnIso).localeCompare(String(y.soldOnIso)); });
+
+  return {
+    ok: true,
+    complete: res.complete,
+    tz: tz,
+    windowFrom: oldestIso,
+    windowTo: newestIso,
+    graceDays: graceDays,
+    qualifyingSales: qualifying.length,
+    stranded: stranded,
+    undated: undated,
+    scheduledCount: scheduled.length,
+    cancelledCount: cancelled.length,
+    shortfall: Object.keys(soldPerCustomer).filter(function (k) {
+      return rowsPerCustomer[k] > 0 && soldPerCustomer[k] > rowsPerCustomer[k];
+    }).map(function (k) {
+      var cust = saleByCustomer[k].customer;
+      var jobs = {};
+      (completions.completions || []).forEach(function (c) {
+        if (c.jobNumber && growthStrandedNameMatch_(cust, c.customer)) jobs[c.jobNumber] = true;
+      });
+      return { customer: cust, hca: saleByCustomer[k].hca,
+               sales: soldPerCustomer[k], rows: rowsPerCustomer[k],
+               installedJobs: Object.keys(jobs).length,
+               jobNumbers: Object.keys(jobs).join(", ") };
+    }),
+    comboRows: combo.installs.length
+  };
+}
+
+/* Read-only preview. Run this from the editor; it writes nothing and emails
+   nobody. */
+function previewStrandedSoldJobs() {
+  var r = growthStrandedSoldJobs_();
+  if (!r.ok) { Logger.log("stranded check FAILED: " + r.error); return r; }
+
+  var money = function (n) { return "$" + Math.round(Number(n) || 0).toLocaleString("en-US"); };
+  var out = [];
+  out.push("STRANDED SOLD JOBS — sold but not on the board");
+  out.push("================================================");
+  out.push("Window   : " + r.windowFrom + " .. " + r.windowTo +
+           "  (" + r.graceDays + "-day grace on new sales)");
+  out.push("Qualifying Growth sales in window: " + r.qualifyingSales +
+           "   COMBO LOG rows read: " + r.comboRows);
+  out.push("Scheduled: " + r.scheduledCount + "   Cancelled: " + r.cancelledCount +
+           "   Count shortfalls: " + r.shortfall.length);
+  if (!r.complete) {
+    out.push("!! PARTIAL sold-alert read — the Gmail ceiling was hit, so this");
+    out.push("!! report can only be missing stranded jobs, never inventing them.");
+  }
+  out.push("");
+
+  if (!r.stranded.length) {
+    out.push("NOT ON THE BOARD: none. Every qualifying sale reached the COMBO LOG.");
+  } else {
+    out.push("NOT ON THE BOARD (" + r.stranded.length + ") — oldest first:");
+    r.stranded.forEach(function (s) {
+      out.push("  " + s.ageDays + "d  " + s.soldOnIso + "  " + money(s.amount) +
+               "  " + s.customer + "  (" + s.hca + ")" +
+               (s.jobNumber ? "  job " + s.jobNumber : "") +
+               (s.opportunityNumber ? "  opp " + s.opportunityNumber : ""));
+    });
+  }
+  out.push("");
+
+  if (!r.undated.length) {
+    out.push("ON THE BOARD, NO DATE: none.");
+  } else {
+    out.push("ON THE BOARD, NO DATE (" + r.undated.length + ") — known but unscheduled:");
+    r.undated.forEach(function (s) {
+      out.push("  " + s.soldOnIso + "  " + money(s.amount) + "  " + s.customer +
+               "  (" + s.hca + ")  [" + s.sourceSheet + "]" +
+               (s.note ? "  — " + s.note : ""));
+    });
+  }
+  out.push("");
+  if (r.shortfall.length) {
+    out.push("MORE SALES THAN JOBS (" + r.shortfall.length + ") — the customer is on the");
+    out.push("board, but with fewer COMBO LOG rows than qualifying sales, so at");
+    out.push("least one sale has no job behind it:");
+    r.shortfall.forEach(function (e) {
+      out.push("  " + e.sales + " sales vs " + e.rows + " job row(s)" +
+               (e.installedJobs ? " vs " + e.installedJobs + " installed job(s)" : "") +
+               "  " + e.customer + "  (" + e.hca + ")" +
+               (e.jobNumbers ? "  ST#" + e.jobNumbers : ""));
+    });
+    out.push("");
+  }
+  out.push("Name matching needs two shared tokens, so a stranded job can hide");
+  out.push("behind a misspelling in the COMBO LOG. Spot-check anything you know");
+  out.push("was sold and does not appear in either list above.");
+
+  var msg = out.join("\n");
+  Logger.log(msg);
+  return r;
+}
+
+/* ============================================================================
+ * PERMIT PIPELINE — sold jobs held up, and whether they are actually late
+ *
+ * "Late" is meaningless without the jurisdiction. Everett turns a residential
+ * mechanical permit in 5 business days but takes 4-6 WEEKS on a commercial-zoned
+ * property; Seattle is 1 week residential and 6 weeks commercial/multi-family;
+ * City of Snohomish is 7 business days for an equipment swap and 6 weeks for an
+ * add or relocate. A single global threshold would either bury the real stalls
+ * or cry wolf on every permit-heavy city, so every age here is measured against
+ * that jurisdiction's own published timeline.
+ *
+ * This is a DIFFERENT question from growthStrandedSoldJobs_. That one asks "did
+ * this sale ever reach the board at all" and works from sold alerts. This one
+ * walks the COMBO LOG itself, so it still sees a job sold months ago that has
+ * been sitting in permitting since — which a sold-alert lookback would miss.
+ * ========================================================================== */
+
+var JURISDICTIONS_SHEET_ID = "1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI";
+
+var PERMIT_PIPELINE_CONFIG = {
+  /* Slack on top of the jurisdiction's own timeline before calling it late.
+     Published timelines are best cases and a few days of drift is normal. */
+  graceDays: 5,
+  /* Used only when the jurisdiction is known but its timeline cell is
+     unparseable — never as a blanket default. */
+  fallbackDays: 14,
+  /* L&I Factory Assembled Structures turnaround for manufactured homes. The
+     JURISDICTIONS sheet lists cities and counties only, so this has no source
+     there. Leave null until someone confirms the real number: FAS rows then
+     report in their own bucket with their age shown and no verdict, which is
+     honest. Set it to a number and they get judged like anywhere else. */
+  manufacturedHomeDays: null
+};
+
+/* The COMBO LOG's JURISDICTION column does not key to the JURISDICTIONS sheet.
+   Left side is what the log actually contains, right side is the sheet's key.
+   SNOHO PTB is Snohomish County — confirmed 2026-08-16, it is simply what the
+   office calls it colloquially. The data agreed before anyone asked: same LNI
+   electrical authority as SNOCO, running concurrently with it all year rather
+   than replacing it, same department mix. */
+var PERMIT_JURISDICTION_ALIASES = {
+  "KING CO": "KINGCO",
+  "KINGCO": "KINGCO",
+  "SNO CO": "SNOCO",
+  "MLT": "MOUNTLAKE TERRACE",
+  "SNOHOMISH CITY": "CITY OF SNOHOMISH",
+  "SNOHOMISH": "CITY OF SNOHOMISH",
+  "SNOHO PTB": "SNOCO",
+  "SKAGITCO": "SKAGIT CO",
+  "ISLANDCO": "ISLAND CO",
+  "WHATCOMCO": "WHATCOM CO"
+};
+
+/* FAS = Factory Assembled Structures, Washington L&I's manufactured-home
+   program — confirmed with the install coordinator. It is a real permit
+   authority, not a missing value and not a subcontractor: L&I issues
+   manufactured-home permits STATEWIDE, which is why FAS appears in the
+   ELECTRICAL column as well and carries its own permit numbers
+   ("FAS 4758790F"). The city is genuinely irrelevant on these, so a FAS row
+   must never be judged against a municipal timeline. */
+var PERMIT_AUTHORITY_FAS = "FAS";
+
+/* "COMBINED W/OTHER PERMIT" and friends mean the work is riding on a permit CM
+   Heating did not pull — most often the homeowner sourced their own, sometimes
+   it is rolled into another permit already open on the job. Either way nobody
+   here is waiting on a city, so measuring it against a municipal timeline is
+   meaningless: Wayne Ho read as 30 days overdue in Everett on exactly this.
+   The phrase turns up in PERMIT NOTES on some rows and in the JURISDICTION cell
+   on others (JAMES HABBERMAN DDS), so both are tested.
+   These are surfaced in their own short section rather than dropped, because
+   the reading is inferred from the wording rather than confirmed by a field —
+   if it is ever wrong, it should be wrong in plain sight. */
+var PERMIT_EXTERNAL_RE =
+  /COMBINED|HOMEOWNER|OWNER[- ]?(SUPPLIED|PULLED|PROVIDED)|CUSTOMER[- ]?(SUPPLIED|PULLED|PROVIDED)/;
+
+/* Values that occupy the JURISDICTION cell and really are absent. */
+var PERMIT_NOT_A_JURISDICTION = { "NA": 1, "N/A": 1, "": 1 };
+
+function growthNormalizeJurisdiction_(raw) {
+  var s = String(raw || "").toUpperCase().replace(/\s+/g, " ").trim();
+  /* Cells carry a trailing permit number: "EVERETT M2603-002", "FAS 4778507F". */
+  s = s.replace(/\s+[A-Z]?\d[\w-]*$/, "").trim();
+  if (PERMIT_NOT_A_JURISDICTION[s]) return { key: "", unmapped: true, raw: s };
+  if (PERMIT_EXTERNAL_RE.test(s)) {
+    return { key: "", unmapped: false, isExternalPermit: true, raw: s };
+  }
+  if (s === PERMIT_AUTHORITY_FAS) {
+    return { key: PERMIT_AUTHORITY_FAS, unmapped: false, isManufacturedHome: true, raw: s };
+  }
+  var key = PERMIT_JURISDICTION_ALIASES[s] || s;
+  return { key: key, unmapped: false, isManufacturedHome: false, raw: s };
+}
+
+/* "ASAP", "ALL EQ - 5 BUSINESS DAYS", "ODU - 2 WEEKS", "2-4 WEEKS", "6 WEEKS".
+   Always takes the LARGEST duration mentioned: these cells describe a range or
+   several equipment cases, and the optimistic end would generate false alarms.
+   Business days convert at 7/5 so the answer stays in calendar days, which is
+   what a date subtraction gives us. */
+function growthParseTimelineDays_(text) {
+  var s = String(text || "").toUpperCase();
+  if (!s.trim()) return null;
+  var best = null;
+  var re = /(\d+)\s*(?:-\s*(\d+)\s*)?(BUSINESS\s+DAY|DAY|WEEK|MONTH)/g;
+  var m;
+  while ((m = re.exec(s)) !== null) {
+    var n = Number(m[2] || m[1]);
+    var unit = m[3];
+    var days = unit.indexOf("WEEK") === 0 ? n * 7
+             : unit.indexOf("MONTH") === 0 ? n * 30
+             : unit.indexOf("BUSINESS") === 0 ? Math.ceil(n * 7 / 5)
+             : n;
+    if (best === null || days > best) best = days;
+  }
+  if (best !== null) return best;
+  /* A bare unit with no digit — Burlington's commercial cell reads "WEEK OR
+     LESS FOR COMMERCIAL GF SWAP". Read it as one whole unit, the upper bound,
+     consistent with taking the longest duration everywhere else here. */
+  if (/\bMONTH\b/.test(s)) return 30;
+  if (/\bWEEK\b/.test(s)) return 7;
+  /* "ASAP" / "TRIAL RUN - CAN GO NEXT DAY" with no number at all. */
+  if (/ASAP|NEXT DAY/.test(s)) return 2;
+  return null;
+}
+
+function readJurisdictionTimelines_() {
+  var out = {};
+  var ss;
+  try { ss = SpreadsheetApp.openById(JURISDICTIONS_SHEET_ID); }
+  catch (err) {
+    Logger.log("JURISDICTIONS unreachable: " + err);
+    return { ok: false, byKey: out };
+  }
+  var sh = ss.getSheets()[0];
+  var values = sh.getDataRange().getValues();
+  var hIdx = -1, cName = -1, cLine = -1, cComm = -1;
+  for (var r = 0; r < Math.min(values.length, 12); r++) {
+    var up = values[r].map(function (c) { return String(c == null ? "" : c).trim().toUpperCase(); });
+    var i = up.indexOf("JURISDICTION");
+    if (i !== -1) {
+      hIdx = r; cName = i;
+      for (var k = 0; k < up.length; k++) {
+        if (up[k].indexOf("SCHEDULING") === 0) cLine = k;
+        if (up[k].indexOf("COMMERCIAL") === 0) cComm = k;
+      }
+      break;
+    }
+  }
+  if (hIdx === -1 || cLine === -1) return { ok: false, byKey: out };
+
+  for (var i2 = hIdx + 1; i2 < values.length; i2++) {
+    var name = String(values[i2][cName] || "").toUpperCase().replace(/\s+/g, " ").trim();
+    if (!name) continue;
+    var resDays = growthParseTimelineDays_(values[i2][cLine]);
+    var comText = cComm === -1 ? "" : String(values[i2][cComm] || "");
+    out[name] = {
+      name: name,
+      residentialDays: resDays,
+      commercialDays: growthParseTimelineDays_(comText),
+      commercialNote: comText.trim()
+    };
+  }
+  return { ok: true, byKey: out };
+}
+
+/* PERMIT NOTES is a small state machine, not prose: "REQUESTED 6/5",
+   "ISSUED-WILL SEND ONCE SCHED", "FINALED 8/6", plus exceptions such as
+   "CUST REFUSED ACCESS FOR INSPECTION". FINALED means the permit is closed out
+   and the job is no longer waiting on the city. */
+function growthPermitState_(note, tz) {
+  var s = String(note || "").toUpperCase().trim();
+  if (!s) return { state: "NONE", sinceIso: "" };
+  /* FINALED first: a note may say both, and closed out beats everything. */
+  var state = /FINAL/.test(s) ? "FINALED"
+            : PERMIT_EXTERNAL_RE.test(s) ? "EXTERNAL"
+            : /ISSUED/.test(s) ? "ISSUED"
+            : /REQUESTED/.test(s) ? "REQUESTED"
+            : "OTHER";
+  var m = s.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  var iso = "";
+  if (m) {
+    var yr = m[3] ? Number(m[3].length === 2 ? "20" + m[3] : m[3])
+                  : Number(Utilities.formatDate(new Date(), tz, "yyyy"));
+    iso = yr + "-" + pad2_(Number(m[1])) + "-" + pad2_(Number(m[2]));
+    /* A month ahead of today means last year's permit, not a future one. */
+    if (iso > Utilities.formatDate(new Date(), tz, "yyyy-MM-dd")) {
+      iso = (yr - 1) + "-" + pad2_(Number(m[1])) + "-" + pad2_(Number(m[2]));
+    }
+  }
+  return { state: state, sinceIso: iso, text: s };
+}
+
+/* HVAC EQUIPMENT INSTALLS ONLY.
+ *
+ * The COMBO LOG holds every trade — DEPARTMENT is HVAC on most rows but also
+ * PLUM and ELECT/ELEC — and plumbing water heaters and electrical-only jobs must
+ * never land in Growth HVAC numbers.
+ *
+ * DEPARTMENT = HVAC is still not sufficient on its own: duct-only work is logged
+ * exactly the same way, and a duct job is not an equipment install. The
+ * MECHANICAL test below matches the WHOLE CELL on purpose. Do NOT loosen it to a
+ * substring test — "DUCTLESS", "DUCTLESS HP", "DUCTLESS SINGLE ZONE" and
+ * "DUCTLESS 5 HU" are all real equipment installs and must keep passing. */
+function growthIsHvacDepartment_(department) {
+  var d = String(department || "").trim().toUpperCase();
+  return d === "HVAC";
+}
+function growthIsHvacEquipmentRow_(mechanical) {
+  var m = String(mechanical || "").trim().toUpperCase().replace(/\s+/g, " ");
+  if (m === "DUCTWORK" || m === "DUCT WORK" ||
+      m === "DUCTWORK ONLY" || m === "DUCT WORK ONLY") return false;
+  return true;
+}
+function growthComboRowIsHvacInstall_(row) {
+  return growthIsHvacDepartment_(row && row.department) &&
+         growthIsHvacEquipmentRow_(row && row.mechanical);
+}
+
+function growthPermitPipeline_() {
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+  var todayIso = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+
+  var combo = readComboInstalls_();
+  if (!combo.ok) return { ok: false, error: "COMBO LOG unreachable" };
+  var jur = readJurisdictionTimelines_();
+
+  var waiting = [], overdue = [], noJurisdiction = [], noTimeline = [],
+      otherTrades = [], manufacturedHome = [], externalPermit = [];
+
+  combo.installs.forEach(function (row) {
+    if (row.isCompleted || row.isDone) return;
+    /* Plumbing and electrical permits are real and worth seeing, but they are
+       not Growth HVAC and must not be counted alongside it. Duct-only HVAC rows
+       are dropped for the same reason: not an equipment install. */
+    if (!growthComboRowIsHvacInstall_(row)) {
+      var pOther = growthPermitState_(row.permitNotes, tz);
+      if (pOther.state !== "FINALED" && pOther.state !== "NONE") {
+        otherTrades.push({
+          customer: row.customer, department: row.department || "?",
+          mechanical: row.mechanical || "", permitState: pOther.state,
+          permitSince: pOther.sinceIso, jurisdictionRaw: row.jurisdiction || ""
+        });
+      }
+      return;
+    }
+    var permit = growthPermitState_(row.permitNotes, tz);
+    /* FINALED is done with the city. NONE means no permit tracked at all, which
+       is a different problem and belongs to the stranded check, not here. */
+    if (permit.state === "FINALED" || permit.state === "NONE") return;
+    if (!permit.sinceIso) return;
+
+    var ageDays = Math.round(
+      (new Date(todayIso + "T12:00:00").getTime() -
+       new Date(permit.sinceIso + "T12:00:00").getTime()) / 86400000);
+
+    var norm = growthNormalizeJurisdiction_(row.jurisdiction);
+    var entry = {
+      customer: row.customer, salesRep: row.salesRep, installDate: row.installDate,
+      jurisdictionRaw: norm.raw, jurisdiction: norm.key,
+      permitState: permit.state, permitSince: permit.sinceIso, ageDays: ageDays,
+      note: row.jobNotes || row.jobCompleted || "", sourceSheet: row.sourceSheet
+    };
+
+    if (permit.state === "EXTERNAL" || norm.isExternalPermit) {
+      entry.why = permit.state === "EXTERNAL" ? permit.text : norm.raw;
+      externalPermit.push(entry);
+      return;
+    }
+    if (norm.unmapped) { noJurisdiction.push(entry); return; }
+
+    if (norm.isManufacturedHome) {
+      entry.authority = "L&I Factory Assembled Structures (manufactured home)";
+      var fasDays = PERMIT_PIPELINE_CONFIG.manufacturedHomeDays;
+      if (!fasDays) { manufacturedHome.push(entry); return; }
+      entry.basis = "manufactured home";
+      entry.expectedDays = fasDays;
+      entry.limitDays = fasDays + PERMIT_PIPELINE_CONFIG.graceDays;
+      (ageDays > entry.limitDays ? overdue : waiting).push(entry);
+      return;
+    }
+
+    var spec = jur.byKey[norm.key];
+    if (!spec || spec.residentialDays === null) { noTimeline.push(entry); return; }
+
+    /* Residential window is the yardstick. Nothing in the COMBO LOG records
+       that a property is commercial-zoned — a dentist office or storefront in a
+       house — so where the commercial window is materially longer, the job is
+       still surfaced but annotated, and a human decides on sight. Hiding it for
+       six weeks on the chance it might be commercial is the worse error. */
+    var base = spec.residentialDays;
+    if (row.isCommercial && spec.commercialDays) {
+      /* Known commercial — use the real window rather than guessing. Everett is
+         5 business days residential and 4-6 WEEKS commercial, so this is the
+         difference between a true alarm and a meaningless one. */
+      base = spec.commercialDays;
+      entry.basis = "commercial";
+    } else {
+      entry.basis = row.isCommercial ? "commercial (no commercial timeline on file)" : "residential";
+      if (!row.isCommercial && spec.commercialDays && spec.commercialDays > spec.residentialDays * 2) {
+        entry.commercialCaveat = "if commercial-zoned, allow ~" + spec.commercialDays + "d";
+      }
+    }
+    var limit = base + PERMIT_PIPELINE_CONFIG.graceDays;
+    entry.expectedDays = base;
+    entry.limitDays = limit;
+    (ageDays > limit ? overdue : waiting).push(entry);
+  });
+
+  overdue.sort(function (a, b) { return (b.ageDays - b.limitDays) - (a.ageDays - a.limitDays); });
+  noJurisdiction.sort(function (a, b) { return b.ageDays - a.ageDays; });
+
+  return {
+    ok: true, tz: tz, todayIso: todayIso,
+    jurisdictionsLoaded: jur.ok ? Object.keys(jur.byKey).length : 0,
+    overdue: overdue, waiting: waiting,
+    noJurisdiction: noJurisdiction, noTimeline: noTimeline,
+    otherTrades: otherTrades, manufacturedHome: manufacturedHome,
+    externalPermit: externalPermit,
+    comboRows: combo.installs.length
+  };
+}
+
+/* Read-only. Writes nothing, emails nobody. */
+function previewPermitPipeline() {
+  var r = growthPermitPipeline_();
+  if (!r.ok) { Logger.log("permit pipeline FAILED: " + r.error); return r; }
+  var out = [];
+  out.push("PERMIT PIPELINE — open jobs waiting on a permit");
+  out.push("================================================");
+  out.push("As of " + r.todayIso + " · COMBO LOG rows " + r.comboRows +
+           " · jurisdictions loaded " + r.jurisdictionsLoaded);
+  out.push("HVAC EQUIPMENT INSTALLS ONLY — plumbing, electrical and duct-only");
+  out.push("rows are held out below and never counted in these figures.");
+  out.push("Overdue " + r.overdue.length + " · within window " + r.waiting.length +
+           " · no jurisdiction recorded " + r.noJurisdiction.length +
+           " · no timeline " + r.noTimeline.length +
+           " · manufactured home " + r.manufacturedHome.length +
+           " · permit not ours " + r.externalPermit.length +
+           " · other trades held out " + r.otherTrades.length);
+  out.push("");
+
+  function line(e, showLimit) {
+    return "  " + e.ageDays + "d" + (showLimit ? "/" + e.limitDays + "d" : "") +
+           "  " + (e.jurisdiction || e.jurisdictionRaw || "?") +
+           "  " + e.permitState + " " + e.permitSince +
+           "  " + e.customer + (e.salesRep ? " (" + e.salesRep + ")" : "") +
+           (e.basis === "commercial" ? "  [COMMERCIAL window]" : "") +
+           (e.commercialCaveat ? "  [" + e.commercialCaveat + "]" : "") +
+           (e.note ? "  — " + String(e.note).slice(0, 60) : "");
+  }
+
+  out.push(r.overdue.length ? "OVERDUE — past the jurisdiction's own timeline:"
+                            : "OVERDUE: none.");
+  r.overdue.forEach(function (e) { out.push(line(e, true)); });
+  out.push("");
+
+  if (r.externalPermit.length) {
+    out.push("PERMIT NOT OURS (" + r.externalPermit.length + ") — combined with another");
+    out.push("permit or supplied by the homeowner, so no city timeline applies");
+    out.push("and nothing here is waiting on us:");
+    r.externalPermit.forEach(function (e) {
+      out.push(line(e, false) + (e.why ? "  <" + String(e.why).slice(0, 40) + ">" : ""));
+    });
+    out.push("");
+  }
+  if (r.manufacturedHome.length) {
+    out.push("MANUFACTURED HOME — L&I Factory Assembled Structures (" +
+             r.manufacturedHome.length + "). Permitted by the state, not the");
+    out.push("city, so no municipal timeline applies. Age shown, no verdict —");
+    out.push("set PERMIT_PIPELINE_CONFIG.manufacturedHomeDays to judge these:");
+    r.manufacturedHome.forEach(function (e) { out.push(line(e, false)); });
+    out.push("");
+  }
+  if (r.noJurisdiction.length) {
+    out.push("NO JURISDICTION RECORDED (" + r.noJurisdiction.length +
+             ") — the cell is blank or NA, so no timeline applies:");
+    r.noJurisdiction.forEach(function (e) { out.push(line(e, false)); });
+    out.push("");
+  }
+  if (r.noTimeline.length) {
+    out.push("JURISDICTION NOT IN THE SHEET (" + r.noTimeline.length + "):");
+    r.noTimeline.forEach(function (e) { out.push(line(e, false)); });
+    out.push("");
+  }
+  if (r.otherTrades.length) {
+    out.push("OTHER TRADES — open permits, deliberately NOT in the HVAC counts:");
+    r.otherTrades.forEach(function (e) {
+      out.push("  [" + e.department + "] " + e.permitState + " " + e.permitSince +
+               "  " + e.customer + (e.mechanical ? "  " + e.mechanical : ""));
+    });
+    out.push("");
+  }
+  out.push("Timelines come from the JURISDICTIONS sheet and always take the");
+  out.push("LONGEST duration in the cell. 'SNOHO PTB' is Snohomish County.");
+
+  var msg = out.join("\n");
+  Logger.log(msg);
+  return r;
+}
+/* ============================================================================
+ * readGrowthDaysRaw_ - THIS IS THE LIVE DEFINITION. This is the one that runs.
+ *
+ * Applied 2026-08-18 (the date-coercion fix). The pre-fix copy still exists
+ * earlier in this file, renamed on 2026-08-28 to:
+ *
+ *     readGrowthDaysRaw_OLD_20260818
+ *
+ * It is parked, not deleted, and nothing calls it. Leave it that way.
+ *
+ * WHY IT WAS RENAMED AND NOT DELETED. Apps Script shares one global scope and
+ * the LAST definition of a name wins. While both copies were named
+ * readGrowthDaysRaw_, which one actually ran was decided by their order in the
+ * file - silently, with no error and no log line. The rename makes the live one
+ * unambiguous. Deleting a block instead of renaming it is how this project lost
+ * the opening bracket of GROWTH_SOURCE_CORRECTIONS on 2026-08-25 and stopped
+ * parsing.
+ *
+ * DO NOT restore the old name. Two live copies of it and the file's line order
+ * silently decides your numbers again.
+ *
+ * DO NOT follow "replace lines N through M" instructions anywhere in this
+ * project, including older ones left in comments. Line numbers here drift by
+ * hundreds between edits. Find code by content, never by line number.
+ * ========================================================================== */
+
+function readGrowthDaysRaw_(ss) {
+  var fallback = (typeof L2C_DAYS !== "undefined" && L2C_DAYS) ? L2C_DAYS : [];
+  var sh = growthDaysSheet_(ss);
+  if (!sh) return fallback;
+
+  var rows;
+  try {
+    var last = sh.getLastRow();
+    if (last < 2) return fallback;
+    rows = sh.getRange(2, 1, last - 1, GROWTH_DAILY_DATA_HEADER.length).getValues();
+  } catch (e) {
+    Logger.log("Daily Data tab unreadable (" + e + "); using the L2C_DAYS array.");
+    return fallback;
+  }
+
+  /* WHY THIS EXISTS. Google Sheets silently coerces a label typed or written as
+     "Mon 8/17" into a real Date value formatted "ddd m/d". It still LOOKS like
+     "Mon 8/17" on screen, but getValues() hands back a Date object whose
+     String() form is "Mon Aug 17 2026 00:00:00 GMT-0700 (PDT)" — which contains
+     no M/D. The old test therefore skipped EVERY row, out.length came back 0,
+     and the whole tab silently fell back to the L2C_DAYS array with nothing
+     logged and nothing visibly broken. The Daily panel sat on stale array data
+     while the tab was correct and simply ignored.
+     Normalise Dates back to "Ddd M/D" before testing. */
+  var tz;
+  try { tz = sh.getParent().getSpreadsheetTimeZone(); }
+  catch (e) { tz = Session.getScriptTimeZone(); }
+
+  function labelOf(v) {
+    if (v instanceof Date && !isNaN(v.getTime())) {
+      return Utilities.formatDate(v, tz, "EEE M/d");   // -> "Mon 8/17"
+    }
+    return String(v == null ? "" : v).trim();
+  }
+
+  var out = [], skipped = 0, coerced = 0;
+  rows.forEach(function (r) {
+    if (r[0] instanceof Date) coerced++;
+    var label = labelOf(r[0]);
+    /* A label with no M/D in it cannot drive the BI-thru date, so it is not a
+       day row — blank rows and stray notes land here and are skipped, not
+       guessed at. */
+    if (!label || !/\d{1,2}\/\d{1,2}/.test(label)) { if (label) skipped++; return; }
+    var nums = [];
+    for (var i = 1; i <= 8; i++) {
+      var n = Number(r[i]);
+      nums.push(isFinite(n) ? n : 0);
+    }
+    out.push([label].concat(nums));
+  });
+
+  if (!out.length) {
+    Logger.log("Daily Data produced 0 usable rows out of " + rows.length +
+               " — falling back to the L2C_DAYS array. Check column A.");
+    return fallback;
+  }
+  if (coerced) Logger.log("Daily Data: " + coerced + " label(s) were stored as dates and were normalised.");
+  if (skipped) Logger.log("Daily Data: skipped " + skipped + " row(s) with no M/D in the label.");
+  return out;
+}
+/* ############################################################################
+ * GROWTH COLLAPSE — BUNDLING FIX          paste as ONE block, 2026-08-21
+ * ############################################################################
+ *
+ * WHERE  End of "0730daily-recaps" in HCA Daily Recap. Ctrl+End, Enter twice,
+ *        paste, save. DELETE NOTHING. Four functions here supersede four that
+ *        already exist further up; the later definition wins, which is how
+ *        readGrowthDaysRaw_ has been running from line 15804 for weeks.
+ *
+ * WHAT   Sold alerts for one job arrive as separate estimates — system, water
+ *        heater, IAQ, electrical panel, purification. The old code kept ONE
+ *        alert per opportunity, whichever email landed last, and discarded the
+ *        rest. That is right for a re-quote and wrong for a bundle. Five
+ *        August sales were wrong because of it.
+ *
+ * EFFECT August moves from 60 sales / $881,742.15 to 61 / $942,071.78.
+ *
+ * THEN   Run zzPreviewBundledSold. It writes nothing. Only after it reads
+ *        clean do you run refreshSameDaySoldTab and then refreshDailyGrowth.
+ *
+ * BACK   Delete this whole block. Nothing above it was touched. The tab is
+ *        rebuilt from Gmail on every run, so no data is lost either way.
+ * ######################################################################## */
+
+
+/* ============================================================================
+ * growthCollapseLatestSoldAlerts_  —  REPLACEMENT (2026-08-21)
+ *
+ * WHAT CHANGED AND WHY
+ * The previous version grouped alerts by opportunity / job / estimate and kept
+ * exactly ONE member per group: the latest-received alert, with only its own
+ * amount. That is right for a re-quote and wrong for a bundle. When an HCA
+ * sells a system and a water heater on the same opportunity, ServiceTitan fires
+ * two alerts seconds apart; the old rule kept whichever email landed second and
+ * threw the other away. Five August cases, each verified by closing the
+ * arithmetic on the published day row, seller confirmed on RECAP_ROSTER:
+ *
+ *   8/10  Vincent Stevens  opp 408387028  Granard     $16,490.65  AC w/ return
+ *         kept a $109.00 dryer vent, which then failed the $2,000 gate, so
+ *         the whole sale left the tab.
+ *   8/13  Laura Richmond   opp 409447315  Maddalena   $ 8,815.50  gas furnace
+ *   8/18  Alisha Jang      opp 410395417  Chounramany $16,790.48  furnace + AC
+ *   8/19  Evan Miller      opp 407848823  Milo        $ 2,749.00  water tank
+ *         lost to an 8/20 re-paper of the system on the same opportunity.
+ *   8/10  Schiebel/Watson  opp 407804785  Diosdado    $15,375.00  200A panel
+ *         papered by an electrician, so the OLD readSoldAlerts_ discarded it
+ *         at the seller gate before grouping. See rule 4.
+ *
+ * Together: 60 sales / $881,742.15 becomes 61 / $942,071.78 for August.
+ *
+ * THE RULE. Grouping is unchanged. Inside a group:
+ *   1. An alert whose amount equals the exact sum of later alerts in the same
+ *      group is a COMBINED estimate that was re-papered as line items. It is
+ *      dropped. (Laura Richmond 8/13: est 409618580 is $13,540.50, and
+ *      $8,815.50 + $4,725.00 is $13,540.50 to the penny.)
+ *   2. Survivors are bucketed by PRODUCT, read off the estimate Name. Same
+ *      bucket means successive versions of one thing, so the latest-received
+ *      wins — a re-quote, a downgrade, a "- updated", a "- Copy".
+ *   3. The bundling buckets in a group become ONE sale whose amount is their
+ *      sum, regardless of sold date — HVAC and plumbing are written as separate
+ *      estimates, sometimes days apart, and still count as one HCA sale. The
+ *      record carries the anchor's date: rostered before unrostered, system
+ *      before add-on, larger before smaller. Non-bundling buckets stand alone.
+ *   4. The roster test is applied to the GROUP, not to each estimate, because
+ *      readSoldAlerts_(days, true) now lets non-roster sellers through so their
+ *      halves can be reunited. A group with no rostered member produces
+ *      nothing; a standalone line item needs its own rostered seller. That is
+ *      what keeps the COD service traffic out of the headline.
+ *
+ * Ryan Schiebel and Kasey Watson, opp 407804785: a $15,375.00 200A panel sold
+ * 8/7 by an electrician plus a $15,482.54 ductless sold 8/10 by Diosdado is one
+ * sale of $30,857.54, dated 8/10. growthClassifyLatestSale_ still reads the
+ * EARLIEST member for same-day, so it classifies against 8/7's booked run.
+ *
+ * WHY NAME AND NOT DEPARTMENT. The Sold Estimate Alert body carries no
+ * department, business unit, or trade — ALERT_FIELD_LABELS is the whole set,
+ * and Name is the only field holding product identity. isFireplaceSale_ already
+ * classifies by Name regex, so this follows the pattern already in the file.
+ *
+ * CONTRACT. Same signature, same return shape. Every consumer field is
+ * preserved: growthRevisionCount, growthRevisionMembers (the same-day lookback
+ * in growthClassifyLatestSale_ reads it), growthJobCandidates,
+ * growthOpportunityCandidates, and diagnostics.rawAlerts / uniqueSales /
+ * revisedGroups / supersededAlerts. Members carried on a record are only that
+ * record's own members, never the whole opportunity, or the same-day lookback
+ * and the stExcluded_ guard would reach across unrelated line items.
+ * ========================================================================== */
+
+/* Ordered most specific first. A combined estimate naming two products lands in
+   the more specific bucket, which is where its own successor lives.
+
+   bundles:true is Geoff's list — IAQ, water heater, electrical panel, water
+   purification. HVAC and plumbing are typically written as two estimates and
+   still count as ONE sale for the HCA, so these fold into the system sale
+   instead of competing with it — across sold dates, not just within a day.
+
+   bundles:false stands alone. Service work is a tech ticket, not an HCA bundle,
+   and it fails the $2,000 gate on its own anyway. Fireplace is left standalone
+   because the file already routes fireplace separately (isFireplaceSale_,
+   soldTodayBucket_) and no August case exercises the combination — flip its
+   flag if a furnace-plus-fireplace should count once. Edit this list to add a
+   trade; nothing below needs to change. */
+var GROWTH_PRODUCT_BUCKETS = [
+  { key: "fireplace",    bundles: false, re: /\b(fireplace|firebox|insert|hearth|gas\s*log|slim\s*?line)\b/i },
+  { key: "purification", bundles: true,  re: /\b(purif(y|ier|ication)|reverse\s*osmosis|water\s*softener|whole\s*house\s*filtr)\b/i },
+  { key: "waterheater",  bundles: true,  re: /\b(water\s*(heater|tank)|hot\s*water|tankless)\b/i },
+  { key: "electrical",   bundles: true,  re: /\b(amp|panel|breaker|circuit|sub-?panel|surge|electrical|rewire|wiring|generator|ev\s*charger)\b/i },
+  { key: "airquality",   bundles: true,  re: /\b(duct|ductwork|return\s*air|air\s*scrubber|air\s*ranger|filter|iaq|humidifier|dryer\s*vent|vent\s*clean)\b/i },
+  { key: "service",      bundles: false, re: /\b(maintenance|club|member(ship)?|service\s*fee|diag(nostic)?|repair|clean(ing)?|flush|p-?trap|drain|igniter|thermostat|inducer|blower|capacitor|contactor|control\s*board|pcb|switch|coil\s*clean|leak\s*search|waiver|discount)\b/i }
+];
+/* The primary. Everything with bundles:true folds into it. */
+var GROWTH_PRODUCT_DEFAULT = "system";
+
+function growthProductBucket_(name) {
+  var s = String(name || "");
+  for (var i = 0; i < GROWTH_PRODUCT_BUCKETS.length; i++) {
+    if (GROWTH_PRODUCT_BUCKETS[i].re.test(s)) return GROWTH_PRODUCT_BUCKETS[i].key;
+  }
+  return GROWTH_PRODUCT_DEFAULT;
+}
+
+function growthBucketBundles_(key) {
+  if (key === GROWTH_PRODUCT_DEFAULT) return true;
+  for (var i = 0; i < GROWTH_PRODUCT_BUCKETS.length; i++) {
+    if (GROWTH_PRODUCT_BUCKETS[i].key === key) return !!GROWTH_PRODUCT_BUCKETS[i].bundles;
+  }
+  return false;
+}
+
+function growthCents_(v) {
+  var n = Number(v);
+  return isFinite(n) ? Math.round(n * 100) : 0;
+}
+
+function growthAlertTime_(a) {
+  return (a && a.received && a.received.getTime) ? a.received.getTime() : 0;
+}
+
+function growthCollapseLatestSoldAlerts_OLD_20260826(alerts) {
+  alerts = alerts || [];
+
+  /* ---- 1. GROUPING. Unchanged from the previous version. ---- */
+  var parent = alerts.map(function (_, i) { return i; });
+  var firstSeen = {};
+  function find(i) {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  }
+  function link(key, i) {
+    if (!key) return;
+    if (firstSeen[key] === undefined) { firstSeen[key] = i; return; }
+    var a = find(firstSeen[key]), b = find(i);
+    if (a !== b) parent[b] = a;
+  }
+  alerts.forEach(function (alert, i) {
+    var customer = normName_(alert.customer);
+    if (alert.opportunityNumber) link("opp|" + alert.opportunityNumber + "|" + customer, i);
+    if (alert.jobNumber) link("job|" + alert.jobNumber + "|" + customer, i);
+    if (alert.estimateNumber) link("est|" + alert.estimateNumber + "|" + customer, i);
+  });
+
+  var groups = {};
+  alerts.forEach(function (alert, i) {
+    var root = find(i);
+    (groups[root] = groups[root] || []).push({ alert: alert, index: i });
+  });
+
+  function ordered(members) {
+    return members.slice().sort(function (x, y) {
+      var xt = growthAlertTime_(x.alert), yt = growthAlertTime_(y.alert);
+      if (xt !== yt) return xt - yt;
+      var xd = String(x.alert.soldOnIso || ""), yd = String(y.alert.soldOnIso || "");
+      return xd === yd ? x.index - y.index : xd.localeCompare(yd);
+    });
+  }
+
+  var out = [];
+  var revisedGroups = 0, bundledSales = 0, bundledDollars = 0, combinedDropped = 0;
+  var unrosteredGroups = 0, unrosteredBundled = 0, unrosteredDollars = 0;
+
+  Object.keys(groups).forEach(function (root) {
+    var members = ordered(groups[root]);
+    if (members.length > 1) revisedGroups++;
+
+    /* ---- 2. Drop a COMBINED estimate that later got re-papered as line items.
+       Guarded four ways, because "some later amounts happen to add up" is not
+       evidence of anything. The later members must all carry real money, must
+       sit in DISTINCT product buckets — that is what makes them line items
+       rather than versions — and must total this alert to the exact cent.
+       Terry Smith 8/6 is why: $15,027.48 / $0.00 / $15,027.48 sums correctly
+       and means nothing, since the $0.00 is a re-paper of the same system. ---- */
+    var live = members.slice();
+    if (live.length > 2) {
+      var keep = [];
+      for (var i = 0; i < live.length; i++) {
+        var mine = growthCents_(live[i].alert.amount);
+        var later = live.slice(i + 1);
+        var laterSum = 0, allPositive = true, buckets = [];
+        later.forEach(function (m) {
+          var c = growthCents_(m.alert.amount);
+          laterSum += c;
+          if (c <= 0) allPositive = false;
+          var b = growthProductBucket_(m.alert.name);
+          if (buckets.indexOf(b) < 0) buckets.push(b);
+        });
+        var isCombined = mine > 0 && later.length > 1 && allPositive &&
+                         buckets.length === later.length && laterSum === mine;
+        if (isCombined) { combinedDropped++; continue; }
+        keep.push(live[i]);
+      }
+      live = keep;
+    }
+
+    /* ---- 3. One survivor per product bucket: the latest-received. ---- */
+    var byBucket = {};
+    live.forEach(function (m) {
+      var b = growthProductBucket_(m.alert.name);
+      byBucket[b] = m;   // live is oldest-first, so the last write is the newest
+    });
+
+    /* ---- 3b. Roster test, at the GROUP. ---- */
+    var hasRostered = live.some(function (m) { return !m.alert.unrostered; });
+    if (!hasRostered) { unrosteredGroups++; return; }
+
+    /* ---- 4. Bundling buckets across the whole group become ONE sale.
+       Non-bundling buckets stand alone and need their own rostered seller. ---- */
+    var survivors = ordered(Object.keys(byBucket).map(function (b) { return byBucket[b]; }));
+    var sales = [];
+    var bundle = survivors.filter(function (m) {
+      return growthBucketBundles_(growthProductBucket_(m.alert.name));
+    });
+    if (bundle.length && bundle.some(function (m) { return !m.alert.unrostered; })) {
+      sales.push(bundle);
+    }
+    survivors.forEach(function (m) {
+      if (!growthBucketBundles_(growthProductBucket_(m.alert.name)) && !m.alert.unrostered) {
+        sales.push([m]);
+      }
+    });
+
+    sales.forEach(function (lineItems) {
+      var total = 0;
+      lineItems.forEach(function (m) { total += growthCents_(m.alert.amount); });
+
+      /* The anchor. Rostered first, so seller, customer, job number and the
+         sold DATE never come from an electrician's half. Then the system over
+         an add-on, then the larger figure. */
+      var primary = lineItems.slice().sort(function (x, y) {
+        var xr = x.alert.unrostered ? 0 : 1, yr = y.alert.unrostered ? 0 : 1;
+        if (xr !== yr) return yr - xr;
+        var xs = growthProductBucket_(x.alert.name) === GROWTH_PRODUCT_DEFAULT ? 1 : 0;
+        var ys = growthProductBucket_(y.alert.name) === GROWTH_PRODUCT_DEFAULT ? 1 : 0;
+        if (xs !== ys) return ys - xs;
+        return growthCents_(y.alert.amount) - growthCents_(x.alert.amount);
+      })[0];
+
+      var kept = Object.assign({}, primary.alert);
+      kept.amount = total / 100;
+
+      /* Members are the alerts that fed these line items, including the
+         versions superseded inside their buckets — growthClassifyLatestSale_
+         walks them for the earliest sold date and stExcluded_ walks them for
+         approval-guard rulings. A standalone sale never sees the bundle's. */
+      var liveBuckets = lineItems.map(function (m) {
+        return growthProductBucket_(m.alert.name);
+      });
+      var mine = members.filter(function (m) {
+        return liveBuckets.indexOf(growthProductBucket_(m.alert.name)) >= 0;
+      });
+      if (!mine.length) mine = lineItems;
+
+      kept.growthRevisionCount = mine.length;
+      kept.growthRevisionMembers = mine.map(function (m) { return m.alert; });
+      kept.growthLineItemCount = lineItems.length;
+      kept.growthLineItems = lineItems.map(function (m) {
+        return {
+          bucket: growthProductBucket_(m.alert.name),
+          name: m.alert.name,
+          estimateNumber: m.alert.estimateNumber,
+          soldOnIso: m.alert.soldOnIso,
+          seller: m.alert.unrostered ? (m.alert.soldByRaw || "(not on roster)") : m.alert.hca,
+          unrostered: !!m.alert.unrostered,
+          amount: growthCents_(m.alert.amount) / 100
+        };
+      });
+      kept.growthJobCandidates = [];
+      kept.growthOpportunityCandidates = [];
+      mine.forEach(function (m) {
+        var a = m.alert;
+        if (a.jobNumber && kept.growthJobCandidates.indexOf(String(a.jobNumber)) < 0) {
+          kept.growthJobCandidates.push(String(a.jobNumber));
+        }
+        if (a.opportunityNumber && kept.growthOpportunityCandidates.indexOf(String(a.opportunityNumber)) < 0) {
+          kept.growthOpportunityCandidates.push(String(a.opportunityNumber));
+        }
+      });
+
+      if (lineItems.length > 1) {
+        bundledSales++;
+        bundledDollars += (total - growthCents_(primary.alert.amount)) / 100;
+      }
+      lineItems.forEach(function (m) {
+        if (m.alert.unrostered) {
+          unrosteredBundled++;
+          unrosteredDollars += growthCents_(m.alert.amount) / 100;
+        }
+      });
+      out.push(kept);
+    });
+  });
+
+  return {
+    alerts: out,
+    diagnostics: {
+      rawAlerts: alerts.length,
+      uniqueSales: out.length,
+      revisedGroups: revisedGroups,
+      supersededAlerts: alerts.length - out.length,
+      bundledSales: bundledSales,
+      bundledDollars: Math.round(bundledDollars * 100) / 100,
+      combinedEstimatesDropped: combinedDropped,
+      unrosteredGroupsDropped: unrosteredGroups,
+      unrosteredLineItemsBundled: unrosteredBundled,
+      unrosteredDollarsBundled: Math.round(unrosteredDollars * 100) / 100
+    }
+  };
+}
+/* ============================================================================
+ * growthCollapseLatestSoldAlerts_  —  REPLACEMENT (2026-08-26)
+ *
+ * ONE CHANGE, in step 3. Everything else is byte-for-byte the 2026-08-21 block.
+ *
+ * WHY. Jeff Tabor, opportunity 410448705, job 410448703: Adam Weberg sold a
+ * $7,808.10 American Standard gas furnace and a $9,800.88 Mitsubishi ductless
+ * on 8/25, twenty-six seconds apart. Both estimate names fall through every
+ * GROWTH_PRODUCT_BUCKETS regex to the "system" catch-all ("Ductless" does not
+ * match \bduct\b), so the two were read as two drafts of one quote and the
+ * furnace was dropped. Verified by running the live functions against the two
+ * real alerts: in 2 alerts / $17,608.98, out 1 sale / $9,800.88.
+ *
+ * WHAT CHANGED. A bundling bucket may now hold more than one survivor, when
+ * growthIsCoSold_ says the two members are two different pieces of work sold
+ * in one sitting rather than two versions of one. They still fold into ONE
+ * sale through the existing bundling rule, so the sale COUNT cannot move —
+ * only the dollars. Backtested over all 224 Sold Estimate Alerts from 7/30 to
+ * 8/26: 91 sales before, 91 sales after, three sales gained dollars —
+ * Kathy Davis +$14,374.24, Jeff Tabor +$7,808.10, Bonnie Piest +$2,865.13.
+ * Nothing else moved, and all eleven zzSelfTest fixtures still pass.
+ *
+ * THE ONE THAT NEARLY BROKE IT. The Diosdado fixture — an 8/13 heat pump at
+ * $17,478.47 replaced by an 8/16 furnace at $10,882.45 — is a downgrade, not
+ * two systems, and an earlier version of this rule summed it. The sold-date
+ * and thirty-minute gates are what stop that, and they are the only two gates
+ * a fixture currently proves are load-bearing. The other four are redundant on
+ * 27 days of real traffic; they are kept because each blocks a different way
+ * this can go wrong, not because the data demanded them.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * growthIsCoSold_  —  NEW (2026-08-26)
+ * Two members of the same product bucket are two DIFFERENT pieces of work —
+ * not two versions of one — only when every gate below holds.
+ * ------------------------------------------------------------------------- */
+var GROWTH_COSOLD = { minAmountGapPct: 20, minutesApart: 30, enabled: true };
+
+var GROWTH_EQUIP_TOKENS = [
+  ["furnace",     /\b(furnace|gas\s*furnace)\b/i],
+  ["heatpump",    /\b(heat\s*pump|heatpump)\b/i],
+  ["ductless",    /\b(ductless|mini-?split|single\s*head|single\s*zone|\d+\s*-?\s*zone)\b/i],
+  ["ac",          /\b(a\/?c|air\s*condition\w*)\b/i],
+  ["airhandler",  /\b(air\s*handler)\b/i],
+  ["boiler",      /\b(boiler)\b/i],
+  ["fireplace",   /\b(fireplace|firebox|insert|hearth)\b/i],
+  ["waterheater", /\b(water\s*(heater|tank)|tankless|hot\s*water)\b/i],
+  ["ductwork",    /\b(duct\s*work|ductwork|return\s*air|supply\s*run|heat\s*run|dropbox)\b/i],
+  ["ductclean",   /\b(duct\s*clean\w*|vent\s*clean\w*)\b/i],
+  ["scrubber",    /\b(air\s*scrubber|air\s*ranger|iaq|purif\w*)\b/i],
+  ["filter",      /\b(filter|media\s*cabinet)\b/i],
+  ["humidifier",  /\b(humidifier|dehumidifi\w*)\b/i],
+  ["dryervent",   /\b(dryer\s*vent)\b/i],
+  ["gaspiping",   /\b(gas\s*piping|gas\s*line)\b/i],
+  ["panel",       /\b(panel|sub-?panel|breaker|circuit|generator|ev\s*charger|surge)\b/i],
+  ["thermostat",  /\b(thermostat)\b/i]
+];
+
+function growthEquipSet_(name) {
+  var s = String(name || ""), out = [];
+  for (var i = 0; i < GROWTH_EQUIP_TOKENS.length; i++) {
+    if (GROWTH_EQUIP_TOKENS[i][1].test(s)) out.push(GROWTH_EQUIP_TOKENS[i][0]);
+  }
+  return out.sort().join("+");
+}
+
+/* Strip the words a rep adds when re-papering the SAME estimate, then flatten.
+   "NEW* Comfort Solution #2 ... - Copy" and "Comfort Solution #2 ..." must
+   normalise to the same string, or every copy reads as a second system. */
+function growthNameKey_(name) {
+  return String(name || "")
+    .replace(/\b(new\*?|updated?|revised?|copy|final|option)\b/gi, " ")
+    .replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g, " ")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .toLowerCase().trim();
+}
+
+/* TRUE = these two are two different pieces of work sold together. */
+function growthIsCoSold_(a, b) {
+  if (!GROWTH_COSOLD.enabled) return false;
+  var av = Number(a.amount), bv = Number(b.amount);
+  /* A zero or a credit is a re-paper or an adjustment, never a second system. */
+  if (!(av > 0) || !(bv > 0)) return false;
+  if (String(a.estimateNumber || "") === String(b.estimateNumber || "")) return false;
+  /* Same equipment named on both = one system, quoted twice. */
+  var ae = growthEquipSet_(a.name), be = growthEquipSet_(b.name);
+  if (ae === be) return false;
+  /* One name contained in the other = a re-paper with extra words. */
+  var ak = growthNameKey_(a.name), bk = growthNameKey_(b.name);
+  if (!ak || !bk) return false;
+  if (ak === bk || ak.indexOf(bk) >= 0 || bk.indexOf(ak) >= 0) return false;
+  /* A revision lands near the price it replaces. Two systems rarely do. */
+  var hi = Math.max(av, bv), lo = Math.min(av, bv);
+  if (((hi - lo) / hi) * 100 < GROWTH_COSOLD.minAmountGapPct) return false;
+  /* Two things sold TOGETHER are papered in one sitting and carry one sold
+     date. A downgrade is a second decision on a second day: James X 8/13 heat
+     pump $17,478.47 replaced by an 8/16 furnace $10,882.45 is one sale, and
+     without this gate the amount rule would have summed it. */
+  if (String(a.soldOnIso || "") !== String(b.soldOnIso || "")) return false;
+  var at = (a.received && a.received.getTime) ? a.received.getTime() : 0;
+  var bt = (b.received && b.received.getTime) ? b.received.getTime() : 0;
+  if (!at || !bt) return false;
+  if (Math.abs(at - bt) > GROWTH_COSOLD.minutesApart * 60000) return false;
+  return true;
+}
+
+
+function growthCollapseLatestSoldAlerts_(alerts) {
+  alerts = alerts || [];
+
+  /* ---- 1. GROUPING. Unchanged from the previous version. ---- */
+  var parent = alerts.map(function (_, i) { return i; });
+  var firstSeen = {};
+  function find(i) {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  }
+  function link(key, i) {
+    if (!key) return;
+    if (firstSeen[key] === undefined) { firstSeen[key] = i; return; }
+    var a = find(firstSeen[key]), b = find(i);
+    if (a !== b) parent[b] = a;
+  }
+  alerts.forEach(function (alert, i) {
+    var customer = normName_(alert.customer);
+    if (alert.opportunityNumber) link("opp|" + alert.opportunityNumber + "|" + customer, i);
+    if (alert.jobNumber) link("job|" + alert.jobNumber + "|" + customer, i);
+    if (alert.estimateNumber) link("est|" + alert.estimateNumber + "|" + customer, i);
+  });
+
+  var groups = {};
+  alerts.forEach(function (alert, i) {
+    var root = find(i);
+    (groups[root] = groups[root] || []).push({ alert: alert, index: i });
+  });
+
+  function ordered(members) {
+    return members.slice().sort(function (x, y) {
+      var xt = growthAlertTime_(x.alert), yt = growthAlertTime_(y.alert);
+      if (xt !== yt) return xt - yt;
+      var xd = String(x.alert.soldOnIso || ""), yd = String(y.alert.soldOnIso || "");
+      return xd === yd ? x.index - y.index : xd.localeCompare(yd);
+    });
+  }
+
+  var out = [];
+  var revisedGroups = 0, bundledSales = 0, bundledDollars = 0, combinedDropped = 0;
+  var unrosteredGroups = 0, unrosteredBundled = 0, unrosteredDollars = 0;
+  var coSoldSplits = 0;
+
+  Object.keys(groups).forEach(function (root) {
+    var members = ordered(groups[root]);
+    if (members.length > 1) revisedGroups++;
+
+    /* ---- 2. Drop a COMBINED estimate that later got re-papered as line items.
+       Guarded four ways, because "some later amounts happen to add up" is not
+       evidence of anything. The later members must all carry real money, must
+       sit in DISTINCT product buckets — that is what makes them line items
+       rather than versions — and must total this alert to the exact cent.
+       Terry Smith 8/6 is why: $15,027.48 / $0.00 / $15,027.48 sums correctly
+       and means nothing, since the $0.00 is a re-paper of the same system. ---- */
+    var live = members.slice();
+    if (live.length > 2) {
+      var keep = [];
+      for (var i = 0; i < live.length; i++) {
+        var mine = growthCents_(live[i].alert.amount);
+        var later = live.slice(i + 1);
+        var laterSum = 0, allPositive = true, buckets = [];
+        later.forEach(function (m) {
+          var c = growthCents_(m.alert.amount);
+          laterSum += c;
+          if (c <= 0) allPositive = false;
+          var b = growthProductBucket_(m.alert.name);
+          if (buckets.indexOf(b) < 0) buckets.push(b);
+        });
+        var isCombined = mine > 0 && later.length > 1 && allPositive &&
+                         buckets.length === later.length && laterSum === mine;
+        if (isCombined) { combinedDropped++; continue; }
+        keep.push(live[i]);
+      }
+      live = keep;
+    }
+
+    /* ---- 3. Survivors per product bucket. The latest-received wins WITHIN a
+       version chain, but a bundling bucket may hold more than one survivor when
+       two members are two different pieces of work sold together rather than
+       two drafts of one (growthIsCoSold_). Jeff Tabor 8/25 is why: a $7,808.10
+       gas furnace and a $9,800.88 ductless, same job, 26 seconds apart, both
+       landing in the "system" catch-all, so the furnace was silently dropped. */
+    var byBucket = {};
+    live.forEach(function (m) {
+      var b = growthProductBucket_(m.alert.name);
+      var list = byBucket[b] || (byBucket[b] = []);
+      if (!list.length) { list.push(m); return; }
+      /* A standalone bucket never holds two sales; keep the old behaviour. */
+      if (!growthBucketBundles_(b)) { byBucket[b] = [m]; return; }
+      /* Prefer to supersede the survivor naming the SAME equipment, so a
+         furnace revision replaces the furnace and not the ductless beside it. */
+      var mine = growthEquipSet_(m.alert.name), at = -1;
+      for (var i = 0; i < list.length; i++) {
+        if (growthEquipSet_(list[i].alert.name) === mine &&
+            !growthIsCoSold_(list[i].alert, m.alert)) { at = i; break; }
+      }
+      if (at < 0) {
+        for (var j = 0; j < list.length; j++) {
+          if (!growthIsCoSold_(list[j].alert, m.alert)) { at = j; break; }
+        }
+      }
+      if (at >= 0) list[at] = m;
+      else { list.push(m); coSoldSplits++; }
+    });
+
+    /* ---- 3b. Roster test, at the GROUP. ---- */
+    var hasRostered = live.some(function (m) { return !m.alert.unrostered; });
+    if (!hasRostered) { unrosteredGroups++; return; }
+
+    /* ---- 4. Bundling buckets across the whole group become ONE sale.
+       Non-bundling buckets stand alone and need their own rostered seller. ---- */
+    var flat = [];
+    Object.keys(byBucket).forEach(function (b) { flat = flat.concat(byBucket[b]); });
+    var survivors = ordered(flat);
+    var sales = [];
+    var bundle = survivors.filter(function (m) {
+      return growthBucketBundles_(growthProductBucket_(m.alert.name));
+    });
+    if (bundle.length && bundle.some(function (m) { return !m.alert.unrostered; })) {
+      sales.push(bundle);
+    }
+    survivors.forEach(function (m) {
+      if (!growthBucketBundles_(growthProductBucket_(m.alert.name)) && !m.alert.unrostered) {
+        sales.push([m]);
+      }
+    });
+
+    sales.forEach(function (lineItems) {
+      var total = 0;
+      lineItems.forEach(function (m) { total += growthCents_(m.alert.amount); });
+
+      /* The anchor. Rostered first, so seller, customer, job number and the
+         sold DATE never come from an electrician's half. Then the system over
+         an add-on, then the larger figure. */
+      var primary = lineItems.slice().sort(function (x, y) {
+        var xr = x.alert.unrostered ? 0 : 1, yr = y.alert.unrostered ? 0 : 1;
+        if (xr !== yr) return yr - xr;
+        var xs = growthProductBucket_(x.alert.name) === GROWTH_PRODUCT_DEFAULT ? 1 : 0;
+        var ys = growthProductBucket_(y.alert.name) === GROWTH_PRODUCT_DEFAULT ? 1 : 0;
+        if (xs !== ys) return ys - xs;
+        return growthCents_(y.alert.amount) - growthCents_(x.alert.amount);
+      })[0];
+
+      var kept = Object.assign({}, primary.alert);
+      kept.amount = total / 100;
+
+      /* Members are the alerts that fed these line items, including the
+         versions superseded inside their buckets — growthClassifyLatestSale_
+         walks them for the earliest sold date and stExcluded_ walks them for
+         approval-guard rulings. A standalone sale never sees the bundle's. */
+      var liveBuckets = lineItems.map(function (m) {
+        return growthProductBucket_(m.alert.name);
+      });
+      var mine = members.filter(function (m) {
+        return liveBuckets.indexOf(growthProductBucket_(m.alert.name)) >= 0;
+      });
+      if (!mine.length) mine = lineItems;
+
+      kept.growthRevisionCount = mine.length;
+      kept.growthRevisionMembers = mine.map(function (m) { return m.alert; });
+      kept.growthLineItemCount = lineItems.length;
+      kept.growthLineItems = lineItems.map(function (m) {
+        return {
+          bucket: growthProductBucket_(m.alert.name),
+          name: m.alert.name,
+          estimateNumber: m.alert.estimateNumber,
+          soldOnIso: m.alert.soldOnIso,
+          seller: m.alert.unrostered ? (m.alert.soldByRaw || "(not on roster)") : m.alert.hca,
+          unrostered: !!m.alert.unrostered,
+          amount: growthCents_(m.alert.amount) / 100
+        };
+      });
+      kept.growthJobCandidates = [];
+      kept.growthOpportunityCandidates = [];
+      mine.forEach(function (m) {
+        var a = m.alert;
+        if (a.jobNumber && kept.growthJobCandidates.indexOf(String(a.jobNumber)) < 0) {
+          kept.growthJobCandidates.push(String(a.jobNumber));
+        }
+        if (a.opportunityNumber && kept.growthOpportunityCandidates.indexOf(String(a.opportunityNumber)) < 0) {
+          kept.growthOpportunityCandidates.push(String(a.opportunityNumber));
+        }
+      });
+
+      if (lineItems.length > 1) {
+        bundledSales++;
+        bundledDollars += (total - growthCents_(primary.alert.amount)) / 100;
+      }
+      lineItems.forEach(function (m) {
+        if (m.alert.unrostered) {
+          unrosteredBundled++;
+          unrosteredDollars += growthCents_(m.alert.amount) / 100;
+        }
+      });
+      out.push(kept);
+    });
+  });
+
+  return {
+    alerts: out,
+    diagnostics: {
+      rawAlerts: alerts.length,
+      uniqueSales: out.length,
+      revisedGroups: revisedGroups,
+      supersededAlerts: alerts.length - out.length,
+      bundledSales: bundledSales,
+      bundledDollars: Math.round(bundledDollars * 100) / 100,
+      combinedEstimatesDropped: combinedDropped,
+      coSoldSplits: coSoldSplits,
+      unrosteredGroupsDropped: unrosteredGroups,
+      unrosteredLineItemsBundled: unrosteredBundled,
+      unrosteredDollarsBundled: Math.round(unrosteredDollars * 100) / 100
+    }
+  };
+}
+
+/* ============================================================================
+ * readSoldAlerts_  —  REPLACEMENT (2026-08-21)
+ *
+ * ONE CHANGE: an opt-in second argument. Called as readSoldAlerts_(days) it
+ * behaves exactly as before — non-roster sellers are dropped at read time. All
+ * 14 other call sites in this file pass one argument and are untouched.
+ *
+ * Called as readSoldAlerts_(days, true) it KEEPS non-roster alerts, tagged
+ * unrostered:true with hca:"" and the raw name in soldByRaw. Only
+ * sameDaySoldMonthData_ asks for this, and only so the collapse can see a
+ * bundle whose halves were papered by different people.
+ *
+ * WHY. Ryan Schiebel and Kasey Watson, customer 407824308, opportunity
+ * 407804785, job 407804783: a $15,482.54 Mitsubishi ductless sold 8/10 by
+ * Davis Diosdado, and a $15,375.00 200A panel sold 8/7 by Jack Nichols, an
+ * electrician. One job, one customer, one HCA sale. The old gate dropped the
+ * panel here, before grouping, so no downstream logic could ever reunite them.
+ *
+ * A group with no roster seller in it still produces nothing — that filtering
+ * moved into growthCollapseLatestSoldAlerts_, which drops any group and any
+ * standalone line item that has no rostered member. The COD service traffic
+ * that this flag now lets through is discarded there, not counted.
+ * ========================================================================== */
+
+function readSoldAlerts_(days, includeUnrostered) {
+  const out = [];
+  const res = searchAllThreads_(
+    'from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' +
+    Math.max(1, days) + "d", SOLD_ALERT_CEILING);
+  if (!res.ok) {
+    Logger.log("Sold alert search failed: " + res.error);
+    return {
+      ok: false, complete: false, alerts: out
+    };
+  }
+  const threads = res.threads;
+  threads.forEach(t => t.getMessages().forEach(msg => {
+    const f = parseAlertFields_(msg.getPlainBody());
+    const soldBy = f["sold by"] || "";
+    const seller = soldSellerName_(soldBy);
+    /* Default behaviour: a technician or trade seller is not counted, and the
+       alert never leaves this function. With includeUnrostered the alert is
+       kept and flagged, so a bundle can be reassembled before the roster test
+       is applied to the GROUP rather than to each estimate. */
+    if (!seller && !includeUnrostered) return;
+    /* "7/30 8:15 AM" carries no year; the tracker needs a sortable date. */
+    const md = String(f["date"] || "").match(/^(\d{1,2})\/(\d{1,2})/);
+    out.push({
+      hca: seller,
+      unrostered: !seller,
+      soldByRaw: soldBy,
+      soldOnIso: md ? resolveAlertDate_(Number(md[1]), Number(md[2]), msg.getDate())
+                    : Utilities.formatDate(msg.getDate(), DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd"),
+      customer: String(f["customer"] || "").trim(),
+      amount: parseDealAmount_(f["amount"] || "").amount,
+      name: f["name"] || "",
+      soldOn: f["date"] || "",
+      jobNumber: f["job#"] || f["job #"] || "",
+      estimateNumber: f["estimate#"] || f["estimate #"] || "",
+      opportunityNumber: f["opportunity#"] || f["opportunity #"] || "",
+      received: msg.getDate()
+    })
+    ;
+  })
+  );
+  if (!res.complete) {
+    Logger.log("! Sold alert search hit its " + SOLD_ALERT_CEILING +
+      "-thread ceiling — this is a PARTIAL read and every total from it is low.");
+  }
+  return {
+    ok: true, complete: res.complete, alerts: out
+  };
+}
+
+
+/* ============================================================================
+ * sameDaySoldMonthData_  —  REPLACEMENT (2026-08-21)
+ *
+ * Byte-for-byte the live version except one call: readSoldAlerts_(40) becomes
+ * readSoldAlerts_(40, true). Shipped as a whole function so there is nothing
+ * to hunt for and nothing to hand-edit in a 15,862-line file.
+ * ========================================================================== */
+
+function sameDaySoldMonthData_() {
+  var tz;
+  try {
+    tz = DAILY_RECAP_CONFIG.timeZone;
+  }
+  catch (e) {
+    tz = "America/Los_Angeles";
+  }
+  var now = new Date();
+  var fromIso = monthStartIso_();   // single source of truth (calendar-month 1st)
+  var toIso = Utilities.formatDate(now, tz, "yyyy-MM-dd");
+  /* Same reader as Sold Today: HCA-only, year-safe dates, real amount parse. */
+  /* The only change: ask readSoldAlerts_ to keep non-roster sellers so a
+     bundle whose halves were papered by different people can be reassembled.
+     growthCollapseLatestSoldAlerts_ applies the roster test to the GROUP and
+     discards anything with no HCA in it. */
+  var res = readSoldAlerts_(40, true);
+  if (!res.ok) return {
+    ok: false, fromIso: fromIso, toIso: toIso, days: {
+    },
+    tz: tz
+  };
+  var collapse = growthCollapseLatestSoldAlerts_(res.alerts);
+  var collapsed = collapse.alerts
+    .filter(function (a) {
+    return a.soldOnIso >= fromIso && a.soldOnIso <= toIso;
+  })
+  .filter(function (a) {
+    /* honor the approval-guard rulings (phantom rentals / phantom CODs) */
+    if (typeof stExcluded_ !== "function") return true;
+    return !(a.growthRevisionMembers || [a]).some(function (member) {
+      return stExcluded_(member);
+    });
+  })
+  ;
+  var mtdRevisedGroups = 0, mtdSupersededAlerts = 0;
+  collapsed.forEach(function (alert) {
+    var revisions = Number(alert.growthRevisionCount) || 1;
+    if (revisions > 1) mtdRevisedGroups++;
+    mtdSupersededAlerts += Math.max(0, revisions - 1);
+  });
+  var qualifying = [];
+  var excluded = { count: 0, dollars: 0, amountCount: 0, sellerCount: 0 };
+  collapsed.forEach(function (alert) {
+    var decision = growthSoldQualification_(alert);
+    if (decision.included) {
+      qualifying.push(alert);
+      return;
+    }
+    excluded.count++;
+    excluded.dollars += decision.amount;
+    if (decision.reason === "seller") excluded.sellerCount++;
+    else excluded.amountCount++;
+  });
+  var booked = readBookedJobs_((typeof BOOKED_LOOKBACK_DAYS !== "undefined") ? BOOKED_LOOKBACK_DAYS : 60);
+  var days = {
+  };
+  var unmatchedFollowUp = 0;
+  qualifying.forEach(function (a) {
+    var amt = (isFinite(Number(a.amount)) && a.amount) ? Number(a.amount) : 0;
+    var cls = growthClassifyLatestSale_(a, booked);
+    var d = days[a.soldOnIso] = days[a.soldOnIso] || {
+      total: 0, same: 0, follow: 0, unknown: 0, dollars: 0
+    };
+    d.total++;
+    d.dollars += amt;
+    if (cls.tag === "SAME-DAY") d.same++;
+    else d.follow++;
+    if (!cls.matched) unmatchedFollowUp++;
+  })
+  ;
+  return {
+    ok: true, complete: res.complete, fromIso: fromIso, toIso: toIso,
+    days: days, tz: tz, includedCount: qualifying.length, excluded: excluded,
+    dedupe: Object.assign({}, collapse.diagnostics, {
+      mtdUniqueBeforeQualification: collapsed.length,
+      mtdIncluded: qualifying.length,
+      mtdRevisedGroups: mtdRevisedGroups,
+      mtdSupersededAlerts: mtdSupersededAlerts
+    }),
+    unmatchedFollowUp: unmatchedFollowUp,
+    qualification: "amount > $" + GROWTH_HVAC_SOLD_MIN_DOLLARS +
+      " and seller in RECAP_ROSTER / approved manager sellers"
+  };
+}
+
+
+/* ============================================================================
+ * zzPreviewBundledSold  —  READ-ONLY VERIFIER (2026-08-21)
+ *
+ * Run this from the editor before letting anything repaint. It writes no cell,
+ * creates no tab and sends no mail: it reads Gmail, runs the same collapse the
+ * live path runs, and logs what it found. previewSameDaySold cannot do this —
+ * it prints the day table only, and the collapse diagnostics never leave
+ * sameDaySoldMonthData_.
+ *
+ * WHAT TO LOOK FOR
+ *   unrosteredGroupsDropped     large once readSoldAlerts_(40, true) is live.
+ *                               Still 0 means the one-line change at ~11156
+ *                               did not take.
+ *   unrosteredLineItemsBundled  should be SMALL — 1 expected, the Schiebel /
+ *                               Watson 200A panel. If this is large, STOP:
+ *                               tech-written add-ons are folding into HCA
+ *                               sales and inflating the headline.
+ *   bundledSales                4 expected for August.
+ *   Every bundle is printed line by line, so each one can be eyeballed as a
+ *   real bundle rather than a re-quote before any number is published.
+ * ========================================================================== */
+
+function zzPreviewBundledSold() {
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+  var now = new Date();
+  var fromIso = Utilities.formatDate(now, tz, "yyyy-MM") + "-01";
+  var toIso = Utilities.formatDate(now, tz, "yyyy-MM-dd");
+  var money = function (n) {
+    return "$" + (Math.round(Number(n) * 100) / 100).toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+  var out = [];
+
+  /* ---- the day table and totals, straight off the live path ---- */
+  var m = sameDaySoldMonthData_();
+  if (!m.ok) {
+    Logger.log("PREVIEW FAILED — sold-alert read did not succeed. Nothing changed.");
+    return "read failed";
+  }
+  out.push("BUNDLED SOLD PREVIEW — nothing written. " + m.fromIso + " → " + m.toIso +
+           (m.complete === false ? "   !! PARTIAL Gmail read, every total below is low" : ""));
+  out.push("");
+  var nTotal = 0, dTotal = 0;
+  Object.keys(m.days).sort().forEach(function (iso) {
+    var d = m.days[iso];
+    nTotal += d.total;
+    dTotal += d.dollars;
+    out.push("  " + iso + "   total " + d.total + " · same-day " + d.same +
+             " · follow-up " + d.follow + "   " + money(d.dollars));
+  });
+  out.push("  " + "-".repeat(56));
+  out.push("  MTD   " + nTotal + " sales   " + money(dTotal));
+  out.push("");
+
+  var g = m.dedupe || {};
+  out.push("DIAGNOSTICS");
+  ["rawAlerts", "uniqueSales", "revisedGroups", "supersededAlerts",
+   "bundledSales", "bundledDollars", "combinedEstimatesDropped",
+   "unrosteredGroupsDropped", "unrosteredLineItemsBundled",
+   "unrosteredDollarsBundled", "mtdUniqueBeforeQualification", "mtdIncluded",
+   "mtdRevisedGroups", "mtdSupersededAlerts"].forEach(function (k) {
+    if (g[k] !== undefined) out.push("  " + k + ": " + g[k]);
+  });
+  if (g.bundledSales === undefined) {
+    out.push("  !! No bundling diagnostics. The OLD growthCollapseLatestSoldAlerts_");
+    out.push("     is still the live definition — check for a second copy of it.");
+  }
+  if (g.unrosteredGroupsDropped === 0) {
+    out.push("  !! unrosteredGroupsDropped is 0 — readSoldAlerts_(40, true) is");
+    out.push("     probably not live at ~line 11156, so no non-roster half can");
+    out.push("     rejoin its bundle.");
+  }
+  out.push("");
+
+  /* ---- every bundle, line by line, so a human can judge each one ---- */
+  var res = readSoldAlerts_(40, true);
+  if (!res.ok) {
+    out.push("Could not re-read alerts for the bundle detail; totals above still stand.");
+    Logger.log(out.join("\n"));
+    return out.join("\n");
+  }
+  var collapse = growthCollapseLatestSoldAlerts_(res.alerts);
+  var bundles = (collapse.alerts || []).filter(function (a) {
+    return (a.growthLineItemCount || 1) > 1 &&
+           String(a.soldOnIso || "") >= fromIso && String(a.soldOnIso || "") <= toIso;
+  }).sort(function (x, y) {
+    return String(x.soldOnIso).localeCompare(String(y.soldOnIso));
+  });
+
+  out.push("BUNDLES THIS MONTH — " + bundles.length + " (each is ONE sale)");
+  if (!bundles.length) {
+    out.push("  none. If the collapse replacement is live, that is a red flag —");
+    out.push("  August has four provable bundles.");
+  }
+  bundles.forEach(function (a) {
+    out.push("");
+    out.push("  " + a.soldOnIso + "   " + a.customer + "   " + a.hca +
+             "   opp " + (a.opportunityNumber || "?") + "   TOTAL " + money(a.amount));
+    (a.growthLineItems || []).forEach(function (li) {
+      out.push("      " + (li.unrostered ? "[off-roster] " : "             ") +
+               (li.bucket + "        ").slice(0, 12) + " " +
+               (money(li.amount) + "           ").slice(0, 13) +
+               li.soldOnIso + "  " + li.seller + "  est " + li.estimateNumber);
+      out.push("                   " + String(li.name || "").slice(0, 78));
+    });
+  });
+
+  var msg = out.join("\n");
+  Logger.log(msg);
+  return msg;
+}
+/* ============================================================================
+ * zzSupersessionAudit  —  READ-ONLY (2026-08-21)
+ *
+ * Finds the losses the bundling fix does NOT catch, and makes them visible.
+ *
+ * THE FAILURE IT LOOKS FOR. Product buckets are read off the estimate Name, and
+ * "system" is the catch-all. Any accessory whose name matches none of the
+ * bucket patterns lands in "system", collides with the actual equipment sale,
+ * wins on recency, and takes the real number down with it. Two confirmed:
+ *
+ *   7/28  opp 407638256  Milo         $348.13 "Kumo cloud" superseded
+ *                                     $12,325.60 Mitsubishi 2-zone.
+ *   8/12  opp 408901659  Chounramany  $981.00 "Duct cleaning" superseded
+ *                                     $2,865.13 "Ductwork Revision return air".
+ *
+ * Both predate the fix — neither is a regression — and neither is reachable by
+ * adding more regex, because the next one will have a name nobody guessed.
+ * So this does not try to decide. It reports, and a human judges.
+ *
+ * It calls growthCollapseLatestSoldAlerts_ rather than re-deriving the groups,
+ * so it can never drift from what the live path actually does.
+ *
+ * THREE CLASSES
+ *   RENTAL  the survivor is nominal — under $1 by the file's own stIsNominal_.
+ *           That is not a loss. A Comfort Club rental is booked as DEFERRED
+ *           REVENUE, so ServiceTitan writes $0.00 or a $0.01 placeholder (see
+ *           the comment at readSoldAlerts_'s rental sweep, and RENTAL_MAX_
+ *           DOLLARS = 1). James Haberman DDS is the worked example and is
+ *           already documented by name in MONDAY_GROWTH_NOTE: Comfort Club at
+ *           $464.99/mo, $44,639 over eight years, showing $0 in revenue on
+ *           purpose. Listed so it can be seen, never as a defect.
+ *   SEVERE  the survivor carries real money but still falls under the $2,000
+ *           gate, while something it superseded was over it — a sale that is
+ *           genuinely invisible on the tab.
+ *   WATCH   the survivor is under half of what it superseded. Usually a real
+ *           downgrade, occasionally an accessory that ate its own system.
+ *
+ * A combined estimate that was re-papered into exactly these line items is
+ * skipped: its amount equals the record total to the cent, which is what makes
+ * it a predecessor rather than a loss. Laura Richmond 8/13 is the case.
+ *
+ * USAGE  zzSupersessionAudit()          last 40 days
+ *        zzSupersessionAudit(120)       last 120 days
+ *        zzSupersessionAudit(120, 0.75) same, flag anything under 75%
+ * ========================================================================== */
+
+function zzSupersessionAudit(days, watchRatio) {
+  days = Number(days) || 40;
+  watchRatio = (watchRatio === undefined || watchRatio === null) ? 0.5 : Number(watchRatio);
+  var floor = (typeof GROWTH_HVAC_SOLD_MIN_DOLLARS !== "undefined")
+    ? GROWTH_HVAC_SOLD_MIN_DOLLARS : 2000;
+  var money = function (n) {
+    return "$" + (Math.round(Number(n) * 100) / 100).toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  function r_opp(r) { return String(r.opp || r.cust || "?"); }
+
+  var res = readSoldAlerts_(days, true);
+  if (!res.ok) { Logger.log("SUPERSESSION AUDIT — alert read failed."); return "read failed"; }
+  var collapse = growthCollapseLatestSoldAlerts_(res.alerts);
+
+  var isNominal = (typeof stIsNominal_ === "function")
+    ? stIsNominal_
+    : function (v) {
+        return v === null || v === undefined || String(v).trim() === "" ||
+               !isFinite(Number(v)) || Number(v) < 1;
+      };
+  var severe = [], watch = [], rental = [], scanned = 0;
+  var seen = {};
+  (collapse.alerts || []).forEach(function (a) {
+    scanned++;
+    var total = Number(a.amount) || 0;
+    var kept = {};
+    (a.growthLineItems || []).forEach(function (li) { kept[li.bucket] = li; });
+
+    (a.growthRevisionMembers || []).forEach(function (m) {
+      var b = growthProductBucket_(m.name);
+      var k = kept[b];
+      if (!k) return;
+      var mc = growthCents_(m.amount), kc = growthCents_(k.amount);
+      /* the survivor itself, or an identical re-paper of it */
+      if (String(m.estimateNumber) === String(k.estimateNumber) && mc === kc) return;
+      /* a COMBINED estimate re-papered into exactly these line items: its
+         amount is the record total to the cent. A predecessor, not a loss. */
+      if (mc === growthCents_(total)) return;
+      if (mc <= kc) return;
+      if (mc < growthCents_(floor)) return;
+
+      var row = {
+        iso: a.soldOnIso, cust: a.customer, hca: a.hca,
+        opp: a.opportunityNumber, bucket: b,
+        lostName: m.name, lostEst: m.estimateNumber, lostAmt: Number(m.amount) || 0,
+        keptName: k.name, keptEst: k.estimateNumber, keptAmt: Number(k.amount) || 0,
+        total: total
+      };
+      /* One row per (opportunity, lost estimate, kept estimate). The Gmail
+         read can hand back the same message twice when threads overlap, which
+         double-counts nothing in the totals but would print twice here. */
+      var dedupe = String(r_opp(row)) + "|" + row.lostEst + "|" + row.keptEst;
+      if (seen[dedupe]) return;
+      seen[dedupe] = true;
+
+      if (isNominal(k.amount)) rental.push(row);
+      else if (growthCents_(total) < growthCents_(floor)) severe.push(row);
+      else if (kc < mc * watchRatio) watch.push(row);
+    });
+  });
+
+  var out = [];
+  out.push("SUPERSESSION AUDIT — nothing written.  last " + days + " days" +
+           (res.complete === false ? "   !! PARTIAL Gmail read" : ""));
+  out.push("  " + scanned + " collapsed sales scanned · gate " + money(floor) +
+           " · watch ratio " + Math.round(watchRatio * 100) + "%");
+  out.push("");
+
+  function render(title, rows, note) {
+    out.push(title + " — " + rows.length);
+    out.push("  " + note);
+    rows.sort(function (x, y) { return y.lostAmt - x.lostAmt; });
+    rows.forEach(function (r) {
+      out.push("");
+      out.push("  " + r.iso + "   " + r.cust + "   " + r.hca + "   opp " + (r.opp || "?"));
+      out.push("      LOST  " + money(r.lostAmt) + "   [" + r.bucket + "]  est " +
+               r.lostEst + "   " + String(r.lostName || "").slice(0, 66));
+      out.push("      KEPT  " + money(r.keptAmt) + "   [" + r.bucket + "]  est " +
+               r.keptEst + "   " + String(r.keptName || "").slice(0, 66));
+      var mo = (typeof rentalMonthlyFromName_ === "function")
+        ? rentalMonthlyFromName_(r.keptName) : 0;
+      out.push("      sale now totals " + money(r.total) +
+               (mo ? "   (" + money(mo) + "/mo recurring)" : ""));
+    });
+    out.push("");
+  }
+
+  render("SEVERE", severe,
+         "the whole sale is missing from the tab — survivor fell under the gate");
+  render("WATCH", watch,
+         "usually a real downgrade; check for an accessory that ate its system");
+  render("RENTAL — not a defect", rental,
+         "survivor is nominal, so this is deferred revenue, not a lost sale");
+
+  if (!severe.length && !watch.length && !rental.length) {
+    out.push("Nothing flagged. Every collapsed sale kept its largest line item.");
+  }
+  out.push("Nothing here is fixed automatically. Each one is a judgement about");
+  out.push("whether two estimates are one sale or two, which the alert body");
+  out.push("does not carry — it has no department, business unit or trade.");
+
+  var msg = out.join("\n");
+  Logger.log(msg);
+  return msg;
+}
+/* ============================================================================
+ * readBiLeads_  —  REPLACEMENT (2026-08-21)
+ *
+ * WHAT WAS WRONG. This read one hardcoded file: BI_LEADS_SHEET_ID at line 63,
+ * which is "All Leads MTD July 2026.xlsx", last modified 2026-08-03. Its only
+ * caller is writeJobStatus_ (line 12756), which fills the Job Status sheet's
+ * BI Rep / BI Lead Type / BI Job Status columns. So for eighteen days those
+ * columns have been attributing AUGUST jobs from a JULY lead export — matching
+ * nothing, or worse, matching a stale row for a repeat customer.
+ *
+ * WHAT IT DOES NOW. Asks gaResolveUploads_(["leads"]) first — the v2 builder's
+ * resolver, which reads the Daily Uploads folder and identifies files by COLUMN
+ * HEADER SIGNATURE rather than filename. That module already exists (line 13733)
+ * and its own comment says why the filename approach was abandoned: "it globbed
+ * all of Drive and had eleven 'All Leads' candidates to guess between, resolving
+ * by Drive's modified timestamp — so re-uploading an old file would silently
+ * make it 'newest'." Nothing was ever rewired to it. This rewires it.
+ *
+ * BI_LEADS_SHEET_ID stays as the fallback, so if the uploads folder is empty or
+ * the Drive API service is not enabled, behaviour is exactly what it is today.
+ *
+ * The return shape is unchanged — byJob, byCustomerDate, rows — so biLookup_
+ * and writeJobStatus_ need no edit. Two fields are ADDED, source and updated,
+ * purely so the log can say which file the attribution actually came from.
+ * Silent staleness is what caused this; a named source is the cure.
+ * ========================================================================== */
+
+/* ============================================================================
+ * readBiLeads_  —  REPLACEMENT (2026-08-21)
+ *
+ * WHAT WAS WRONG. This read one hardcoded file: BI_LEADS_SHEET_ID at line 63,
+ * which is "All Leads MTD July 2026.xlsx", last modified 2026-08-03. Its only
+ * caller is writeJobStatus_ (line 12756), which fills the Job Status sheet's
+ * BI Rep / BI Lead Type / BI Job Status columns. So for eighteen days those
+ * columns have been attributing AUGUST jobs from a JULY lead export — matching
+ * nothing, or worse, matching a stale row for a repeat customer.
+ *
+ * WHAT IT DOES NOW. Asks gaResolveUploads_(["leads"]) first — the v2 builder's
+ * resolver, which reads the Daily Uploads folder and identifies files by COLUMN
+ * HEADER SIGNATURE rather than filename. That module already exists (line 13733)
+ * and its own comment says why the filename approach was abandoned: "it globbed
+ * all of Drive and had eleven 'All Leads' candidates to guess between, resolving
+ * by Drive's modified timestamp — so re-uploading an old file would silently
+ * make it 'newest'." Nothing was ever rewired to it. This rewires it.
+ *
+ * BI_LEADS_SHEET_ID stays as the fallback, so if the uploads folder is empty or
+ * the Drive API service is not enabled, behaviour is exactly what it is today.
+ *
+ * The return shape is unchanged — byJob, byCustomerDate, rows — so biLookup_
+ * and writeJobStatus_ need no edit. Two fields are ADDED, source and updated,
+ * purely so the log can say which file the attribution actually came from.
+ * Silent staleness is what caused this; a named source is the cure.
+ * ========================================================================== */
+
+function readBiLeads_() {
+  const out = { byJob: {}, byCustomerDate: {}, rows: 0, source: "", updated: "" };
+  let temp = "";
+  let grid = null;
+
+  /* ---- PREFERRED: the v2 resolver, header-signature matched ---- */
+  try {
+    if (typeof gaResolveUploads_ === "function") {
+      const res = gaResolveUploads_(["leads"]);
+      const f = res && res.found && res.found.leads;
+      if (f && f.values && f.values.length > 1) {
+        grid = f.values;
+        out.source = f.title + "  [" + (f.where || "uploads folder") + "]";
+        out.updated = f.updated ? String(f.updated).slice(0, 10) : "";
+      }
+    }
+  } catch (err) {
+    Logger.log("BI leads: v2 resolver unavailable (" +
+      (err && err.message ? err.message : String(err)) + ") — trying the pinned file.");
+  }
+
+  /* ---- FALLBACK: the pinned file, exactly as before ---- */
+  if (!grid) {
+    if (!BI_LEADS_SHEET_ID) {
+      Logger.log("BI leads: no uploads-folder leads export and no BI_LEADS_SHEET_ID. " +
+        "Job Status will be built without BI columns.");
+      return out;
+    }
+    try {
+      const opened = openBiLeadsBook_(BI_LEADS_SHEET_ID);
+      const ss = opened.ss;
+      temp = opened.tempId;
+      const sheet = BI_LEADS_TAB ? ss.getSheetByName(BI_LEADS_TAB) : ss.getSheets()[0];
+      if (!sheet || sheet.getLastRow() < 2) {
+        trashBiTemp_(temp);
+        return out;
+      }
+      grid = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+      out.source = "BI_LEADS_SHEET_ID (pinned file — the uploads folder had no leads export)";
+    } catch (err) {
+      Logger.log("BI leads lookup unavailable, Job Status built without it: " +
+        (err && err.message ? err.message : String(err)));
+      trashBiTemp_(temp);
+      return out;
+    }
+  }
+
+  /* ---- Build the lookup. Column detection and record shape are unchanged. ---- */
+  try {
+    const head = {};
+    grid[0].forEach((h, i) => {
+      head[String(h || "").trim().toLowerCase()] = i;
+    });
+    const col = (...names) => {
+      for (let i = 0; i < names.length; i++) if (names[i] in head) return head[names[i]];
+      return -1;
+    };
+    const cJob = col("job.number", "jobnumber", "job number");
+    const cRep = col("techname", "tech name", "soldbyname");
+    const cType = col("lead type", "leadtype");
+    const cCust = col("customer.name", "customer");
+    const cAppt = col("lastapptdate", "appointment date", "est");
+    const cStat = col("jobstatus", "job status");
+    if (cJob === -1 && cCust === -1) {
+      Logger.log("BI leads: " + (out.source || "source") +
+        " has neither a job number nor a customer column — lookup skipped.");
+      trashBiTemp_(temp);
+      return out;
+    }
+    const iso = v => v instanceof Date
+      ? Utilities.formatDate(v, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd")
+      : String(v || "").trim().slice(0, 10);
+
+    for (let r = 1; r < grid.length; r++) {
+      const row = grid[r];
+      const rec = {
+        rep: cRep === -1 ? "" : String(row[cRep] || "").replace(/\s+/g, " ").trim(),
+        leadType: cType === -1 ? "" : String(row[cType] || "").trim(),
+        jobStatus: cStat === -1 ? "" : String(row[cStat] || "").trim(),
+        customer: cCust === -1 ? "" : String(row[cCust] || "").trim(),
+        apptIso: cAppt === -1 ? "" : iso(row[cAppt])
+      };
+      if (!rec.rep && !rec.leadType && !rec.jobStatus) continue;
+      const job = cJob === -1 ? "" : String(row[cJob] || "").trim();
+      if (job) out.byJob[job] = rec;
+      if (rec.customer) {
+        out.byCustomerDate[normName_(rec.customer)] = rec;
+        if (rec.apptIso) out.byCustomerDate[normName_(rec.customer) + "|" + rec.apptIso] = rec;
+      }
+      out.rows++;
+    }
+  } catch (err) {
+    Logger.log("BI leads parse failed, Job Status built without it: " +
+      (err && err.message ? err.message : String(err)));
+    trashBiTemp_(temp);
+    return out;
+  }
+
+  trashBiTemp_(temp);
+  Logger.log("BI leads: " + out.rows + " row(s) from " + (out.source || "unknown source") +
+    (out.updated ? "  (updated " + out.updated + ")" : ""));
+  return out;
+}
+/* ============================================================================
+ * zzSoldBySource  —  READ-ONLY (2026-08-21)
+ *
+ * The L2C tab's by-source block (row 28: Source · Leads · Installs · L2C %)
+ * has no SOLD column. Leads and installs break out Marketed / Tech Flip /
+ * Self Gen; sold does not, so there is no close rate by source anywhere.
+ *
+ * This adds it, read-only, reusing what already exists:
+ *   growthCollapseLatestSoldAlerts_  the same 61 MTD sales the tab publishes
+ *   growthSoldQualification_         the same $2,000 + roster gate
+ *   gaResolveUploads_                the header-signature upload resolver
+ *   gaBucket_                        Lead Type -> mkt / tech / sg
+ *
+ * THREE SOURCES, NOT ONE. Attributing from All Leads alone left 26 of 61 sales
+ * unattributed — 42.6%, measured. None of the 26 were in that export at all,
+ * by job or by name: their leads predate the one-month window. But 17 of them
+ * sit in All Installs and several more in the Backlog Pipeline, both of which
+ * carry a Lead Type column. So all three are indexed, in precedence order:
+ *
+ *   1 leads     most authoritative — it IS the lead record
+ *   2 installs  the same job after it installed, Lead Type preserved
+ *   3 pipeline  sold and scheduled, not yet installed
+ *
+ * The source that answered is printed per sale, so a Tech Flip attributed off
+ * the pipeline can be told apart from one read straight off the lead row.
+ *
+ * WHY THE JOB NUMBER IS NOT ENOUGH. A Sold Estimate Alert carries the QUOTE
+ * job number; the install and pipeline rows carry the INSTALL job number, and
+ * they are different jobs. Ryan Schiebel and Kasey Watson: sold alert Job#
+ * 407804783, pipeline jobNumber 409427884, same sale. So biLookup_'s customer
+ * fallback does most of the work here, and that is deliberate.
+ *
+ * UNATTRIBUTED IS A REAL ANSWER, NOT A FAILURE. The leads export is scoped to
+ * one month — its own footer says "Date is on or after 8/1/2026 and is before
+ * 8/22/2026". An August sale from a July lead has no row to match, and there
+ * are several: Greg Anderson, Haberman, Schiebel/Watson. Those are reported as
+ * Unattributed and listed by name. A percentage computed as though they did not
+ * exist would be worse than one that admits the gap.
+ *
+ * SURNAME FALLBACK. "Sam and Barb Bateman" in the pipeline is "Sam Bateman" on
+ * the sold alert. Exact normalised match is tried first; only if that fails does
+ * it try the surname, and only when exactly ONE record in the whole index
+ * carries it. Those are labelled "surname" so a wrong one is visible rather
+ * than silently folded into a percentage.
+ * ========================================================================== */
+
+function zzSoldBySource(days) {
+  days = Number(days) || 40;
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+  var now = new Date();
+  var fromIso = Utilities.formatDate(now, tz, "yyyy-MM") + "-01";
+  var toIso = Utilities.formatDate(now, tz, "yyyy-MM-dd");
+  var money = function (n) {
+    return "$" + (Math.round(Number(n) * 100) / 100).toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  var res = readSoldAlerts_(days, true);
+  if (!res.ok) { Logger.log("SOLD BY SOURCE — alert read failed."); return "read failed"; }
+  var collapse = growthCollapseLatestSoldAlerts_(res.alerts);
+
+  /* Same MTD window, same approval guard, same qualification gate that
+     sameDaySoldMonthData_ applies, so this counts the published 61. */
+  var mtd = (collapse.alerts || []).filter(function (a) {
+    return a.soldOnIso >= fromIso && a.soldOnIso <= toIso;
+  }).filter(function (a) {
+    if (typeof stExcluded_ !== "function") return true;
+    return !(a.growthRevisionMembers || [a]).some(function (m) { return stExcluded_(m); });
+  }).filter(function (a) {
+    return growthSoldQualification_(a).included;
+  });
+
+  /* ---- Index all three uploads by job number and by customer ---- */
+  var idx = { byJob: {}, byName: {}, bySurname: {}, sources: {}, ambiguous: {} };
+  var order = ["leads", "installs", "pipeline"];
+  try {
+    var up = gaResolveUploads_(order);
+    order.forEach(function (kind) {
+      var f = up && up.found && up.found[kind];
+      if (!f || !f.values || f.values.length < 2) return;
+      var grid = f.values;
+      var head = {};
+      grid[0].forEach(function (h, i) { head[String(h || "").trim().toLowerCase()] = i; });
+      function col() {
+        for (var i = 0; i < arguments.length; i++) {
+          if (arguments[i] in head) return head[arguments[i]];
+        }
+        return -1;
+      }
+      var cType = col("lead type", "leadtype");
+      var cCust = col("customer.name", "customer");
+      var cJob  = col("job.number", "jobnumber", "job number");
+      if (cType === -1 || cCust === -1) return;
+      idx.sources[kind] = f.title + " (" + (grid.length - 1) + " rows)";
+      for (var r = 1; r < grid.length; r++) {
+        var lt = String(grid[r][cType] || "").trim();
+        if (!lt) continue;
+        var cu = String(grid[r][cCust] || "").trim();
+        if (!cu) continue;
+        var rec = { leadType: lt, kind: kind, customer: cu };
+        var nm = normName_(cu);
+        if (nm && !idx.byName[nm]) idx.byName[nm] = rec;
+        var parts = nm.split(" ").filter(function (t) { return t.length > 2 && !/^\d+$/.test(t); });
+        var sn = parts.length ? parts[parts.length - 1] : "";
+        if (sn) {
+          if (idx.bySurname[sn] && normName_(idx.bySurname[sn].customer) !== nm) idx.ambiguous[sn] = true;
+          else if (!idx.bySurname[sn]) idx.bySurname[sn] = rec;
+        }
+        var jb = cJob === -1 ? "" : String(grid[r][cJob] || "").trim();
+        if (jb && !idx.byJob[jb]) idx.byJob[jb] = rec;
+      }
+    });
+  } catch (err) {
+    Logger.log("Upload resolver unavailable (" +
+      (err && err.message ? err.message : String(err)) + ") — attribution will be empty.");
+  }
+
+  function attribute(a) {
+    var jobs = [a.jobNumber].concat(a.growthJobCandidates || []);
+    for (var i = 0; i < jobs.length; i++) {
+      var j = String(jobs[i] || "").trim();
+      if (j && idx.byJob[j]) return { rec: idx.byJob[j], how: "job" };
+    }
+    var nm = normName_(a.customer);
+    if (nm && idx.byName[nm]) return { rec: idx.byName[nm], how: "name" };
+    var parts = nm.split(" ").filter(function (t) { return t.length > 2 && !/^\d+$/.test(t); });
+    var sn = parts.length ? parts[parts.length - 1] : "";
+    if (sn && idx.bySurname[sn] && !idx.ambiguous[sn]) {
+      return { rec: idx.bySurname[sn], how: "surname" };
+    }
+    return null;
+  }
+
+  var LABEL = { mkt: "Marketed (Inbound + Webform)", tech: "Tech Flip", sg: "Self Gen" };
+  var tally = { mkt: { n: 0, $: 0 }, tech: { n: 0, $: 0 }, sg: { n: 0, $: 0 },
+                unattributed: { n: 0, $: 0 } };
+  var viaKind = { leads: 0, installs: 0, pipeline: 0 };
+  var viaHow = { job: 0, name: 0, surname: 0 };
+  var orphans = [];
+
+  mtd.forEach(function (a) {
+    var hit = attribute(a);
+    var b = hit ? gaBucket_(hit.rec.leadType) : "";
+    var amt = Number(a.amount) || 0;
+    if (b && tally[b]) {
+      tally[b].n++; tally[b].$ += amt;
+      viaKind[hit.rec.kind] = (viaKind[hit.rec.kind] || 0) + 1;
+      viaHow[hit.how] = (viaHow[hit.how] || 0) + 1;
+    } else {
+      tally.unattributed.n++; tally.unattributed.$ += amt;
+      orphans.push({ iso: a.soldOnIso, cust: a.customer, hca: a.hca,
+                     job: a.jobNumber, opp: a.opportunityNumber, amt: amt,
+                     why: hit ? ("Lead Type '" + hit.rec.leadType + "' not bucketable")
+                              : "in none of leads / installs / pipeline" });
+    }
+  });
+
+  var out = [];
+  out.push("SOLD BY SOURCE — nothing written.  " + fromIso + " → " + toIso +
+           (res.complete === false ? "   !! PARTIAL Gmail read" : ""));
+  ["leads", "installs", "pipeline"].forEach(function (k) {
+    out.push("  " + pad(k, 10) + (idx.sources[k] || "NOT RESOLVED"));
+  });
+  if (!Object.keys(idx.sources).length) {
+    out.push("  !! No uploads resolved. Every sale below will read Unattributed.");
+  }
+  out.push("");
+  out.push("  " + pad("Source", 30) + pad("Sold", 7) + pad("$ Sold", 16) + "share");
+  var total = mtd.length, dollars = 0;
+  mtd.forEach(function (a) { dollars += Number(a.amount) || 0; });
+  ["mkt", "tech", "sg", "unattributed"].forEach(function (k) {
+    var t = tally[k];
+    var name = LABEL[k] || "Unattributed";
+    out.push("  " + pad(name, 30) + pad(String(t.n), 7) + pad(money(t.$), 16) +
+             (total ? (Math.round(t.n / total * 1000) / 10) + "%" : "—"));
+  });
+  out.push("  " + "-".repeat(60));
+  out.push("  " + pad("Total", 30) + pad(String(total), 7) + pad(money(dollars), 16));
+  out.push("");
+
+  if (orphans.length) {
+    out.push("UNATTRIBUTED — " + orphans.length + " sale(s), " +
+             money(tally.unattributed.$) + ". Most are August sales from July leads;");
+    out.push("the leads export is scoped to one month, so there is no row to match.");
+    orphans.sort(function (x, y) { return y.amt - x.amt; }).forEach(function (o) {
+      out.push("  " + o.iso + "  " + pad(String(o.cust).slice(0, 30), 32) +
+               pad(money(o.amt), 14) + pad(o.hca, 18) +
+               "job " + (o.job || "?") + " · opp " + (o.opp || "?") + " · " + o.why);
+    });
+    out.push("");
+  }
+  out.push("Attributed via:  job " + viaHow.job + " · customer name " + viaHow.name +
+           " · surname " + viaHow.surname);
+  out.push("Answered by:     leads " + viaKind.leads + " · installs " + viaKind.installs +
+           " · pipeline " + viaKind.pipeline);
+  out.push("");
+  out.push("A sale attributes to the source of the LEAD that produced it. Anything");
+  out.push("still unattributed had no row in any of the three exports — its lead");
+  out.push("predates the window and it has neither installed nor been scheduled.");
+  out.push("Closing that needs a wider export, not a change here.");
+
+  function pad(s, n) { s = String(s == null ? "" : s); return s + " ".repeat(Math.max(1, n - s.length)); }
+
+  var msg = out.join("\n");
+  Logger.log(msg);
+  return msg;
+}
+/* ============================================================================
+ * zzSoldWatch  —  sale sentinel (2026-08-21)
+ *
+ * Apps Script has no "new Gmail message" trigger. The only way to react to a
+ * sale is to poll — so the point of this is to poll CHEAPLY and do the
+ * expensive thing only when something actually changed.
+ *
+ * refreshSameDaySoldTab takes 65-75 seconds: readSoldAlerts_ walks a 40-day
+ * Gmail window calling getMessages() and parseAlertFields_(getPlainBody()) on
+ * every thread. Running that hourly costs ~28 minutes a day to catch maybe
+ * four events. This runs a bare search over a 2-day window, reads thread
+ * metadata only — no bodies — and exits in a couple of seconds when nothing
+ * has moved.
+ *
+ * THE FINGERPRINT IS NOT THE NEWEST THREAD ID. Sold alerts bundle: one Gmail
+ * thread routinely carries five of them. A new alert landing in an existing
+ * thread does not change that thread's id, so an id-based fingerprint would
+ * sleep through most sales. This uses thread count + total MESSAGE count +
+ * the newest last-message timestamp, all of which move when an alert arrives
+ * either way.
+ *
+ * SELF-HEALING. If the fingerprint has not been refreshed in STALE_MINUTES it
+ * refreshes regardless. So a Gmail hiccup, a quota trip or a missed tick costs
+ * you one late refresh, not a tab that quietly stops updating — which is the
+ * failure mode that would make this worse than the hourly trigger it replaces.
+ *
+ * IT DOES NOT STORE A FINGERPRINT IT DID NOT EARN. refreshSameDaySoldTab
+ * declines on a failed or partial Gmail read and preserves the previous table.
+ * If that happens the fingerprint is left alone so the next tick tries again.
+ *
+ * refreshDailyGrowth is NOT called. It writes formulas, not values
+ * (=IFERROR(INDEX(...)) at lines 9873-9876), so the Daily panel follows the
+ * Same-Day Sold tab on its own the moment the tab changes.
+ *
+ * INSTALL   installSoldWatch()    every 10 min, and removes the hourly
+ *                                 refreshSameDaySoldTab trigger it supersedes
+ * REMOVE    removeSoldWatch()     deletes the watcher, restores the hourly
+ * ========================================================================== */
+
+var SOLD_WATCH = {
+  everyMinutes: 10,      /* 1, 5, 10, 15 or 30 — Apps Script allows no others */
+  windowDays: 2,         /* Gmail search window. Small on purpose: this is a
+                            change detector, not a reader. */
+  ceiling: 60,           /* threads to look at; 2 days never approaches this */
+  staleMinutes: 90,      /* force a refresh if it has been longer than this */
+  fromHour: 6,           /* Pacific. Outside this the sentinel returns at once */
+  toHour: 20             /* rather than burning 100+ no-op ticks overnight */
+};
+var SOLD_WATCH_FP_PROP = "ZZ_SOLD_WATCH_FP";
+var SOLD_WATCH_AT_PROP = "ZZ_SOLD_WATCH_AT";
+
+function zzSoldWatch() {
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+  var now = new Date();
+  var hour = Number(Utilities.formatDate(now, tz, "H"));
+  if (hour < SOLD_WATCH.fromHour || hour > SOLD_WATCH.toHour) {
+    return "outside watch hours";
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var q = 'from:alerts@servicetitan.com subject:"Sold Estimate Alert" newer_than:' +
+          Math.max(1, SOLD_WATCH.windowDays) + "d";
+
+  var threads;
+  try {
+    threads = GmailApp.search(q, 0, SOLD_WATCH.ceiling);
+  } catch (err) {
+    Logger.log("sold watch: Gmail search failed (" +
+      (err && err.message ? err.message : String(err)) + ") — retrying next tick.");
+    return "search failed";
+  }
+
+  /* Metadata only. No getMessages(), no getPlainBody() — that is the whole
+     reason this is cheap. */
+  var msgs = 0, newest = 0;
+  threads.forEach(function (t) {
+    msgs += t.getMessageCount();
+    var d = t.getLastMessageDate();
+    var ms = (d && d.getTime) ? d.getTime() : 0;
+    if (ms > newest) newest = ms;
+  });
+  var fp = threads.length + "|" + msgs + "|" + newest;
+
+  var stored = props.getProperty(SOLD_WATCH_FP_PROP) || "";
+  var at = Number(props.getProperty(SOLD_WATCH_AT_PROP) || 0);
+  var ageMin = at ? (now.getTime() - at) / 60000 : 1e9;
+
+  if (fp === stored && ageMin < SOLD_WATCH.staleMinutes) {
+    Logger.log("sold watch: no change — " + msgs + " alert(s) in " + threads.length +
+      " thread(s), last refresh " + Math.round(ageMin) + " min ago. Nothing run.");
+    return "no change";
+  }
+
+  var why = (fp !== stored)
+    ? "new sold alert (" + stored + " -> " + fp + ")"
+    : "heartbeat, " + Math.round(ageMin) + " min since last refresh";
+  Logger.log("sold watch: " + why + " — refreshing Same-Day Sold.");
+
+  var result;
+  try {
+    result = String(refreshSameDaySoldTab() || "");
+  } catch (err) {
+    Logger.log("sold watch: refresh threw (" +
+      (err && err.message ? err.message : String(err)) +
+      ") — fingerprint NOT stored, will retry next tick.");
+    return "refresh failed";
+  }
+
+  /* Only a real repaint earns a fingerprint. A declined refresh keeps the old
+     one so the next tick tries again instead of going quiet for 90 minutes. */
+  if (result.indexOf("Same-Day Sold tab updated") !== 0) {
+    Logger.log("sold watch: refresh declined (" + result +
+      ") — fingerprint NOT stored, will retry next tick.");
+    return result;
+  }
+
+  props.setProperty(SOLD_WATCH_FP_PROP, fp);
+  props.setProperty(SOLD_WATCH_AT_PROP, String(now.getTime()));
+  Logger.log("sold watch: " + result);
+  return result;
+}
+
+/* Read-only. Says what it would do and what is currently installed. */
+function previewSoldWatch() {
+  var out = [];
+  var trg = ScriptApp.getProjectTriggers();
+  var watch = trg.filter(function (t) { return t.getHandlerFunction() === "zzSoldWatch"; });
+  var hourly = trg.filter(function (t) { return t.getHandlerFunction() === "refreshSameDaySoldTab"; });
+  var props = PropertiesService.getScriptProperties();
+  out.push("SOLD WATCH — preview, nothing changed.");
+  out.push("  zzSoldWatch triggers installed          : " + watch.length);
+  out.push("  refreshSameDaySoldTab triggers installed: " + hourly.length);
+  out.push("  stored fingerprint : " + (props.getProperty(SOLD_WATCH_FP_PROP) || "(none)"));
+  var at = Number(props.getProperty(SOLD_WATCH_AT_PROP) || 0);
+  out.push("  last refresh       : " + (at ? new Date(at) : "(never)"));
+  out.push("  total project triggers: " + trg.length + " of 20 allowed");
+  out.push("");
+  out.push("installSoldWatch() would add one " + SOLD_WATCH.everyMinutes +
+           "-minute trigger and delete " + hourly.length + " hourly refreshSameDaySoldTab trigger(s).");
+  var msg = out.join("\n");
+  Logger.log(msg);
+  return msg;
+}
+
+function installSoldWatch() {
+  var removed = 0, killedWatch = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    var h = t.getHandlerFunction();
+    if (h === "zzSoldWatch") { ScriptApp.deleteTrigger(t); killedWatch++; }
+    /* The watcher supersedes the hourly full refresh. Leaving both installed
+       would cost more than doing nothing. */
+    if (h === "refreshSameDaySoldTab") { ScriptApp.deleteTrigger(t); removed++; }
+  });
+  ScriptApp.newTrigger("zzSoldWatch").timeBased()
+    .everyMinutes(SOLD_WATCH.everyMinutes).create();
+  var msg = "sold watch installed — every " + SOLD_WATCH.everyMinutes + " min, " +
+    SOLD_WATCH.fromHour + ":00-" + SOLD_WATCH.toHour + ":00 Pacific. Replaced " +
+    killedWatch + " old watcher(s) and removed " + removed +
+    " hourly refreshSameDaySoldTab trigger(s). removeSoldWatch() reverses this.";
+  Logger.log(msg);
+  return msg;
+}
+
+function removeSoldWatch() {
+  var removed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === "zzSoldWatch") { ScriptApp.deleteTrigger(t); removed++; }
+  });
+  ScriptApp.newTrigger("refreshSameDaySoldTab").timeBased().everyHours(1).create();
+  var msg = "sold watch removed (" + removed +
+    " trigger(s)) and the hourly refreshSameDaySoldTab trigger restored.";
+  Logger.log(msg);
+  return msg;
+}
+/* ============================================================================
+ * zzSelfTest  —  DAILY CANARY, TRIGGER SELF-HEAL, LAST-KNOWN-GOOD (2026-08-21)
+ *
+ * WHAT THIS DEFENDS AGAINST. Apps Script shares one global scope and the
+ * LAST definition to load wins, silently. This file already proves it:
+ * readGrowthDaysRaw_ is defined twice, at 3194 and 15804, because a comment
+ * said "REPLACE LINES 3189-3222" and nobody did. If another session appends a
+ * third growthCollapseLatestSoldAlerts_, nothing errors — the numbers just
+ * quietly become someone else's numbers.
+ *
+ * WHY THE TEST IS BEHAVIOURAL, NOT TEXTUAL. Apps Script cannot read its own
+ * source without the Apps Script API and a script.projects OAuth scope, so a
+ * function that counts its own definitions is not available. Instead this runs
+ * TEN REAL AUGUST SALE GROUPS through whatever growthCollapseLatestSoldAlerts_
+ * is currently loaded and asserts the exact dates and cents that were verified
+ * against the published sheet on 2026-08-21. Every one of the ten is a case
+ * that was checked by hand. If someone replaces the collapse, these fail — no
+ * matter how it got replaced.
+ *
+ * WHAT SELF-HEALS AND WHAT DOES NOT. Be clear about this:
+ *
+ *   TRIGGERS      heal automatically. The script owns them and can rewrite
+ *                 them. A missing sold watch is recreated, duplicates are
+ *                 pruned, a resurrected hourly refreshSameDaySoldTab is
+ *                 deleted. This is real repair.
+ *   TABS / PANEL  already self-heal. refreshSameDaySoldTab rebuilds the tab
+ *                 from Gmail every run and the Daily panel cells are
+ *                 =IFERROR(INDEX(...)) formulas that follow it. Corrupt the
+ *                 tab and the next run fixes it.
+ *   SOURCE CODE   does NOT self-heal, deliberately. Restoring code needs the
+ *                 Apps Script API and a script that can rewrite itself on a
+ *                 timer is a worse hazard than the one it guards against —
+ *                 one bad automated write and there is nothing left to
+ *                 restore from. LAST KNOWN GOOD FOR CODE IS THE DATED BACKUP
+ *                 PROJECT, restored by hand. What this gives you instead is
+ *                 an unambiguous alarm naming exactly which rule broke, so
+ *                 the manual restore is a two-minute job with a known target.
+ *
+ * LAST KNOWN GOOD, for numbers, is a high-water mark in Script Properties:
+ * the MTD sold count and dollars from the last fully passing run. Within one
+ * calendar month those only ever go up. A DECREASE is the signature of the
+ * collapse regressing, so it raises a WARN with the delta — and the high-water
+ * mark is deliberately NOT lowered, so it keeps complaining every day until it
+ * recovers or you acknowledge it with zzSelfTestAcceptCurrent().
+ *
+ * VERSION DRIFT. installSelfTest() stamps the current GROWTH_FIX_VERSION into
+ * Script Properties. Each run compares the loaded constant against the stamp.
+ * If another session ships a block carrying a different version, that mismatch
+ * is a FAIL on its own, before any fixture runs.
+ *
+ * INSTALL    installSelfTest()          one daily trigger, 05:00 Pacific
+ * REMOVE     removeSelfTest()
+ * RUN NOW    zzSelfTest()               logs, sends no mail. NOT read-only:
+ *                                       it repairs triggers and, on a clean
+ *                                       pass, writes the high-water mark. It
+ *                                       writes no sheet cell and creates no
+ *                                       tab. Set SELF_TEST.repairTriggers
+ *                                       false for a look-but-touch-nothing run.
+ * INSPECT    zzSelfTestBaseline()       genuinely read-only, prints stored state
+ * ACCEPT     zzSelfTestAcceptCurrent()  re-stamp version + reset high-water
+ *                                       mark. Run this AFTER a change you
+ *                                       made on purpose.
+ * ========================================================================== */
+
+var GROWTH_FIX_VERSION = "2026-08-26a";
+
+var SELF_TEST = {
+  hour: 5,                 /* Pacific. growthWriteHour is 4, so this checks the
+                              published state an hour after the pipeline wrote
+                              it, and an hour before the 06:00 sold watch opens. */
+  repairTriggers: true,    /* false = report drift, change nothing */
+  emailTo: "",             /* blank = DAILY_RECAP_CONFIG.managerEmail */
+  dollarTolerance: 0.01
+};
+
+var ZZ_ST_VERSION_PROP = "ZZ_SELFTEST_VERSION";
+var ZZ_ST_LKG_PROP     = "ZZ_SELFTEST_LKG";
+var ZZ_ST_LAST_PROP    = "ZZ_SELFTEST_LAST";
+
+/* ---------------------------------------------------------------------------
+ * The fixtures. Ten real August 2026 opportunity groups, each verified against
+ * the published day row before it was written down here. Nine assert a date and
+ * an amount; the tenth asserts that a group with no HCA in it produces nothing,
+ * which is what keeps COD service traffic out of the headline.
+ * ------------------------------------------------------------------------- */
+function zzSelfTestFixtures_() {
+  function A(o) {
+    return {
+      hca: o.un ? "" : (o.hca || "HCA"),
+      unrostered: !!o.un,
+      soldByRaw: o.hca || "",
+      customer: o.cust,
+      name: o.name,
+      amount: o.amt,
+      estimateNumber: o.est,
+      opportunityNumber: o.opp,
+      jobNumber: o.job,
+      soldOnIso: o.sold,
+      received: new Date(o.rcv)
+    };
+  }
+  return [    
+    { id: "Tabor 410448705 — furnace + ductless, 26s apart, both in the system bucket",
+      exp: [["2026-08-25", 17608.98]],
+      in: [
+        A({cust:"Jeff Tabor",hca:"Adam Weberg",name:"American Standard 80% Single- Stage 40k Btu Gas Furnace",amt:7808.10,est:"410842473",opp:"410448705",job:"410448703",sold:"2026-08-25",rcv:"2026-08-25T16:51:24Z"}),
+        A({cust:"Jeff Tabor",hca:"Adam Weberg",name:"Mitsubishi Single Head 9K Btu Ductless System",amt:9800.88,est:"411308311",opp:"410448705",job:"410448703",sold:"2026-08-25",rcv:"2026-08-25T16:51:50Z"})] },
+
+    { id: "K Davis 408921212 — ducted heat pump + single-zone ductless, 10s apart",
+      exp: [["2026-08-11", 22011.05]],
+      in: [
+        A({cust:"Kathy Davis",hca:"Davis Diosdado",name:"American Standard Silver 14 heat pump / AHRI# 215485200",amt:14374.24,est:"409219140",opp:"408921212",job:"408921210",sold:"2026-08-11",rcv:"2026-08-12T00:17:28Z"}),
+        A({cust:"Kathy Davis",hca:"Davis Diosdado",name:"Mitsubishi HX single zone ductless heat pump installation",amt:7636.81,est:"409463860",opp:"408921212",job:"408921210",sold:"2026-08-11",rcv:"2026-08-12T00:17:38Z"})] },
+
+    { id: "SYNTHETIC — the same two systems three days apart is a downgrade, not two sales",
+      exp: [["2026-08-28", 9800.88]],
+      in: [
+        A({cust:"Synthetic Downgrade",hca:"Adam Weberg",name:"American Standard 80% Single- Stage 40k Btu Gas Furnace",amt:7808.10,est:"999000001",opp:"999000",job:"999001",sold:"2026-08-25",rcv:"2026-08-25T16:51:24Z"}),
+        A({cust:"Synthetic Downgrade",hca:"Adam Weberg",name:"Mitsubishi Single Head 9K Btu Ductless System",amt:9800.88,est:"999000002",opp:"999000",job:"999001",sold:"2026-08-28",rcv:"2026-08-28T16:51:50Z"})] },
+    { id: "Jang 410395417 — system + water heater bundle, 21s apart",
+      exp: [["2026-08-18", 19539.48]],
+      in: [
+        A({cust:"Alisha Jang",name:"FURNACE AND AC - custom offer",amt:16790.48,est:"410513504",opp:"410395417",job:"410395415",sold:"2026-08-18",rcv:"2026-08-19T00:38:07Z"}),
+        A({cust:"Alisha Jang",name:"Hot water tank",amt:2749.00,est:"410524811",opp:"410395417",job:"410395415",sold:"2026-08-18",rcv:"2026-08-19T00:38:28Z"})] },
+
+    { id: "Richmond 409447315 — COMBINED estimate dropped, halves summed",
+      exp: [["2026-08-13", 13540.50]],
+      in: [
+        A({cust:"Laura Richmond 0011389",name:"BETTER Replace high efficiency gas furnace Replace hot water heater",amt:13540.50,est:"409618580",opp:"409447315",job:"409447313",sold:"2026-08-13",rcv:"2026-08-13T17:22:34Z"}),
+        A({cust:"Laura Richmond 0011389",name:"BETTER Replace high efficiency gas furnace",amt:8815.50,est:"409640504",opp:"409447315",job:"409447313",sold:"2026-08-13",rcv:"2026-08-13T18:41:42Z"}),
+        A({cust:"Laura Richmond 0011389",name:"Replace hot water heater",amt:4725.00,est:"409642783",opp:"409447315",job:"409447313",sold:"2026-08-13",rcv:"2026-08-13T18:42:03Z"})] },
+
+    { id: "V Stevens 408387028 — $109 add-on must not eat a $16,490 AC",
+      exp: [["2026-08-10", 16599.65]],
+      in: [
+        A({cust:"Vincent Stevens",name:"American Standard AC w/Return Add",amt:16490.65,est:"408472217",opp:"408387028",job:"408387026",sold:"2026-08-10",rcv:"2026-08-10T16:58:35Z"}),
+        A({cust:"Vincent Stevens",name:"Dryer vent cleaning",amt:109.00,est:"409388767",opp:"408387028",job:"408387026",sold:"2026-08-10",rcv:"2026-08-11T02:30:14Z"})] },
+
+    { id: "Schiebel/Watson 407804785 — electrician's half rejoins, across dates",
+      exp: [["2026-08-10", 30857.54]],
+      in: [
+        A({hca:"Jack Nichols",un:1,cust:"Ryan Schiebel and Kasey Watson",name:"200 amp service and panel upgrade (with circuit for freezer)",amt:15375.00,est:"408456521",opp:"407804785",job:"407804783",sold:"2026-08-07",rcv:"2026-08-07T19:25:08Z"}),
+        A({hca:"Davis Diosdado",cust:"Ryan Schiebel and Kasey Watson",name:"Mitsubishi Hyper Heat 2-zone ductless heat pump installation",amt:15482.54,est:"408464399",opp:"407804785",job:"407804783",sold:"2026-08-10",rcv:"2026-08-10T18:53:41Z"})] },
+
+    { id: "Bomstead 410391294 — same bucket re-paper, must NOT double",
+      exp: [["2026-08-19", 5930.78]],
+      in: [
+        A({cust:"Jeffrey Bomstead",name:"Furnace option 1",amt:5930.78,est:"410557122",opp:"410391294",job:"410391292",sold:"2026-08-19",rcv:"2026-08-19T16:38:48Z"}),
+        A({cust:"Jeffrey Bomstead",name:"Furnace option 1 - updated",amt:5930.78,est:"410571191",opp:"410391294",job:"410391292",sold:"2026-08-19",rcv:"2026-08-19T17:42:30Z"})] },
+
+    { id: "Boisvert 408120596 — two-hour re-quote, latest wins",
+      exp: [["2026-08-01", 16756.07]],
+      in: [
+        A({cust:"Caroline Boisvert",name:"American Standard furnace and heat pump",amt:16459.07,est:"408594912",opp:"408120596",job:"408120594",sold:"2026-08-01",rcv:"2026-08-01T17:46:00Z"}),
+        A({cust:"Caroline Boisvert",name:"American Standard 2 stage furnace and heat pump",amt:16756.07,est:"408599745",opp:"408120596",job:"408120594",sold:"2026-08-01",rcv:"2026-08-01T19:51:53Z"})] },
+
+    { id: "T Smith 408719760 — $0.00 re-paper must NOT trip the combined guard",
+      exp: [["2026-08-06", 15027.48]],
+      in: [
+        A({cust:"Terry Smith",name:"Midea AC / S9V2 Variable Speed Furnace",amt:15027.48,est:"408793016",opp:"408719760",job:"408719758",sold:"2026-08-06",rcv:"2026-08-06T17:48:55Z"}),
+        A({cust:"Terry Smith",name:"Midea 1800 ACGF - 2.0T for $349.99 per month - Copy",amt:0.00,est:"408909450",opp:"408719760",job:"408719758",sold:"2026-08-06",rcv:"2026-08-06T18:04:55Z"}),
+        A({cust:"Terry Smith",name:"Midea AC / S9V2 Variable Speed Furnace",amt:15027.48,est:"408793016",opp:"408719760",job:"408719758",sold:"2026-08-06",rcv:"2026-08-06T18:30:23Z"})] },
+
+    { id: "Diosdado 409486601 — heat pump downgraded to furnace, not summed",
+      exp: [["2026-08-16", 10882.45]],
+      in: [
+        A({cust:"James X",name:"American Standard Silver 16 heat pump / AHRI# 216374489",amt:17478.47,est:"409653444",opp:"409486601",job:"409486599",sold:"2026-08-13",rcv:"2026-08-13T20:59:15Z"}),
+        A({cust:"James X",name:"American Standard 96% gas furnace installation",amt:10882.45,est:"409621998",opp:"409486601",job:"409486599",sold:"2026-08-16",rcv:"2026-08-16T20:02:40Z"})] },
+
+    { id: "E Miller 407848823 — six alerts, three re-papers, one water tank",
+      exp: [["2026-08-20", 20572.89]],
+      in: [
+        A({cust:"Evan Miller",name:"Comfort Solution #2 American Standard Quest",amt:20572.89,est:"408469343",opp:"407848823",job:"407848821",sold:"2026-08-15",rcv:"2026-08-15T22:33:39Z"}),
+        A({cust:"Evan Miller",name:"Comfort Solution #2 American Standard Quest",amt:20572.89,est:"408469343",opp:"407848823",job:"407848821",sold:"2026-08-17",rcv:"2026-08-18T00:46:44Z"}),
+        A({cust:"Evan Miller",name:"Comfort Solution #2 American Standard Quest",amt:17823.89,est:"408469343",opp:"407848823",job:"407848821",sold:"2026-08-19",rcv:"2026-08-19T21:31:19Z"}),
+        A({cust:"Evan Miller",name:'50 Gallon Tall (20" Wide) Atmospheric Vent Water Tank - NG - Bradford White',amt:2749.00,est:"410617383",opp:"407848823",job:"407848821",sold:"2026-08-19",rcv:"2026-08-19T21:31:24Z"}),
+        A({cust:"Evan Miller",name:"NEW* Comfort Solution #2 American Standard Quest - Copy",amt:17823.89,est:"410661112",opp:"407848823",job:"407848821",sold:"2026-08-20",rcv:"2026-08-20T15:20:07Z"}),
+        A({cust:"Evan Miller",name:"NEW* Comfort Solution #2 American Standard Quest - Copy",amt:17823.89,est:"410661112",opp:"407848823",job:"407848821",sold:"2026-08-20",rcv:"2026-08-20T15:25:00Z"})] },
+
+    { id: "SYNTHETIC — combined estimate in a bucket nothing else reuses",
+      exp: [["2026-08-11", 12000.00]],
+      in: [
+        A({cust:"Fixture Combined Guard",name:"200 amp panel and complete comfort system package",amt:12000.00,est:"900000001",opp:"900000000",job:"900000002",sold:"2026-08-11",rcv:"2026-08-11T16:00:00Z"}),
+        A({cust:"Fixture Combined Guard",name:"High efficiency gas furnace",amt:8000.00,est:"900000003",opp:"900000000",job:"900000002",sold:"2026-08-11",rcv:"2026-08-11T16:05:00Z"}),
+        A({cust:"Fixture Combined Guard",name:"Hot water tank",amt:4000.00,est:"900000004",opp:"900000000",job:"900000002",sold:"2026-08-11",rcv:"2026-08-11T16:06:00Z"})] },
+
+    { id: "E Johnson 409288176 — no HCA in the group, must produce NOTHING",
+      exp: [],
+      in: [
+        A({hca:"Doug Jansen",un:1,cust:"Elizabeth Johnson",name:"Service fee",amt:169.00,est:"409358479",opp:"409288176",job:"409288174",sold:"2026-08-10",rcv:"2026-08-10T17:02:17Z"}),
+        A({hca:"Doug Jansen",un:1,cust:"Elizabeth Johnson",name:"Annual maintenance club",amt:251.88,est:"409360300",opp:"409288176",job:"409288174",sold:"2026-08-10",rcv:"2026-08-10T17:29:22Z"}),
+        A({hca:"Doug Jansen",un:1,cust:"Elizabeth Johnson",name:"Install ez trap and overflow safety switch",amt:585.65,est:"409343535",opp:"409288176",job:"409288174",sold:"2026-08-10",rcv:"2026-08-10T17:29:48Z"}),
+        A({hca:"Doug Jansen",un:1,cust:"Elizabeth Johnson",name:"Service fee discounts",amt:-169.00,est:"409363038",opp:"409288176",job:"409288174",sold:"2026-08-10",rcv:"2026-08-10T18:36:25Z"})] }
+  ];
+}
+
+function zzSelfTest(sendEmail) {
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+  var now = new Date();
+  var stamp = Utilities.formatDate(now, tz, "yyyy-MM-dd HH:mm");
+  var monthIso = Utilities.formatDate(now, tz, "yyyy-MM");
+  var props = PropertiesService.getScriptProperties();
+
+  var fails = [], warns = [], notes = [], out = [];
+  function money(n) {
+    return "$" + (Math.round(Number(n) * 100) / 100).toFixed(2)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  out.push("SELF TEST — " + stamp + " " + tz);
+  out.push("");
+
+  /* ---- 1. VERSION ------------------------------------------------------ */
+  var loaded = (typeof GROWTH_FIX_VERSION !== "undefined") ? String(GROWTH_FIX_VERSION) : "(undefined)";
+  var stamped = props.getProperty(ZZ_ST_VERSION_PROP) || "";
+  out.push("1. VERSION");
+  out.push("   loaded  " + loaded);
+  out.push("   stamped " + (stamped || "(not stamped — run installSelfTest)"));
+  if (!stamped) {
+    notes.push("No version stamped yet. Run installSelfTest() to set the baseline.");
+  } else if (stamped !== loaded) {
+    fails.push("VERSION DRIFT: stamped " + stamped + " but " + loaded + " is loaded. " +
+               "Another block was appended after this one. Nothing below can be trusted " +
+               "until you know what shipped.");
+  }
+  out.push("");
+
+  /* ---- 2. FIXTURES ----------------------------------------------------- */
+    out.push("2. COLLAPSE FIXTURES — twelve verified sale groups + two synthetic");
+  var fx = zzSelfTestFixtures_(), fxPass = 0;
+  if (typeof growthCollapseLatestSoldAlerts_ !== "function") {
+    fails.push("growthCollapseLatestSoldAlerts_ is not defined. The block is gone.");
+    out.push("   !! function not defined — all ten skipped");
+  } else {
+    fx.forEach(function (c) {
+      var got, err = "";
+      try {
+        var r = growthCollapseLatestSoldAlerts_(c.in);
+        got = (r && r.alerts ? r.alerts : []).map(function (a) {
+          return [String(a.soldOnIso), Math.round(Number(a.amount) * 100) / 100];
+        }).sort(function (x, y) { return x[0] < y[0] ? -1 : 1; });
+      } catch (e) {
+        err = (e && e.message) ? e.message : String(e);
+        got = null;
+      }
+      var exp = c.exp.slice().sort(function (x, y) { return x[0] < y[0] ? -1 : 1; });
+      var ok = !err && JSON.stringify(got) === JSON.stringify(exp);
+      if (ok) { fxPass++; out.push("   PASS  " + c.id); return; }
+      var show = function (v) {
+        return (!v || !v.length) ? "(nothing)"
+          : v.map(function (g) { return g[0] + " " + money(g[1]); }).join("  |  ");
+      };
+      out.push("   FAIL  " + c.id);
+      out.push("         expected " + show(exp));
+      out.push("         got      " + (err ? "THREW: " + err : show(got)));
+      fails.push("Fixture failed — " + c.id + ": expected " + show(exp) +
+                 ", got " + (err ? "THREW " + err : show(got)));
+    });
+  }
+  out.push("   " + fxPass + " of " + fx.length + " passed");
+  out.push("");
+
+  /* ---- 3. LIVE PATH ---------------------------------------------------- */
+  out.push("3. LIVE PATH — sameDaySoldMonthData_(), reads Gmail, writes nothing");
+  var soldN = null, soldDollars = null;
+  if (typeof sameDaySoldMonthData_ !== "function") {
+    fails.push("sameDaySoldMonthData_ is not defined.");
+    out.push("   !! function not defined");
+  } else {
+    try {
+      var m = sameDaySoldMonthData_();
+      if (!m || !m.ok) {
+        fails.push("sameDaySoldMonthData_ returned not-ok. The Gmail read failed; " +
+                   "the tab is preserving its previous table.");
+        out.push("   !! returned not-ok");
+      } else {
+        soldN = 0; soldDollars = 0;
+        Object.keys(m.days || {}).forEach(function (d) {
+          soldN += Number(m.days[d].total) || 0;
+          soldDollars += Number(m.days[d].dollars) || 0;
+        });
+        soldDollars = Math.round(soldDollars * 100) / 100;
+        out.push("   window     " + m.fromIso + " -> " + m.toIso);
+        out.push("   MTD sold   " + soldN + "   " + money(soldDollars));
+        var dg = m.dedupe || {};
+        out.push("   bundles    " + (dg.bundledSales || 0) +
+                 " · combined dropped " + (dg.combinedEstimatesDropped || 0) +
+                 " · unrostered groups dropped " + (dg.unrosteredGroupsDropped || 0) +
+                 " · unrostered line items bundled " + (dg.unrosteredLineItemsBundled || 0));
+        if (m.complete === false) {
+          warns.push("PARTIAL Gmail read. The MTD figures above are a floor, not a total. " +
+                     "This usually clears on its own next run.");
+          out.push("   !! PARTIAL Gmail read");
+        }
+        if ((dg.unrosteredLineItemsBundled || 0) > 3) {
+          warns.push("unrosteredLineItemsBundled is " + dg.unrosteredLineItemsBundled +
+                     " — expected about 1. Tech-written add-ons may be folding into HCA " +
+                     "sales and inflating the headline. Run zzPreviewBundledSold and read " +
+                     "the bundle list.");
+        }
+      }
+    } catch (e2) {
+      fails.push("sameDaySoldMonthData_ threw: " + ((e2 && e2.message) ? e2.message : String(e2)));
+      out.push("   !! threw " + ((e2 && e2.message) ? e2.message : String(e2)));
+    }
+  }
+  out.push("");
+
+  /* ---- 4. LAST KNOWN GOOD — high-water mark within the month ----------- */
+  out.push("4. LAST KNOWN GOOD");
+  var lkg = null;
+  try { lkg = JSON.parse(props.getProperty(ZZ_ST_LKG_PROP) || "null"); } catch (e3) { lkg = null; }
+  if (!lkg) {
+    out.push("   none stored — this run will set it if everything passes");
+  } else {
+    out.push("   from       " + lkg.at + "   version " + lkg.version);
+    out.push("   MTD sold   " + lkg.sold + "   " + money(lkg.dollars));
+    if (lkg.monthIso !== monthIso) {
+      out.push("   (different month — comparison skipped, mark resets)");
+    } else if (soldN !== null) {
+      if (soldN < lkg.sold) {
+        warns.push("MTD SOLD WENT BACKWARDS: " + lkg.sold + " -> " + soldN +
+                   " (" + (soldN - lkg.sold) + "). Within one month that number only " +
+                   "goes up. This is what a regressed collapse looks like.");
+        out.push("   !! sold " + lkg.sold + " -> " + soldN);
+      }
+      if (soldDollars < lkg.dollars - SELF_TEST.dollarTolerance) {
+        warns.push("MTD DOLLARS WENT BACKWARDS: " + money(lkg.dollars) + " -> " +
+                   money(soldDollars) + " (" + money(soldDollars - lkg.dollars) + ").");
+        out.push("   !! dollars " + money(lkg.dollars) + " -> " + money(soldDollars));
+      }
+    }
+  }
+  out.push("");
+
+  /* ---- 5. TRIGGERS — the part that actually repairs itself ------------- */
+  out.push("5. TRIGGERS" + (SELF_TEST.repairTriggers ? "" : "   (repair disabled)"));
+  var repaired = [];
+  try {
+    var trigs = ScriptApp.getProjectTriggers();
+    var watch = [], hourly = [], byFn = {};
+    trigs.forEach(function (t) {
+      var fn = t.getHandlerFunction();
+      byFn[fn] = (byFn[fn] || 0) + 1;
+      if (fn === "zzSoldWatch") watch.push(t);
+      if (fn === "refreshSameDaySoldTab") hourly.push(t);
+    });
+    out.push("   total " + trigs.length + " of 20 allowed");
+    Object.keys(byFn).sort().forEach(function (fn) {
+      out.push("     " + fn + (byFn[fn] > 1 ? "  x" + byFn[fn] : ""));
+    });
+
+    if (watch.length === 1 && !hourly.length) {
+      out.push("   sold watch OK — 1 installed, no stale hourly");
+    }
+
+    if (SELF_TEST.repairTriggers) {
+      if (watch.length > 1) {
+        for (var i = 1; i < watch.length; i++) ScriptApp.deleteTrigger(watch[i]);
+        repaired.push("deleted " + (watch.length - 1) + " duplicate zzSoldWatch trigger(s)");
+      }
+      if (!watch.length) {
+        if (typeof zzSoldWatch === "function") {
+          var every = 10;
+          try { every = Number(SOLD_WATCH.everyMinutes) || 10; } catch (eSW) { every = 10; }
+          ScriptApp.newTrigger("zzSoldWatch").timeBased().everyMinutes(every).create();
+          repaired.push("recreated the missing zzSoldWatch trigger (every " + every + " min)");
+        } else {
+          fails.push("zzSoldWatch has no trigger AND the function is not defined. " +
+                     "The sentinel block was removed. Same-Day Sold is now only " +
+                     "refreshed by the 04:00 pipeline.");
+        }
+      }
+      if (hourly.length) {
+        hourly.forEach(function (t) { ScriptApp.deleteTrigger(t); });
+        repaired.push("deleted " + hourly.length + " resurrected hourly " +
+                      "refreshSameDaySoldTab trigger(s) — the sold watch supersedes them");
+      }
+      if (trigs.length >= 19) {
+        warns.push("Trigger count is " + trigs.length + " of 20. The next install will fail.");
+      }
+    } else {
+      if (watch.length !== 1) notes.push("zzSoldWatch triggers: " + watch.length + " (expected 1)");
+      if (hourly.length) notes.push("stale hourly refreshSameDaySoldTab: " + hourly.length);
+    }
+
+    if (repaired.length) {
+      repaired.forEach(function (r) { out.push("   REPAIRED  " + r); });
+      warns.push("Triggers were repaired: " + repaired.join("; ") +
+                 ". Something changed them. Worth knowing what.");
+    }
+  } catch (e4) {
+    warns.push("Could not read triggers: " + ((e4 && e4.message) ? e4.message : String(e4)));
+    out.push("   !! " + ((e4 && e4.message) ? e4.message : String(e4)));
+  }
+  out.push("");
+
+  /* ---- 6. VERDICT ------------------------------------------------------ */
+  var status = fails.length ? "FAIL" : (warns.length ? "WARN" : "OK");
+  out.push("VERDICT  " + status);
+  if (fails.length) {
+    out.push("");
+    out.push("FAILURES — the code is not what was shipped:");
+    fails.forEach(function (f, i) { out.push("  " + (i + 1) + ". " + f); });
+    out.push("");
+    out.push("RESTORE. Source does not self-heal and never will from here. Last known");
+    out.push("good code is the dated backup project, restored by hand:");
+    out.push("  1. Open the backup Apps Script project for the last good date.");
+    out.push("  2. Copy its whole file over the live one. Complete file — never a diff.");
+    out.push("  3. Run zzSelfTest() and confirm 10 of 10 and VERDICT OK.");
+    out.push("  4. Run installSelfTest() to re-stamp the version.");
+  }
+  if (warns.length) {
+    out.push("");
+    out.push("WARNINGS — look, judge, do not assume:");
+    warns.forEach(function (w, i) { out.push("  " + (i + 1) + ". " + w); });
+  }
+  if (notes.length) {
+    out.push("");
+    notes.forEach(function (n) { out.push("NOTE  " + n); });
+  }
+  if (status === "WARN" && lkg && lkg.monthIso === monthIso) {
+    out.push("");
+    out.push("The high-water mark is NOT lowered on a WARN, so this repeats daily until it");
+    out.push("recovers. If the drop is correct and intended, run zzSelfTestAcceptCurrent().");
+  }
+
+  /* ---- 7. PERSIST ------------------------------------------------------ */
+  if (status === "OK" && soldN !== null) {
+    props.setProperty(ZZ_ST_LKG_PROP, JSON.stringify({
+      at: stamp, monthIso: monthIso, version: loaded,
+      sold: soldN, dollars: soldDollars, fixtures: fxPass + "/" + fx.length
+    }));
+    out.push("");
+    out.push("High-water mark updated: " + soldN + " sold · " + money(soldDollars));
+  }
+
+  var msg = out.join("\n");
+  Logger.log(msg);
+
+  /* ---- 8. EMAIL — on trouble, and once on recovery. Silent when OK->OK. */
+  var prev = props.getProperty(ZZ_ST_LAST_PROP) || "";
+  props.setProperty(ZZ_ST_LAST_PROP, status);
+  if (sendEmail) {
+    var shouldSend = (status !== "OK") || (prev && prev !== "OK");
+    if (shouldSend) {
+      var to = SELF_TEST.emailTo;
+      if (!to) { try { to = DAILY_RECAP_CONFIG.managerEmail; } catch (e5) { to = ""; } }
+      if (!to) {
+        Logger.log("No recipient — set SELF_TEST.emailTo or DAILY_RECAP_CONFIG.managerEmail.");
+      } else {
+        var subj = (status === "OK")
+          ? "Growth self-test RECOVERED — back to OK"
+          : "Growth self-test " + status + " — " +
+            (fails.length ? fails.length + " failure(s)" : warns.length + " warning(s)");
+        try {
+          MailApp.sendEmail(to, subj, msg);
+          Logger.log("Emailed " + to + ": " + subj);
+        } catch (e6) {
+          Logger.log("Email failed: " + ((e6 && e6.message) ? e6.message : String(e6)));
+        }
+      }
+    } else {
+      Logger.log("OK and was OK — no email sent.");
+    }
+  }
+  return msg;
+}
+
+function zzSelfTestDaily() { return zzSelfTest(true); }
+
+function installSelfTest() {
+  var props = PropertiesService.getScriptProperties();
+  var removed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() !== "zzSelfTestDaily") return;
+    ScriptApp.deleteTrigger(t); removed++;
+  });
+  var tz;
+  try { tz = DAILY_RECAP_CONFIG.timeZone; } catch (e) { tz = "America/Los_Angeles"; }
+  ScriptApp.newTrigger("zzSelfTestDaily").timeBased()
+    .everyDays(1).atHour(SELF_TEST.hour).inTimezone(tz).create();
+  props.setProperty(ZZ_ST_VERSION_PROP, String(GROWTH_FIX_VERSION));
+  var total = ScriptApp.getProjectTriggers().length;
+  var msg = "Self test installed — daily at " + SELF_TEST.hour + ":00 " + tz +
+    ". Replaced " + removed + " old trigger(s). Version stamped " + GROWTH_FIX_VERSION +
+    ". Total project triggers now " + total + " of 20. " +
+    "Email goes to " + (SELF_TEST.emailTo || (function () {
+      try { return DAILY_RECAP_CONFIG.managerEmail; } catch (e) { return "(none set)"; }
+    })()) + " on FAIL, on WARN, and once on recovery — silent when it is fine.";
+  Logger.log(msg);
+  return msg;
+}
+
+function removeSelfTest() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() !== "zzSelfTestDaily") return;
+    ScriptApp.deleteTrigger(t); n++;
+  });
+  var msg = "Removed " + n + " zzSelfTestDaily trigger(s). Stored version stamp and " +
+            "high-water mark were left alone — zzSelfTest() still runs by hand.";
+  Logger.log(msg);
+  return msg;
+}
+
+function zzSelfTestBaseline() {
+  var props = PropertiesService.getScriptProperties();
+  var lkg = props.getProperty(ZZ_ST_LKG_PROP) || "(none)";
+  var msg = [
+    "SELF TEST BASELINE — read-only",
+    "  version loaded  " + ((typeof GROWTH_FIX_VERSION !== "undefined") ? GROWTH_FIX_VERSION : "(undefined)"),
+    "  version stamped " + (props.getProperty(ZZ_ST_VERSION_PROP) || "(none)"),
+    "  last status     " + (props.getProperty(ZZ_ST_LAST_PROP) || "(never run)"),
+    "  high-water mark " + lkg
+  ].join("\n");
+  Logger.log(msg);
+  return msg;
+}
+
+function zzSelfTestAcceptCurrent() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty(ZZ_ST_VERSION_PROP, String(GROWTH_FIX_VERSION));
+  props.deleteProperty(ZZ_ST_LKG_PROP);
+  props.deleteProperty(ZZ_ST_LAST_PROP);
+  var msg = "Accepted current state. Version re-stamped " + GROWTH_FIX_VERSION +
+    " and the high-water mark cleared. The next zzSelfTestAcceptCurrent run sets a fresh one. " +
+    "Only run this after a change you made on purpose.";
+  Logger.log(msg);
+  return msg;
+}
+/* ============================================================================
+ * growthBiMtd_ — REPLACEMENT, deployed 2026-08-28. THIS IS THE LIVE COPY.
+ *
+ * The pre-2026-08-28 version is parked earlier in this file as
+ * growthBiMtd_OLD_20260828. Nothing calls it. Do not restore its name — Apps
+ * Script shares one global scope and the LAST definition wins, so two copies
+ * of this name means the file's line order silently decides which one runs.
+ *
+ * WHAT CHANGED. Every returned NUMBER is identical to the old version. What
+ * changed is that the silent failures now say something:
+ *
+ *   1. Tab missing, tab empty, OR the spreadsheet unreachable — the catch on
+ *      openById turned a real error (bad id, revoked access) into "no tab",
+ *      so all three landed in one branch and returned the constants, NO LOG.
+ *   2. BI_MTD_LEADS resolving to 0 — returned the constants, NO LOG. Note this
+ *      fires only on a literal 0; an ABSENT key does not come here, it goes to
+ *      case 3 below.
+ *   3. Tab present but missing its BI_MTD rows — used to return the frozen
+ *      constants while REPORTING `source` as the tab. Nothing downstream could
+ *      tell it was reading mid-August numbers. This is the one that mattered:
+ *      it is not a fallback with a missing log line, it is a false provenance
+ *      claim, and the parts-equal-whole check cannot catch it because the
+ *      constants are internally consistent by construction (71+29+1 = 101).
+ *
+ * The only non-log behaviour change is that `source` now tells the truth in
+ * case 3. `source` is consumed in exactly one place — a Logger line in the
+ * PLAN report — so nothing computed depends on it.
+ * ========================================================================== */
+function growthIsoCell_(v) {
+  if (v == null || v === "") return "";
+  if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v)) {
+    return Utilities.formatDate(v, DAILY_RECAP_CONFIG.timeZone, "yyyy-MM-dd");
+  }
+  var s = String(v).trim();
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[1] + "-" + iso[2] + "-" + iso[3];
+  var us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (us) return us[3] + "-" + ("0" + us[1]).slice(-2) + "-" + ("0" + us[2]).slice(-2);
+  return s.slice(0, 10);
+}
+function growthBiMtd_(ss) {
+  if (GROWTH_BI_CACHE_) return GROWTH_BI_CACHE_;
+
+  var fb = {
+    leads: (typeof BI_MTD_LEADS === "number") ? BI_MTD_LEADS : 0,
+    mkt:   (typeof BI_MTD_MKT_LEADS === "number") ? BI_MTD_MKT_LEADS : 0,
+    tech:  (typeof BI_MTD_TECH_LEADS === "number") ? BI_MTD_TECH_LEADS : 0,
+    sg:    (typeof BI_MTD_SG_LEADS === "number") ? BI_MTD_SG_LEADS : 0,
+    installs: 0, instMkt: 0, instTech: 0, instSg: 0, rentalInstalls: 0,
+    monthStart: "", throughIso: "", source: "code constants"
+  };
+
+  var sh = null, openErr = "";
+  /* The catch below turns a real failure — bad sheet id, revoked access, API
+     hiccup — into sh = null, which is indistinguishable from "the tab is not
+     there." Keep the reason so the log can tell them apart. */
+  try {
+    sh = (ss || SpreadsheetApp.openById(GROWTH_SHEET_ID)).getSheetByName(GROWTH_CONFIG_TAB);
+  } catch (e) { sh = null; openErr = String(e); }
+  /* WAS SILENT, on all three causes. */
+  if (!sh || sh.getLastRow() < 2) {
+    Logger.log("Growth Config: " +
+      (openErr
+        ? "could not open the spreadsheet or reach the tab (" + openErr + ")"
+        : (sh ? "tab '" + GROWTH_CONFIG_TAB + "' is present but empty (last row " + sh.getLastRow() + ")"
+              : "tab '" + GROWTH_CONFIG_TAB + "' is MISSING")) +
+      " — using the hardcoded BI_MTD_* constants instead (leads " + fb.leads +
+      ", mkt " + fb.mkt + ", tech " + fb.tech + ", sg " + fb.sg +
+      "). Those are a frozen snapshot. THE MTD LEAD FIGURES ARE NOT CURRENT.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+
+  var map = {};
+  try {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().forEach(function (r) {
+      var k = String(r[0] || "").trim();
+      if (k) map[k] = r[1];
+    });
+  } catch (e) {
+    Logger.log("Growth Config unreadable (" + e + "); using the code constants. " +
+      "THE MTD LEAD FIGURES ARE NOT CURRENT.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+
+  /* A key that is PRESENT but unparseable means someone typed into the tab.
+     That is a corrupted config, not a missing one, so it rejects the whole tab
+     rather than silently mixing a hand-edited value with the code constants. */
+  var bad = [];
+  var fromConst = [];   /* keys the tab did not supply — these came from code */
+  function num(key, fallbackVal) {
+    if (!(key in map) || map[key] === "" || map[key] === null) { fromConst.push(key); return fallbackVal; }
+    var n = Number(map[key]);
+    if (!isFinite(n) || n < 0 || Math.floor(n) !== n) { bad.push(key + "=" + map[key]); return fallbackVal; }
+    return n;
+  }
+  /* A zero total-leads reading would silently blank every L2C percentage, so
+     it is treated as an unset tab rather than a real zero.
+     WAS SILENT. */
+  var leads = num("BI_MTD_LEADS", fb.leads);
+  if (!leads) {
+    Logger.log("Growth Config: BI_MTD_LEADS resolved to 0 (tab value " +
+      (("BI_MTD_LEADS" in map) ? JSON.stringify(map["BI_MTD_LEADS"])
+                               : "absent, and the code constant is 0 too") +
+      ") — treated as an unset tab, not a real zero. Using the hardcoded " +
+      "BI_MTD_* constants. THE MTD LEAD FIGURES ARE NOT CURRENT.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+
+  var out = {
+    leads: leads,
+    mkt:   num("BI_MTD_MKT_LEADS", fb.mkt),
+    tech:  num("BI_MTD_TECH_LEADS", fb.tech),
+    sg:    num("BI_MTD_SG_LEADS", fb.sg),
+    installs: num("BI_MTD_INSTALLS", fb.installs),
+    instMkt:  num("BI_MTD_MKT_INSTALLS", fb.instMkt),
+    instTech: num("BI_MTD_TECH_INSTALLS", fb.instTech),
+    instSg:   num("BI_MTD_SG_INSTALLS", fb.instSg),
+    rentalInstalls: num("BI_MTD_RENTAL_INSTALLS", 0),  // Fix 6: rental installs excluded from avg ticket
+        monthStart: growthIsoCell_(map["BI_MONTH_START"]),
+    throughIso: growthIsoCell_(map["BI_THROUGH_ISO"]),
+    source: "'" + GROWTH_CONFIG_TAB + "' tab"
+  };
+  if (bad.length) {
+    Logger.log("Growth Config has non-numeric value(s): " + bad.join(", ") +
+      ". Falling back to the code constants. THE MTD LEAD FIGURES ARE NOT CURRENT.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+  /* WAS SILENT, AND WORSE THAN SILENT. A tab that exists but has lost its
+     BI_MTD rows takes none of the fallback branches: num() hands back the code
+     constants one by one, they sum consistently, the parts-equal-whole check
+     passes, and the result is returned with source reading as the tab. The
+     numbers are mid-August; the label says they came from the tab. Say so. */
+  /* Install keys may not exist yet on a tab created before Fix 5. The four
+     install keys will all be in fromConst (fallback 0). That is expected on the
+     first run — growthWriteBiMtd_ auto-appends them. Only the LEAD keys being
+     absent is a sign of a broken tab. */
+  var leadConst = fromConst.filter(function (k) { return k.indexOf("INSTALLS") === -1; });
+  if (leadConst.length) {
+    Logger.log("Growth Config: " + leadConst.length + " of 4 lead key(s) not supplied by the tab (" +
+      leadConst.join(", ") + ") — those values came from the hardcoded BI_MTD_* " +
+      "constants, which are a frozen snapshot. The tab was read successfully; it " +
+      "simply does not hold those rows. THE AFFECTED FIGURES ARE NOT CURRENT.");
+    out.source = (leadConst.length >= 4)
+      ? "code constants (the '" + GROWTH_CONFIG_TAB + "' tab exists but holds no BI_MTD rows)"
+      : "'" + GROWTH_CONFIG_TAB + "' tab, plus " + leadConst.length + " value(s) from the code constants";
+  }
+  /* The parts must equal the whole. If they do not, the tab was hand-edited
+     into an inconsistent state and the constants are the safer read. */
+  if (out.mkt + out.tech + out.sg !== out.leads) {
+    Logger.log("Growth Config: " + out.mkt + "+" + out.tech + "+" + out.sg + " != " + out.leads +
+      " — the source split does not sum to total leads. Falling back to the code constants. " +
+      "THE MTD LEAD FIGURES ARE NOT CURRENT.");
+    GROWTH_BI_CACHE_ = fb; return fb;
+  }
+  /* Same check for installs, but only when they have been populated (non-zero).
+     On the first run after Fix 5, the install keys may not exist yet. */
+  if (out.installs && (out.instMkt + out.instTech + out.instSg !== out.installs)) {
+    Logger.log("Growth Config: install split " + out.instMkt + "+" + out.instTech + "+" + out.instSg +
+      " != " + out.installs + " — falling back to 0 for installs (the Daily Data row sums will be used instead).");
+    out.installs = 0; out.instMkt = 0; out.instTech = 0; out.instSg = 0;
+  }
+  GROWTH_BI_CACHE_ = out;
+  return out;
+}
+/* Diagnostic only — prints what gaReadTabular_ actually hands the matcher
+   for All Installs 09.04.xlsx. Safe to delete afterward. */
