@@ -702,6 +702,62 @@ function showConfigNeeded() {
     '</div>';
 }
 
+/* Normalize inconsistent rep names from the AR Log.
+   Handles: ALL-CAPS variants, short-name aliases, nicknames. */
+var REP_ALIASES = {
+  'samir': 'Samir Khoury',
+  'kyle m': 'Kyle McAlister'
+};
+/* Reps to hide from the dropdown (not HCAs) */
+var REP_EXCLUDE = ['scott olson'];
+
+function toTitleCase(s) {
+  return s.replace(/\w\S*/g, function(t) {
+    return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase();
+  });
+}
+
+function canonicalRep(name) {
+  if (!name) return name;
+  var lower = name.toLowerCase().trim();
+  if (REP_ALIASES[lower]) return REP_ALIASES[lower];
+  /* If ALL-CAPS or all-lower, title-case it */
+  if (name === name.toUpperCase() || name === name.toLowerCase()) {
+    return toTitleCase(name);
+  }
+  return name;
+}
+
+function normalizeReps(data) {
+  if (!data || !data.rows) return data;
+  /* Canonicalize salesRep on every row */
+  data.rows.forEach(function(row) {
+    if (row.salesRep) row.salesRep = canonicalRep(row.salesRep);
+  });
+  /* Rebuild reps list from canonicalized rows, excluding non-HCAs */
+  var seen = {};
+  data.reps = [];
+  data.rows.forEach(function(row) {
+    var r = row.salesRep;
+    if (r && !seen[r] && REP_EXCLUDE.indexOf(r.toLowerCase()) === -1) {
+      seen[r] = true; data.reps.push(r);
+    }
+  });
+  data.reps.sort();
+  /* Rebuild keyed groups (legacy format compat) */
+  data.reps.forEach(function(r) { if (!data[r]) data[r] = []; });
+  Object.keys(data).forEach(function(key) {
+    if (key === 'reps' || key === 'rows') return;
+    var canon = canonicalRep(key);
+    if (canon !== key) {
+      if (!data[canon]) data[canon] = [];
+      data[canon] = data[canon].concat(data[key]);
+      delete data[key];
+    }
+  });
+  return data;
+}
+
 function loadData() {
   var sel = document.getElementById('repSelect');
   sel.innerHTML = '<option value="">Loading...</option>';
@@ -710,11 +766,12 @@ function loadData() {
   fetch(WEB_APP_URL + '?action=list', { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      allData = data;
-      populateReps(data.reps || []);
+      allData = normalizeReps(data);
+      populateReps(allData.reps || []);
       var lastRep = '';
       try { lastRep = localStorage.getItem('ar_selected_rep') || ''; } catch(e) {}
-      if (lastRep && data.reps && data.reps.indexOf(lastRep) > -1) {
+      lastRep = REP_ALIASES[lastRep] || lastRep;
+      if (lastRep && allData.reps && allData.reps.indexOf(lastRep) > -1) {
         sel.value = lastRep;
         filterAndRender(lastRep);
       }
@@ -736,9 +793,9 @@ function refreshData() {
   fetch(WEB_APP_URL + '?action=list', { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      allData = data;
-      populateReps(data.reps || []);
-      if (currentRep && data.reps && data.reps.indexOf(currentRep) > -1) {
+      allData = normalizeReps(data);
+      populateReps(allData.reps || []);
+      if (currentRep && allData.reps && allData.reps.indexOf(currentRep) > -1) {
         sel.value = currentRep;
         filterAndRender(currentRep);
       }
