@@ -1,231 +1,324 @@
-<title>AR Collections</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
 
-<style>
-:root {
-  --bg: #F2F4F7;
-  --surface: #FFFFFF;
-  --text: #1A2233;
-  --text-secondary: #5C6B7F;
-  --accent: #2B6CB0;
-  --accent-hover: #245A94;
-  --accent-light: #E0EDF8;
-  --border: #D6DCE4;
-  --border-light: #E8ECF1;
-  --green: #1B7A42;
-  --green-bg: #E3F5EC;
-  --green-border: #A3DCBC;
-  --amber: #96700A;
-  --amber-bg: #FEF6DE;
-  --amber-border: #E8D48A;
-  --orange: #A84415;
-  --orange-bg: #FDEDE4;
-  --orange-border: #EAB08A;
-  --red: #B42318;
-  --red-bg: #FDE8E8;
-  --red-border: #EAA0A0;
-  --input-bg: #F2F4F7;
-  --shadow-sm: 0 1px 2px rgba(26,34,51,0.05);
-  --shadow: 0 1px 3px rgba(26,34,51,0.08), 0 1px 2px rgba(26,34,51,0.04);
-  --shadow-lg: 0 4px 12px rgba(26,34,51,0.10);
-  --radius: 10px;
-  --radius-sm: 6px;
-}
+/
+/
+Claude finished the response
+Found it. rebuildARLog isn't missing because of a bug — the function is gone from the script entirely. The handoff doc says it was added 2026-09-04 and present in sha1 08adc5cfa5f0 (~1,617 lines), but the script you just uploaded doesn't contain it at all. It was either removed during an edit or overwritten by another agent (same pattern as the 2026-09-03 incident).
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0D1117;
-    --surface: #161B22;
-    --text: #E2E8F0;
-    --text-secondary: #8B98A8;
-    --accent: #6BA3D6;
-    --accent-hover: #7FB5E2;
-    --accent-light: #1A2D42;
-    --border: #2A3544;
-    --border-light: #222D3A;
-    --green: #5BD88A;
-    --green-bg: #0D2818;
-    --green-border: #1A4D30;
-    --amber: #F0C850;
-    --amber-bg: #2A2008;
-    --amber-border: #4D3D12;
-    --orange: #F0924C;
-    --orange-bg: #2A1808;
-    --orange-border: #4D2E14;
-    --red: #F07272;
-    --red-bg: #2A0F0F;
-    --red-border: #4D1A1A;
-    --input-bg: #0D1117;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
-    --shadow: 0 1px 3px rgba(0,0,0,0.25);
-    --shadow-lg: 0 4px 12px rgba(0,0,0,0.35);
+That explains the error chain: whatever you ran called updateARLog with a null cmFileId, which hit DriveApp.getFileById(null) at line 673 → Exception: Invalid argument: id.
+
+Here's the function to add back. Paste it anywhere in the script (I'd put it right after dailyARAutomation):
+
+javascript
+/**
+ * Manual re-run: rebuilds the AR Log from today's existing Drive files
+ * without needing a new email. Finds today's folder in Daily AR Export,
+ * locates the CM and AR Transactions files by filename pattern, and runs
+ * the full pipeline.
+ */
+function rebuildARLog() {
+  var todayShort = Utilities.formatDate(new Date(), TZ, 'MM.dd');
+  var folderName = todayShort + ' Daily AR Upload';
+  Logger.log('=== Rebuild AR Log — looking for folder: ' + folderName + ' ===');
+
+  var parentFolder = DriveApp.getFolderById(DAILY_EXPORT_FOLDER_ID);
+  var folders = parentFolder.getFoldersByName(folderName);
+
+  if (!folders.hasNext()) {
+    Logger.log('ERROR: Could not find folder: ' + folderName);
+    return;
   }
+  var todayFolder = folders.next();
+  Logger.log('Found folder: ' + todayFolder.getName() + ' (ID: ' + todayFolder.getId() + ')');
+
+  // Locate files by filename pattern
+  var cmFileId = null;
+  var transFileId = null;
+  var files = todayFolder.getFiles();
+
+  while (files.hasNext()) {
+    var file = files.next();
+    var name = file.getName();
+
+    if (name.match(/^AR CM/i) && name.match(/\.xlsx$/i)) {
+      cmFileId = file.getId();
+      Logger.log('Found CM file: ' + name + ' (ID: ' + cmFileId + ')');
+    }
+    if (name.match(/^AR Transactions/i) && name.match(/\.xlsx$/i)) {
+      transFileId = file.getId();
+      Logger.log('Found Transactions file: ' + name + ' (ID: ' + transFileId + ')');
+    }
+  }
+
+  if (!cmFileId) {
+    Logger.log('ERROR: No AR CM file found in ' + folderName);
+    return;
+  }
+  if (!transFileId) {
+    Logger.log('ERROR: No AR Transactions file found in ' + folderName);
+    return;
+  }
+
+  // Full pipeline
+  var payments = parsePaymentData_(transFileId);
+  Logger.log('Parsed payments for ' + Object.keys(payments).length + ' customers');
+
+  var comboLookup = buildComboLogLookup_();
+  Logger.log('Combo Log: ' + Object.keys(comboLookup).length + ' last names');
+
+  var installsLookup = buildAllInstallsLookup_();
+  Logger.log('All Installs: ' + Object.keys(installsLookup).length + ' customers');
+
+  var soldAlerts = parseSoldAlerts_();
+  Logger.log('Sold Alerts: ' + Object.keys(soldAlerts).length + ' jobs');
+
+  updateARLog(cmFileId, payments, comboLookup, installsLookup, soldAlerts);
+
+  Logger.log('=== Rebuild AR Log complete ===');
 }
+The function finds today's folder by the MM.dd Daily AR Upload naming convention, pattern-matches both xlsx files (guarding against null before calling updateARLog), then runs the full pipeline: payments → Combo Log → All Installs → Sold Alerts → update. After you paste it, run rebuildARLog from the editor — it should pick up both files in today's 09.08 folder and update the AR Log.
 
-:root[data-theme="dark"] {
-  --bg: #0D1117;
-  --surface: #161B22;
-  --text: #E2E8F0;
-  --text-secondary: #8B98A8;
-  --accent: #6BA3D6;
-  --accent-hover: #7FB5E2;
-  --accent-light: #1A2D42;
-  --border: #2A3544;
-  --border-light: #222D3A;
-  --green: #5BD88A;
-  --green-bg: #0D2818;
-  --green-border: #1A4D30;
-  --amber: #F0C850;
-  --amber-bg: #2A2008;
-  --amber-border: #4D3D12;
-  --orange: #F0924C;
-  --orange-bg: #2A1808;
-  --orange-border: #4D2E14;
-  --red: #F07272;
-  --red-bg: #2A0F0F;
-  --red-border: #4D1A1A;
-  --input-bg: #0D1117;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
-  --shadow: 0 1px 3px rgba(0,0,0,0.25);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.35);
-}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+Message collapsed
+That ran clean — AR Log rebuilt with today's 9/8 data. $176,077.67 across 116 invoices (down from $216,803.16 on 9/5). The AR Collections page should now be serving the fresh data through the web app endpoint.
 
+and update the AR for the HCA - as well
+
+The data is already live — the AR Collections page reads directly from the AR Log via the web app endpoint, so the 9/8 data (19 Install invoices, $133,809.45) is serving now whenever an HCA loads the page.
+
+When you say "update the AR for the HCA," are you looking for changes to the page itself — layout, features, new reps, design tweaks — or were you confirming the data pipeline is flowing? Let me know what needs work on the page and I'll make the changes.
+
+ultimately, we are going to link that with the CRM i am building out - all part of the HCA toolkit
+
+
+Read a memory
+Read a memory
+Got it — the AR Collections page is the AR card that feeds into the broader HCA toolkit alongside the follow-up tracker, sold tracker, and daily activities, all tied together by the ServiceTitan job number.
+
+Right now the pipeline is working end-to-end: AR exports → rebuildARLog → AR Log spreadsheet → doGet web app → AR Collections page. The 9/8 data is live. When the CRM wraps around it, the same endpoint serves the AR card — no duplicate data source.
+
+Is there anything you want changed on the AR Collections page itself before it gets folded into the CRM, or are we good on the AR side for today?
+
+look at the hca toolkit and match the style and colors - https://cmheating.github.io/sales-tools/index.html
+
+
+Read 4 files, loaded tools, searched the web · 2 notes
+Read 4 files, loaded tools, searched the web · 2 notes
+Sent notification
+AR Collections page restyled to match HCA Toolkit dark theme. Complete file is in the session — Outfit + Playfair Display fonts, 
+#0a1628 background, orange 
+#c97d10 accents, glassmorphism cards, matching modal/toast/aging colors. All functionality unchanged. Ready for Ctrl+A → Ctrl+V into GitHub.
+
+The restyled AR Collections page is ready. Here's what changed visually (all functionality is identical):
+
+Fonts: DM Sans → Outfit (body) + Playfair Display (headings, customer names, modal titles) — same as index.html.
+
+Colors: Light theme with blue accent → dark-only theme matching the toolkit. Background 
+#0a1628, orange accent 
+#c97d10/
+#e9960f replacing the old blue 
+#2B6CB0, with the same subtle radial gradient overlay the toolkit uses.
+
+Cards: Solid white cards → glassmorphism (rgba(255,255,255,.05) with rgba(255,255,255,.08) borders, border-radius: 14px). Aging color-coding preserved — green/amber/orange/red borders and badges adjusted for dark background readability.
+
+Header: Added the "CM Heating" badge, Playfair Display title, frosted-glass sticky header with backdrop-filter: blur. Subtitle changed from "CM Heating — Install" to "Home Comfort Advisor · Install" to match the toolkit's subtitle pattern.
+
+Controls: Select, search, sort — all restyled with dark inputs, orange focus rings.
+
+Modal: Confirm dialog uses 
+#152238 background with rgba(255,255,255,.12) border, matching the toolkit's modal style.
+
+Footer: Added "CM Heating · Internal HCA Tool · Not for distribution" footer, same as index.html.
+
+Removed: Light/dark mode toggle system (the toolkit is dark-only, so AR Collections now matches).
+
+
+Ar collections
+Code · HTML 
+do I need to do anything with the .html code or is this already done?
+
+The file is ready to go — complete HTML document, all CSS and JS inline. You paste it into the GitHub web editor for ar-collections.html with Ctrl+A → Ctrl+V and commit. That's the only step.
+
+
+Write a message…
+
+
+
+
+Ar collections · HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-title" content="AR Collections" />
+<title>AR Collections | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+ 
 body {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  background: #0a1628;
+  color: #fff;
   line-height: 1.5;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
-
+ 
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(201,125,16,.14) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(26,53,96,.42) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+ 
 /* ── Header ──────────────────────────────────────────────────────────── */
-
+ 
 .app-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 14px 20px;
+  background: rgba(10,22,40,0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 18px 20px;
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: var(--shadow-sm);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
-.header-left h1 {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
-.header-left .subtitle {
-  font-size: 11px;
-  color: var(--text-secondary);
+ 
+.badge {
+  display: inline-block;
+  background: #c97d10;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 1px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 4px;
 }
-
+ 
+.header-left h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+}
+ 
+.header-left .subtitle {
+  font-size: 12px;
+  color: rgba(255,255,255,.48);
+  margin-top: 3px;
+}
+ 
 .btn-refresh {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.5);
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
-
-.btn-refresh:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+ 
+.btn-refresh:hover { background: rgba(201,125,16,.2); color: #e9960f; border-color: rgba(201,125,16,.4); }
 .btn-refresh:active { transform: scale(0.95); }
 .btn-refresh.spinning svg { animation: spin 0.8s linear infinite; }
-
+ 
 @keyframes spin { to { transform: rotate(360deg); } }
-
+ 
 /* ── Controls bar ────────────────────────────────────────────────────── */
-
+ 
 .controls {
   padding: 14px 20px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
-
+ 
 .controls select {
   width: 100%;
   padding: 12px 40px 12px 14px;
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  color: #fff;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235C6B7F' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B98A8' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
 }
-
+ 
 .controls select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
+  border-color: #c97d10;
+  box-shadow: 0 0 0 3px rgba(201,125,16,.2);
 }
-
+ 
+.controls select option {
+  background: #152238;
+  color: #fff;
+}
+ 
 .search-sort-row {
   display: flex;
   gap: 8px;
 }
-
+ 
 .search-wrap {
   flex: 1;
   position: relative;
 }
-
+ 
 .search-wrap svg {
   position: absolute;
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.4);
   pointer-events: none;
 }
-
+ 
 .search-wrap input {
   width: 100%;
   padding: 10px 12px 10px 36px;
   font-family: inherit;
   font-size: 14px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
+  color: #fff;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
 }
-
+ 
 .search-wrap input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
+  border-color: #c97d10;
+  box-shadow: 0 0 0 3px rgba(201,125,16,.2);
 }
-
-.search-wrap input::placeholder { color: var(--text-secondary); }
-
+ 
+.search-wrap input::placeholder { color: rgba(255,255,255,.35); }
+ 
 .sort-btn {
   display: flex;
   align-items: center;
@@ -234,82 +327,83 @@ body {
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  color: rgba(255,255,255,.5);
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
   cursor: pointer;
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  box-shadow: var(--shadow-sm);
   transition: all 0.15s ease;
 }
-
-.sort-btn:hover { color: var(--accent); border-color: var(--accent); }
+ 
+.sort-btn:hover { color: #e9960f; border-color: rgba(201,125,16,.4); }
 .sort-btn:active { transform: scale(0.97); }
-
+ 
 /* ── Stats ───────────────────────────────────────────────────────────── */
-
+ 
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   padding: 14px 20px 0;
+  position: relative;
+  z-index: 1;
 }
-
+ 
 .stat-tile {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
   padding: 12px 10px;
   text-align: center;
-  box-shadow: var(--shadow-sm);
 }
-
+ 
 .stat-tile .stat-value {
   font-size: 19px;
   font-weight: 700;
-  color: var(--text);
+  color: #fff;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
-
+ 
 .stat-tile .stat-label {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.5);
   margin-top: 3px;
   font-weight: 500;
 }
-
+ 
 /* ── Invoice cards ───────────────────────────────────────────────────── */
-
+ 
 .invoice-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 14px 20px 24px;
+  position: relative;
+  z-index: 1;
 }
-
+ 
 .invoice-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.15s ease;
-  border-left: 4px solid var(--border);
+  transition: background 0.15s ease;
+  border-left: 4px solid rgba(255,255,255,.1);
 }
-
-.invoice-card:hover { box-shadow: var(--shadow); }
-
-.invoice-card.aging-green  { border-left-color: var(--green); }
-.invoice-card.aging-amber  { border-left-color: var(--amber); }
-.invoice-card.aging-orange { border-left-color: var(--orange); }
-.invoice-card.aging-red    { border-left-color: var(--red); }
-
+ 
+.invoice-card:hover { background: rgba(255,255,255,.08); }
+ 
+.invoice-card.aging-green  { border-left-color: #5BD88A; }
+.invoice-card.aging-amber  { border-left-color: #F0C850; }
+.invoice-card.aging-orange { border-left-color: #F0924C; }
+.invoice-card.aging-red    { border-left-color: #F07272; }
+ 
 .card-main {
   padding: 14px 14px 14px 12px;
   cursor: pointer;
@@ -318,48 +412,50 @@ body {
   gap: 8px;
   align-items: start;
   min-height: 58px;
-  -webkit-tap-highlight-color: rgba(0,0,0,0.04);
+  -webkit-tap-highlight-color: transparent;
 }
-
+ 
 .card-customer {
+  font-family: 'Playfair Display', serif;
   font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 700;
+  color: #fff;
   line-height: 1.3;
 }
-
+ 
 .card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
   margin-top: 3px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.48);
   font-variant-numeric: tabular-nums;
 }
-
+ 
 .card-meta span { white-space: nowrap; }
-
+ 
 .card-pmt {
   font-size: 11px;
-  color: var(--green);
+  color: #5BD88A;
   margin-top: 3px;
   font-weight: 500;
 }
-
+ 
 .card-balance {
   text-align: right;
   white-space: nowrap;
   padding-left: 8px;
 }
-
+ 
 .card-balance .amount {
   font-size: 16px;
   font-weight: 700;
+  color: #fff;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
-
+ 
 .days-badge {
   display: inline-block;
   font-size: 11px;
@@ -369,20 +465,20 @@ body {
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
-
-.days-green  { background: var(--green-bg);  color: var(--green); }
-.days-amber  { background: var(--amber-bg);  color: var(--amber); }
-.days-orange { background: var(--orange-bg); color: var(--orange); }
-.days-red    { background: var(--red-bg);    color: var(--red); }
-
+ 
+.days-green  { background: rgba(91,216,138,.15);  color: #5BD88A; }
+.days-amber  { background: rgba(240,200,80,.15);  color: #F0C850; }
+.days-orange { background: rgba(240,146,76,.15);  color: #F0924C; }
+.days-red    { background: rgba(240,114,114,.15);  color: #F07272; }
+ 
 /* ── Card expanded detail ────────────────────────────────────────────── */
-
+ 
 .card-detail {
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid rgba(255,255,255,.06);
   padding: 14px 14px 14px 12px;
-  background: var(--bg);
+  background: rgba(0,0,0,.2);
 }
-
+ 
 .card-detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -390,264 +486,297 @@ body {
   font-size: 13px;
   margin-bottom: 14px;
 }
-
+ 
 .detail-label {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.42);
   font-weight: 500;
 }
-
+ 
 .detail-value {
-  color: var(--text);
+  color: #fff;
   font-variant-numeric: tabular-nums;
   margin-top: 1px;
 }
-
+ 
 .notes-section { margin-top: 10px; }
-
+ 
 .notes-section label {
   display: block;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.42);
   font-weight: 500;
   margin-bottom: 6px;
 }
-
+ 
 .existing-notes {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.55);
   line-height: 1.6;
   margin-bottom: 10px;
   white-space: pre-wrap;
   word-break: break-word;
-  border-left: 2px solid var(--border);
+  border-left: 2px solid rgba(255,255,255,.12);
   padding-left: 10px;
 }
-
+ 
 .note-input-row {
   display: flex;
   gap: 8px;
 }
-
+ 
 .note-input-row input {
   flex: 1;
   padding: 10px 12px;
   font-family: inherit;
   font-size: 14px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  color: #fff;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
 }
-
+ 
 .note-input-row input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-light);
+  border-color: #c97d10;
+  box-shadow: 0 0 0 2px rgba(201,125,16,.2);
 }
-
-.note-input-row input::placeholder { color: var(--text-secondary); }
-
+ 
+.note-input-row input::placeholder { color: rgba(255,255,255,.3); }
+ 
 .btn-action {
   padding: 10px 16px;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: var(--accent);
+  background: #c97d10;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease, transform 0.1s ease;
   -webkit-tap-highlight-color: transparent;
 }
-
-.btn-action:hover { background: var(--accent-hover); }
+ 
+.btn-action:hover { background: #e9960f; }
 .btn-action:active { transform: scale(0.97); }
 .btn-action:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-.btn-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
+.btn-action:focus-visible { outline: 2px solid #c97d10; outline-offset: 2px; }
+ 
 .btn-paid {
-  background: var(--green);
+  background: #1a7a4a;
 }
-.btn-paid:hover { opacity: 0.9; }
-
+.btn-paid:hover { background: #22964f; }
+ 
 .paid-row {
   display: flex;
   gap: 8px;
   margin-top: 10px;
 }
-
+ 
 .paid-row input {
   flex: 1;
   padding: 10px 12px;
   font-family: inherit;
   font-size: 14px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  color: #fff;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
 }
-
+ 
 .paid-row input:focus {
   outline: none;
-  border-color: var(--green);
-  box-shadow: 0 0 0 2px var(--green-bg);
+  border-color: #5BD88A;
+  box-shadow: 0 0 0 2px rgba(91,216,138,.15);
 }
-
-.paid-row input::placeholder { color: var(--text-secondary); }
-
+ 
+.paid-row input::placeholder { color: rgba(255,255,255,.3); }
+ 
 .paid-status {
   margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--green);
+  color: #5BD88A;
   font-weight: 600;
 }
-
+ 
 .paid-status svg { flex-shrink: 0; }
-
+ 
 /* ── Confirm overlay ─────────────────────────────────────────────────── */
-
+ 
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
   padding: 20px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
-
+ 
 .confirm-box {
-  background: var(--surface);
-  border-radius: var(--radius);
+  background: #152238;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
   padding: 24px;
   max-width: 340px;
   width: 100%;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  animation: popIn 0.2s ease;
 }
-
+ 
 .confirm-box h3 {
-  font-size: 16px;
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
   font-weight: 700;
+  color: #fff;
   margin-bottom: 8px;
 }
-
+ 
 .confirm-box p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.5);
   margin-bottom: 20px;
   line-height: 1.5;
 }
-
+ 
 .confirm-btns {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
 }
-
+ 
 .btn-cancel {
   padding: 10px 18px;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  color: rgba(255,255,255,.5);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
-
-.btn-cancel:hover { color: var(--text); }
-
+ 
+.btn-cancel:hover { color: #fff; background: rgba(255,255,255,.1); }
+ 
 /* ── Empty / loading / toast ─────────────────────────────────────────── */
-
+ 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.42);
+  position: relative;
+  z-index: 1;
 }
-
+ 
 .empty-state svg { margin-bottom: 12px; opacity: 0.35; }
-
+ 
 .empty-state p {
   font-size: 14px;
   max-width: 260px;
   margin: 0 auto;
   line-height: 1.6;
 }
-
+ 
 .loading {
   text-align: center;
   padding: 60px 20px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.42);
   font-size: 14px;
+  position: relative;
+  z-index: 1;
 }
-
+ 
 .toast {
   position: fixed;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%) translateY(80px);
-  background: var(--text);
-  color: var(--bg);
+  background: #fff;
+  color: #0a1628;
   padding: 10px 20px;
-  border-radius: var(--radius);
+  border-radius: 12px;
   font-size: 13px;
   font-weight: 500;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
   transition: transform 0.25s ease;
   z-index: 100;
   pointer-events: none;
 }
-
+ 
 .toast.visible { transform: translateX(-50%) translateY(0); }
-
+ 
 .updated-stamp {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.35);
   text-align: center;
-  padding: 4px 20px 24px;
+  padding: 4px 20px 8px;
   font-variant-numeric: tabular-nums;
+  position: relative;
+  z-index: 1;
 }
-
+ 
 .results-count {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.45);
   padding: 0 20px 4px;
   font-weight: 500;
+  position: relative;
+  z-index: 1;
 }
-
+ 
+.footer {
+  padding: 14px 28px 28px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+ 
+.footer p {
+  font-size: 11px;
+  color: rgba(255,255,255,.35);
+  letter-spacing: .04em;
+}
+ 
+@keyframes popIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+ 
 @media (min-width: 640px) {
   .stats-row, .invoice-list, .controls, .results-count { max-width: 600px; }
 }
 </style>
-
+</head>
+<body>
+ 
 <header class="app-header">
   <div class="header-left">
+    <div class="badge">CM Heating</div>
     <h1>AR Collections</h1>
-    <div class="subtitle">CM Heating — Install</div>
+    <div class="subtitle">Home Comfort Advisor · Install</div>
   </div>
   <button class="btn-refresh" id="btnRefresh" title="Refresh data" onclick="refreshData()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
   </button>
 </header>
-
+ 
 <div class="controls" id="controlsArea">
   <select id="repSelect" disabled>
     <option value="">Loading...</option>
   </select>
 </div>
-
+ 
 <div class="stats-row" id="statsRow" hidden>
   <div class="stat-tile">
     <div class="stat-value" id="statBalance">—</div>
@@ -662,7 +791,7 @@ body {
     <div class="stat-label">Oldest</div>
   </div>
 </div>
-
+ 
 <div id="resultsCount" class="results-count" hidden></div>
 <div id="content">
   <div class="empty-state">
@@ -670,28 +799,29 @@ body {
     <p>Select your name to see outstanding collections</p>
   </div>
 </div>
-
+ 
 <div class="updated-stamp" id="updatedStamp" hidden></div>
 <div class="toast" id="toast"></div>
 <div id="confirmOverlay" hidden></div>
-
+<div class="footer"><p>CM Heating · Internal HCA Tool · Not for distribution</p></div>
+ 
 <script>
 // ── Configuration ──────────────────────────────────────────────────────────
 var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec';
-
+ 
 // ── State ──────────────────────────────────────────────────────────────────
 var allData = null;
 var expandedInvoice = null;
 var currentSort = 'balance'; // balance | days | customer
 var searchTerm = '';
 var searchSortRendered = false;
-
+ 
 // ── Init ───────────────────────────────────────────────────────────────────
 (function init() {
   if (!WEB_APP_URL) { showConfigNeeded(); return; }
   loadData();
 })();
-
+ 
 function showConfigNeeded() {
   var sel = document.getElementById('repSelect');
   sel.innerHTML = '<option value="">Web App URL not configured</option>';
@@ -701,7 +831,7 @@ function showConfigNeeded() {
     '<p>Set the WEB_APP_URL in this page\'s script to the deployed Apps Script web app URL.</p>' +
     '</div>';
 }
-
+ 
 /* Normalize inconsistent rep names from the AR Log.
    Handles: ALL-CAPS variants, short-name aliases, nicknames. */
 var REP_ALIASES = {
@@ -710,13 +840,13 @@ var REP_ALIASES = {
 };
 /* Reps to hide from the dropdown (not HCAs) */
 var REP_EXCLUDE = ['scott olson'];
-
+ 
 function toTitleCase(s) {
   return s.replace(/\w\S*/g, function(t) {
     return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase();
   });
 }
-
+ 
 function canonicalRep(name) {
   if (!name) return name;
   var lower = name.toLowerCase().trim();
@@ -727,7 +857,7 @@ function canonicalRep(name) {
   }
   return name;
 }
-
+ 
 function normalizeReps(data) {
   if (!data || !data.rows) return data;
   /* Canonicalize salesRep on every row */
@@ -757,12 +887,12 @@ function normalizeReps(data) {
   });
   return data;
 }
-
+ 
 function loadData() {
   var sel = document.getElementById('repSelect');
   sel.innerHTML = '<option value="">Loading...</option>';
   sel.disabled = true;
-
+ 
   fetch(WEB_APP_URL + '?action=list', { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -783,13 +913,13 @@ function loadData() {
         '<p>Could not load AR data. Check the web app URL and try again.</p></div>';
     });
 }
-
+ 
 function refreshData() {
   var btn = document.getElementById('btnRefresh');
   btn.classList.add('spinning');
   var sel = document.getElementById('repSelect');
   var currentRep = sel.value;
-
+ 
   fetch(WEB_APP_URL + '?action=list', { redirect: 'follow' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -804,7 +934,7 @@ function refreshData() {
     .catch(function() { showToast('Refresh failed — try again'); })
     .finally(function() { btn.classList.remove('spinning'); });
 }
-
+ 
 function populateReps(reps) {
   var sel = document.getElementById('repSelect');
   sel.disabled = false;
@@ -817,7 +947,7 @@ function populateReps(reps) {
     sel.appendChild(opt);
   });
   if (current) sel.value = current;
-
+ 
   sel.onchange = function() {
     var rep = sel.value;
     try { localStorage.setItem('ar_selected_rep', rep); } catch(e) {}
@@ -826,7 +956,7 @@ function populateReps(reps) {
     filterAndRender(rep);
   };
 }
-
+ 
 function ensureSearchSort() {
   if (searchSortRendered) return;
   searchSortRendered = true;
@@ -843,14 +973,14 @@ function ensureSearchSort() {
     '<span id="sortLabel">BAL</span>' +
     '</button>';
   controls.appendChild(row);
-
+ 
   document.getElementById('searchInput').addEventListener('input', function(e) {
     searchTerm = e.target.value;
     var rep = document.getElementById('repSelect').value;
     filterAndRender(rep);
   });
 }
-
+ 
 function cycleSort() {
   var order = ['balance', 'days', 'customer'];
   var i = order.indexOf(currentSort);
@@ -860,7 +990,7 @@ function cycleSort() {
   var rep = document.getElementById('repSelect').value;
   filterAndRender(rep);
 }
-
+ 
 function filterAndRender(rep) {
   if (!rep || !allData) {
     document.getElementById('statsRow').hidden = true;
@@ -874,16 +1004,16 @@ function filterAndRender(rep) {
       '<p>Select your name to see outstanding collections</p></div>';
     return;
   }
-
+ 
   ensureSearchSort();
-
+ 
   var rows = (allData.rows || []).filter(function(r) {
     return r.salesRep.toLowerCase() === rep.toLowerCase();
   });
-
+ 
   // Stats use full (unfiltered) rep data
   updateStats(rows);
-
+ 
   // Apply search filter
   var term = searchTerm.trim().toLowerCase();
   var filtered = rows;
@@ -894,14 +1024,14 @@ function filterAndRender(rep) {
              (r.notes || '').toLowerCase().indexOf(term) > -1;
     });
   }
-
+ 
   // Sort
   filtered.sort(function(a, b) {
     if (currentSort === 'balance') return b.balance - a.balance;
     if (currentSort === 'days') return b.days - a.days;
     return (a.customer || '').localeCompare(b.customer || '');
   });
-
+ 
   // Results count when searching
   var rc = document.getElementById('resultsCount');
   if (term) {
@@ -910,9 +1040,9 @@ function filterAndRender(rep) {
   } else {
     rc.hidden = true;
   }
-
+ 
   renderCards(filtered);
-
+ 
   var stamp = document.getElementById('updatedStamp');
   stamp.hidden = false;
   var now = new Date();
@@ -921,7 +1051,7 @@ function filterAndRender(rep) {
     hour: 'numeric', minute: '2-digit'
   });
 }
-
+ 
 function updateStats(rows) {
   var statsRow = document.getElementById('statsRow');
   statsRow.hidden = false;
@@ -934,10 +1064,10 @@ function updateStats(rows) {
   document.getElementById('statCount').textContent = rows.length;
   document.getElementById('statOldest').textContent = oldest + 'd';
 }
-
+ 
 function renderCards(rows) {
   var container = document.getElementById('content');
-
+ 
   if (rows.length === 0) {
     var msg = searchTerm.trim() ? 'No invoices match your search' : 'No outstanding install invoices. Nice work!';
     container.innerHTML =
@@ -945,13 +1075,13 @@ function renderCards(rows) {
       '<p>' + msg + '</p></div>';
     return;
   }
-
+ 
   var html = '<div class="invoice-list">';
   rows.forEach(function(r) {
     var agingClass = getAgingClass(r.days);
     var daysClass = getDaysClass(r.days);
     var isExpanded = expandedInvoice === r.invoice;
-
+ 
     html += '<div class="invoice-card ' + agingClass + '">';
     html += '<div class="card-main" onclick="toggleCard(\'' + r.invoice + '\')">';
     html += '<div>';
@@ -961,24 +1091,24 @@ function renderCards(rows) {
     html += '<span>' + esc(r.date) + '</span>';
     html += '<span>' + esc(r.bu) + '</span>';
     html += '</div>';
-
+ 
     // Show last payment on collapsed card if available
     if (!isExpanded && r.lastPmt) {
       html += '<div class="card-pmt">Last pmt: ' + esc(r.lastPmt) +
               (r.pmtDate ? ' (' + esc(r.pmtDate) + ')' : '') + '</div>';
     }
-
+ 
     if (r.paid && !isExpanded) {
-      html += '<div class="card-pmt" style="color:var(--green);font-weight:600;">Paid: ' + esc(r.paid) + '</div>';
+      html += '<div class="card-pmt" style="color:#5BD88A;font-weight:600;">Paid: ' + esc(r.paid) + '</div>';
     }
-
+ 
     html += '</div>';
     html += '<div class="card-balance">';
     html += '<div class="amount">' + formatCurrency(r.balance) + '</div>';
     html += '<div class="days-badge ' + daysClass + '">' + r.days + 'd</div>';
     html += '</div>';
     html += '</div>';
-
+ 
     if (isExpanded) {
       html += '<div class="card-detail">';
       html += '<div class="card-detail-grid">';
@@ -993,7 +1123,7 @@ function renderCards(rows) {
         html += detailCell('Pmt Date', r.pmtDate || '—');
       }
       html += '</div>';
-
+ 
       html += '<div class="notes-section">';
       html += '<label>Notes</label>';
       if (r.notes) {
@@ -1004,7 +1134,7 @@ function renderCards(rows) {
       html += '<button class="btn-action" onclick="saveNote(\'' + r.invoice + '\')">Save</button>';
       html += '</div>';
       html += '</div>';
-
+ 
       if (!r.paid) {
         html += '<div class="paid-row">';
         html += '<input type="text" id="paid-' + r.invoice + '" placeholder="e.g. pd ' + todayShort() + ' gs">';
@@ -1016,42 +1146,42 @@ function renderCards(rows) {
         html += ' Paid: ' + esc(r.paid);
         html += '</div>';
       }
-
+ 
       html += '</div>';
     }
-
+ 
     html += '</div>';
   });
   html += '</div>';
   container.innerHTML = html;
-
+ 
   // Scroll expanded card into view
   if (expandedInvoice) {
     var expanded = document.querySelector('.card-detail');
     if (expanded) expanded.parentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
-
+ 
 function toggleCard(invoice) {
   expandedInvoice = expandedInvoice === invoice ? null : invoice;
   var rep = document.getElementById('repSelect').value;
   filterAndRender(rep);
 }
-
+ 
 // ── Note save ──────────────────────────────────────────────────────────────
-
+ 
 function saveNote(invoice) {
   var input = document.getElementById('note-' + invoice);
   var rawNote = (input.value || '').trim();
   if (!rawNote) return;
-
+ 
   // Auto-prepend date
   var note = todayShort() + ' ' + rawNote;
-
+ 
   var btn = input.nextElementSibling;
   btn.disabled = true;
   btn.textContent = 'Saving...';
-
+ 
   fetch(WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({ action: 'note', invoice: invoice, note: note }),
@@ -1076,17 +1206,17 @@ function saveNote(invoice) {
     filterAndRender(rep);
   });
 }
-
+ 
 // ── Paid confirmation ──────────────────────────────────────────────────────
-
+ 
 function confirmPaid(invoice) {
   var input = document.getElementById('paid-' + invoice);
   var paid = (input.value || '').trim();
   if (!paid) { input.focus(); return; }
-
+ 
   var row = findRow(invoice);
   var name = row ? row.customer : 'Invoice #' + invoice;
-
+ 
   var overlay = document.getElementById('confirmOverlay');
   overlay.hidden = false;
   overlay.innerHTML =
@@ -1099,20 +1229,20 @@ function confirmPaid(invoice) {
     '<button class="btn-action btn-paid" onclick="executePaid(\'' + invoice + '\', \'' + esc(paid).replace(/'/g, "\\'") + '\')">Confirm</button>' +
     '</div></div></div>';
 }
-
+ 
 function cancelConfirm(e) {
   if (e.target === e.currentTarget || e.target.classList.contains('btn-cancel')) {
     document.getElementById('confirmOverlay').hidden = true;
   }
 }
-
+ 
 function executePaid(invoice, paid) {
   document.getElementById('confirmOverlay').hidden = true;
-
+ 
   var input = document.getElementById('paid-' + invoice);
   var btn = input ? input.nextElementSibling : null;
   if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
-
+ 
   fetch(WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({ action: 'paid', invoice: invoice, paid: paid }),
@@ -1135,7 +1265,7 @@ function executePaid(invoice, paid) {
     filterAndRender(rep);
   });
 }
-
+ 
 function findRow(invoice) {
   if (!allData || !allData.rows) return null;
   for (var i = 0; i < allData.rows.length; i++) {
@@ -1143,9 +1273,9 @@ function findRow(invoice) {
   }
   return null;
 }
-
+ 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
+ 
 function formatCurrency(n) {
   if (typeof n !== 'number') return '$0';
   if (Math.abs(n) >= 1000) {
@@ -1153,43 +1283,43 @@ function formatCurrency(n) {
   }
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-
+ 
 function formatCurrencyVal(v) {
   var n = parseFloat(v);
   if (isNaN(n)) return v;
   return formatCurrency(n);
 }
-
+ 
 function getDaysClass(d) {
   if (d < 30) return 'days-green';
   if (d < 60) return 'days-amber';
   if (d < 90) return 'days-orange';
   return 'days-red';
 }
-
+ 
 function getAgingClass(d) {
   if (d < 30) return 'aging-green';
   if (d < 60) return 'aging-amber';
   if (d < 90) return 'aging-orange';
   return 'aging-red';
 }
-
+ 
 function todayShort() {
   var d = new Date();
   return (d.getMonth() + 1) + '/' + d.getDate();
 }
-
+ 
 function detailCell(label, value) {
   return '<div><div class="detail-label">' + label + '</div>' +
          '<div class="detail-value">' + value + '</div></div>';
 }
-
+ 
 function esc(s) {
   var d = document.createElement('div');
   d.textContent = s || '';
   return d.innerHTML;
 }
-
+ 
 function showToast(msg) {
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -1197,3 +1327,7 @@ function showToast(msg) {
   setTimeout(function() { t.classList.remove('visible'); }, 2500);
 }
 </script>
+</body>
+</html>
+ 
+
