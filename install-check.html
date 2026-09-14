@@ -74,7 +74,7 @@
   </div>
   <!-- REVIEW QUEUE (only shows when the page is opened from a queue link) -->
   <div class="card" id="queueCard" style="display:none">
-    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">★</span> Install review queue</span><span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><select id="queueDay" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;font-weight:600"><option value="next">Tomorrow</option><option value="today">Today</option></select><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600"></span></span></h2>
+    <h2 style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span><span class="n">★</span> Install review queue</span><span style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><select id="queueDay" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;font-weight:600"><option value="next">Tomorrow</option><option value="today">Today</option><option value="attention">⚠️ Needs Attention</option></select><span id="queueProg" style="font-size:13px;color:var(--mut);font-weight:600"></span></span></h2>
     <div id="queueList"></div>
     <p class="sub" style="margin:10px 2px 0;font-size:12px">Tap a job to load it into the check below. After you Send to HCA, the next job loads automatically. Pulls the day&rsquo;s HVAC installs from the schedule — double-check against ServiceTitan dispatch for anything missed.</p>
   </div>
@@ -393,7 +393,23 @@ var EQUIP_MAP={'GF/HP':'Gas furnace + heat pump','GF HP':'Gas furnace + heat pum
 function equipLabel(s){s=String(s||'').trim();if(!s)return'';var k=s.toUpperCase();return EQUIP_MAP[k]?(EQUIP_MAP[k]+' ('+s+')'):s;}
 function qLabel(it){var b=[];if(it.addr)b.push(it.addr);if(it.city)b.push(it.city);if(it.hca)b.push(it.hca);if(it.equip)b.push(equipLabel(it.equip));if(it.idate)b.push(it.idate);return b.join(' · ');}
 function parseQueue(){try{var m=String(location.hash||'').match(/[#&]q=([^&]*)/);if(!m||!m[1])return;var arr=JSON.parse(decodeURIComponent(m[1]));if(Object.prototype.toString.call(arr)==='[object Array]'&&arr.length){QUEUE=arr;qDone={};qIdx=-1;renderQueue();var qc=el('queueCard');if(qc)qc.style.display='block';}}catch(e){}}
-function renderQueue(){var list=el('queueList');if(!list)return;list.innerHTML='';var done=0;QUEUE.forEach(function(it,i){var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';var complete=(st==='complete'),open=(st==='open');var doneFlag=qDone[i]||complete;if(doneFlag)done++;var mv=(sc&&sc.movedFrom)?(' <span class="qflag">(checked for '+qesc(sc.movedFrom)+')</span>'):'';var tag=complete?(' · <span style="color:#39b34a;font-weight:700">✓ cleared</span>'+mv):(open?(' · <span class="qflag">⏳ in progress</span>'+mv):'');var row=document.createElement('div');row.className='qrow'+(i===qIdx?' qcur':'')+(doneFlag?' qdone':'');row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+'</div><div class="qmeta">'+qesc(qLabel(it))+(it.jflag?(' · <span class="qflag">⚠ '+qesc(it.jflag)+'</span>'):'')+tag+'</div></div>'+(doneFlag?'<span class="qcheck">✓</span>':'');row.onclick=function(){loadQueueItem(i);};list.appendChild(row);});var p=el('queueProg');if(p)p.textContent=done+' of '+QUEUE.length+' done';}
+function renderQueue(){
+  var list=el('queueList');if(!list)return;list.innerHTML='';var done=0;
+  QUEUE.forEach(function(it,i){
+    var sc=findSavedCheck(it.customer,it.idate),st=sc?String(sc.status||'').toLowerCase():'';
+    var complete=(st==='complete'),open=(st==='open');
+    var doneFlag=qDone[i]||complete;if(doneFlag)done++;
+    var mv=(sc&&sc.movedFrom)?(' <span class="qflag">(checked for '+qesc(sc.movedFrom)+')</span>'):'';
+    var catBadge=it.queueCategory?(' · <span class="qflag" style="color:var(--gold);font-weight:700">['+qesc(it.queueCategory)+']</span>'):'';
+    var tag=complete?(' · <span style="color:#39b34a;font-weight:700">✓ cleared</span>'+mv):(open?(' · <span class="qflag">⏳ in progress</span>'+mv):'');
+    var row=document.createElement('div');
+    row.className='qrow'+(i===qIdx?' qcur':'')+(doneFlag?' qdone':'');
+    row.innerHTML='<span class="qdot"></span><div class="qmain"><div class="qname">'+qesc(it.customer||'(no name)')+catBadge+'</div><div class="qmeta">'+qesc(qLabel(it))+(it.jflag?(' · <span class="qflag">⚠ '+qesc(it.jflag)+'</span>'):'')+tag+'</div></div>'+(doneFlag?'<span class="qcheck">✓</span>':'');
+    row.onclick=function(){loadQueueItem(i);};
+    list.appendChild(row);
+  });
+  var p=el('queueProg');if(p)p.textContent=done+' of '+QUEUE.length+' done';
+}
 function loadQueueItem(i){var it=QUEUE[i];if(!it)return;qIdx=i;
   /* Resume saved progress for this job if a check was already started — never reset it. */
   var saved=findSavedCheck(it.customer,it.idate);
@@ -510,14 +526,22 @@ function loadOpenChecks(){
 function autoLoadQueue(day){
   day=day||'next';
   var qc=el('queueCard');if(qc)qc.style.display='block';
-  var list=el('queueList');if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Loading '+(day==='today'?'today':'tomorrow')+'’s installs…</p>';
+  var labelMap={'next':'tomorrow’s','today':'today’s','attention':'unmatched / urgent'};
+  var list=el('queueList');if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Loading '+(labelMap[day]||day)+' installs…</p>';
   var pg=el('queueProg');if(pg)pg.textContent='';
   clearForm_();QUEUE=[];qDone={};qIdx=-1;
   api({action:'pendinginstalls',day:day}).then(function(d){
-    if(d&&d.ok&&d.jobs&&d.jobs.length){QUEUE=d.jobs;qDone={};qIdx=-1;renderQueue();}
-    else if(d&&d.ok){if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">No HVAC installs on the schedule for '+qesc(d.date||(day==='today'?'today':'tomorrow'))+' yet.</p>';if(pg)pg.textContent='';}
-    else{if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Couldn’t reach the schedule — fill the check in manually, or switch the day and retry.</p>';}
-  }).catch(function(){if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Couldn’t reach the schedule — fill the check in manually, or switch the day and retry.</p>';});
+    if(d&&d.ok&&d.jobs&&d.jobs.length){
+      QUEUE=d.jobs;qDone={};qIdx=-1;renderQueue();
+    } else if(d&&d.ok){
+      if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">No installs found for '+(labelMap[day]||day)+'.</p>';
+      if(pg)pg.textContent='';
+    } else {
+      if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Couldn’t reach the schedule — fill the check in manually, or switch the day and retry.</p>';
+    }
+  }).catch(function(){
+    if(list)list.innerHTML='<p class="sub" style="margin:6px 2px">Couldn’t reach the schedule — fill the check in manually, or switch the day and retry.</p>';
+  });
 }
 function setHca(sellerName){var sel=el('hca');if(!sel)return false;var target=String(sellerName||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!target)return false;var tT=target.split(' ').filter(Boolean),tLast=tT[tT.length-1]||'';for(var i=0;i<sel.options.length;i++){var raw=sel.options[i].value||sel.options[i].text||'';var opt=raw.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();if(!opt)continue;var oT=opt.split(' ').filter(Boolean),oLast=oT[oT.length-1]||'';if(opt===target||(tLast&&tLast===oLast)){sel.value=raw;return true;}}return false;}
 /* Cross-check the Combo Log's SALES REP against the selected HCA. Compares on
