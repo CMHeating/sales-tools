@@ -285,8 +285,15 @@ A scheduled run is not an interactive session and does not have the same reach.
   here but deployed by pasting into the Apps Script editor. The repo is never
   the live source. Assume the deployed copy has drifted and read it before
   reasoning about behavior. §2.2 still applies: propose, do not run.
-- **A missing day is a lag, never a zero.** Exports post about a day behind. An
-  empty day means the data has not landed yet. Never report it as no activity.
+- **A missing day is a lag, never a zero.** An empty day means the data has not
+  landed yet. Never report it as no activity. What *causes* the lag is in §7 —
+  a manual export step, not a fixed delay — so "about a day behind" is a habit,
+  not a guarantee.
+- **Never schedule a run against an upstream refresh time.** A job that fires at
+  05:41 because BI refreshes at 05:40 is timed against a system it does not read
+  from. Schedule against the *artifact*: confirm today's file exists and carries
+  today's data. If it does not, say so and stop — do not report yesterday's
+  numbers as today's.
 
 ---
 
@@ -348,6 +355,28 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 - **State the basis of any figure.** Job-completion date and invoice date give
   different answers to the same question, and a number without its basis will
   be compared against one that used the other.
+- **BI refreshes at 05:40 Pacific, Monday through Friday — that is when the
+  report changes, not when the data reaches anything an agent can read.** The
+  chain has four links and only the first runs on a clock:
+
+  1. **BI report refreshes.** 05:40 Pacific, weekdays. Deterministic.
+  2. **A human exports `All Leads` / `All Installs` to Drive.** Manual, at no
+     fixed time. Export stamps observed 9/5–9/14: 06:19, 07:04, 07:11, 08:06,
+     08:26, 11:33, 14:53, 22:07, 22:59 Pacific.
+  3. **Code reads whatever file it was pointed at** — which is not necessarily
+     the newest one, or even the right month.
+  4. **MTD lead figures come from constants in the script source**, updated by
+     hand.
+
+  So "BI refreshed at 05:40" tells you nothing about whether today's numbers
+  are in Drive, and nothing about whether any script is reading them. Check the
+  file's modified time and the data's own last date. Never the clock.
+- **No BI refresh Saturday or Sunday.** A weekend run reads Friday's report.
+  Six of the ten HCAs work Saturdays, so a Saturday figure that looks flat is
+  usually Friday's data rather than a slow day.
+- **05:40 is Pacific *local*, and Pacific changes.** PDT ends 2026-11-01. A
+  trigger set in `America/Los_Angeles` follows the change; one set in UTC
+  drifts an hour that morning. Any schedule written down states which it uses.
 
 ---
 

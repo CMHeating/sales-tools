@@ -157,6 +157,41 @@ Shared external data:
   The only source of a *scheduled* install date.
 - **ServiceTitan alerts** arrive from `alerts@servicetitan.com`. Booked Job
   Alert is the **scheduled-appointment** alert and says nothing about a sale.
+- **BI (`All Leads` / `All Installs`)** — the report refreshes **05:40 Pacific,
+  Monday–Friday**, but nothing automatic moves it into Drive. See below.
+
+### The BI chain, and where it is currently broken
+
+Four links. Only the first runs on a clock, and links 3 and 4 are stale right
+now. Verified 2026-09-15 — re-verify before relying on any of it.
+
+1. **BI report refreshes** — 05:40 Pacific, weekdays. Deterministic.
+2. **A human exports to Drive** — manual, no fixed time. Export stamps across
+   9/5–9/14 ran 06:19, 07:04, 07:11, 08:06, 08:26, 11:33, 14:53, 22:07, 22:59
+   Pacific. This is the variable step, not email delivery.
+3. **`BI_LEADS_SHEET_ID`** (`daily-recap.gs:23`) points at
+   **`All Leads MTD July 2026.xlsx`, last modified 2026-08-03.** `readBiLeads_()`
+   has been reading a July snapshot since August. `BI_LEADS_TAB` is `""`, so it
+   takes the first sheet.
+4. **MTD lead figures are hardcoded** — `BI_MTD_LEADS`, `BI_MTD_MKT_LEADS`,
+   `BI_MTD_TECH_LEADS`, `BI_MTD_SG_LEADS` at `daily-recap.gs:2829-2832`, updated
+   by hand. The neighbouring notes reference 8/7. **Total L2C % and Marketed
+   L2C % on the L2C tab divide by these constants**, so both percentages are
+   only as current as the last hand edit.
+
+Three more places carry a **weekly** model of BI that the 05:40 daily refresh
+contradicts — `BI_DAY_NOTE`, `RAN_LEADS_NOTE`, `RAN_INSTALLS_NOTE` and
+`titanRan_` all say some form of *"Monday's BI replaces this."* Two of those
+strings are written into **spreadsheet cell notes**, where a human reads them
+and plans around a Monday that no longer means anything.
+
+Also live: `writeGrowthSheetForYesterday()` is **retired** — it returns
+immediately and writes nothing — but `installRecapTriggers` still creates a
+daily trigger for it at `growthWriteHour`, and the config comment above that
+value describes a 7am run while the value is `4`. Comment, value, and behavior
+are three different stories.
+
+None of the above is fixed by moving a trigger to 05:41.
 
 ## Data Conventions
 
