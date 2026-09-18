@@ -93,35 +93,30 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
       <div class="hello" id="hello">—</div>
 
       <div class="grid">
-        <!-- AR -->
         <div class="card ar">
           <div class="card-head"><h2>Accounts Receivable</h2><span class="tag">Your open invoices</span></div>
           <div class="card-body"><div id="arBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="arNote"></span><a class="btn" href="ar-collections.html">Open AR</a></div>
         </div>
 
-        <!-- SOLD -->
         <div class="card sold">
           <div class="card-head"><h2>Sold Jobs</h2><span class="tag">In install ops</span></div>
           <div class="card-body"><div id="soldBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="soldNote"></span><a class="btn" href="sold-job-tracker.html">Open Sold Tracker</a></div>
         </div>
 
-        <!-- FOLLOW-UP -->
         <div class="card followup">
           <div class="card-head"><h2>Follow-Ups</h2><span class="tag">Open leads</span></div>
           <div class="card-body"><div id="followupBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="followupNote"></span><a class="btn" id="followupLink" href="follow-up-tracker.html">Open Follow-Up</a></div>
         </div>
 
-        <!-- ACTIVITIES -->
         <div class="card activities">
           <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
           <div class="card-body"><div id="activitiesBody" class="soon">Coming soon — will show your ride-alongs, self-gen, install visits, and follow-ups logged in the daily recap.</div></div>
           <div class="card-foot"><span class="card-note"></span></div>
         </div>
 
-        <!-- CLEARANCE (shared) -->
         <div class="card clearance">
           <div class="card-head"><h2>Clearance</h2><span class="tag">Shared — sell from stock</span></div>
           <div class="card-body"><div id="clearanceBody" class="loading">—</div></div>
@@ -149,11 +144,6 @@ const FIREBASE_CONFIG = {
   appId: "1:187871662912:web:1d52671de23c4f38d620a5"
 };
 
-/* ---- Roster + name reconciliation across the four feeds ----
-   short  = auth roster name (login)
-   full   = Firebase full name (cmh_followup_tracker / cmh_sold_tracker)
-   ar     = AR /exec rep-name spelling (verify at AR-card build; blank = not an HCA in AR)
-   Admins (office) have no HCA pipeline of their own — role ADMIN, no full/ar. */
 const USERS = [
   { role:"ADMIN", short:"Geoff",   email:"geoffrey.simons@cmheating.com" },
   { role:"ADMIN", short:"Amy",     email:"amy@cmheating.com" },
@@ -198,8 +188,8 @@ function findByName(input){
 function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
 function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.className="status-pill "+cls; }
 
-let currentUser = null;   // {role,short,email,...}
-let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
+let currentUser = null;
+let viewRep = null;
 
 async function login(){
   const name = prompt("Enter your name:"); if(name===null) return;
@@ -250,7 +240,6 @@ function unlock(){
   loadCards();
 }
 
-/* ---- Cards ---- */
 function loadCards(){
   const who = viewRep;
   $("hello").innerHTML = who
@@ -304,41 +293,4 @@ function renderSold(who){
     jobs = all.filter(j => norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full));
   }
   const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
-  setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
-  $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
-}
-
-let arData = null;
-function loadArCard(who){
-  if(arData){ renderAr(who); return; }
-  setBody("arBody", '<div class="loading">Loading AR…</div>');
-  fetch(AR_EXEC + "?action=list", { redirect:"follow" })
-    .then(r => r.json())
-    .then(d => { arData = d; if(viewRep && viewRep.role==="HCA") renderAr(viewRep); })
-    .catch(() => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
-}
-function renderAr(who){
-  const recs = arRecordsFor(arData, who.ar);
-  const total = recs.reduce((s,r)=> s + (Number(r.balance||r.Balance||0)||0), 0);
-  const oldest = recs.reduce((m,r)=> Math.max(m, Number(r.daysOverdue||r.days||0)||0), 0);
-  setBody("arBody", `<div class="metrics">${metric("$"+total.toLocaleString(),"Balance","red")}${metric(recs.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
-  $("arNote").textContent = recs.length ? "" : "No open AR for this name.";
-}
-function arRecordsFor(d, arName){
-  if(!d || !arName) return [];
-  if(d.byRep && d.byRep[arName]) return d.byRep[arName];
-  const list = d.records || d.invoices || d.rows || [];
-  return Array.isArray(list) ? list.filter(r => norm(r.rep||r.Rep||r.hca) === norm(arName)) : [];
-}
-
-function loadClearanceCard(){
-  onValue(ref(db, DB_CLEARANCE), snap => {
-    const d = snap.val() || {};
-    const units = Array.isArray(d.units) ? d.units : (d.units ? Object.values(d.units) : []);
-    const avail = units.filter(u => u.status === "Available").length;
-    setBody("clearanceBody", `<div class="metrics">${metric(avail,"Available","orange")}${metric(units.length,"Total units","orange")}</div>`);
-  }, err => setBody("clearanceBody", '<div class="soon">Clearance unavailable.</div>'));
-}
-</script>
-</body>
-</html>
+  setBody("soldBody",
