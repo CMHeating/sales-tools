@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HCA CRM | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--muted2:rgba(255,255,255,.38);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.15),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.26),transparent 60%);pointer-events:none}
+.screen{position:relative;z-index:1;min-height:100vh}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}
+.title h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.05}
+.title p{font-size:13px;color:var(--muted);margin-top:6px;max-width:780px}
+.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.status-pill{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:1px solid rgba(245,158,11,.35);color:#fde68a;background:rgba(245,158,11,.12);white-space:nowrap}
+.status-pill.ok{color:#bbf7d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12)}
+.status-pill.bad{color:#fecaca;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
+.back-link{color:var(--muted);font-size:12px;text-decoration:none}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-block}
+.adminbar{display:none;padding:14px 22px;border-bottom:1px solid var(--line);align-items:center;gap:12px;flex-wrap:wrap;background:rgba(201,125,16,.06)}
+.adminbar.show{display:flex}
+.adminbar label{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#ffd399}
+.select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:10px 14px;outline:none;min-width:220px}
+.select option{color:#0a1628}
+.main{padding:20px 22px 44px}
+.hello{font-family:"Playfair Display",serif;font-size:22px;margin-bottom:4px}
+.hello small{font-family:Outfit,sans-serif;font-size:13px;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--muted2);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;min-height:150px}
+.card.ar{border-left-color:var(--red)}
+.card.sold{border-left-color:var(--green)}
+.card.followup{border-left-color:var(--blue)}
+.card.activities{border-left-color:var(--yellow)}
+.card.clearance{border-left-color:var(--orange)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h2{font-family:"Playfair Display",serif;font-size:19px}
+.card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.card-body{flex:1;display:flex;flex-direction:column;justify-content:center}
+.metrics{display:flex;gap:22px;flex-wrap:wrap}
+.metric{min-width:80px}
+.metric strong{display:block;font-size:30px;line-height:1}
+.metric span{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-top:5px}
+.metric.red strong{color:#fecaca}.metric.green strong{color:#bbf7d0}.metric.blue strong{color:#bfdbfe}.metric.yellow strong{color:#fde68a}.metric.orange strong{color:#ffd399}
+.card-foot{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-note{font-size:12px;color:var(--muted2)}
+.loading{color:var(--muted);font-size:14px}
+.soon{color:var(--muted2);font-size:13px;font-style:italic}
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;gap:16px}
+.locked .lock{font-size:52px}
+.locked h2{font-family:"Playfair Display",serif;font-size:26px}
+.locked p{color:var(--muted);max-width:520px}
+.footer-note{margin-top:26px;color:var(--muted2);font-size:12px;line-height:1.5}
+#content{display:none}
+#content.show{display:block}
+.hidden{display:none!important}
+@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}.title h1{font-size:38px}}
+@media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <div class="title">
+      <div class="badge">CM Heating</div>
+      <h1>HCA CRM</h1>
+      <p>Your pipeline in one place — AR, sold jobs, follow-ups, activities, and clearance stock. Signs you in once and shows your numbers.</p>
+    </div>
+    <div class="top-actions">
+      <div id="statusBadge" class="status-pill bad">○ Login required</div>
+      <button class="btn" id="btnLogin" type="button">Log in</button>
+      <button class="btn hidden" id="btnLogout" type="button">Log out</button>
+      <a class="back-link" href="index.html">← HCA Toolkit</a>
+    </div>
+  </header>
+
+  <div id="adminBar" class="adminbar">
+    <label for="viewAs">Viewing as</label>
+    <select id="viewAs" class="select"></select>
+  </div>
+
+  <div id="locked" class="locked">
+    <div class="lock">🔒</div>
+    <h2>Staff login required</h2>
+    <p>Tap <b>Log in</b> and use your name + the same PIN you use for the other HCA tools.</p>
+  </div>
+
+  <div id="content">
+    <main class="main">
+      <div class="hello" id="hello">—</div>
+
+      <div class="grid">
+        <!-- AR -->
+        <div class="card ar">
+          <div class="card-head"><h2>Accounts Receivable</h2><span class="tag">Your open invoices</span></div>
+          <div class="card-body"><div id="arBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="arNote"></span><a class="btn" href="ar-collections.html">Open AR</a></div>
+        </div>
+
+        <!-- SOLD -->
+        <div class="card sold">
+          <div class="card-head"><h2>Sold Jobs</h2><span class="tag">In install ops</span></div>
+          <div class="card-body"><div id="soldBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="soldNote"></span><a class="btn" href="sold-job-tracker.html">Open Sold Tracker</a></div>
+        </div>
+
+        <!-- FOLLOW-UP -->
+        <div class="card followup">
+          <div class="card-head"><h2>Follow-Ups</h2><span class="tag">Open leads</span></div>
+          <div class="card-body"><div id="followupBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="followupNote"></span><a class="btn" id="followupLink" href="follow-up-tracker.html">Open Follow-Up</a></div>
+        </div>
+
+        <!-- ACTIVITIES -->
+        <div class="card activities">
+          <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
+          <div class="card-body"><div id="activitiesBody" class="soon">Coming soon — will show your ride-alongs, self-gen, install visits, and follow-ups logged in the daily recap.</div></div>
+          <div class="card-foot"><span class="card-note"></span></div>
+        </div>
+
+        <!-- CLEARANCE (shared) -->
+        <div class="card clearance">
+          <div class="card-head"><h2>Clearance</h2><span class="tag">Shared — sell from stock</span></div>
+          <div class="card-body"><div id="clearanceBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="clearanceNote"></span><a class="btn" href="clearance.html">Open Clearance</a></div>
+        </div>
+      </div>
+
+      <p class="footer-note">All numbers load from the CM Heating database after login and are scoped to you. Admins can view another rep with the selector up top. CM Heating · Internal HCA Tool.</p>
+    </main>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+/* ---- Roster + name reconciliation across the four feeds ----
+   short  = auth roster name (login)
+   full   = Firebase full name (cmh_followup_tracker / cmh_sold_tracker)
+   ar     = AR /exec rep-name spelling (verify at AR-card build; blank = not an HCA in AR)
+   Admins (office) have no HCA pipeline of their own — role ADMIN, no full/ar. */
+const USERS = [
+  { role:"ADMIN", short:"Geoff",   email:"geoffrey.simons@cmheating.com" },
+  { role:"ADMIN", short:"Amy",     email:"amy@cmheating.com" },
+  { role:"ADMIN", short:"Laura",   email:"laura.weiss@cmheating.com" },
+  { role:"ADMIN", short:"Jazryn",  email:"jazryn.delacruz@cmheating.com" },
+  { role:"ADMIN", short:"Sabrina", email:"sabrina.kennard@cmheating.com" },
+  { role:"ADMIN", short:"Jen",     email:"jennifer@cmheating.com" },
+  { role:"ADMIN", short:"Brittny", email:"bmiller@cmheating.com" },
+  { role:"ADMIN", short:"Vanessa", email:"vanessa.williams@cmheating.com" },
+  { role:"HCA", short:"Amber",   email:"amber.maddalena@cmheating.com", full:"Amber Maddalena",   ar:"Amber Maddalena" },
+  { role:"HCA", short:"Chester", email:"chester.granard@cmheating.com", full:"Chester Granard",   ar:"Chester Granard" },
+  { role:"HCA", short:"Davis",   email:"davis.diosdado@cmheating.com",  full:"Davis Diosdado",    ar:"Davis Diosdado" },
+  { role:"HCA", short:"Jay",     email:"javierre.milo@cmheating.com",   full:"Javierre Milo",     ar:"Javierre Milo" },
+  { role:"HCA", short:"Joe",     email:"jchounramany@cmheating.com",    full:"Joe Chounramany",   ar:"Joe Chounramany" },
+  { role:"HCA", short:"Joseph",  email:"joseph.ruble@cmheating.com",    full:"Joseph Ruble",      ar:"Joseph Ruble" },
+  { role:"HCA", short:"Kyle",    email:"kmcalister@cmheating.com",      full:"Kyle McAlister",    ar:"Kyle McAlister" },
+  { role:"HCA", short:"Samir",   email:"samir.khoury@cmheating.com",    full:"Samir Khoury",      ar:"Samir Khoury" },
+  { role:"HCA", short:"Trevor",  email:"trevor.bohm@cmheating.com",     full:"Trevor Bohm",       ar:"Trevor Bohm" },
+  { role:"HCA", short:"Adam",    email:"adam@cmheating.com",            full:"Adam Weberg",       ar:"Adam Weberg" }
+];
+
+const DB_FOLLOWUP  = "cmh_followup_tracker";
+const DB_SOLD      = "cmh_sold_tracker";
+const DB_CLEARANCE = "cmh_clearance";
+const AR_EXEC = "https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec";
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+const $ = id => document.getElementById(id);
+const norm = v => String(v || "").trim().toLowerCase();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const findByEmail = e => USERS.find(u => norm(u.email) === norm(e)) || null;
+function findByName(input){
+  const t = norm(input); if(!t) return null;
+  const exact = USERS.find(u => u.short.toLowerCase() === t);
+  if (exact) return exact;
+  const m = USERS.filter(u => u.short.toLowerCase().startsWith(t));
+  return m.length === 1 ? m[0] : null;
+}
+function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
+function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.className="status-pill "+cls; }
+
+let currentUser = null;   // {role,short,email,...}
+let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
+
+async function login(){
+  const name = prompt("Enter your name:"); if(name===null) return;
+  const user = findByName(name);
+  if(!user){ alert("Name not recognized. Try your first name, exactly as listed."); return; }
+  const pin = prompt(`Enter PIN for ${user.short}:`); if(pin===null) return;
+  try{ await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin)); }
+  catch(err){ console.error("Login error:", err); alert("Incorrect PIN, or your Auth user isn't set up yet."); }
+}
+$("btnLogin").addEventListener("click", login);
+$("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
+
+onAuthStateChanged(auth, user => {
+  const known = user ? findByEmail(user.email) : null;
+  if(!known){ currentUser=null; lock(); if(user) signOut(auth).catch(e=>console.error(e)); return; }
+  currentUser = known;
+  unlock();
+});
+
+function lock(){
+  $("locked").classList.remove("hidden");
+  $("content").classList.remove("show");
+  $("adminBar").classList.remove("show");
+  $("btnLogin").classList.remove("hidden");
+  $("btnLogout").classList.add("hidden");
+  badge("○ Login required", "bad");
+}
+
+function unlock(){
+  $("locked").classList.add("hidden");
+  $("content").classList.add("show");
+  $("btnLogin").classList.add("hidden");
+  $("btnLogout").classList.remove("hidden");
+  badge(`● ${currentUser.role}: ${currentUser.short}`, "ok");
+
+  const isAdmin = currentUser.role === "ADMIN";
+  if(isAdmin){
+    const sel = $("viewAs");
+    sel.innerHTML = USERS.filter(u => u.role === "HCA")
+      .map(u => `<option value="${esc(u.email)}">${esc(u.full || u.short)}</option>`).join("");
+    $("adminBar").classList.add("show");
+    viewRep = USERS.find(u => u.email === sel.value) || null;
+    sel.onchange = () => { viewRep = USERS.find(u => u.email === sel.value) || null; loadCards(); };
+  } else {
+    $("adminBar").classList.remove("show");
+    viewRep = currentUser;
+  }
+  loadCards();
+}
+
+/* ---- Cards ---- */
+function loadCards(){
+  const who = viewRep;
+  $("hello").innerHTML = who
+    ? `${esc(who.full || who.short)} <small>· your pipeline</small>`
+    : `— <small>select a rep above</small>`;
+
+  loadClearanceCard();
+  if(!who || who.role !== "HCA"){
+    setBody("arBody", '<div class="soon">Select a rep to view AR.</div>');
+    setBody("soldBody", '<div class="soon">Select a rep.</div>');
+    setBody("followupBody", '<div class="soon">Select a rep.</div>');
+    return;
+  }
+  loadFollowupCard(who);
+  loadSoldCard(who);
+  loadArCard(who);
+}
+
+function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
+function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
+
+let followupData = null;
+function loadFollowupCard(who){
+  $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  if(followupData){ renderFollowup(who); return; }
+  onValue(ref(db, DB_FOLLOWUP), snap => {
+    followupData = snap.val() || {};
+    if(viewRep && viewRep.role === "HCA") renderFollowup(viewRep);
+  }, err => setBody("followupBody", '<div class="soon">Follow-up data unavailable.</div>'));
+}
+function renderFollowup(who){
+  const leads = (followupData && Array.isArray(followupData.leads) ? followupData.leads : [])
+    .filter(l => norm(l.hca) === norm(who.full));
+  const never = leads.filter(l => !l.followUps).length;
+  setBody("followupBody", `<div class="metrics">${metric(leads.length,"Open","blue")}${metric(never,"Never touched","blue")}</div>`);
+  $("followupNote").textContent = leads.length ? "" : "No open leads.";
+}
+
+let soldData = null;
+function loadSoldCard(who){
+  if(soldData){ renderSold(who); return; }
+  onValue(ref(db, DB_SOLD), snap => {
+    soldData = snap.val() || {};
+    if(viewRep && viewRep.role === "HCA") renderSold(viewRep);
+  }, err => setBody("soldBody", '<div class="soon">Sold data unavailable.</div>'));
+}
+function renderSold(who){
+  let jobs = [];
+  if(soldData && soldData.jobs){
+    const all = Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs);
+    jobs = all.filter(j => norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full));
+  }
+  const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
+  setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
+  $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
+}
+
+let arData = null;
+function loadArCard(who){
+  if(arData){ renderAr(who); return; }
+  setBody("arBody", '<div class="loading">Loading AR…</div>');
+  fetch(AR_EXEC + "?action=list", { redirect:"follow" })
+    .then(r => r.json())
+    .then(d => { arData = d; if(viewRep && viewRep.role==="HCA") renderAr(viewRep); })
+    .catch(() => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
+}
+function renderAr(who){
+  const recs = arRecordsFor(arData, who.ar);
+  const total = recs.reduce((s,r)=> s + (Number(r.balance||r.Balance||0)||0), 0);
+  const oldest = recs.reduce((m,r)=> Math.max(m, Number(r.daysOverdue||r.days||0)||0), 0);
+  setBody("arBody", `<div class="metrics">${metric("$"+total.toLocaleString(),"Balance","red")}${metric(recs.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
+  $("arNote").textContent = recs.length ? "" : "No open AR for this name.";
+}
+function arRecordsFor(d, arName){
+  if(!d || !arName) return [];
+  if(d.byRep && d.byRep[arName]) return d.byRep[arName];
+  const list = d.records || d.invoices || d.rows || [];
+  return Array.isArray(list) ? list.filter(r => norm(r.rep||r.Rep||r.hca) === norm(arName)) : [];
+}
+
+function loadClearanceCard(){
+  onValue(ref(db, DB_CLEARANCE), snap => {
+    const d = snap.val() || {};
+    const units = Array.isArray(d.units) ? d.units : (d.units ? Object.values(d.units) : []);
+    const avail = units.filter(u => u.status === "Available").length;
+    setBody("clearanceBody", `<div class="metrics">${metric(avail,"Available","orange")}${metric(units.length,"Total units","orange")}</div>`);
+  }, err => setBody("clearanceBody", '<div class="soon">Clearance unavailable.</div>'));
+}
+</script>
+</body>
+</html>
