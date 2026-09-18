@@ -36,6 +36,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .card.followup{border-left-color:var(--blue)}
 .card.activities{border-left-color:var(--yellow)}
 .card.clearance{border-left-color:var(--orange)}
+.card.install{border-left-color:#14b8a6}
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .card-head h2{font-family:"Playfair Display",serif;font-size:19px}
 .card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
@@ -116,6 +117,13 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
           <div class="card-head"><h2>Sold Jobs</h2><span class="tag">In install ops</span></div>
           <div class="card-body"><div id="soldBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="soldNote"></span><a class="btn" href="sold-job-tracker.html">Open Sold Tracker</a></div>
+        </div>
+
+        <!-- INSTALL AVAILABILITY (opens the live booking app; same login usually carries) -->
+        <div class="card install">
+          <div class="card-head"><h2>Install Availability</h2><span class="tag">Grab a slot</span></div>
+          <div class="card-body"><div id="installBody" class="soon">Open the live install board to grab a slot and close with a confirmed date. Your login usually carries — if not, sign in as usual.</div></div>
+          <div class="card-foot"><span class="card-note"></span><a class="btn" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener">Open Install Availability</a></div>
         </div>
 
         <!-- FOLLOW-UP -->
