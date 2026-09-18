@@ -1,68 +1,379 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="apple-mobile-web-app-title" content="HCA Tools" />
-<title>HCA Tools | CM Heating</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HCA CRM | CM Heating</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}body{font-family:'Outfit',sans-serif;background:#0a1628;color:#fff;min-height:100vh;min-height:-webkit-fill-available;overflow-x:hidden}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.14) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(26,53,96,.42) 0%,transparent 60%);pointer-events:none;z-index:0}.screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}.hdr{padding:28px 28px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;animation:fadeDown .5s ease both}.badge{display:inline-block;background:#c97d10;color:#fff;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}.hdr h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;line-height:1.1;color:#fff}.hdr p{font-size:13px;color:rgba(255,255,255,.48);margin-top:4px}.clock{text-align:right;flex-shrink:0}.clock-time{font-family:'Playfair Display',serif;font-size:26px;font-weight:600;color:#fff;line-height:1}.clock-date{font-size:12px;color:rgba(255,255,255,.42);margin-top:4px}.divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);margin:24px 28px;animation:fadeDown .5s .1s ease both}.section-lbl{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.62);padding:0 20px;margin-bottom:14px;animation:fadeDown .5s .15s ease both}.cards{padding:0 20px;display:flex;flex-direction:column;gap:12px}.tool-card{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px 20px;text-decoration:none;color:#fff;cursor:pointer;transition:background .2s,transform .15s;-webkit-user-select:none;user-select:none}.tool-card:active{transform:scale(.98);background:rgba(255,255,255,.09)}.tool-card:hover{background:rgba(255,255,255,.08)}.tool-card.c0{animation:slideUp .45s .12s ease both;border-left:5px solid #e74c3c;background:rgba(220,38,38,.18);border-color:rgba(248,113,113,.38)}.tool-card.c1{animation:slideUp .45s .20s ease both;border-left:3px solid #c97d10}.tool-card.c2{animation:slideUp .45s .28s ease both;border-left:3px solid #1a7a4a}.tool-card.c3{animation:slideUp .45s .36s ease both;border-left:3px solid #2a6cc4}.tool-card.c4{animation:slideUp .45s .44s ease both;border-left:3px solid #0ea5e9}.tool-card.c5{animation:slideUp .45s .52s ease both;border-left:3px solid #8b3fc8}.tool-card.c6{animation:slideUp .45s .60s ease both;border-left:3px solid #c0392b}.tool-card.c7{animation:slideUp .45s .68s ease both;border-left:3px solid #166a3e}.tool-card.c8{animation:slideUp .45s .76s ease both;border-left:3px solid #0ea5e9}.tool-card.c9{animation:slideUp .45s .84s ease both;border-left:3px solid #f97316}.card-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}.tool-card.c0 .card-icon{background:rgba(231,76,60,.22)}.tool-card.c1 .card-icon{background:rgba(201,125,16,.18)}.tool-card.c2 .card-icon{background:rgba(26,122,74,.18)}.tool-card.c3 .card-icon{background:rgba(42,108,196,.18)}.tool-card.c4 .card-icon{background:rgba(14,165,233,.18)}.tool-card.c5 .card-icon{background:rgba(139,63,200,.18)}.tool-card.c6 .card-icon{background:rgba(192,57,43,.18)}.tool-card.c7 .card-icon{background:rgba(22,106,62,.18)}.tool-card.c8 .card-icon{background:rgba(14,165,233,.18)}.tool-card.c9 .card-icon{background:rgba(249,115,22,.20)}.card-body{flex:1}.card-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:3px}.card-desc{font-size:12px;color:rgba(255,255,255,.52);line-height:1.45}.card-tag{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-top:7px;display:inline-block}.tool-card.c0 .card-tag{background:rgba(231,76,60,.24);color:#ffb4aa}.tool-card.c1 .card-tag{background:rgba(201,125,16,.2);color:#e9960f}.tool-card.c2 .card-tag{background:rgba(26,122,74,.2);color:#2ea86a}.tool-card.c3 .card-tag{background:rgba(42,108,196,.2);color:#5b9bd5}.tool-card.c4 .card-tag{background:rgba(14,165,233,.20);color:#38bdf8}.tool-card.c5 .card-tag{background:rgba(139,63,200,.2);color:#b57fe0}.tool-card.c6 .card-tag{background:rgba(192,57,43,.2);color:#e74c3c}.tool-card.c7 .card-tag{background:rgba(22,106,62,.2);color:#2ea86a}.tool-card.c8 .card-tag{background:rgba(14,165,233,.20);color:#38bdf8}.tool-card.c9 .card-tag{background:rgba(249,115,22,.22);color:#fdba74}.card-arrow{font-size:20px;color:rgba(255,255,255,.25);flex-shrink:0}.footer{padding:22px 28px 28px;text-align:center;animation:fadeUp .5s .6s ease both}.footer p{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:.04em}.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(6px)}.modal-overlay.open{display:flex}.modal{background:#152238;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;animation:popIn .2s ease}.modal h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:5px}.modal p{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:18px;line-height:1.5}.name-list{display:flex;flex-direction:column;gap:7px;max-height:380px;overflow-y:auto}.name-btn{width:100%;padding:13px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-family:'Outfit',sans-serif;font-size:15px;font-weight:500;text-align:left;cursor:pointer;transition:background .15s,border-color .15s;display:flex;align-items:center;justify-content:space-between}.name-btn:hover,.name-btn:active{background:rgba(42,108,196,.25);border-color:#2a6cc4}.name-btn span{font-size:12px;color:rgba(255,255,255,.3)}.name-btn.pending{opacity:.65}.vpn-warning{display:flex;align-items:flex-start;gap:12px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px}.vpn-warning .vpn-icon{font-size:22px;flex-shrink:0;margin-top:1px}.vpn-warning .vpn-text{font-size:13px;color:rgba(255,255,255,.85);line-height:1.5;font-weight:500}.vpn-warning .vpn-text strong{color:#fff;display:block;margin-bottom:3px;font-size:14px}.modal-actions{display:flex;flex-direction:column;gap:8px}.btn-primary{width:100%;padding:13px 16px;background:#c97d10;border:none;border-radius:10px;color:#fff;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}.btn-primary:hover{background:#e9960f}.btn-secondary{width:100%;padding:11px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(255,255,255,.7);font-family:'Outfit',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;text-decoration:none;text-align:center;display:block}.btn-secondary:hover{background:rgba(255,255,255,.1)}.modal-cancel{width:100%;margin-top:4px;padding:11px;background:transparent;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.3);font-family:'Outfit',sans-serif;font-size:14px;cursor:pointer}@keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}@keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeUp{from{opacity:0}to{opacity:1}}@media(min-width:700px){.hdr{padding:36px 36px 0}.hdr h1{font-size:34px}.cards{padding:0 28px}.divider{margin:28px 36px}.section-lbl{padding:0 28px}}@media(min-width:900px){.cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tool-card{flex-direction:column;align-items:flex-start;gap:12px;height:100%}.card-arrow{display:none}.tool-card.c0{grid-column:1/-1;flex-direction:row;align-items:center}.tool-card.c0 .card-title{font-size:22px}.tool-card.c0 .card-desc{font-size:14px}}
+:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--muted2:rgba(255,255,255,.38);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.15),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.26),transparent 60%);pointer-events:none}
+.screen{position:relative;z-index:1;min-height:100vh}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}
+.title h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.05}
+.title p{font-size:13px;color:var(--muted);margin-top:6px;max-width:780px}
+.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.status-pill{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:1px solid rgba(245,158,11,.35);color:#fde68a;background:rgba(245,158,11,.12);white-space:nowrap}
+.status-pill.ok{color:#bbf7d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12)}
+.status-pill.bad{color:#fecaca;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
+.back-link{color:var(--muted);font-size:12px;text-decoration:none}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-block}
+.adminbar{display:none;padding:14px 22px;border-bottom:1px solid var(--line);align-items:center;gap:12px;flex-wrap:wrap;background:rgba(201,125,16,.06)}
+.adminbar.show{display:flex}
+.adminbar label{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#ffd399}
+.select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:10px 14px;outline:none;min-width:220px}
+.select option{color:#0a1628}
+.main{padding:20px 22px 44px}
+.hello{font-family:"Playfair Display",serif;font-size:22px;margin-bottom:4px}
+.hello small{font-family:Outfit,sans-serif;font-size:13px;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--muted2);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;min-height:150px}
+.card.ar{border-left-color:var(--red)}
+.card.sold{border-left-color:var(--green)}
+.card.followup{border-left-color:var(--blue)}
+.card.activities{border-left-color:var(--yellow)}
+.card.clearance{border-left-color:var(--orange)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h2{font-family:"Playfair Display",serif;font-size:19px}
+.card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.card-body{flex:1;display:flex;flex-direction:column;justify-content:center}
+.metrics{display:flex;gap:22px;flex-wrap:wrap}
+.metric{min-width:80px}
+.metric strong{display:block;font-size:30px;line-height:1}
+.metric span{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-top:5px}
+.metric.red strong{color:#fecaca}.metric.green strong{color:#bbf7d0}.metric.blue strong{color:#bfdbfe}.metric.yellow strong{color:#fde68a}.metric.orange strong{color:#ffd399}
+.card-foot{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-note{font-size:12px;color:var(--muted2)}
+.loading{color:var(--muted);font-size:14px}
+.soon{color:var(--muted2);font-size:13px;font-style:italic}
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;gap:16px}
+.locked .lock{font-size:52px}
+.locked h2{font-family:"Playfair Display",serif;font-size:26px}
+.locked p{color:var(--muted);max-width:520px}
+.loginform{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px}
+.linput{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:16px;padding:12px 14px;outline:none;min-width:160px}
+.linput::placeholder{color:var(--muted2)}
+.btn.primary{background:rgba(201,125,16,.22);border-color:rgba(201,125,16,.55);color:#ffd399}
+.loginmsg{margin-top:10px;font-size:13px;color:#fecaca;min-height:18px}
+.footer-note{margin-top:26px;color:var(--muted2);font-size:12px;line-height:1.5}
+#content{display:none}
+#content.show{display:block}
+.hidden{display:none!important}
+@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}.title h1{font-size:38px}}
+@media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
 </style>
 </head>
 <body>
 <div class="screen">
-  <div class="hdr">
-    <div class="hdr-left">
+  <header class="top">
+    <div class="title">
       <div class="badge">CM Heating</div>
-      <h1>HCA Tools</h1>
-      <p>Home Comfort Advisor · Field Kit</p>
+      <h1>HCA CRM</h1>
+      <p>Your pipeline in one place — AR, sold jobs, follow-ups, activities, and clearance stock. Signs you in once and shows your numbers.</p>
     </div>
-    <div class="clock"><div class="clock-time" id="clock-time">--:--</div><div class="clock-date" id="clock-date">---</div></div>
+    <div class="top-actions">
+      <div id="statusBadge" class="status-pill bad">○ Login required</div>
+      <button class="btn" id="btnLogin" type="button">Log in</button>
+      <button class="btn hidden" id="btnLogout" type="button">Log out</button>
+      <a class="back-link" href="index.html">← HCA Toolkit</a>
+    </div>
+  </header>
+
+  <div id="adminBar" class="adminbar">
+    <label for="viewAs">Viewing as</label>
+    <select id="viewAs" class="select"></select>
   </div>
-  <div class="divider"></div>
-  <div class="section-lbl">Select a tool</div>
-  <div class="cards">
-    <a class="tool-card c0" href="crm.html"><div class="card-icon">🎯</div><div class="card-body"><div class="card-title">HCA CRM</div><div class="card-desc">Your whole pipeline in one place — AR, sold jobs, follow-ups, and clearance stock. Sign in once and see your numbers.</div><span class="card-tag">Your dashboard</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c6" href="comfort-club-rental-process.html"><div class="card-icon">🚨</div><div class="card-body"><div class="card-title">ServiceTitan Comfort Club Rental Process</div><div class="card-desc">Start here for every Comfort Club rental sale — required process, contract setup, credit review, and penny test.</div><span class="card-tag">Start here</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c2" href="install-check.html"><div class="card-icon">📋</div><div class="card-body"><div class="card-title">Next-Day Install Check</div><div class="card-desc">Verify tomorrow's install — materials, layout, billing, sizing, discounts — then email the HCA good-to-go or needs-attention.</div><span class="card-tag">Pre-install</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c1" href="hca-layout-cheatsheet.html"><div class="card-icon">🧰</div><div class="card-body"><div class="card-title">Install Materials</div><div class="card-desc">The Layout-form materials cheat sheet — the example of what to stage for the job.</div><span class="card-tag">Materials</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c8" href="hca-field-guide.html"><div class="card-icon">📚</div><div class="card-body"><div class="card-title">HCA Field Guide</div><div class="card-desc">Fast answers for financing, rebates, jurisdictions, electrical, labor times, thermostat compatibility, permitting, and install rules.</div><span class="card-tag">Field Intelligence</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c1" href="caas-calculator.html"><div class="card-icon">💰</div><div class="card-body"><div class="card-title">Comfort Club vs. Buy</div><div class="card-desc">Run the numbers live — show the true cost of buying vs. Comfort Club on any quote.</div><span class="card-tag">On consult</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c2" href="hca-caas-quoting.html"><div class="card-icon">🧾</div><div class="card-body"><div class="card-title">HCA CaaS Quoting Tool</div><div class="card-desc">Governed COD + rental pricing for every AHRI-verified package — locked MSRPs, monthly payments, and residuals by size.</div><span class="card-tag">Governed pricing</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c3" href="hca-top-sellers.html"><div class="card-icon">🏆</div><div class="card-body"><div class="card-title">HCA Top Sellers — Laminated</div><div class="card-desc">Print-ready field reference: top-20 sold products with governed rental monthly, plus the full COD MSRP grid by size.</div><span class="card-tag">Print &amp; laminate</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c2" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener"><div class="card-icon">📅</div><div class="card-body"><div class="card-title">Install Availability</div><div class="card-desc">Grab open install slots in real time — close with a confirmed date on the spot.</div><span class="card-tag">Close the deal</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c3" href="follow-up-tracker.html"><div class="card-icon">📋</div><div class="card-body"><div class="card-title">My Follow-Up Tracker</div><div class="card-desc">Sign in with your CM Heating Google account to see your open leads.</div><span class="card-tag">Post consult</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c9" href="ar-collections.html"><div class="card-icon">💵</div><div class="card-body"><div class="card-title">AR Collections</div><div class="card-desc">Outstanding install invoices by rep — balances, aging, notes, and mark-paid. Pulls live from the AR Log.</div><span class="card-tag">Collections</span></div><div class="card-arrow">›</div></a>
-    <div class="tool-card c4" onclick="openSoldPicker()"><div class="card-icon">✅</div><div class="card-body"><div class="card-title">My Sold Job Tracker</div><div class="card-desc">Track sold jobs after the sale — TBD blockers, financing, permits, install dates, registration, duct cleaning, and done follow-up.</div><span class="card-tag">After sale</span></div><div class="card-arrow">›</div></div>
-    <a class="tool-card c1" href="clearance.html"><div class="card-icon">🏷️</div><div class="card-body"><div class="card-title">Clearance Inventory</div><div class="card-desc">Warehouse equipment ready to move — live from the inventory sheet. Filter available vs. committed, spot aging stock, and copy a sell list. HCA login required.</div><span class="card-tag">Sell from stock</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c9" href="hca-1on1.html"><div class="card-icon">🤝</div><div class="card-body"><div class="card-title">Book HCA 1:1</div><div class="card-desc">Book your required biweekly 20-minute 1:1 with Geoff. Amy can see booked times and protect the dispatch board.</div><span class="card-tag">Every 2 weeks</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c5" href="https://iccloud.equifax.com/web/guest/home?p_p_state=maximized&p_p_mode=view&refererPlid=282&_com_liferay_login_web_portlet_LoginPortlet_mvcRenderCommandName=%2Flogin%2Flogin&saveLastPath=false&p_p_id=com_liferay_login_web_portlet_LoginPortlet&p_p_lifecycle=0&_com_liferay_login_web_portlet_LoginPortlet_redirect=%2F" target="_blank" rel="noopener"><div class="card-icon">🏦</div><div class="card-body"><div class="card-title">Comfort Club Credit Check</div><div class="card-desc">Equifax InterConnect — run credit approval for Comfort Club enrollment on the spot.</div><span class="card-tag">Credit approval</span></div><div class="card-arrow">›</div></a>
-    <div class="tool-card c6" onclick="openRise()"><div class="card-icon">🔥</div><div class="card-body"><div class="card-title">RISE 2.0</div><div class="card-desc">Heat load calculations and internal HCA tools. Requires Global Protect VPN.</div><span class="card-tag">Requires VPN</span></div><div class="card-arrow">›</div></div>
-    <a class="tool-card c7" href="investment-calculator.html"><div class="card-icon">📈</div><div class="card-body"><div class="card-title">Invest the Difference</div><div class="card-desc">Show what happens when they invest instead of buy — compound interest vs buy cost, with inflation.</div><span class="card-tag">Comfort Club closer</span></div><div class="card-arrow">›</div></a>
+
+  <div id="locked" class="locked">
+    <div class="lock">🔒</div>
+    <h2>Staff login required</h2>
+    <p>Enter your first name and the same PIN you use for the other HCA tools.</p>
+    <form id="loginForm" class="loginform" autocomplete="off">
+      <input id="fName" class="linput" type="text" placeholder="First name" autocomplete="off">
+      <input id="fPin"  class="linput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off">
+      <button id="fSubmit" class="btn primary" type="submit">Sign in</button>
+    </form>
+    <div id="loginMsg" class="loginmsg"></div>
   </div>
-  <div class="footer"><p>CM Heating · Internal HCA Tool · Not for distribution</p></div>
+
+  <div id="content">
+    <main class="main">
+      <div class="hello" id="hello">—</div>
+
+      <div class="grid">
+        <!-- AR -->
+        <div class="card ar">
+          <div class="card-head"><h2>Accounts Receivable</h2><span class="tag">Your open invoices</span></div>
+          <div class="card-body"><div id="arBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="arNote"></span><a class="btn" href="ar-collections.html">Open AR</a></div>
+        </div>
+
+        <!-- SOLD -->
+        <div class="card sold">
+          <div class="card-head"><h2>Sold Jobs</h2><span class="tag">In install ops</span></div>
+          <div class="card-body"><div id="soldBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="soldNote"></span><a class="btn" href="sold-job-tracker.html">Open Sold Tracker</a></div>
+        </div>
+
+        <!-- FOLLOW-UP -->
+        <div class="card followup">
+          <div class="card-head"><h2>Follow-Ups</h2><span class="tag">Open leads</span></div>
+          <div class="card-body"><div id="followupBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="followupNote"></span><a class="btn" id="followupLink" href="follow-up-tracker.html">Open Follow-Up</a></div>
+        </div>
+
+        <!-- ACTIVITIES -->
+        <div class="card activities">
+          <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
+          <div class="card-body"><div id="activitiesBody" class="soon">Coming soon — will show your ride-alongs, self-gen, install visits, and follow-ups logged in the daily recap.</div></div>
+          <div class="card-foot"><span class="card-note"></span></div>
+        </div>
+
+        <!-- CLEARANCE (shared) -->
+        <div class="card clearance">
+          <div class="card-head"><h2>Clearance</h2><span class="tag">Shared — sell from stock</span></div>
+          <div class="card-body"><div id="clearanceBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="clearanceNote"></span><a class="btn" href="clearance.html">Open Clearance</a></div>
+        </div>
+      </div>
+
+      <p class="footer-note">All numbers load from the CM Heating database after login and are scoped to you. Admins can view another rep with the selector up top. CM Heating · Internal HCA Tool.</p>
+    </main>
+  </div>
 </div>
-<div class="modal-overlay" id="modal-sold" onclick="closeOnOverlay(event,'modal-sold')"><div class="modal"><h2>Sold Job Tracker</h2><p>Select your name to view sold jobs, TBD blockers, active installs, and done follow-up.</p><div class="name-list" id="sold-name-list"></div><button class="modal-cancel" onclick="closeModal('modal-sold')">Cancel</button></div></div>
-<div class="modal-overlay" id="modal-rise" onclick="closeOnOverlay(event,'modal-rise')"><div class="modal"><h2>RISE 2.0</h2><p>Heat load calculations and HCA tools — Reliance internal platform.</p><div class="vpn-warning"><div class="vpn-icon">🔒</div><div class="vpn-text"><strong>Global Protect VPN required</strong>Make sure you're connected to Global Protect VPN before opening RISE 2.0, or the site won't load.</div></div><div class="modal-actions"><button class="btn-primary" onclick="openRiseApp()">I'm connected — Open RISE 2.0</button><a class="btn-secondary" href="https://acrobat.adobe.com/id/urn:aaid:sc:VA6C2:4ea8a4d8-44d6-4862-b9f7-ad247b8693f7" target="_blank" rel="noopener">📄 View RISE Instructions (PDF)</a><button class="modal-cancel" onclick="closeModal('modal-rise')">Cancel</button></div></div></div>
-<script>
-function tick(){var now=new Date(),h=now.getHours(),m=now.getMinutes(),ampm=h>=12?'PM':'AM';h=h%12||12;document.getElementById('clock-time').textContent=h+':'+(m<10?'0':'')+m+' '+ampm;var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];document.getElementById('clock-date').textContent=days[now.getDay()]+' '+months[now.getMonth()]+' '+now.getDate()}tick();setInterval(tick,10000);
-var SOLD_HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joe Chounramany','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
-/* A11y: sequential top-to-bottom stagger (so the reordered cards animate in
-   order), and make the onclick div-cards keyboard-operable (button role + Enter/Space). */
-(function(){
-  var cards=document.querySelectorAll('.cards .tool-card');
-  Array.prototype.forEach.call(cards,function(c,i){
-    c.style.animationDelay=(0.12+i*0.05)+'s';
-    if(c.tagName==='DIV'){
-      c.setAttribute('role','button');
-      c.setAttribute('tabindex','0');
-      c.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();c.click();}});
-    }
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+/* ---- Roster + name reconciliation across the four feeds ----
+   short  = auth roster name (login)
+   full   = Firebase full name (cmh_followup_tracker / cmh_sold_tracker)
+   ar     = AR /exec rep-name spelling (verify at AR-card build; blank = not an HCA in AR)
+   Admins (office) have no HCA pipeline of their own — role ADMIN, no full/ar. */
+const USERS = [
+  { role:"ADMIN", short:"Geoff",   email:"geoffrey.simons@cmheating.com" },
+  { role:"ADMIN", short:"Amy",     email:"amy@cmheating.com" },
+  { role:"ADMIN", short:"Laura",   email:"laura.weiss@cmheating.com" },
+  { role:"ADMIN", short:"Jazryn",  email:"jazryn.delacruz@cmheating.com" },
+  { role:"ADMIN", short:"Sabrina", email:"sabrina.kennard@cmheating.com" },
+  { role:"ADMIN", short:"Jen",     email:"jennifer@cmheating.com" },
+  { role:"ADMIN", short:"Brittny", email:"bmiller@cmheating.com" },
+  { role:"ADMIN", short:"Vanessa", email:"vanessa.williams@cmheating.com" },
+  { role:"HCA", short:"Amber",   email:"amber.maddalena@cmheating.com", full:"Amber Maddalena",   ar:"Amber Maddalena" },
+  { role:"HCA", short:"Chester", email:"chester.granard@cmheating.com", full:"Chester Granard",   ar:"Chester Granard" },
+  { role:"HCA", short:"Davis",   email:"davis.diosdado@cmheating.com",  full:"Davis Diosdado",    ar:"Davis Diosdado" },
+  { role:"HCA", short:"Jay",     email:"javierre.milo@cmheating.com",   full:"Javierre Milo",     ar:"Javierre Milo" },
+  { role:"HCA", short:"Joe",     email:"jchounramany@cmheating.com",    full:"Joe Chounramany",   ar:"Joe Chounramany" },
+  { role:"HCA", short:"Joseph",  email:"joseph.ruble@cmheating.com",    full:"Joseph Ruble",      ar:"Joseph Ruble" },
+  { role:"HCA", short:"Kyle",    email:"kmcalister@cmheating.com",      full:"Kyle McAlister",    ar:"Kyle McAlister" },
+  { role:"HCA", short:"Samir",   email:"samir.khoury@cmheating.com",    full:"Samir Khoury",      ar:"Samir Khoury" },
+  { role:"HCA", short:"Trevor",  email:"trevor.bohm@cmheating.com",     full:"Trevor Bohm",       ar:"Trevor Bohm" },
+  { role:"HCA", short:"Adam",    email:"adam@cmheating.com",            full:"Adam Weberg",       ar:"Adam Weberg" }
+];
+
+const DB_FOLLOWUP  = "cmh_followup_tracker";
+const DB_SOLD      = "cmh_sold_tracker";
+const DB_CLEARANCE = "cmh_clearance";
+const AR_EXEC = "https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec";
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+const $ = id => document.getElementById(id);
+const norm = v => String(v || "").trim().toLowerCase();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const findByEmail = e => USERS.find(u => norm(u.email) === norm(e)) || null;
+function findByName(input){
+  const t = norm(input); if(!t) return null;
+  const exact = USERS.find(u => u.short.toLowerCase() === t);
+  if (exact) return exact;
+  const m = USERS.filter(u => u.short.toLowerCase().startsWith(t));
+  return m.length === 1 ? m[0] : null;
+}
+function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
+function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.className="status-pill "+cls; }
+
+let currentUser = null;   // {role,short,email,...}
+let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
+
+async function doLogin(name, pin){
+  const msg = $("loginMsg");
+  const user = findByName(name);
+  if(!user){ msg.textContent = "Name not recognized — use your first name exactly as listed."; return; }
+  msg.textContent = "Signing in…";
+  try{
+    await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin));
+    msg.textContent = "";
+  }catch(err){
+    console.error("Login error:", err);
+    msg.textContent = "Incorrect PIN, or your account isn't set up yet.";
+  }
+}
+const loginForm = $("loginForm");
+if(loginForm){
+  loginForm.addEventListener("submit", e => {
+    e.preventDefault();
+    doLogin($("fName").value.trim(), $("fPin").value.trim());
   });
-})();
-function openSoldPicker(){var list=document.getElementById('sold-name-list');list.innerHTML='';SOLD_HCAS.forEach(function(name){var btn=document.createElement('button');btn.className='name-btn';btn.innerHTML=name+'<span>Open ›</span>';btn.onclick=function(){window.open('sold-job-tracker.html?hca='+encodeURIComponent(name),'_blank');closeModal('modal-sold')};list.appendChild(btn)});document.getElementById('modal-sold').classList.add('open')}
-function openRise(){document.getElementById('modal-rise').classList.add('open')}function openRiseApp(){window.open('https://riseapp-prod.reliancecomfort.com/','_blank');closeModal('modal-rise')}function closeModal(id){document.getElementById(id).classList.remove('open')}function closeOnOverlay(e,id){if(e.target===document.getElementById(id))closeModal(id)}
+}
+const topLogin = $("btnLogin");
+if(topLogin){ topLogin.addEventListener("click", () => { const f=$("fName"); if(f) f.focus(); }); }
+$("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
+
+onAuthStateChanged(auth, user => {
+  const known = user ? findByEmail(user.email) : null;
+  if(!known){ currentUser=null; lock(); if(user) signOut(auth).catch(e=>console.error(e)); return; }
+  currentUser = known;
+  unlock();
+});
+
+function lock(){
+  $("locked").classList.remove("hidden");
+  $("content").classList.remove("show");
+  $("adminBar").classList.remove("show");
+  $("btnLogin").classList.remove("hidden");
+  $("btnLogout").classList.add("hidden");
+  badge("○ Login required", "bad");
+}
+
+function unlock(){
+  $("locked").classList.add("hidden");
+  $("content").classList.add("show");
+  $("btnLogin").classList.add("hidden");
+  $("btnLogout").classList.remove("hidden");
+  badge(`● ${currentUser.role}: ${currentUser.short}`, "ok");
+
+  const isAdmin = currentUser.role === "ADMIN";
+  if(isAdmin){
+    const sel = $("viewAs");
+    sel.innerHTML = USERS.filter(u => u.role === "HCA")
+      .map(u => `<option value="${esc(u.email)}">${esc(u.full || u.short)}</option>`).join("");
+    $("adminBar").classList.add("show");
+    // default: first HCA (admins have no pipeline of their own)
+    viewRep = USERS.find(u => u.email === sel.value) || null;
+    sel.onchange = () => { viewRep = USERS.find(u => u.email === sel.value) || null; loadCards(); };
+  } else {
+    $("adminBar").classList.remove("show");
+    viewRep = currentUser;   // HCA sees themselves
+  }
+  loadCards();
+}
+
+/* ---- Cards ---- */
+function loadCards(){
+  const who = viewRep;
+  $("hello").innerHTML = who
+    ? `${esc(who.full || who.short)} <small>· your pipeline</small>`
+    : `— <small>select a rep above</small>`;
+
+  loadClearanceCard();      // shared — always
+  if(!who || who.role !== "HCA"){
+    // admin with no HCA selected (shouldn't happen; selector defaults to an HCA)
+    setBody("arBody", '<div class="soon">Select a rep to view AR.</div>');
+    setBody("soldBody", '<div class="soon">Select a rep.</div>');
+    setBody("followupBody", '<div class="soon">Select a rep.</div>');
+    return;
+  }
+  loadFollowupCard(who);
+  loadSoldCard(who);
+  loadArCard(who);
+}
+
+function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
+function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
+
+/* FOLLOW-UP: read cmh_followup_tracker, scope to this rep's full name.
+   (Step-2 wiring; frame already reads live data — count of open leads for the rep.) */
+let followupData = null;
+function loadFollowupCard(who){
+  $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  if(followupData){ renderFollowup(who); return; }
+  onValue(ref(db, DB_FOLLOWUP), snap => {
+    followupData = snap.val() || {};
+    if(viewRep && viewRep.role === "HCA") renderFollowup(viewRep);
+  }, err => setBody("followupBody", '<div class="soon">Follow-up data unavailable.</div>'));
+}
+function renderFollowup(who){
+  const leads = (followupData && Array.isArray(followupData.leads) ? followupData.leads : [])
+    .filter(l => norm(l.hca) === norm(who.full));
+  const never = leads.filter(l => !l.followUps).length;
+  const stale = leads.filter(l => l.status && /stale/i.test(l.status)).length;
+  setBody("followupBody", `<div class="metrics">${metric(leads.length,"Open","blue")}${metric(never,"Never touched","blue")}</div>`);
+  $("followupNote").textContent = leads.length ? "" : "No open leads.";
+}
+
+/* SOLD: read cmh_sold_tracker for this rep. */
+let soldData = null;
+function loadSoldCard(who){
+  if(soldData){ renderSold(who); return; }
+  onValue(ref(db, DB_SOLD), snap => {
+    soldData = snap.val() || {};
+    if(viewRep && viewRep.role === "HCA") renderSold(viewRep);
+  }, err => setBody("soldBody", '<div class="soon">Sold data unavailable.</div>'));
+}
+function renderSold(who){
+  // sold node shape: hcas/<name> or jobs keyed; frame counts jobs for the rep by name.
+  let jobs = [];
+  if(soldData){
+    if(soldData.jobs){
+      const all = Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs);
+      jobs = all.filter(j => norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full));
+    }
+  }
+  const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
+  setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
+  $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
+}
+
+/* AR: fetch /exec?action=list, filter to this rep's AR name. */
+let arData = null;
+function loadArCard(who){
+  if(arData){ renderAr(who); return; }
+  setBody("arBody", '<div class="loading">Loading AR…</div>');
+  fetch(AR_EXEC + "?action=list", { redirect:"follow" })
+    .then(r => r.json())
+    .then(d => { arData = d; if(viewRep && viewRep.role==="HCA") renderAr(viewRep); })
+    .catch(() => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
+}
+function lastName(n){ const p = String(n||"").trim().split(/\s+/); return p.length ? norm(p[p.length-1]) : ""; }
+function renderAr(who){
+  // AR feed may spell names differently ("Jay Milo" vs "Javierre Milo"). Match on exact
+  // ar-name OR shared LAST NAME (stable across nickname/spelling differences).
+  const wantExact = norm(who.ar);
+  const wantLast  = lastName(who.full) || lastName(who.ar);
+  const rows = (arData && Array.isArray(arData.rows) ? arData.rows : [])
+    .filter(r => { const rn = norm(r.salesRep); return rn === wantExact || (wantLast && lastName(r.salesRep) === wantLast); });
+  const total  = rows.reduce((s,r)=> s + (Number(r.balance)||0), 0);
+  const oldest = rows.reduce((m,r)=> Math.max(m, Number(r.days)||0), 0);
+  setBody("arBody", `<div class="metrics">${metric("$"+Math.round(total).toLocaleString(),"Balance","red")}${metric(rows.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
+  $("arNote").textContent = rows.length ? "" : "No open AR for this name.";
+}
+
+/* CLEARANCE: shared count. */
+function loadClearanceCard(){
+  onValue(ref(db, DB_CLEARANCE), snap => {
+    const d = snap.val() || {};
+    const units = Array.isArray(d.units) ? d.units : (d.units ? Object.values(d.units) : []);
+    const avail = units.filter(u => u.status === "Available").length;
+    setBody("clearanceBody", `<div class="metrics">${metric(avail,"Available","orange")}${metric(units.length,"Total units","orange")}</div>`);
+  }, err => setBody("clearanceBody", '<div class="soon">Clearance unavailable.</div>'));
+}
 </script>
 </body>
 </html>
