@@ -330,9 +330,14 @@ function loadArCard(who){
     .then(d => { arData = d; if(viewRep && viewRep.role==="HCA") renderAr(viewRep); })
     .catch(() => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
 }
+function lastName(n){ const p = String(n||"").trim().split(/\s+/); return p.length ? norm(p[p.length-1]) : ""; }
 function renderAr(who){
+  // AR feed may spell names differently ("Jay Milo" vs "Javierre Milo"). Match on exact
+  // ar-name OR shared LAST NAME (stable across nickname/spelling differences).
+  const wantExact = norm(who.ar);
+  const wantLast  = lastName(who.full) || lastName(who.ar);
   const rows = (arData && Array.isArray(arData.rows) ? arData.rows : [])
-    .filter(r => norm(r.salesRep) === norm(who.ar));
+    .filter(r => { const rn = norm(r.salesRep); return rn === wantExact || (wantLast && lastName(r.salesRep) === wantLast); });
   const total  = rows.reduce((s,r)=> s + (Number(r.balance)||0), 0);
   const oldest = rows.reduce((m,r)=> Math.max(m, Number(r.days)||0), 0);
   setBody("arBody", `<div class="metrics">${metric("$"+Math.round(total).toLocaleString(),"Balance","red")}${metric(rows.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
