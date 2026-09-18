@@ -4,35 +4,246 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Clearance Inventory | CM Heating</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f1f5f9;--card:#ffffff;--text:#0f172a;--muted:#475569;--orange:#f58220;--border:#e2e8f0}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
-  header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--border)}
-  header img{height:34px}
-  header a{margin-left:auto;color:var(--orange);text-decoration:none;font-weight:600}
-  main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;max-width:520px;width:100%;box-shadow:0 4px 16px rgba(15,23,42,.06)}
-  h1{margin:0 0 6px;font-size:22px}
-  .sub{color:var(--muted);margin:0 0 18px}
-  p{line-height:1.5;margin:0 0 12px}
-  .btn{display:inline-block;margin-top:8px;background:var(--orange);color:#fff;text-decoration:none;font-weight:600;padding:12px 18px;border-radius:10px}
+:root{
+  --navy:#0a1628; --navy2:#111f36; --card:#16243c;
+  --blue:#005aa9; --orange:#f58220; --green:#16a34a;
+  --red:#dc2626; --white:#ffffff; --ink:#102033; --muted:#64748b;
+  --line:#d7e2ea; --soft:#f4f8fb;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--navy);color:var(--white);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 60px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:rgba(17,31,54,.96);border-radius:16px;padding:16px 18px}
+.top h1{font-size:22px;flex:1 1 260px}
+.top p{color:#cbd5e1;font-size:13px;width:100%;margin-top:4px}
+.btn{border:0;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer;font-size:14px;text-decoration:none;display:inline-block}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.ghost{background:rgba(255,255,255,.08);color:#fff}
+#statusBadge{font-weight:800;font-size:13px;padding:7px 12px;border-radius:999px;background:#172554;color:#fecaca}
+.notice{background:#172554;color:#bfdbfe;border-radius:14px;padding:14px 16px;margin:18px 0;font-size:14px}
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px;gap:16px}
+.locked .lock{font-size:52px}
+.locked h2{color:#fff}
+.locked p{color:#cbd5e1;max-width:520px}
+#content{display:none}
+#content.show{display:block}
+.hidden{display:none!important}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+.controls input[type=text]{flex:1 1 240px;padding:11px 13px;border-radius:10px;border:1px solid var(--line);font-size:15px;color:var(--ink)}
+.chip{border:0;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;background:rgba(255,255,255,.08);color:#cbd5e1}
+.chip.on{background:var(--orange);color:#102033}
+.meta{color:#94a3b8;font-size:12px;margin:6px 2px 0}
+.tablewrap{margin-top:12px;overflow-x:auto;background:#fff;border-radius:16px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;color:var(--ink);font-size:14px;min-width:760px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--soft);color:var(--blue);font-size:12px;text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800}
+.pill.avail{background:#dcfce7;color:#166534}
+.pill.committed{background:#fef3c7;color:#92400e}
+.model{font-weight:700}
+.notescell{color:#475569}
+.empty{color:#cbd5e1;text-align:center;padding:34px;font-size:14px}
 </style>
 </head>
 <body>
-<header>
-  <img src="https://cmheating.github.io/sales-tools/cm-logo.webp" alt="CM Heating">
-  <a href="index.html">← HCA Toolkit</a>
-</header>
-<main>
-  <div class="card">
+<div class="wrap">
+  <div class="top">
     <h1>Clearance Inventory</h1>
-    <p class="sub">Temporarily offline — being rebuilt</p>
-    <p>This page has been taken down while the clearance tool is rebuilt with proper access controls. Check with Geoff or the warehouse for current clearance stock.</p>
-    <p>The new clearance tool will appear on the HCA Toolkit when it is ready.</p>
-    <a class="btn" href="index.html">Back to the HCA Toolkit</a>
+    <span id="statusBadge">○ LOGIN REQUIRED</span>
+    <button class="btn blue" id="btnLogin" type="button">Log in</button>
+    <button class="btn ghost hidden" id="btnLogout" type="button">Log out</button>
+    <a class="btn ghost" href="index.html">← HCA Toolkit</a>
+    <p>CM Heating internal use only — current clearance / closeout equipment. Prices and units change; confirm with the warehouse before committing to a customer.</p>
   </div>
-</main>
+
+  <!-- Locked state: shown by default, stays shown unless Firebase confirms a valid user (fail closed) -->
+  <div id="locked" class="locked">
+    <div class="lock">🔒</div>
+    <h2>Staff login required</h2>
+    <p>Tap <b>Log in</b> and use your name + the same PIN you use for the Install Availability sheet.</p>
+  </div>
+
+  <!-- Protected content: hidden until authenticated; units load from the database, never stored in this file -->
+  <div id="content">
+    <div class="controls">
+      <input id="search" type="text" placeholder="Search model, notes, serial…" autocomplete="off">
+      <button class="chip on"  data-filter="all"       type="button">All</button>
+      <button class="chip"     data-filter="Available" type="button">Available</button>
+      <button class="chip"     data-filter="Committed" type="button">Committed</button>
+    </div>
+    <div class="meta" id="meta"></div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th><th>Status</th><th>Value</th><th>Condition / Notes</th>
+            <th>Serial</th><th>Order #</th><th>Customer</th><th>Order Date</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty" style="display:none">No clearance units loaded yet. An admin can run the clearance sync.</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+/* ---- Reused verbatim from financing-secure.html so the SAME PINs work ---- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+const INSTALL_USERS = [
+  { role:"ADMIN", name:"Geoff",   email:"geoffrey.simons@cmheating.com" },
+  { role:"ADMIN", name:"Amy",     email:"amy@cmheating.com" },
+  { role:"ADMIN", name:"Laura",   email:"laura.weiss@cmheating.com" },
+  { role:"ADMIN", name:"Jazryn",  email:"jazryn.delacruz@cmheating.com" },
+  { role:"ADMIN", name:"Sabrina", email:"sabrina.kennard@cmheating.com" },
+  { role:"ADMIN", name:"Jen",     email:"jennifer@cmheating.com" },
+  { role:"ADMIN", name:"Brittny", email:"bmiller@cmheating.com" },
+  { role:"ADMIN", name:"Vanessa", email:"vanessa.williams@cmheating.com" },
+  { role:"HCA",   name:"Amber",   email:"amber.maddalena@cmheating.com" },
+  { role:"HCA",   name:"Chester", email:"chester.granard@cmheating.com" },
+  { role:"HCA",   name:"Davis",   email:"davis.diosdado@cmheating.com" },
+  { role:"HCA",   name:"Jay",     email:"javierre.milo@cmheating.com" },
+  { role:"HCA",   name:"Joe",     email:"jchounramany@cmheating.com" },
+  { role:"HCA",   name:"Joseph",  email:"joseph.ruble@cmheating.com" },
+  { role:"HCA",   name:"Kyle",    email:"kmcalister@cmheating.com" },
+  { role:"HCA",   name:"Samir",   email:"samir.khoury@cmheating.com" },
+  { role:"HCA",   name:"Trevor",  email:"trevor.bohm@cmheating.com" },
+  { role:"HCA",   name:"Adam",    email:"adam@cmheating.com" }
+];
+
+const DB_CLEARANCE = "cmh_clearance";
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+let currentUser = null;
+let listenerStarted = false;
+let allUnits = [];
+let activeFilter = "all";
+
+const $ = id => document.getElementById(id);
+const norm = v => String(v || "").trim().toLowerCase();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const findByEmail = e => INSTALL_USERS.find(u => norm(u.email) === norm(e)) || null;
+function findByName(input){
+  const t = norm(input); if(!t) return null;
+  const exact = INSTALL_USERS.find(u => u.name.toLowerCase() === t);
+  if (exact) return exact;
+  const m = INSTALL_USERS.filter(u => u.name.toLowerCase().startsWith(t));
+  return m.length === 1 ? m[0] : null;
+}
+function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
+function badge(txt,color){ const b=$("statusBadge"); b.textContent=txt; b.style.color=color; }
+
+async function login(){
+  const name = prompt("Enter your name:"); if(name===null) return;
+  const user = findByName(name);
+  if(!user){ alert("Name not recognized. Try your first name, exactly as listed."); return; }
+  const pin = prompt(`Enter PIN for ${user.name}:`); if(pin===null) return;
+  try{
+    await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin));
+  }catch(err){
+    console.error("Login error:", err);
+    alert("Incorrect PIN, or your Auth user isn't set up yet.");
+  }
+}
+
+$("btnLogin").addEventListener("click", login);
+$("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
+
+/* ---- Auth gate: fail CLOSED. Content shows only for a recognized, signed-in user. ---- */
+onAuthStateChanged(auth, user => {
+  const known = user ? findByEmail(user.email) : null;
+  if(!known){
+    currentUser = null;
+    lock();
+    if(user) signOut(auth).catch(e=>console.error(e));
+    return;
+  }
+  currentUser = { role:known.role, name:known.name, email:known.email };
+  unlock();
+});
+
+function lock(){
+  $("locked").classList.remove("hidden");
+  $("content").classList.remove("show");
+  $("btnLogin").classList.remove("hidden");
+  $("btnLogout").classList.add("hidden");
+  badge("○ LOGIN REQUIRED", "#fecaca");
+}
+
+function unlock(){
+  $("locked").classList.add("hidden");
+  $("content").classList.add("show");
+  $("btnLogin").classList.add("hidden");
+  $("btnLogout").classList.remove("hidden");
+  badge(`● ${currentUser.role}: ${currentUser.name}`, "#86efac");
+  if(!listenerStarted){ startListener(); listenerStarted = true; }
+}
+
+/* ---- Load units from the database (never from this file) ---- */
+function startListener(){
+  onValue(ref(db, DB_CLEARANCE), snap => {
+    const data = snap.val() || {};
+    allUnits = Array.isArray(data.units) ? data.units
+             : (data.units ? Object.values(data.units) : []);
+    const updated = data.updated ? new Date(data.updated) : null;
+    $("meta").textContent = updated
+      ? `${allUnits.length} units · updated ${updated.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}`
+      : `${allUnits.length} units`;
+    render();
+  });
+}
+
+function render(){
+  const q = norm($("search").value);
+  const rows = allUnits.filter(u => {
+    if(activeFilter !== "all" && u.status !== activeFilter) return false;
+    if(!q) return true;
+    return norm(u.model).includes(q) || norm(u.notes).includes(q) || norm(u.serial).includes(q);
+  });
+  const tb = $("rows"); tb.innerHTML = "";
+  $("empty").style.display = allUnits.length ? "none" : "block";
+  for(const u of rows){
+    const tr = document.createElement("tr");
+    const pill = u.status === "Available" ? '<span class="pill avail">Available</span>'
+                                          : '<span class="pill committed">Committed</span>';
+    tr.innerHTML =
+      `<td class="model">${esc(u.model)}</td>`+
+      `<td>${pill}</td>`+
+      `<td>${esc(u.value)}</td>`+
+      `<td class="notescell">${esc(u.notes)}</td>`+
+      `<td>${esc(u.serial)}</td>`+
+      `<td>${esc(u.orderNo)}</td>`+
+      `<td>${esc(u.customer)}</td>`+
+      `<td>${esc(u.orderDate)}</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+$("search").addEventListener("input", render);
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
+  c.classList.add("on");
+  activeFilter = c.dataset.filter;
+  render();
+}));
+</script>
 </body>
 </html>
