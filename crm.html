@@ -53,6 +53,11 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .locked .lock{font-size:52px}
 .locked h2{font-family:"Playfair Display",serif;font-size:26px}
 .locked p{color:var(--muted);max-width:520px}
+.loginform{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px}
+.linput{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:16px;padding:12px 14px;outline:none;min-width:160px}
+.linput::placeholder{color:var(--muted2)}
+.btn.primary{background:rgba(201,125,16,.22);border-color:rgba(201,125,16,.55);color:#ffd399}
+.loginmsg{margin-top:10px;font-size:13px;color:#fecaca;min-height:18px}
 .footer-note{margin-top:26px;color:var(--muted2);font-size:12px;line-height:1.5}
 #content{display:none}
 #content.show{display:block}
@@ -85,7 +90,13 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
   <div id="locked" class="locked">
     <div class="lock">🔒</div>
     <h2>Staff login required</h2>
-    <p>Tap <b>Log in</b> and use your name + the same PIN you use for the other HCA tools.</p>
+    <p>Enter your first name and the same PIN you use for the other HCA tools.</p>
+    <form id="loginForm" class="loginform" autocomplete="off">
+      <input id="fName" class="linput" type="text" placeholder="First name" autocomplete="off">
+      <input id="fPin"  class="linput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off">
+      <button id="fSubmit" class="btn primary" type="submit">Sign in</button>
+    </form>
+    <div id="loginMsg" class="loginmsg"></div>
   </div>
 
   <div id="content">
@@ -191,15 +202,28 @@ function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.classNam
 let currentUser = null;
 let viewRep = null;
 
-async function login(){
-  const name = prompt("Enter your name:"); if(name===null) return;
+async function doLogin(name, pin){
+  const msg = $("loginMsg");
   const user = findByName(name);
-  if(!user){ alert("Name not recognized. Try your first name, exactly as listed."); return; }
-  const pin = prompt(`Enter PIN for ${user.short}:`); if(pin===null) return;
-  try{ await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin)); }
-  catch(err){ console.error("Login error:", err); alert("Incorrect PIN, or your Auth user isn't set up yet."); }
+  if(!user){ msg.textContent = "Name not recognized — use your first name exactly as listed."; return; }
+  msg.textContent = "Signing in…";
+  try{
+    await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin));
+    msg.textContent = "";
+  }catch(err){
+    console.error("Login error:", err);
+    msg.textContent = "Incorrect PIN, or your account isn't set up yet.";
+  }
 }
-$("btnLogin").addEventListener("click", login);
+const loginForm = $("loginForm");
+if(loginForm){
+  loginForm.addEventListener("submit", e => {
+    e.preventDefault();
+    doLogin($("fName").value.trim(), $("fPin").value.trim());
+  });
+}
+const topLogin = $("btnLogin");
+if(topLogin){ topLogin.addEventListener("click", () => { const f=$("fName"); if(f) f.focus(); }); }
 $("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
 
 onAuthStateChanged(auth, user => {
@@ -293,4 +317,36 @@ function renderSold(who){
     jobs = all.filter(j => norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full));
   }
   const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
-  setBody("soldBody",
+  setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
+  $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
+}
+
+let arData = null;
+function loadArCard(who){
+  if(arData){ renderAr(who); return; }
+  setBody("arBody", '<div class="loading">Loading AR…</div>');
+  fetch(AR_EXEC + "?action=list", { redirect:"follow" })
+    .then(r => r.json())
+    .then(d => { arData = d; if(viewRep && viewRep.role==="HCA") renderAr(viewRep); })
+    .catch(() => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
+}
+function renderAr(who){
+  const rows = (arData && Array.isArray(arData.rows) ? arData.rows : [])
+    .filter(r => norm(r.salesRep) === norm(who.ar));
+  const total  = rows.reduce((s,r)=> s + (Number(r.balance)||0), 0);
+  const oldest = rows.reduce((m,r)=> Math.max(m, Number(r.days)||0), 0);
+  setBody("arBody", `<div class="metrics">${metric("$"+Math.round(total).toLocaleString(),"Balance","red")}${metric(rows.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
+  $("arNote").textContent = rows.length ? "" : "No open AR for this name.";
+}
+
+function loadClearanceCard(){
+  onValue(ref(db, DB_CLEARANCE), snap => {
+    const d = snap.val() || {};
+    const units = Array.isArray(d.units) ? d.units : (d.units ? Object.values(d.units) : []);
+    const avail = units.filter(u => u.status === "Available").length;
+    setBody("clearanceBody", `<div class="metrics">${metric(avail,"Available","orange")}${metric(units.length,"Total units","orange")}</div>`);
+  }, err => setBody("clearanceBody", '<div class="soon">Clearance unavailable.</div>'));
+}
+</script>
+</body>
+</html>
