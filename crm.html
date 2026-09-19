@@ -353,11 +353,13 @@ function renderSold(who){
 let arData = null;
 function loadArCard(who){
   if(arData){ renderAr(who); return; }
-  setBody("arBody", '<div class="loading">Loading AR…</div>');
-  fetch(AR_EXEC + "?action=list", { redirect:"follow" })
-    .then(r => r.json())
-    .then(d => { arData = d; if(viewRep && viewRep.role==="HCA") renderAr(viewRep); })
-    .catch(() => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
+  setBody("arBody", '<div class="loading">Loading AR\u2026</div>');
+  // Read AR from Firebase cmh_ar (populated by the AR Automation's pushArToFirebase).
+  // Reliable, same-origin auth as the other cards \u2014 no cross-origin /exec fetch (which 404'd intermittently).
+  onValue(ref(db, "cmh_ar"), snap => {
+    arData = snap.val() || { rows: [] };
+    if(viewRep && viewRep.role === "HCA") renderAr(viewRep);
+  }, err => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
 }
 function lastName(n){ const p = String(n||"").trim().split(/\s+/); return p.length ? norm(p[p.length-1]) : ""; }
 function renderAr(who){
