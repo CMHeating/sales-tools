@@ -136,8 +136,18 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
         <!-- ACTIVITIES -->
         <div class="card activities">
           <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
-          <div class="card-body"><div id="activitiesBody" class="soon">Coming soon — will show your ride-alongs, self-gen, install visits, and follow-ups logged in the daily recap.</div></div>
-          <div class="card-foot"><span class="card-note"></span></div>
+          <div class="card-body">
+            <div id="activitiesBody" class="metrics" style="gap:16px;">
+              <div class="metric yellow"><strong id="cntRideAlong">0</strong><span>Ride Alongs</span></div>
+              <div class="metric yellow"><strong id="cntSelfGen">0</strong><span>Self-Gen</span></div>
+              <div class="metric yellow"><strong id="cntInstallVisit">0</strong><span>Install Visits</span></div>
+              <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
+              <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
+            </div>
+          </div>
+          <div class="card-foot">
+            <span class="card-note" id="actLastUpdated">No submissions today</span>
+          </div>
         </div>
 
         <!-- CLEARANCE (shared) -->
@@ -197,6 +207,7 @@ const USERS = [
 const DB_FOLLOWUP  = "cmh_followup_tracker";
 const DB_SOLD      = "cmh_sold_tracker";
 const DB_CLEARANCE = "cmh_clearance";
+const DB_ACTIVITY  = "cmh_hca_activity";
 const AR_EXEC = "https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec";
 
 const app  = initializeApp(FIREBASE_CONFIG);
@@ -219,6 +230,7 @@ function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.classNam
 
 let currentUser = null;   // {role,short,email,...}
 let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
+let actUnsubscribe = null; // store unsubscribe for activities listener
 
 async function doLogin(name, pin){
   const msg = $("loginMsg");
@@ -258,6 +270,7 @@ function lock(){
   $("btnLogin").classList.remove("hidden");
   $("btnLogout").classList.add("hidden");
   badge("○ Login required", "bad");
+  if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
 }
 
 function unlock(){
@@ -296,15 +309,58 @@ function loadCards(){
     setBody("arBody", '<div class="soon">Select a rep to view AR.</div>');
     setBody("soldBody", '<div class="soon">Select a rep.</div>');
     setBody("followupBody", '<div class="soon">Select a rep.</div>');
+    
+    // Clear out activities
+    if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
+    ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "Select a rep";
     return;
   }
   loadFollowupCard(who);
   loadSoldCard(who);
   loadArCard(who);
+  loadActivitiesCard(who);
 }
 
 function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
 function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
+
+/* DAILY ACTIVITIES: read cmh_hca_activity, scoped to rep and today */
+function loadActivitiesCard(who) {
+  if (actUnsubscribe) {
+    actUnsubscribe(); // Unsubscribe previous listener if admin switched reps
+  }
+  
+  const d = new Date();
+  const todayIso = d.getFullYear() + "-" + 
+                   String(d.getMonth() + 1).padStart(2, '0') + "-" + 
+                   String(d.getDate()).padStart(2, '0');
+                   
+  const actRef = ref(db, `cmh_hca_activity/${encodeURIComponent(who.full)}/${todayIso}`);
+  
+  actUnsubscribe = onValue(actRef, snap => {
+    const data = snap.val();
+    if (data && data.counts) {
+      const c = data.counts;
+      $("cntRideAlong").textContent = c.techRideAlong || 0;
+      $("cntSelfGen").textContent = c.selfGen || 0;
+      $("cntInstallVisit").textContent = c.installVisit || 0;
+      $("cntReferrals").textContent = c.referrals || 0;
+      $("cntUnsold").textContent = c.followUpUnsold || 0;
+      
+      if (data.updated) {
+        const timeStr = new Date(data.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $("actLastUpdated").textContent = `Updated ${timeStr}`;
+      } else {
+        $("actLastUpdated").textContent = "Live today";
+      }
+    } else {
+      ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "No submissions today";
+    }
+  }, err => {
+    $("actLastUpdated").textContent = "Unavailable";
+    console.error("Activities error:", err);
+  });
+}
 
 /* FOLLOW-UP: read cmh_followup_tracker, scope to this rep's full name.
    (Step-2 wiring; frame already reads live data — count of open leads for the rep.) */
