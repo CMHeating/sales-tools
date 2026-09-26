@@ -4,95 +4,96 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>HCA CRM | CM Heating</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--muted2:rgba(255,255,255,.38);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6}
+/* CRM dialect — DESIGN LANGUAGE spec 2026-09-26 §2 (HCA-facing, iPad, light). Tokens/classes per spec; slate + one navy accent. */
+:root{--bg:#f4f4f2;--surface:#fff;--ink:#16202a;--accent:#1f3b57;--topbar:#1f2a33;--nav:#aab4bd;--text2:#5b6670;--border:#d7dadd;--chip:#9aa3ab;--hair:#e3e6e8;--fill-strong:#4f5a63;--fill-strong2:#66727c;--fill-light:#eceeef;--fill-light2:#f7f8f8;--off:#8a939a}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden}
-body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.15),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.26),transparent 60%);pointer-events:none}
-.screen{position:relative;z-index:1;min-height:100vh}
-.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}
-.badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}
-.title h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.05}
-.title p{font-size:13px;color:var(--muted);margin-top:6px;max-width:780px}
-.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.status-pill{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:1px solid rgba(245,158,11,.35);color:#fde68a;background:rgba(245,158,11,.12);white-space:nowrap}
-.status-pill.ok{color:#bbf7d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12)}
-.status-pill.bad{color:#fecaca;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
-.back-link{color:var(--muted);font-size:12px;text-decoration:none}
-.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-block}
-.adminbar{display:none;padding:14px 22px;border-bottom:1px solid var(--line);align-items:center;gap:12px;flex-wrap:wrap;background:rgba(201,125,16,.06)}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
+.screen{min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:54px;padding:8px 22px;background:var(--topbar);color:#fff}
+.title{display:flex;align-items:baseline;gap:12px}
+.badge{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--nav)}
+.title h1{font-size:17px;font-weight:700;line-height:1.2}
+.title p{display:none}
+.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status-pill{font-size:12px;font-weight:600;border-radius:17px;height:34px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--nav);color:#fff;white-space:nowrap}
+.status-pill.ok{background:#fff;border-color:#fff;color:var(--ink)}
+.status-pill.bad{border-style:dashed}
+.back-link{color:var(--nav);font-size:14px;text-decoration:none}
+.back-link:hover{color:#fff}
+.btn{border:1px solid var(--chip);background:#fff;color:var(--ink);padding:0 12px;height:34px;border-radius:17px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.btn.primary{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:600}
+.top .btn{background:transparent;border-color:var(--nav);color:#fff}
+.chip{border:1px solid #9aa3ab;background:#fff;color:#16202a;padding:0 12px;height:34px;border-radius:17px;font:500 13px inherit;font-family:inherit;cursor:pointer}
+.chip-on{border:1px solid #1f3b57;background:#1f3b57;color:#fff;padding:0 12px;height:34px;border-radius:17px;font-weight:600;font-size:13px;font-family:inherit;cursor:pointer}
+.seg{display:inline-flex;gap:6px}
+.adminbar{display:none;padding:10px 22px;border-bottom:1px solid var(--border);align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface)}
 .adminbar.show{display:flex}
-.adminbar label{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#ffd399}
-.select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:10px 14px;outline:none;min-width:220px}
-.select option{color:#0a1628}
+.adminbar label,.lbl{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.select{background:#fff;border:1px solid var(--chip);border-radius:17px;color:var(--ink);font-family:inherit;font-size:14px;height:34px;padding:0 12px;outline:none;min-width:220px}
 .main{padding:20px 22px 44px}
-.hello{font-family:"Playfair Display",serif;font-size:22px;margin-bottom:4px}
-.hello small{font-family:Outfit,sans-serif;font-size:13px;color:var(--muted);font-weight:400}
+.hello{font-size:20px;font-weight:700;margin-bottom:4px}
+.hello small{font-size:13px;color:var(--text2);font-weight:400}
 .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
-.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--muted2);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;min-height:150px}
-.card.ar{border-left-color:var(--red)}
-.card.sold{border-left-color:var(--green)}
-.card.followup{border-left-color:var(--blue)}
-.card.activities{border-left-color:var(--yellow)}
-.card.clearance{border-left-color:var(--orange)}
-.card.install{border-left-color:#14b8a6}
-.card.schedule{border-left-color:#a78bfa;grid-column:1/-1}
-.sched-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.sched-nav .btn{padding:9px 16px;font-size:14px}
-.sched-date{flex:1;text-align:center;font-family:"Playfair Display",serif;font-size:19px}
-.sched-axis{position:relative;height:16px;font-size:10px;font-weight:700;color:var(--muted2)}
-.sched-axis span{position:absolute;transform:translateX(-50%)}
-.sched-axis span:first-child{transform:none}
-.sched-track{position:relative;height:56px;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px calc(100%/12))}
-.sb{position:absolute;top:4px;bottom:4px;border-radius:7px;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 7px;overflow:hidden;white-space:nowrap;letter-spacing:.02em}
-.sb.blk{background:rgba(201,125,16,.28);border:1px solid rgba(201,125,16,.7);color:#ffd399}
-.sb.ride{background:repeating-linear-gradient(45deg,rgba(59,130,246,.38) 0 8px,rgba(59,130,246,.2) 8px 16px);border:1px solid rgba(59,130,246,.75);color:#dbeafe}
-.sb.open{border:1px solid rgba(34,197,94,.6);background:rgba(34,197,94,.08);color:#bbf7d0}
-.sb.after{border:1px dashed rgba(34,197,94,.85);color:#bbf7d0}
-.sb.os{background:rgba(255,255,255,.03)}
-.sb.off{background:rgba(255,255,255,.05);color:var(--muted2);justify-content:center}
-.sched-plan{margin-top:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
-.sched-lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
-.sched-techs{flex:1;min-width:200px;font-size:13px;color:var(--muted);line-height:1.5}
-.sched-techs b{color:#fff;font-weight:700}
-.sched-wk{display:flex;flex-direction:column;gap:6px}
-.sched-row{display:grid;grid-template-columns:96px 1fr 48px;gap:10px;align-items:center;cursor:pointer;border-radius:10px}
-.sched-row .sched-track{height:42px}
-.sched-row:hover .sched-track{outline:1px solid rgba(255,255,255,.28);outline-offset:1px}
-.sched-row .d{font-size:13px;font-weight:800;line-height:1.25}
-.sched-row .d span{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
-.sched-row.today .d{text-decoration:underline;text-underline-offset:3px}
-.sched-row .n{font-size:18px;font-weight:800;text-align:center}
-.sched-row .n span{display:block;font-size:10px;font-weight:700;color:var(--muted2)}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.card-head h2{font-family:"Playfair Display",serif;font-size:19px}
-.card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;min-height:150px}
+.card.schedule{grid-column:1/-1}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--hair)}
+.card-head h2{font-size:17px;font-weight:700}
+.card-head .tag{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
 .card-body{flex:1;display:flex;flex-direction:column;justify-content:center}
 .metrics{display:flex;gap:22px;flex-wrap:wrap}
 .metric{min-width:80px}
-.metric strong{display:block;font-size:30px;line-height:1}
-.metric span{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-top:5px}
-.metric.red strong{color:#fecaca}.metric.green strong{color:#bbf7d0}.metric.blue strong{color:#bfdbfe}.metric.yellow strong{color:#fde68a}.metric.orange strong{color:#ffd399}
+.metric strong{display:block;font-size:30px;font-weight:700;line-height:1.05;color:var(--ink)}
+.metric span{display:block;font-size:13px;color:var(--text2);margin-top:4px;padding-top:4px;border-top:1px solid var(--hair)}
 .card-foot{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.card-note{font-size:12px;color:var(--muted2)}
-.loading{color:var(--muted);font-size:14px}
-.soon{color:var(--muted2);font-size:13px;font-style:italic}
-.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;gap:16px}
-.locked .lock{font-size:52px}
-.locked h2{font-family:"Playfair Display",serif;font-size:26px}
-.locked p{color:var(--muted);max-width:520px}
+.card-note{font-size:12px;color:var(--text2)}
+.loading{color:var(--text2);font-size:14px}
+.soon{color:var(--text2);font-size:13px}
+/* schedule */
+.sched-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.sched-date{flex:1;text-align:center;font-size:17px;font-weight:700;min-width:160px}
+.sched-axis{position:relative;height:16px;font-size:12px;color:var(--text2)}
+.sched-axis span{position:absolute;transform:translateX(-50%)}
+.sched-axis span:first-child{transform:none}
+.sched-track{position:relative;height:56px;border-radius:5px;background:repeating-linear-gradient(90deg,#e3e6e8 0 1px,transparent 1px calc(100%/12))}
+.sb{position:absolute;top:4px;bottom:4px;box-sizing:border-box;border-radius:5px;font-family:'IBM Plex Sans Condensed','IBM Plex Sans',sans-serif;font-size:12px;font-weight:700;display:flex;align-items:center;padding:0 7px;overflow:hidden;white-space:nowrap}
+.sb.blk{background:#4f5a63;color:#fff}
+.sb.ride{background:repeating-linear-gradient(45deg,#4f5a63 0 8px,#66727c 8px 16px);color:#fff}
+.sb.open{border:1.5px solid #1f3b57;background:#fff;color:#1f3b57}
+.sb.after{border:1.5px dashed #1f3b57;background:#fff;color:#1f3b57}
+.sb.os{background:repeating-linear-gradient(45deg,#eceeef 0 5px,#f7f8f8 5px 10px)}
+.sb.off{background:#eceeef;color:#8a939a;justify-content:center}
+.sched-plan{margin-top:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.sched-lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
+.sched-techs{flex:1;min-width:200px;font-size:13px;color:var(--text2);line-height:1.5}
+.sched-techs b{color:var(--ink);font-weight:700}
+.sched-wk{display:flex;flex-direction:column;gap:6px}
+.sched-row{display:grid;grid-template-columns:96px 1fr 48px;gap:10px;align-items:center;cursor:pointer;border-radius:5px}
+.sched-row .sched-track{height:44px}
+.sched-row:hover .sched-track,.sched-row:focus-visible .sched-track{outline:1.5px solid #1f3b57;outline-offset:1px}
+.sched-row .d{font-size:13px;font-weight:700;line-height:1.25}
+.sched-row .d span{display:block;font-size:12px;font-weight:400;color:var(--text2)}
+.sched-row.today .d{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.sched-row .n{font-size:18px;font-weight:700;text-align:center}
+.sched-row .n span{display:block;font-size:12px;font-weight:400;color:var(--text2)}
+.sched-lg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-top:10px}
+.sched-lg i{display:inline-block;width:22px;height:13px;margin-right:5px;vertical-align:-2px;border-radius:2px;position:relative;top:0}
+/* login */
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;gap:14px}
+.locked h2{font-size:20px;font-weight:700}
+.locked p{color:var(--text2);max-width:520px;font-size:14px}
 .loginform{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px}
-.linput{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:16px;padding:12px 14px;outline:none;min-width:160px}
-.linput::placeholder{color:var(--muted2)}
-.btn.primary{background:rgba(201,125,16,.22);border-color:rgba(201,125,16,.55);color:#ffd399}
-.loginmsg{margin-top:10px;font-size:13px;color:#fecaca;min-height:18px}
-.footer-note{margin-top:26px;color:var(--muted2);font-size:12px;line-height:1.5}
+.linput{background:#fff;border:1px solid var(--chip);border-radius:17px;color:var(--ink);font-family:inherit;font-size:16px;height:40px;padding:0 14px;outline:none;min-width:160px}
+.linput:focus{border-color:var(--accent)}
+.linput::placeholder{color:var(--off)}
+.loginmsg{margin-top:10px;font-size:13px;font-weight:600;color:var(--ink);min-height:18px}
+.footer-note{margin-top:26px;color:var(--text2);font-size:12px;line-height:1.5}
 #content{display:none}
 #content.show{display:block}
 .hidden{display:none!important}
-@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}.title h1{font-size:38px}}
-@media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
+@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.top{flex-direction:column;align-items:flex-start}.select{width:100%;min-width:0}}
 </style>
 </head>
 <body>
@@ -117,7 +118,6 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 
   <div id="locked" class="locked">
-    <div class="lock">🔒</div>
     <h2>Staff login required</h2>
     <p>Enter your first name and the same PIN you use for the other HCA tools.</p>
     <form id="loginForm" class="loginform" autocomplete="off">
@@ -187,13 +187,13 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 
         <!-- MY SCHEDULE (planned blockers from the weekly schedule; full width, last) -->
         <div class="card schedule">
-          <div class="card-head"><h2>My Schedule</h2><span class="tag">Planned day</span></div>
+          <div class="card-head"><h2>My Schedule</h2><span class="tag" id="schedTag">Planned day</span></div>
           <div class="sched-nav">
             <button class="btn" id="schedPrev" type="button" aria-label="Previous day">&lsaquo;</button>
             <div class="sched-date" id="schedDate">—</div>
             <button class="btn" id="schedNext" type="button" aria-label="Next day">&rsaquo;</button>
             <button class="btn" id="schedToday" type="button">Today</button>
-            <button class="btn" id="schedMode" type="button" aria-pressed="false">Week</button>
+            <div class="seg" role="group" aria-label="Schedule view"><button class="chip-on" id="schedDayBtn" type="button" aria-pressed="true">Day</button><button class="chip" id="schedWeekBtn" type="button" aria-pressed="false">Week</button></div>
           </div>
           <div class="card-body" style="justify-content:flex-start"><div id="schedBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="schedNote">Planned schedule. Booked consults stay on the ServiceTitan board.</span></div>
@@ -507,6 +507,7 @@ const HCA_SCHEDULE = {
 const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
   return { Hagen:MF, Doug:MF, Caleb:MF, "Dan K":MF, Conrad:MF, Younis:MF, Charles:MF, Nicco:MF,
            Alex:TS, Carter:TS, Peter:TS, Dewaynne:TS, Anderson:TS, "Dan D":SW, Emmanuel:SW }; })();
+const SCHED_LEGEND = `<div class="sched-lg"><span><i class="sb ride" style="position:relative;display:inline-block;top:0;bottom:auto;padding:0"></i>Tech ride-along</span><span><i class="sb blk" style="position:relative;display:inline-block;top:0;bottom:auto;padding:0"></i>Meeting / 1:1</span><span><i class="sb open" style="position:relative;display:inline-block;top:0;bottom:auto;padding:0"></i>Open slot</span><span><i class="sb after" style="position:relative;display:inline-block;top:0;bottom:auto;padding:0"></i>After-ride appt</span><span><i class="sb os" style="position:relative;display:inline-block;top:0;bottom:auto;padding:0"></i>Off shift</span></div>`;
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 let schedDate = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })();
 let schedView = "day";   // "day" | "week"
@@ -554,7 +555,9 @@ function schedPlan(p, d){
 
 function schedBars(pl){
   const pct = h => ((h-7)/12*100).toFixed(3) + "%";
-  return pl.blocks.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+  const bl = [];
+  pl.blocks.forEach(b => { if(b[3] === "SALES MEETING + 1:1 9:00"){ bl.push([b[0],9,b[2],"MTG 8:00"], [9,b[1],b[2],"1:1 9:00"]); } else bl.push(b); });
+  return bl.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
 }
 function schedAxis(){
   const pct = h => ((h-7)/12*100).toFixed(3) + "%";
@@ -578,6 +581,7 @@ function renderScheduleWeek(p){
   setBody("schedBody",
     `<div class="sched-row" style="cursor:default"><div></div><div class="sched-axis">${schedAxis()}</div><div class="n"><span>Slots</span></div></div>
      <div class="sched-wk" id="schedWk">${rows}</div>
+     ${SCHED_LEGEND}
      <div class="sched-plan"><div class="metric" style="min-width:110px"><strong>${total}</strong><span>Consults bookable this week</span></div>
        <div class="sched-techs">Rotation week ${schedWeek(start < SCHED_ANCHOR ? SCHED_ANCHOR : start)+1}<br>Tap a day to open it.</div></div>`);
   const wk = $("schedWk");
@@ -589,7 +593,8 @@ function renderScheduleWeek(p){
 }
 function schedSetView(v){
   schedView = v;
-  const b = $("schedMode"); b.textContent = v === "week" ? "Day" : "Week"; b.setAttribute("aria-pressed", v === "week" ? "true" : "false");
+  [["schedDayBtn","day"],["schedWeekBtn","week"]].forEach(([id,val]) => { const b = $(id); b.className = v === val ? "chip-on" : "chip"; b.setAttribute("aria-pressed", v === val ? "true" : "false"); });
+  $("schedTag").textContent = v === "week" ? "Planned week" : "Planned day";
   $("schedPrev").setAttribute("aria-label", v === "week" ? "Previous week" : "Previous day");
   $("schedNext").setAttribute("aria-label", v === "week" ? "Next week" : "Next day");
   renderSchedule();
@@ -611,6 +616,7 @@ function renderSchedule(){
   setBody("schedBody",
     `<div class="sched-axis">${axis}</div>
      <div class="sched-track">${bars}</div>
+     ${SCHED_LEGEND}
      <div class="sched-plan">
        <div class="sched-lines">${pl.lines.join("<br>")}</div>
        <div class="metric" style="min-width:110px"><strong>${pl.book}</strong><span>Consults bookable</span></div>
@@ -621,7 +627,8 @@ function schedShift(n){ const k = schedView === "week" ? 7*n : n; schedDate = ne
 $("schedPrev").addEventListener("click", () => schedShift(-1));
 $("schedNext").addEventListener("click", () => schedShift(1));
 $("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=new Date(t.getFullYear(), t.getMonth(), t.getDate()); renderSchedule(); });
-$("schedMode").addEventListener("click", () => schedSetView(schedView === "week" ? "day" : "week"));
+$("schedDayBtn").addEventListener("click", () => schedSetView("day"));
+$("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
 
 /* CLEARANCE: shared count. */
 function loadClearanceCard(){
