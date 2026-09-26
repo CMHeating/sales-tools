@@ -197,7 +197,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, query, orderByKey, endAt, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const FIREBASE_CONFIG = {
@@ -358,21 +358,29 @@ function loadCards(){
 function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
 function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
 
-/* DAILY ACTIVITIES: read cmh_hca_activity, scoped to rep and today */
+/* DAILY ACTIVITIES: read cmh_hca_activity, scoped to rep.
+   Writer (HCA Daily Recap, pushHcaActivityToFirebase_) stores keys as the plain full name,
+   e.g. "Amber Maddalena" (REST decodes the URL), and dates as Pacific YYYY-MM-DD.
+   Shows the most recent day on file up to today (Pacific), labelled with its date. */
+const ACT_IDS = ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'];
+function pacificIso(d) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+function activityKey(name) {
+  // Firebase keys cannot contain . $ # [ ] / — must match what the writer stores.
+  return String(name || "").trim().replace(/[.$#\[\]\/]/g, "");
+}
 function loadActivitiesCard(who) {
   if (actUnsubscribe) {
     actUnsubscribe(); // Unsubscribe previous listener if admin switched reps
+    actUnsubscribe = null;
   }
-  
-  const d = new Date();
-  const todayIso = d.getFullYear() + "-" + 
-                   String(d.getMonth() + 1).padStart(2, '0') + "-" + 
-                   String(d.getDate()).padStart(2, '0');
-                   
-  const actRef = ref(db, `cmh_hca_activity/${encodeURIComponent(who.full)}/${todayIso}`);
-  
-  actUnsubscribe = onValue(actRef, snap => {
-    const data = snap.val();
+  const todayIso = pacificIso(new Date());
+  const actQuery = query(ref(db, `${DB_ACTIVITY}/${activityKey(who.full)}`), orderByKey(), endAt(todayIso), limitToLast(1));
+
+  actUnsubscribe = onValue(actQuery, snap => {
+    let dayIso = null, data = null;
+    snap.forEach(child => { dayIso = child.key; data = child.val(); });
     if (data && data.counts) {
       const c = data.counts;
       $("cntRideAlong").textContent = c.techRideAlong || 0;
@@ -380,15 +388,16 @@ function loadActivitiesCard(who) {
       $("cntInstallVisit").textContent = c.installVisit || 0;
       $("cntReferrals").textContent = c.referrals || 0;
       $("cntUnsold").textContent = c.followUpUnsold || 0;
-      
-      if (data.updated) {
-        const timeStr = new Date(data.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        $("actLastUpdated").textContent = `Updated ${timeStr}`;
+      if (dayIso === todayIso) {
+        $("actLastUpdated").textContent = "Today";
       } else {
-        $("actLastUpdated").textContent = "Live today";
+        const [y, m, d] = dayIso.split("-").map(Number);
+        const label = new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "numeric", day: "numeric" });
+        $("actLastUpdated").textContent = `Latest recap: ${label} — none yet today`;
       }
     } else {
-      ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "No submissions today";
+      ACT_IDS.forEach(id => $(id).textContent = '0');
+      $("actLastUpdated").textContent = "No recap activity on file";
     }
   }, err => {
     $("actLastUpdated").textContent = "Unavailable";
