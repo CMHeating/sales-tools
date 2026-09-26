@@ -79,7 +79,7 @@ Which rules apply to a file, by path. These are the repo's existing conventions 
 | `*.before-*.html` | **Frozen recovery snapshots.** Never edit or delete. Creating a new one before a risky change is encouraged. |
 | `*.private.*`, `firebase-hosting-install/`, `firebase.*-only.json` | Secrets and local deploy scaffolding — gitignored, never commit. |
 | Any committed file | No PIN literals. Everything outside the ignore list is published to GitHub Pages. |
-| New `*.html` tool | Self-contained (inline CSS/JS, no build), matches the dark theme, and gets a link added to `index.html`. |
+| New `*.html` tool | Self-contained (inline CSS/JS, no build), uses the light CRM style (see Design Patterns), and gets a link added to `index.html`. |
 
 Both `scripts/build-install-availability-spark.js` and `scripts/extract-install-pins.js` resolve their inputs relative to the working directory, so run them from the repo root.
 
@@ -251,13 +251,30 @@ Change them here and in the roster together.
 
 ## Design Patterns
 
-**Most tools are light** — slate backgrounds (`#f1f5f9`, `#f8fafc`, `#f0f4f8`), dark text, professional rather than emoji-heavy. All the trackers, `daily-brief.html`, `exec-summary.html`, `hca-schedule.html` and `install-availability.html` follow this.
+**The HCA-facing pages share one light look — the "CRM" style** (restyled 2026-09-26,
+commits `35223a9`…`37bb589`, plus `0fe6622` for the 1:1 page): `crm.html`, `index.html`,
+`sold-job-tracker.html`, `clearance.html`, `follow-up-tracker.html`, `ar-collections.html` and `hca-1on1.html`. Match it exactly when
+editing any of them or adding a page the HCAs use:
 
-**Three are intentionally dark** — `leaderboard.html` (`#0a0f1a`, built for an office wall display), `index.html` and `hca-1on1.html` (`#0a1628`).
+- Fonts: IBM Plex Sans + IBM Plex Sans Condensed only (Google Fonts). No Outfit or Playfair Display on these pages.
+- Tokens (copy the `:root` block from `crm.html`): background `#f4f4f2`, surface `#fff`,
+  ink `#16202a`, one navy accent `#1f3b57`, top bar `#1f2a33`, muted text `#5b6670`,
+  border `#d7dadd`, hairline `#e3e6e8`, strong fill `#4f5a63` / `#66727c`, light fill `#eceeef` / `#f7f8f8`, off `#8a939a`.
+- Dark top bar with a small uppercase `CM HEATING` eyebrow and a 17px title; white cards,
+  10px radius, no shadows, no glow backgrounds; pill buttons 34px high, 17px radius.
+- **No red / green / amber status colours.** State is carried by shape and words:
+  solid navy outline = needs attention, dashed = pending / warning, dark `#4f5a63` fill with
+  white text = critical / blocked, light grey = done / off. Stripes = tech ride-along.
+- Body text 12–14px, labels at least 12px. Emoji stay where they already are (`index.html` tiles).
 
-Match whichever file you are editing. When creating something new, default to the light/professional style unless it is a screen display like the leaderboard.
+**Other tools** are still light slate (`#f1f5f9`, `#f8fafc`, `#f0f4f8`) with Outfit or IBM Plex
+and the older orange accents (`#f58220`, `#c97d10`) — e.g. `daily-brief.html`, `exec-summary.html`,
+`hca-schedule.html`, `install-availability.html`. Match the file you are editing.
 
-Shared across both: orange accents `#f58220` (primary) and `#c97d10`, IBM Plex or Outfit fonts.
+**One is intentionally dark** — `leaderboard.html` (`#0a0f1a`, Barlow), built for an office wall display.
+
+When creating something new for HCAs, use the CRM style above. Printed sheets (black-and-white
+office printer) use the grayscale print style: rules, bold and grey fills, never colour-coding.
 
 The Leaderboard and Install Availability tools use Firebase JS SDK v10 loaded via CDN (`https://www.gstatic.com/firebasejs/10.12.0/`). Other tools are pure client-side, with Google Fonts and — for anything talking to a backend — `fetch` to an Apps Script `/exec` URL.
 
