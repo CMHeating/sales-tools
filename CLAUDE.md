@@ -252,8 +252,8 @@ Change them here and in the roster together.
 ## Design Patterns
 
 **The HCA-facing pages share one light look — the "CRM" style** (restyled 2026-09-26,
-commits `35223a9`…`37bb589`): `crm.html`, `index.html`, `sold-job-tracker.html`,
-`clearance.html`, `follow-up-tracker.html` and `ar-collections.html`. Match it exactly when
+commits `35223a9`…`37bb589`, plus `0fe6622` for the 1:1 page): `crm.html`, `index.html`,
+`sold-job-tracker.html`, `clearance.html`, `follow-up-tracker.html`, `ar-collections.html` and `hca-1on1.html`. Match it exactly when
 editing any of them or adding a page the HCAs use:
 
 - Fonts: IBM Plex Sans + IBM Plex Sans Condensed only (Google Fonts). No Outfit or Playfair Display on these pages.
@@ -269,7 +269,7 @@ editing any of them or adding a page the HCAs use:
 
 **Other tools** are still light slate (`#f1f5f9`, `#f8fafc`, `#f0f4f8`) with Outfit or IBM Plex
 and the older orange accents (`#f58220`, `#c97d10`) — e.g. `daily-brief.html`, `exec-summary.html`,
-`hca-schedule.html`, `hca-1on1.html`, `install-availability.html`. Match the file you are editing.
+`hca-schedule.html`, `install-availability.html`. Match the file you are editing.
 
 **One is intentionally dark** — `leaderboard.html` (`#0a0f1a`, Barlow), built for an office wall display.
 
