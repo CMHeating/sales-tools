@@ -235,19 +235,34 @@ for him. Do not hand-add him to those — `daily-brief.html`'s dropdown crashes 
 an HCA with no generated card — and do not regenerate them with customer names
 or dollar amounts; that is the same exposure the tracker pages just lost.
 
-Two crews, confirmed 2026-08-03:
+Weekly schedule, effective Sun 2026-09-27 (Geoff, 2026-09-26). Two shift crews:
+day crew 8:00–4:00 and evening crew 10:00–6:00. The evening crew works 8:00–4:00 on
+their sales-meeting day. Every HCA has one tech ride-along day a week.
 
-| Crew | Days | Who |
+| HCA | Working days | Crew |
 |---|---|---|
-| Sunday–Thursday | Sun Mon Tue Wed Thu | Amber, Chester, Davis |
-| Tuesday–Saturday | Tue Wed Thu Fri Sat | Adam, Jay, Joe C, Joseph, Kyle, Samir |
-| Trevor Bohm | Mon Wed Thu Sat — off Tue, Fri, Sun | currently on personal leave |
+| Amber Maddalena | Sun Mon Tue Wed Thu | Evening 10–6 |
+| Javierre (Jay) Milo | Sun Mon Tue Wed Thu | Evening 10–6 |
+| Samir Khoury | Tue Wed Thu Fri Sat | Evening 10–6 |
+| Joe Chounramany | Tue Wed Thu Fri Sat | Evening 10–6 |
+| Chester Granard | Mon Tue Wed Thu Sat | Day 8–4 |
+| Davis Diosdado | Mon Tue Wed Thu Fri | Day 8–4 |
+| Joseph Ruble | Mon Tue Wed Thu Fri | Day 8–4 |
+| Kyle McAlister | Mon Tue Wed Thu Fri | Day 8–4 |
+| Adam Weberg | Tue Wed Thu Fri Sat | Day 8–4 |
+| Trevor Bohm | Mon Wed Thu Sat | Day 8–4 (back from leave 2026-09-21) |
 
-These live in `RECAP_ROSTER` in `apps-script/daily-recap.gs` and are not
-cosmetic: `buildTodayPlan_` reads them to decide who gets the 6am recap and,
-the next morning, who gets chased for not answering. A wrong day emails
-somebody on their day off and then records them as delinquent for ignoring it.
-Change them here and in the roster together.
+The working days live in three places and must change together:
+
+- `HCA_SCHEDULE` in `crm.html` — shifts, ride-along day, meeting day, 1:1, and paired techs. This drives the CRM's My Schedule card.
+- `RECAP_NEW_DAYS` in `recapScheduleDays.js` in the live **HCA Daily Recap** Apps Script project. From
+  2026-09-27 it overrides the older `RECAP_ROSTER.days` (the copy in `apps-script/daily-recap.gs` here
+  is not the live code). `buildTodayPlan_` reads it through `recapScheduledDays_()` to decide who gets
+  the 6am recap and, the next morning, who gets chased for not answering.
+- This table.
+
+These are not cosmetic: a wrong day emails somebody on their day off and then records them as
+delinquent for ignoring it.
 
 ## Design Patterns
 
