@@ -37,6 +37,25 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .card.activities{border-left-color:var(--yellow)}
 .card.clearance{border-left-color:var(--orange)}
 .card.install{border-left-color:#14b8a6}
+.card.schedule{border-left-color:#a78bfa;grid-column:1/-1}
+.sched-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sched-nav .btn{padding:9px 16px;font-size:14px}
+.sched-date{flex:1;text-align:center;font-family:"Playfair Display",serif;font-size:19px}
+.sched-axis{position:relative;height:16px;font-size:10px;font-weight:700;color:var(--muted2)}
+.sched-axis span{position:absolute;transform:translateX(-50%)}
+.sched-axis span:first-child{transform:none}
+.sched-track{position:relative;height:56px;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px calc(100%/12))}
+.sb{position:absolute;top:4px;bottom:4px;border-radius:7px;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 7px;overflow:hidden;white-space:nowrap;letter-spacing:.02em}
+.sb.blk{background:rgba(201,125,16,.28);border:1px solid rgba(201,125,16,.7);color:#ffd399}
+.sb.ride{background:repeating-linear-gradient(45deg,rgba(59,130,246,.38) 0 8px,rgba(59,130,246,.2) 8px 16px);border:1px solid rgba(59,130,246,.75);color:#dbeafe}
+.sb.open{border:1px solid rgba(34,197,94,.6);background:rgba(34,197,94,.08);color:#bbf7d0}
+.sb.after{border:1px dashed rgba(34,197,94,.85);color:#bbf7d0}
+.sb.os{background:rgba(255,255,255,.03)}
+.sb.off{background:rgba(255,255,255,.05);color:var(--muted2);justify-content:center}
+.sched-plan{margin-top:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.sched-lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
+.sched-techs{flex:1;min-width:200px;font-size:13px;color:var(--muted);line-height:1.5}
+.sched-techs b{color:#fff;font-weight:700}
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .card-head h2{font-family:"Playfair Display",serif;font-size:19px}
 .card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
@@ -155,6 +174,19 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
           <div class="card-head"><h2>Clearance</h2><span class="tag">Shared — sell from stock</span></div>
           <div class="card-body"><div id="clearanceBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="clearanceNote"></span><a class="btn" href="clearance.html">Open Clearance</a></div>
+        </div>
+
+        <!-- MY SCHEDULE (planned blockers from the weekly schedule; full width, last) -->
+        <div class="card schedule">
+          <div class="card-head"><h2>My Schedule</h2><span class="tag">Planned day</span></div>
+          <div class="sched-nav">
+            <button class="btn" id="schedPrev" type="button" aria-label="Previous day">&lsaquo;</button>
+            <div class="sched-date" id="schedDate">—</div>
+            <button class="btn" id="schedNext" type="button" aria-label="Next day">&rsaquo;</button>
+            <button class="btn" id="schedToday" type="button">Today</button>
+          </div>
+          <div class="card-body" style="justify-content:flex-start"><div id="schedBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="schedNote">Planned schedule. Booked consults stay on the ServiceTitan board.</span></div>
         </div>
       </div>
 
@@ -313,12 +345,14 @@ function loadCards(){
     // Clear out activities
     if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
     ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "Select a rep";
+    renderSchedule();
     return;
   }
   loadFollowupCard(who);
   loadSoldCard(who);
   loadArCard(who);
   loadActivitiesCard(who);
+  renderSchedule();
 }
 
 function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
@@ -430,6 +464,100 @@ function renderAr(who){
   setBody("arBody", `<div class="metrics">${metric("$"+Math.round(total).toLocaleString(),"Balance","red")}${metric(rows.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
   $("arNote").textContent = rows.length ? "" : "No open AR for this name.";
 }
+
+/* MY SCHEDULE: planned day from the weekly HCA schedule (effective week of Sun 9/27/26).
+   Blockers only — tech ride-along, sales meeting, 1:1, meeting-day flex, off shift — plus the
+   open 2-hour consult windows. Booked consults are NOT shown here; they live on the ServiceTitan board.
+   To change someone's schedule, edit their row in HCA_SCHEDULE (keyed by USERS.full).
+   Days: 0=Sun … 6=Sat. Hours are 24h. rot = ride-along tech for rotation weeks 1–4. */
+const SCHED_ANCHOR = new Date(2026, 8, 27);   // Sun 9/27/26 = rotation week 1
+const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
+const HCA_SCHEDULE = {
+  "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
+  "Chester Granard": { sh:[8,16],  days:[1,2,3,4,6], ride:2, crew:"day", mtg:3, oo:[1,8],  cap:3, flex:false, rot:["Emmanuel","Dan D","Anderson","Emmanuel"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
+  "Kyle McAlister":  { sh:[8,16],  days:[1,2,3,4,5], ride:3, crew:"day", mtg:2, oo:[2,10], cap:3, flex:false, rot:["Alex","Charles","Younis","Peter"],         techs:[["Alex",1],["Charles",1],["Peter",1],["Younis",0]] },
+  "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9],  cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
+  "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
+  "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  cap:2, flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
+  "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  cap:3, flex:false, rot:["Emmanuel","Dewaynne","Nicco","Emmanuel"],  techs:[["Emmanuel",1],["Dewaynne",0],["Nicco",0]] },
+  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], cap:3, flex:true,  rot:["Dan D","Dan K","Nicco","Dan D"],           techs:[["Dan D",1],["Dan K",1],["Nicco",1]] },
+  "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], ride:4, crew:"eve", mtg:2, oo:[3,10], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
+  "Joe Chounramany": { sh:[10,18], days:[2,3,4,5,6], ride:2, crew:"eve", mtg:3, oo:[5,10], cap:3, flex:true,  rot:["Hagen","Doug","Alex","Caleb"],             techs:[] }
+};
+const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
+  return { Hagen:MF, Doug:MF, Caleb:MF, "Dan K":MF, Conrad:MF, Younis:MF, Charles:MF, Nicco:MF,
+           Alex:TS, Carter:TS, Peter:TS, Dewaynne:TS, Anderson:TS, "Dan D":SW, Emmanuel:SW }; })();
+const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+let schedDate = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })();
+
+function schedIso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:w; return x+m; }
+function schedWeek(d){ const days=Math.round((d-SCHED_ANCHOR)/86400000); return ((Math.floor(days/7)%4)+4)%4; }
+
+function schedPlan(p, d){
+  const dow = d.getDay(), wk = schedWeek(d);
+  if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
+  if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
+  const blocks=[], lines=[]; let sh, book;
+  if(dow === p.ride){
+    const tech = p.rot[wk];
+    if(p.crew === "day"){
+      sh=[7,16]; blocks.push([7,13.5,"ride","TECH RIDE · "+tech]); blocks.push([14,16,"after","Open · after ride"]);
+      lines.push("Tech ride-along with <b>"+esc(tech)+"</b> — meet at 7:00, ride until 1:30.", "2:00–4:00 appointment: revisit or tech flip.");
+    } else {
+      sh=[10,18]; blocks.push([10,15.5,"ride","TECH RIDE · "+tech]); blocks.push([16,18,"after","Open · after ride"]);
+      lines.push("Tech ride-along with <b>"+esc(tech)+"</b> — meet at 10:00, ride until 3:30.", "4:00–6:00 appointment: revisit or tech flip.");
+    }
+    book = 1;
+  } else {
+    const isM = dow === p.mtg, ooHere = p.oo[0] === dow;
+    sh = (isM && p.flex) ? [8,16] : p.sh;
+    if(isM && p.flex) lines.push("Early shift today: 8–4 for the sales meeting.");
+    if(isM) lines.push("Sales meeting at 8:00.");
+    if(ooHere) lines.push("1:1 with Geoff at "+p.oo[1]+":00.");
+    let open = 0;
+    for(let s=sh[0]; s<sh[1]; s+=2){
+      if(s===8 && isM){ blocks.push([8,10,"blk",(ooHere && p.oo[1]===9) ? "SALES MEETING + 1:1 9:00" : "SALES MEETING 8:00"]); continue; }
+      if(ooHere && s===8 && (p.oo[1]===8 || p.oo[1]===9)){ blocks.push([8,10,"blk","1:1 WITH GEOFF "+p.oo[1]+":00"]); continue; }
+      if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","1:1 WITH GEOFF 10:00"]); continue; }
+      if(ooHere && p.oo[1]===10 && s===8){ blocks.push([8,10,"blk","No booking · 1:1 at 10"]); continue; }
+      blocks.push([s,s+2,"open","Open"]); open++;
+    }
+    book = Math.min(open, p.cap);
+    if(!lines.length) lines.push("Full selling day.");
+  }
+  if(sh[0] > 7) blocks.unshift([7,sh[0],"os",""]);
+  if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
+  return { blocks, book, lines, sh };
+}
+
+function renderSchedule(){
+  const d = schedDate, who = viewRep;
+  $("schedDate").textContent = DAY_NAMES[d.getDay()] + " " + (d.getMonth()+1) + "/" + d.getDate();
+  const p = who && who.role === "HCA" ? HCA_SCHEDULE[who.full] : null;
+  if(!p){ setBody("schedBody", '<div class="soon">No schedule on file for this rep.</div>'); return; }
+  if(d < SCHED_ANCHOR){ setBody("schedBody", '<div class="soon">This schedule starts the week of Sun 9/27/26.</div>'); return; }
+  const pl = schedPlan(p, d);
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  const axis = [7,9,11,13,15,17,19].map(h => `<span style="left:${pct(h)}">${h>12?h-12:h}${h>=12?"p":"a"}</span>`).join("");
+  const bars = pl.blocks.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+  const dow = d.getDay();
+  const techs = !pl.sh ? "—" : !p.techs.length ? "Overflow and unpaired leads."
+    : (p.techs.filter(t => (TECH_DAYS[t[0]]||[]).indexOf(dow) >= 0).map(t => `<b>${esc(t[0])}</b> ${t[1] ? "(primary)" : "(secondary)"}`).join(" · ") || "None of your paired techs work today.");
+  const shiftTxt = pl.sh ? `On shift ${schedClock(pl.sh[0])}–${schedClock(pl.sh[1])} · ` : "";
+  setBody("schedBody",
+    `<div class="sched-axis">${axis}</div>
+     <div class="sched-track">${bars}</div>
+     <div class="sched-plan">
+       <div class="sched-lines">${pl.lines.join("<br>")}</div>
+       <div class="metric" style="min-width:110px"><strong>${pl.book}</strong><span>Consults bookable</span></div>
+       <div class="sched-techs">${shiftTxt}Rotation week ${schedWeek(d)+1}<br>Your techs working: ${techs}</div>
+     </div>`);
+}
+function schedShift(n){ schedDate = new Date(schedDate.getFullYear(), schedDate.getMonth(), schedDate.getDate()+n); renderSchedule(); }
+$("schedPrev").addEventListener("click", () => schedShift(-1));
+$("schedNext").addEventListener("click", () => schedShift(1));
+$("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=new Date(t.getFullYear(), t.getMonth(), t.getDate()); renderSchedule(); });
 
 /* CLEARANCE: shared count. */
 function loadClearanceCard(){
