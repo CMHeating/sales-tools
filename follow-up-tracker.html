@@ -48,6 +48,9 @@ h1{font-size:17px;font-weight:700;color:#fff;line-height:1.2}
 .who b{display:block;color:#fff;font-weight:600}
 .linkbtn{background:transparent;border:1px solid var(--nav);border-radius:17px;height:26px;padding:0 10px;font-family:inherit;font-size:12px;font-weight:600;color:#fff;cursor:pointer;display:inline-flex;align-items:center;margin-top:4px}
 .linkbtn:hover{border-color:#fff}
+.head-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.back-link{color:var(--nav);font-size:14px;text-decoration:none;white-space:nowrap}
+.back-link:hover{color:#fff}
 .notice{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:13px;line-height:1.5;font-weight:600}
 .notice.warn{background:var(--fill-light2);border:1.5px dashed var(--accent);color:var(--ink)}
 .notice.err{background:var(--fill-strong);color:#fff;border:none}
@@ -105,7 +108,10 @@ h2{font-size:15px;margin:26px 0 4px;font-weight:700}
       <h1 id="title">Follow-Up Tracker</h1>
       <div class="sub" id="subtitle">Checking your sign-in…</div>
     </div>
-    <div class="who" id="who" style="display:none"><b id="whoEmail"></b><button class="linkbtn" id="signOutBtn" type="button">Sign out</button></div>
+    <div class="head-right">
+      <div class="who" id="who" style="display:none"><b id="whoEmail"></b><button class="linkbtn" id="signOutBtn" type="button">Sign out</button></div>
+      <a class="back-link" href="index.html">← HCA Toolkit</a>
+    </div>
   </div>
 
   <div id="gate" class="gate" style="display:none">
