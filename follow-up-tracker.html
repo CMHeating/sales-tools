@@ -487,7 +487,7 @@ function render(){
   const updated = data && data.updated ? new Date(data.updated) : null;
   const updatedOk = updated && !Number.isNaN(updated.getTime());
   $('subtitle').textContent = updatedOk
-    ? ('Data refreshed ' + updated.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' · refreshes hourly on workdays')
+    ? ('Data refreshed ' + updated.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' · refreshes several times each workday (about 7:30a, 9a, 1p, 5p)')
     : '';
   if (updatedOk && (Date.now() - updated.getTime()) > STALE_HOURS * 3600000){
     $('dataNotice').innerHTML = '<div class="notice warn"><b>This data is more than two days old.</b> No export lands on Sundays, so a Sunday gap is normal — but a longer one means the hourly sync has not run. Flag Geoff.</div>';
