@@ -481,7 +481,7 @@ const HCA_SCHEDULE = {
   "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
   "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  cap:3, flex:false, rot:["Emmanuel","Dewaynne","Nicco","Emmanuel"],  techs:[["Emmanuel",1],["Dewaynne",0],["Nicco",0]] },
   "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], cap:3, flex:true,  rot:["Dan D","Dan K","Nicco","Dan D"],           techs:[["Dan D",1],["Dan K",1],["Nicco",1]] },
-  "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], ride:4, crew:"eve", mtg:2, oo:[3,10], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
+  "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], off:["2026-09-27"] /* starts Sundays 10/4 */, ride:4, crew:"eve", mtg:2, oo:[3,10], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
   "Joe Chounramany": { sh:[10,18], days:[2,3,4,5,6], ride:2, crew:"eve", mtg:3, oo:[5,10], cap:3, flex:true,  rot:["Hagen","Doug","Alex","Caleb"],             techs:[] }
 };
 const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
@@ -498,6 +498,7 @@ function schedPlan(p, d){
   const dow = d.getDay(), wk = schedWeek(d);
   if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
   if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
+  if((p.off||[]).indexOf(schedIso(d)) >= 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
   const blocks=[], lines=[]; let sh, book;
   if(dow === p.ride){
     const tech = p.rot[wk];
