@@ -474,13 +474,13 @@ const SCHED_ANCHOR = new Date(2026, 8, 27);   // Sun 9/27/26 = rotation week 1
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
   "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
-  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8],  cap:3, flex:false, rot:["Emmanuel","Dan D","Anderson","Emmanuel"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
+  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8],  cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
   "Kyle McAlister":  { sh:[8,16],  days:[1,2,3,4,5], ride:3, crew:"day", mtg:2, oo:[2,10], cap:3, flex:false, rot:["Alex","Charles","Younis","Peter"],         techs:[["Alex",1],["Charles",1],["Peter",1],["Younis",0]] },
   "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9],  cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
   "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
   "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
-  "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  cap:3, flex:false, rot:["Emmanuel","Dewaynne","Nicco","Emmanuel"],  techs:[["Emmanuel",1],["Dewaynne",0],["Nicco",0]] },
-  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], cap:3, flex:true,  rot:["Dan D","Dan K","Nicco","Dan D"],           techs:[["Dan D",1],["Dan K",1],["Nicco",1]] },
+  "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  cap:3, flex:false, rot:["Dan D","Dewaynne","Nicco","Dan D"],  techs:[["Dan D",1],["Dewaynne",0],["Nicco",0]] },
+  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], cap:3, flex:true,  rot:["Emmanuel","Dan K","Nicco","Emmanuel"],     techs:[["Emmanuel",1],["Dan K",1],["Nicco",1]] },
   "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], off:["2026-09-27"] /* starts Sundays 10/4 */, ride:4, crew:"eve", mtg:2, oo:[3,10], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
   "Joe Chounramany": { sh:[10,18], days:[2,3,4,5,6], ride:2, crew:"eve", mtg:3, oo:[5,10], cap:3, flex:true,  rot:["Hagen","Doug","Alex","Caleb"],             techs:[] }
 };
