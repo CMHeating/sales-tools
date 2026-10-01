@@ -35,6 +35,15 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .card.sold{border-left-color:var(--green)}
 .card.followup{border-left-color:var(--blue)}
 .card.activities{border-left-color:var(--yellow)}
+.act-fu{margin-top:10px;font-size:12px;color:var(--muted)}
+.act-week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:14px}
+.act-day{border:1px solid var(--line);border-radius:10px;padding:6px 2px;text-align:center;font-size:11px;font-weight:700;color:var(--muted2);line-height:1.25}
+.act-day b{display:block;font-size:18px;font-weight:800;color:#fde68a;line-height:1.2}
+.act-day.zero b{color:var(--muted2)}
+.act-day.off{opacity:.5}
+.act-day.today{box-shadow:inset 0 0 0 2px rgba(245,158,11,.6)}
+.act-foot{flex-wrap:wrap}
+.act-links{display:flex;gap:8px;flex-wrap:wrap}
 .card.clearance{border-left-color:var(--orange)}
 .card.install{border-left-color:#14b8a6}
 .card.schedule{border-left-color:#a78bfa;grid-column:1/-1}
@@ -188,17 +197,21 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
         <!-- ACTIVITIES -->
         <div class="card activities">
           <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
-          <div class="card-body">
+          <div class="card-body" style="justify-content:flex-start">
             <div id="activitiesBody" class="metrics" style="gap:16px;">
               <div class="metric yellow"><strong id="cntRideAlong">0</strong><span>Ride Alongs</span></div>
               <div class="metric yellow"><strong id="cntSelfGen">0</strong><span>Self-Gen</span></div>
               <div class="metric yellow"><strong id="cntInstallVisit">0</strong><span>Install Visits</span></div>
               <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
+              <div class="metric yellow"><strong id="cntNetworking">0</strong><span>Networking</span></div>
               <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
             </div>
+            <div class="act-fu" id="actFuNote"></div>
+            <div class="act-week" id="actWeek"></div>
           </div>
-          <div class="card-foot">
+          <div class="card-foot act-foot">
             <span class="card-note" id="actLastUpdated">No submissions today</span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a></span>
           </div>
         </div>
 
@@ -378,7 +391,7 @@ function loadCards(){
     
     // Clear out activities
     if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
-    ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "Select a rep";
+    actReset("Select a rep");
     renderSchedule();
     return;
   }
@@ -392,42 +405,60 @@ function loadCards(){
 function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
 function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
 
-/* DAILY ACTIVITIES: read cmh_hca_activity, scoped to rep and today */
-function loadActivitiesCard(who) {
-  if (actUnsubscribe) {
-    actUnsubscribe(); // Unsubscribe previous listener if admin switched reps
-  }
-  
-  const d = new Date();
-  const todayIso = d.getFullYear() + "-" + 
-                   String(d.getMonth() + 1).padStart(2, '0') + "-" + 
-                   String(d.getDate()).padStart(2, '0');
-                   
-  const actRef = ref(db, `cmh_hca_activity/${encodeURIComponent(who.full)}/${todayIso}`);
-  
-  actUnsubscribe = onValue(actRef, snap => {
-    const data = snap.val();
-    if (data && data.counts) {
-      const c = data.counts;
-      $("cntRideAlong").textContent = c.techRideAlong || 0;
-      $("cntSelfGen").textContent = c.selfGen || 0;
-      $("cntInstallVisit").textContent = c.installVisit || 0;
-      $("cntReferrals").textContent = c.referrals || 0;
-      $("cntUnsold").textContent = c.followUpUnsold || 0;
-      
-      if (data.updated) {
-        const timeStr = new Date(data.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        $("actLastUpdated").textContent = `Updated ${timeStr}`;
-      } else {
-        $("actLastUpdated").textContent = "Live today";
-      }
-    } else {
-      ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "No submissions today";
+/* DAILY ACTIVITIES — two sources, one card:
+   1. Recap Form → "Activity Log" sheet → HCA Sold Tracker Sync (activityFirebase.js, every 15 min)
+      → cmh_hca_activity/<Full Name>/<yyyy-MM-dd> = { counts:{...}, updated }  (keys are plain names, not URL-encoded)
+   2. Follow-Up Tracker "Log it" → cmh_followup_log/<hca-key>/<id> = { at, status, customer, ... }
+   Follow-ups shown = recap "Follow-up Unsold" + tracker entries that Pacific day.
+   A day with no activity record may still have a recap (consults only), so the strip never says "missed". */
+const RECAP_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform";
+const ACT_IDS = ["cntRideAlong","cntSelfGen","cntInstallVisit","cntReferrals","cntNetworking","cntUnsold"];
+function pacIso(d){ return d.toLocaleDateString("en-CA", { timeZone:"America/Los_Angeles" }); }
+function actHcaKey(name){ return String(name == null ? "" : name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+function actTotal(c){ return c ? Object.values(c).reduce((a,v) => a + (Number(v) || 0), 0) : 0; }
+function actReset(note){
+  if(actUnsubscribe){ actUnsubscribe(); actUnsubscribe = null; }
+  ACT_IDS.forEach(id => $(id).textContent = "0");
+  $("actLastUpdated").textContent = note; $("actFuNote").textContent = ""; $("actWeek").innerHTML = "";
+}
+function loadActivitiesCard(who){
+  if(actUnsubscribe){ actUnsubscribe(); actUnsubscribe = null; }
+  $("actFuLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  let act = null, fu = null, fuErr = false;
+  const draw = () => {
+    if(act === null) return;
+    const today = pacIso(new Date());
+    const fuByDay = {};
+    Object.values(fu || {}).forEach(e => { if(e && e.at){ const k = pacIso(new Date(e.at)); fuByDay[k] = (fuByDay[k] || 0) + 1; } });
+    const rec = act[today], c = (rec && rec.counts) || {}, fuT = fuByDay[today] || 0;
+    $("cntRideAlong").textContent    = c.techRideAlong || 0;
+    $("cntSelfGen").textContent      = c.selfGen || 0;
+    $("cntInstallVisit").textContent = c.installVisit || 0;
+    $("cntReferrals").textContent    = c.referrals || 0;
+    $("cntNetworking").textContent   = (c.realtorNetworking || 0) + (c.socialNetworking || 0);
+    $("cntUnsold").textContent       = (c.followUpUnsold || 0) + fuT;
+    $("actFuNote").textContent = `Follow-ups today: ${c.followUpUnsold || 0} from the recap · ` +
+      (fuErr ? "tracker log not readable with this sign-in" : `${fuT} logged in the Follow-Up Tracker`);
+    $("actLastUpdated").textContent = rec && rec.updated
+      ? "Counts refreshed " + new Date(rec.updated).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })
+      : "No activity recorded today yet";
+    const [y,m,d] = today.split("-").map(Number), p = HCA_SCHEDULE[who.full];
+    let cells = "";
+    for(let i=6;i>=0;i--){
+      const day = new Date(y, m-1, d-i), iso = schedIso(day);
+      const n = actTotal(act[iso] && act[iso].counts) + (fuByDay[iso] || 0);
+      const off = p && day >= SCHED_ANCHOR && !schedPlan(schedFor(p, day), day).sh;
+      cells += `<div class="act-day${n ? "" : " zero"}${off ? " off" : ""}${i===0 ? " today" : ""}" title="${off ? "Scheduled off" : n + " activities logged"}">${DAY_NAMES[day.getDay()].slice(0,3)} ${day.getMonth()+1}/${day.getDate()}<b>${n || "–"}</b>${off ? "off" : ""}</div>`;
     }
-  }, err => {
-    $("actLastUpdated").textContent = "Unavailable";
-    console.error("Activities error:", err);
-  });
+    $("actWeek").innerHTML = cells;
+  };
+  const u1 = onValue(ref(db, `${DB_ACTIVITY}/${who.full}`),
+    snap => { act = snap.val() || {}; draw(); },
+    err  => { act = {}; draw(); $("actLastUpdated").textContent = "Activities unavailable"; console.error("Activities error:", err); });
+  const u2 = onValue(ref(db, `cmh_followup_log/${actHcaKey(who.full)}`),
+    snap => { fu = snap.val() || {}; fuErr = false; draw(); },
+    err  => { fu = {}; fuErr = true; draw(); });
+  actUnsubscribe = () => { u1(); u2(); };
 }
 
 /* FOLLOW-UP: read cmh_followup_tracker, scope to this rep's full name.
