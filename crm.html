@@ -56,6 +56,18 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .sched-lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
 .sched-techs{flex:1;min-width:200px;font-size:13px;color:var(--muted);line-height:1.5}
 .sched-techs b{color:#fff;font-weight:700}
+.sched-view{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
+.sched-view button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:6px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.sched-view button.on{background:rgba(167,139,250,.22);color:#fff;box-shadow:inset 0 0 0 1px rgba(167,139,250,.7)}
+.sched-wk{display:flex;flex-direction:column;gap:6px}
+.sched-row{display:grid;grid-template-columns:96px 1fr 48px;gap:10px;align-items:center;cursor:pointer;border-radius:10px}
+.sched-row .sched-track{height:44px}
+.sched-row:hover .sched-track,.sched-row:focus-visible .sched-track{outline:1px solid rgba(167,139,250,.75);outline-offset:1px}
+.sched-row .d{font-size:13px;font-weight:800;line-height:1.25}
+.sched-row .d span{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
+.sched-row.today .d{color:#c4b5fd}
+.sched-row .n{font-size:18px;font-weight:800;text-align:center}
+.sched-row .n span{display:block;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase}
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .card-head h2{font-family:"Playfair Display",serif;font-size:19px}
 .card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
@@ -178,12 +190,13 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 
         <!-- MY SCHEDULE (planned blockers from the weekly schedule; full width, last) -->
         <div class="card schedule">
-          <div class="card-head"><h2>My Schedule</h2><span class="tag">Planned day</span></div>
+          <div class="card-head"><h2>My Schedule</h2><span class="tag" id="schedTag">Planned day</span></div>
           <div class="sched-nav">
             <button class="btn" id="schedPrev" type="button" aria-label="Previous day">&lsaquo;</button>
             <div class="sched-date" id="schedDate">—</div>
             <button class="btn" id="schedNext" type="button" aria-label="Next day">&rsaquo;</button>
             <button class="btn" id="schedToday" type="button">Today</button>
+            <div class="sched-view" role="group" aria-label="Schedule view"><button class="on" id="schedDayBtn" type="button" aria-pressed="true">Day</button><button id="schedWeekBtn" type="button" aria-pressed="false">Week</button></div>
           </div>
           <div class="card-body" style="justify-content:flex-start"><div id="schedBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="schedNote">Planned schedule. Booked consults stay on the ServiceTitan board.</span></div>
@@ -487,6 +500,7 @@ const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
            Alex:TS, Carter:TS, Peter:TS, Dewaynne:TS, Anderson:TS, "Dan D":SW, Emmanuel:SW }; })();
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 let schedDate = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })();
+let schedView = "day";   // "day" | "week"
 
 function schedIso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:w; return x+m; }
@@ -530,16 +544,61 @@ function schedPlan(p, d){
   return { blocks, book, lines, sh };
 }
 
+function schedBars(pl){
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  const bl = [];
+  pl.blocks.forEach(b => { if(b[3] === "SALES MEETING + 1:1 9:00"){ bl.push([b[0],9,b[2],"MTG 8:00"], [9,b[1],b[2],"1:1 9:00"]); } else bl.push(b); });
+  return bl.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+}
+function schedAxis(){
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  return [7,9,11,13,15,17,19].map(h => `<span style="left:${pct(h)}">${h>12?h-12:h}${h>=12?"p":"a"}</span>`).join("");
+}
+function renderScheduleWeek(p){
+  const d = schedDate, start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+  const t = new Date(), todayIso = schedIso(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+  $("schedDate").textContent = "Week of Sun " + (start.getMonth()+1) + "/" + start.getDate();
+  let total = 0;
+  const rows = [0,1,2,3,4,5,6].map(i => {
+    const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    if(day < SCHED_ANCHOR) return `<div class="sched-row" data-iso="${schedIso(day)}"><div class="d">${DAY_NAMES[i].slice(0,3)} ${day.getMonth()+1}/${day.getDate()}<span>Before new schedule</span></div><div class="sched-track"></div><div class="n">–</div></div>`;
+    const pl = schedPlan(p, day); total += pl.book;
+    const sub = pl.sh ? `${schedClock(pl.sh[0])}–${schedClock(pl.sh[1])}` : "Off";
+    return `<div class="sched-row${schedIso(day)===todayIso?" today":""}" data-iso="${schedIso(day)}" role="button" tabindex="0" aria-label="Open ${DAY_NAMES[i]}">
+      <div class="d">${DAY_NAMES[i].slice(0,3)} ${day.getMonth()+1}/${day.getDate()}<span>${sub}</span></div>
+      <div class="sched-track">${schedBars(pl)}</div>
+      <div class="n">${pl.sh ? pl.book : "–"}</div></div>`;
+  }).join("");
+  setBody("schedBody",
+    `<div class="sched-row" style="cursor:default"><div></div><div class="sched-axis">${schedAxis()}</div><div class="n"><span>Slots</span></div></div>
+     <div class="sched-wk" id="schedWk">${rows}</div>
+     <div class="sched-plan"><div class="metric" style="min-width:110px"><strong>${total}</strong><span>Consults bookable this week</span></div>
+       <div class="sched-techs">Rotation week ${schedWeek(start < SCHED_ANCHOR ? SCHED_ANCHOR : start)+1}<br>Tap a day to open it.</div></div>`);
+  const wk = $("schedWk");
+  if(wk) wk.querySelectorAll(".sched-row[data-iso]").forEach(r => {
+    const go = () => { const [y,m,dd] = r.dataset.iso.split("-").map(Number); schedDate = new Date(y, m-1, dd); schedSetView("day"); };
+    r.addEventListener("click", go);
+    r.addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); } });
+  });
+}
+function schedSetView(v){
+  schedView = v;
+  [["schedDayBtn","day"],["schedWeekBtn","week"]].forEach(([id,val]) => { const b = $(id); b.className = v === val ? "on" : ""; b.setAttribute("aria-pressed", v === val ? "true" : "false"); });
+  $("schedTag").textContent = v === "week" ? "Planned week" : "Planned day";
+  $("schedPrev").setAttribute("aria-label", v === "week" ? "Previous week" : "Previous day");
+  $("schedNext").setAttribute("aria-label", v === "week" ? "Next week" : "Next day");
+  renderSchedule();
+}
+
 function renderSchedule(){
   const d = schedDate, who = viewRep;
   $("schedDate").textContent = DAY_NAMES[d.getDay()] + " " + (d.getMonth()+1) + "/" + d.getDate();
   const p = who && who.role === "HCA" ? HCA_SCHEDULE[who.full] : null;
   if(!p){ setBody("schedBody", '<div class="soon">No schedule on file for this rep.</div>'); return; }
+  if(schedView === "week"){ renderScheduleWeek(p); return; }
   if(d < SCHED_ANCHOR){ setBody("schedBody", '<div class="soon">This schedule starts the week of Sun 9/27/26.</div>'); return; }
   const pl = schedPlan(p, d);
-  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
-  const axis = [7,9,11,13,15,17,19].map(h => `<span style="left:${pct(h)}">${h>12?h-12:h}${h>=12?"p":"a"}</span>`).join("");
-  const bars = pl.blocks.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+  const axis = schedAxis(), bars = schedBars(pl);
   const dow = d.getDay();
   const techs = !pl.sh ? "—" : !p.techs.length ? "Overflow and unpaired leads."
     : (p.techs.filter(t => (TECH_DAYS[t[0]]||[]).indexOf(dow) >= 0).map(t => `<b>${esc(t[0])}</b> ${t[1] ? "(primary)" : "(secondary)"}`).join(" · ") || "None of your paired techs work today.");
@@ -553,10 +612,12 @@ function renderSchedule(){
        <div class="sched-techs">${shiftTxt}Rotation week ${schedWeek(d)+1}<br>Your techs working: ${techs}</div>
      </div>`);
 }
-function schedShift(n){ schedDate = new Date(schedDate.getFullYear(), schedDate.getMonth(), schedDate.getDate()+n); renderSchedule(); }
+function schedShift(n){ const k = schedView === "week" ? 7*n : n; schedDate = new Date(schedDate.getFullYear(), schedDate.getMonth(), schedDate.getDate()+k); renderSchedule(); }
 $("schedPrev").addEventListener("click", () => schedShift(-1));
 $("schedNext").addEventListener("click", () => schedShift(1));
 $("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=new Date(t.getFullYear(), t.getMonth(), t.getDate()); renderSchedule(); });
+$("schedDayBtn").addEventListener("click", () => schedSetView("day"));
+$("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
 
 /* CLEARANCE: shared count. */
 function loadClearanceCard(){
