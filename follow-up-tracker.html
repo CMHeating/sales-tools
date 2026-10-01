@@ -642,7 +642,7 @@ function logIt(i,l){
     fb.className = 'fb err';
   }
 
-  user.getIdToken().then(function(token){
+  function send(token){
     /* Entries are bucketed per HCA so a rule can bind the writer to the bucket.
        POST makes Firebase generate the child key. */
     return fetch(LOG_BASE + '/' + encodeURIComponent(key) + '.json?auth=' + encodeURIComponent(token), {
@@ -653,11 +653,24 @@ function logIt(i,l){
       return r.text().then(function(t){
         let body = null;
         try { body = t ? JSON.parse(t) : null } catch (_) { body = null }
-        if (!r.ok) throw new Error(String(r.status));
+        /* Show Firebase's own reason ("Permission denied", "Auth token is expired", ...)
+           so a 401 can be told apart from a rules denial vs a stale sign-in. */
+        if (!r.ok) {
+          const why = (body && body.error) ? String(body.error).slice(0, 80) : '';
+          try { console.warn('[follow-up save]', r.status, why, {hcaKey: key, by: user && user.email}); } catch (_) {}
+          throw new Error(String(r.status) + (why ? ': ' + why : ''));
+        }
         if (!body || !body.name) throw new Error('no id');
         return body;
       });
     });
+  }
+
+  /* A 401 means nothing was written, so one retry with a force-refreshed ID token
+     is safe (no double log). Covers a sign-in token that went stale in a long-open tab. */
+  user.getIdToken().then(send).catch(function(e){
+    if (!(e && /^401/.test(e.message || ''))) throw e;
+    return user.getIdToken(true).then(send);
   }).then(function(){
     /* TRANSITIONAL: remove once the sync reads cmh_followup_log.
        Fire and forget to the existing sheet receiver so today's hourly sync keeps
