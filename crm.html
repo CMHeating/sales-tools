@@ -1,57 +1,50 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>My Schedule — Example</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HCA CRM | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
 <style>
-:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--muted2:rgba(255,255,255,.38);--orange:#c97d10;--green:#22c55e;--blue:#3b82f6;--violet:#a78bfa}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh;padding:22px 16px 40px}
-.wrap{max-width:1100px;margin:0 auto}
-.banner{border:1px dashed rgba(167,139,250,.6);background:rgba(167,139,250,.08);border-radius:14px;padding:12px 16px;font-size:13px;color:var(--muted);margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.banner b{color:#fff}
-.select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:14px;padding:8px 12px}
-.select option{color:#000}
-.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 16px;font-family:Outfit,sans-serif;font-size:13px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
-.btn:hover{color:#fff;border-color:rgba(255,255,255,.3)}
-.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--violet);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16)}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.card-head h2{font-family:"Playfair Display",serif;font-size:19px}
-.tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
-.nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.nav .title{flex:1;text-align:center;font-family:"Playfair Display",serif;font-size:19px;min-width:180px}
-.seg{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
-.seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:6px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-.seg button.on{background:rgba(167,139,250,.22);color:#fff;box-shadow:inset 0 0 0 1px rgba(167,139,250,.7)}
-.jump{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:-4px 0 14px}
-.jump button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;cursor:pointer}
-.jump button.on{color:#fff;border-color:rgba(167,139,250,.7);background:rgba(167,139,250,.14)}
-/* WEEK: packet-style row */
-.wk{width:100%;border-collapse:separate;border-spacing:6px 0;table-layout:fixed}
-.wk th{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);text-align:center;padding:0 0 8px}
-.wk th span{display:block;font-size:15px;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:700}
-.wk th.today span{color:#c4b5fd}
-.wk td{vertical-align:top}
-.cell{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:92px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:8px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:800;line-height:1.25}
-.cell:hover,.cell:focus-visible{outline:1px solid rgba(167,139,250,.75);outline-offset:1px}
-.cell .dot{font-size:20px;color:#bbf7d0}
-.cell.sell{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.07)}
-.cell.ride{border-color:rgba(59,130,246,.7);background:repeating-linear-gradient(45deg,rgba(59,130,246,.22) 0 8px,rgba(59,130,246,.1) 8px 16px);color:#dbeafe}
-.cell.meet{border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.16);color:#ffd399}
-.cell.off{color:var(--muted2);font-weight:600}
-.cell.today{box-shadow:inset 0 0 0 2px rgba(167,139,250,.75)}
-.cell small{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
-.cell .slots{font-size:11px;font-weight:700;color:var(--muted)}
-.sum{display:flex;gap:26px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);line-height:1.5}
-.sum b{color:#fff}
-.metric strong{display:block;font-size:30px;font-weight:800;color:#c4b5fd;line-height:1}
-.metric span{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
-.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}
-.legend i{display:inline-block;width:20px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid}
-/* DAY: timeline lane */
-.axis{position:relative;height:16px;font-size:10px;font-weight:700;color:var(--muted2)}
-.axis span{position:absolute;transform:translateX(-50%)}
-.axis span:first-child{transform:none}
-.track{position:relative;height:56px;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px calc(100%/12))}
+:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--muted2:rgba(255,255,255,.38);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.15),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.26),transparent 60%);pointer-events:none}
+.screen{position:relative;z-index:1;min-height:100vh}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}
+.title h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.05}
+.title p{font-size:13px;color:var(--muted);margin-top:6px;max-width:780px}
+.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.status-pill{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:1px solid rgba(245,158,11,.35);color:#fde68a;background:rgba(245,158,11,.12);white-space:nowrap}
+.status-pill.ok{color:#bbf7d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12)}
+.status-pill.bad{color:#fecaca;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
+.back-link{color:var(--muted);font-size:12px;text-decoration:none}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-block}
+.adminbar{display:none;padding:14px 22px;border-bottom:1px solid var(--line);align-items:center;gap:12px;flex-wrap:wrap;background:rgba(201,125,16,.06)}
+.adminbar.show{display:flex}
+.adminbar label{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#ffd399}
+.select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:10px 14px;outline:none;min-width:220px}
+.select option{color:#0a1628}
+.main{padding:20px 22px 44px}
+.hello{font-family:"Playfair Display",serif;font-size:22px;margin-bottom:4px}
+.hello small{font-family:Outfit,sans-serif;font-size:13px;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--muted2);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;min-height:150px}
+.card.ar{border-left-color:var(--red)}
+.card.sold{border-left-color:var(--green)}
+.card.followup{border-left-color:var(--blue)}
+.card.activities{border-left-color:var(--yellow)}
+.card.clearance{border-left-color:var(--orange)}
+.card.install{border-left-color:#14b8a6}
+.card.schedule{border-left-color:#a78bfa;grid-column:1/-1}
+.sched-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sched-nav .btn{padding:9px 16px;font-size:14px}
+.sched-date{flex:1;text-align:center;font-family:"Playfair Display",serif;font-size:19px}
+.sched-axis{position:relative;height:16px;font-size:10px;font-weight:700;color:var(--muted2)}
+.sched-axis span{position:absolute;transform:translateX(-50%)}
+.sched-axis span:first-child{transform:none}
+.sched-track{position:relative;height:56px;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px calc(100%/12))}
 .sb{position:absolute;top:4px;bottom:4px;border-radius:7px;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 7px;overflow:hidden;white-space:nowrap;letter-spacing:.02em}
 .sb.blk{background:rgba(201,125,16,.28);border:1px solid rgba(201,125,16,.7);color:#ffd399}
 .sb.ride{background:repeating-linear-gradient(45deg,rgba(59,130,246,.38) 0 8px,rgba(59,130,246,.2) 8px 16px);border:1px solid rgba(59,130,246,.75);color:#dbeafe}
@@ -59,35 +52,458 @@ body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min
 .sb.after{border:1px dashed rgba(34,197,94,.85);color:#bbf7d0}
 .sb.os{background:rgba(255,255,255,.03)}
 .sb.off{background:rgba(255,255,255,.05);color:var(--muted2);justify-content:center}
-.plan{margin-top:14px;display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
-.plan .lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
-.plan .techs{flex:1;min-width:200px;font-size:13px;color:var(--muted);line-height:1.5}
-.plan .techs b{color:#fff}
-.foot{margin-top:14px;font-size:12px;color:var(--muted2)}
-@media (max-width:720px){.wk{border-spacing:3px 0}.cell{min-height:78px;font-size:11px;padding:6px 3px}.wk th span{font-size:13px}.nav .title{order:-1;flex-basis:100%}}
-</style></head>
-<body><div class="wrap">
-<div class="banner"><span><b>Example only — not the live CRM.</b> On the CRM each HCA sees only their own row after sign-in. Pick an HCA here to preview theirs.</span>
-<label>Viewing as <select class="select" id="who"></select></label></div>
+.sched-plan{margin-top:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.sched-lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
+.sched-techs{flex:1;min-width:200px;font-size:13px;color:var(--muted);line-height:1.5}
+.sched-techs b{color:#fff;font-weight:700}
+.sched-view{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
+.sched-view button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:6px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.sched-view button.on{background:rgba(167,139,250,.22);color:#fff;box-shadow:inset 0 0 0 1px rgba(167,139,250,.7)}
+.sched-wk{display:flex;flex-direction:column;gap:6px}
+.sched-row{display:grid;grid-template-columns:96px 1fr 48px;gap:10px;align-items:center;cursor:pointer;border-radius:10px}
+.sched-row .sched-track{height:44px}
+.sched-row:hover .sched-track,.sched-row:focus-visible .sched-track{outline:1px solid rgba(167,139,250,.75);outline-offset:1px}
+.sched-row .d{font-size:13px;font-weight:800;line-height:1.25}
+.sched-row .d span{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
+.sched-row.today .d{color:#c4b5fd}
+.sched-row .n{font-size:18px;font-weight:800;text-align:center}
+.sched-row .n span{display:block;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase}
+.sched-jump{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:-4px 0 14px}
+.sched-jump button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;cursor:pointer}
+.sched-jump button.on{color:#fff;border-color:rgba(167,139,250,.7);background:rgba(167,139,250,.14)}
+.sched-wkt{width:100%;border-collapse:separate;border-spacing:6px 0;table-layout:fixed}
+.sched-wkt th{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);text-align:center;padding:0 0 8px}
+.sched-wkt th span{display:block;font-size:15px;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:700}
+.sched-wkt th.today span{color:#c4b5fd}
+.sched-wkt td{vertical-align:top}
+.sched-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:92px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:8px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:800;line-height:1.25}
+.sched-cell:hover,.sched-cell:focus-visible{outline:1px solid rgba(167,139,250,.75);outline-offset:1px}
+.sched-cell .dot{font-size:20px;color:#bbf7d0}
+.sched-cell.sell{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.07)}
+.sched-cell.ride{border-color:rgba(59,130,246,.7);background:repeating-linear-gradient(45deg,rgba(59,130,246,.22) 0 8px,rgba(59,130,246,.1) 8px 16px);color:#dbeafe}
+.sched-cell.meet{border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.16);color:#ffd399}
+.sched-cell.off{color:var(--muted2);font-weight:600;cursor:default}
+.sched-cell.today{box-shadow:inset 0 0 0 2px rgba(167,139,250,.75)}
+.sched-cell small{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
+.sched-cell .slots{font-size:11px;font-weight:700;color:var(--muted)}
+.sched-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}
+.sched-legend i{display:inline-block;width:20px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid}
+@media (max-width:720px){.sched-wkt{border-spacing:3px 0}.sched-cell{min-height:78px;font-size:11px;padding:6px 3px}.sched-wkt th span{font-size:13px}}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h2{font-family:"Playfair Display",serif;font-size:19px}
+.card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.card-body{flex:1;display:flex;flex-direction:column;justify-content:center}
+.metrics{display:flex;gap:22px;flex-wrap:wrap}
+.metric{min-width:80px}
+.metric strong{display:block;font-size:30px;line-height:1}
+.metric span{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-top:5px}
+.metric.red strong{color:#fecaca}.metric.green strong{color:#bbf7d0}.metric.blue strong{color:#bfdbfe}.metric.yellow strong{color:#fde68a}.metric.orange strong{color:#ffd399}
+.card-foot{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-note{font-size:12px;color:var(--muted2)}
+.loading{color:var(--muted);font-size:14px}
+.soon{color:var(--muted2);font-size:13px;font-style:italic}
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;gap:16px}
+.locked .lock{font-size:52px}
+.locked h2{font-family:"Playfair Display",serif;font-size:26px}
+.locked p{color:var(--muted);max-width:520px}
+.loginform{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px}
+.linput{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:16px;padding:12px 14px;outline:none;min-width:160px}
+.linput::placeholder{color:var(--muted2)}
+.btn.primary{background:rgba(201,125,16,.22);border-color:rgba(201,125,16,.55);color:#ffd399}
+.loginmsg{margin-top:10px;font-size:13px;color:#fecaca;min-height:18px}
+.footer-note{margin-top:26px;color:var(--muted2);font-size:12px;line-height:1.5}
+#content{display:none}
+#content.show{display:block}
+.hidden{display:none!important}
+@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}.title h1{font-size:38px}}
+@media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <div class="title">
+      <div class="badge">CM Heating</div>
+      <h1>HCA CRM</h1>
+      <p>Your pipeline in one place — AR, sold jobs, follow-ups, activities, and clearance stock. Signs you in once and shows your numbers.</p>
+    </div>
+    <div class="top-actions">
+      <div id="statusBadge" class="status-pill bad">○ Login required</div>
+      <button class="btn" id="btnLogin" type="button">Log in</button>
+      <button class="btn hidden" id="btnLogout" type="button">Log out</button>
+      <a class="back-link" href="index.html">← HCA Toolkit</a>
+    </div>
+  </header>
 
-<div class="card">
-  <div class="card-head"><h2>My Schedule</h2><span class="tag" id="tag">Planned week</span></div>
-  <div class="nav">
-    <button class="btn" id="prev" type="button" aria-label="Previous week">&lsaquo;</button>
-    <div class="title" id="title">—</div>
-    <button class="btn" id="next" type="button" aria-label="Next week">&rsaquo;</button>
-    <button class="btn" id="today" type="button">Today</button>
-    <div class="seg" role="group" aria-label="Schedule view"><button id="vDay" type="button" aria-pressed="false">Day</button><button class="on" id="vWeek" type="button" aria-pressed="true">Week</button></div>
+  <div id="adminBar" class="adminbar">
+    <label for="viewAs">Viewing as</label>
+    <select id="viewAs" class="select"></select>
   </div>
-  <div class="jump" id="jump"></div>
-  <div id="body"></div>
-  <div class="foot">Planned schedule. Booked consults stay on the ServiceTitan board.</div>
+
+  <div id="locked" class="locked">
+    <div class="lock">🔒</div>
+    <h2>Staff login required</h2>
+    <p>Enter your first name and the same PIN you use for the other HCA tools.</p>
+    <form id="loginForm" class="loginform" autocomplete="off">
+      <input id="fName" class="linput" type="text" placeholder="First name" autocomplete="off">
+      <input id="fPin"  class="linput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off">
+      <button id="fSubmit" class="btn primary" type="submit">Sign in</button>
+    </form>
+    <div id="loginMsg" class="loginmsg"></div>
+  </div>
+
+  <div id="content">
+    <main class="main">
+      <div class="hello" id="hello">—</div>
+
+      <div class="grid">
+        <!-- AR -->
+        <div class="card ar">
+          <div class="card-head"><h2>Accounts Receivable</h2><span class="tag">Your open invoices</span></div>
+          <div class="card-body"><div id="arBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="arNote"></span><a class="btn" href="ar-collections.html">Open AR</a></div>
+        </div>
+
+        <!-- SOLD -->
+        <div class="card sold">
+          <div class="card-head"><h2>Sold Jobs</h2><span class="tag">In install ops</span></div>
+          <div class="card-body"><div id="soldBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="soldNote"></span><a class="btn" href="sold-job-tracker.html">Open Sold Tracker</a></div>
+        </div>
+
+        <!-- INSTALL AVAILABILITY (opens the live booking app; same login usually carries) -->
+        <div class="card install">
+          <div class="card-head"><h2>Install Availability</h2><span class="tag">Grab a slot</span></div>
+          <div class="card-body"><div id="installBody" class="soon">Open the live install board to grab a slot and close with a confirmed date. Your login usually carries — if not, sign in as usual.</div></div>
+          <div class="card-foot"><span class="card-note"></span><a class="btn" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener">Open Install Availability</a></div>
+        </div>
+
+        <!-- FOLLOW-UP -->
+        <div class="card followup">
+          <div class="card-head"><h2>Follow-Ups</h2><span class="tag">Open leads</span></div>
+          <div class="card-body"><div id="followupBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="followupNote"></span><a class="btn" id="followupLink" href="follow-up-tracker.html">Open Follow-Up</a></div>
+        </div>
+
+        <!-- ACTIVITIES -->
+        <div class="card activities">
+          <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
+          <div class="card-body">
+            <div id="activitiesBody" class="metrics" style="gap:16px;">
+              <div class="metric yellow"><strong id="cntRideAlong">0</strong><span>Ride Alongs</span></div>
+              <div class="metric yellow"><strong id="cntSelfGen">0</strong><span>Self-Gen</span></div>
+              <div class="metric yellow"><strong id="cntInstallVisit">0</strong><span>Install Visits</span></div>
+              <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
+              <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
+            </div>
+          </div>
+          <div class="card-foot">
+            <span class="card-note" id="actLastUpdated">No submissions today</span>
+          </div>
+        </div>
+
+        <!-- CLEARANCE (shared) -->
+        <div class="card clearance">
+          <div class="card-head"><h2>Clearance</h2><span class="tag">Shared — sell from stock</span></div>
+          <div class="card-body"><div id="clearanceBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="clearanceNote"></span><a class="btn" href="clearance.html">Open Clearance</a></div>
+        </div>
+
+        <!-- MY SCHEDULE (planned blockers from the weekly schedule; full width, last) -->
+        <div class="card schedule">
+          <div class="card-head"><h2>My Schedule</h2><span class="tag" id="schedTag">Planned week</span></div>
+          <div class="sched-nav">
+            <button class="btn" id="schedPrev" type="button" aria-label="Previous week">&lsaquo;</button>
+            <div class="sched-date" id="schedDate">—</div>
+            <button class="btn" id="schedNext" type="button" aria-label="Next week">&rsaquo;</button>
+            <button class="btn" id="schedToday" type="button">Today</button>
+            <div class="sched-view" role="group" aria-label="Schedule view"><button id="schedDayBtn" type="button" aria-pressed="false">Day</button><button class="on" id="schedWeekBtn" type="button" aria-pressed="true">Week</button></div>
+          </div>
+          <div class="sched-jump" id="schedJump"></div>
+          <div class="card-body" style="justify-content:flex-start"><div id="schedBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="schedNote">Planned schedule. Booked consults stay on the ServiceTitan board.</span></div>
+        </div>
+      </div>
+
+      <p class="footer-note">All numbers load from the CM Heating database after login and are scoped to you. Admins can view another rep with the selector up top. CM Heating · Internal HCA Tool.</p>
+    </main>
+  </div>
 </div>
-</div>
-<script>
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+/* ---- Roster + name reconciliation across the four feeds ----
+   short  = auth roster name (login)
+   full   = Firebase full name (cmh_followup_tracker / cmh_sold_tracker)
+   ar     = AR /exec rep-name spelling (verify at AR-card build; blank = not an HCA in AR)
+   Admins (office) have no HCA pipeline of their own — role ADMIN, no full/ar. */
+const USERS = [
+  { role:"ADMIN", short:"Geoff",   email:"geoffrey.simons@cmheating.com" },
+  { role:"ADMIN", short:"Amy",     email:"amy@cmheating.com" },
+  { role:"ADMIN", short:"Laura",   email:"laura.weiss@cmheating.com" },
+  { role:"ADMIN", short:"Jazryn",  email:"jazryn.delacruz@cmheating.com" },
+  { role:"ADMIN", short:"Sabrina", email:"sabrina.kennard@cmheating.com" },
+  { role:"ADMIN", short:"Jen",     email:"jennifer@cmheating.com" },
+  { role:"ADMIN", short:"Brittny", email:"bmiller@cmheating.com" },
+  { role:"ADMIN", short:"Vanessa", email:"vanessa.williams@cmheating.com" },
+  { role:"HCA", short:"Amber",   email:"amber.maddalena@cmheating.com", full:"Amber Maddalena",   ar:"Amber Maddalena" },
+  { role:"HCA", short:"Chester", email:"chester.granard@cmheating.com", full:"Chester Granard",   ar:"Chester Granard" },
+  { role:"HCA", short:"Davis",   email:"davis.diosdado@cmheating.com",  full:"Davis Diosdado",    ar:"Davis Diosdado" },
+  { role:"HCA", short:"Jay",     email:"javierre.milo@cmheating.com",   full:"Javierre Milo",     ar:"Javierre Milo" },
+  { role:"HCA", short:"Joseph",  email:"joseph.ruble@cmheating.com",    full:"Joseph Ruble",      ar:"Joseph Ruble" },
+  { role:"HCA", short:"Kyle",    email:"kmcalister@cmheating.com",      full:"Kyle McAlister",    ar:"Kyle McAlister" },
+  { role:"HCA", short:"Samir",   email:"samir.khoury@cmheating.com",    full:"Samir Khoury",      ar:"Samir Khoury" },
+  { role:"HCA", short:"Trevor",  email:"trevor.bohm@cmheating.com",     full:"Trevor Bohm",       ar:"Trevor Bohm" },
+  { role:"HCA", short:"Adam",    email:"adam@cmheating.com",            full:"Adam Weberg",       ar:"Adam Weberg" }
+];
+
+const DB_FOLLOWUP  = "cmh_followup_tracker";
+const DB_SOLD      = "cmh_sold_tracker";
+const DB_CLEARANCE = "cmh_clearance";
+const DB_ACTIVITY  = "cmh_hca_activity";
+const AR_EXEC = "https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec";
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
 const $ = id => document.getElementById(id);
-/* ---- schedule data + rules: copied unchanged from crm.html (origin/main 639b465), plus Joseph's "eff" entry ---- */
+const norm = v => String(v || "").trim().toLowerCase();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const findByEmail = e => USERS.find(u => norm(u.email) === norm(e)) || null;
+function findByName(input){
+  const t = norm(input); if(!t) return null;
+  const exact = USERS.find(u => u.short.toLowerCase() === t);
+  if (exact) return exact;
+  const m = USERS.filter(u => u.short.toLowerCase().startsWith(t));
+  return m.length === 1 ? m[0] : null;
+}
+function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
+function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.className="status-pill "+cls; }
+
+let currentUser = null;   // {role,short,email,...}
+let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
+let actUnsubscribe = null; // store unsubscribe for activities listener
+
+async function doLogin(name, pin){
+  const msg = $("loginMsg");
+  const user = findByName(name);
+  if(!user){ msg.textContent = "Name not recognized — use your first name exactly as listed."; return; }
+  msg.textContent = "Signing in…";
+  try{
+    await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin));
+    msg.textContent = "";
+  }catch(err){
+    console.error("Login error:", err);
+    msg.textContent = "Incorrect PIN, or your account isn't set up yet.";
+  }
+}
+const loginForm = $("loginForm");
+if(loginForm){
+  loginForm.addEventListener("submit", e => {
+    e.preventDefault();
+    doLogin($("fName").value.trim(), $("fPin").value.trim());
+  });
+}
+const topLogin = $("btnLogin");
+if(topLogin){ topLogin.addEventListener("click", () => { const f=$("fName"); if(f) f.focus(); }); }
+$("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
+
+onAuthStateChanged(auth, user => {
+  const known = user ? findByEmail(user.email) : null;
+  if(!known){ currentUser=null; lock(); if(user) signOut(auth).catch(e=>console.error(e)); return; }
+  currentUser = known;
+  unlock();
+});
+
+function lock(){
+  $("locked").classList.remove("hidden");
+  $("content").classList.remove("show");
+  $("adminBar").classList.remove("show");
+  $("btnLogin").classList.remove("hidden");
+  $("btnLogout").classList.add("hidden");
+  badge("○ Login required", "bad");
+  if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
+}
+
+function unlock(){
+  $("locked").classList.add("hidden");
+  $("content").classList.add("show");
+  $("btnLogin").classList.add("hidden");
+  $("btnLogout").classList.remove("hidden");
+  badge(`● ${currentUser.role}: ${currentUser.short}`, "ok");
+
+  const isAdmin = currentUser.role === "ADMIN";
+  if(isAdmin){
+    const sel = $("viewAs");
+    sel.innerHTML = USERS.filter(u => u.role === "HCA")
+      .map(u => `<option value="${esc(u.email)}">${esc(u.full || u.short)}</option>`).join("");
+    $("adminBar").classList.add("show");
+    // default: first HCA (admins have no pipeline of their own)
+    viewRep = USERS.find(u => u.email === sel.value) || null;
+    sel.onchange = () => { viewRep = USERS.find(u => u.email === sel.value) || null; loadCards(); };
+  } else {
+    $("adminBar").classList.remove("show");
+    viewRep = currentUser;   // HCA sees themselves
+  }
+  loadCards();
+}
+
+/* ---- Cards ---- */
+function loadCards(){
+  const who = viewRep;
+  $("hello").innerHTML = who
+    ? `${esc(who.full || who.short)} <small>· your pipeline</small>`
+    : `— <small>select a rep above</small>`;
+
+  loadClearanceCard();      // shared — always
+  if(!who || who.role !== "HCA"){
+    // admin with no HCA selected (shouldn't happen; selector defaults to an HCA)
+    setBody("arBody", '<div class="soon">Select a rep to view AR.</div>');
+    setBody("soldBody", '<div class="soon">Select a rep.</div>');
+    setBody("followupBody", '<div class="soon">Select a rep.</div>');
+    
+    // Clear out activities
+    if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
+    ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "Select a rep";
+    renderSchedule();
+    return;
+  }
+  loadFollowupCard(who);
+  loadSoldCard(who);
+  loadArCard(who);
+  loadActivitiesCard(who);
+  renderSchedule();
+}
+
+function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
+function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
+
+/* DAILY ACTIVITIES: read cmh_hca_activity, scoped to rep and today */
+function loadActivitiesCard(who) {
+  if (actUnsubscribe) {
+    actUnsubscribe(); // Unsubscribe previous listener if admin switched reps
+  }
+  
+  const d = new Date();
+  const todayIso = d.getFullYear() + "-" + 
+                   String(d.getMonth() + 1).padStart(2, '0') + "-" + 
+                   String(d.getDate()).padStart(2, '0');
+                   
+  const actRef = ref(db, `cmh_hca_activity/${encodeURIComponent(who.full)}/${todayIso}`);
+  
+  actUnsubscribe = onValue(actRef, snap => {
+    const data = snap.val();
+    if (data && data.counts) {
+      const c = data.counts;
+      $("cntRideAlong").textContent = c.techRideAlong || 0;
+      $("cntSelfGen").textContent = c.selfGen || 0;
+      $("cntInstallVisit").textContent = c.installVisit || 0;
+      $("cntReferrals").textContent = c.referrals || 0;
+      $("cntUnsold").textContent = c.followUpUnsold || 0;
+      
+      if (data.updated) {
+        const timeStr = new Date(data.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $("actLastUpdated").textContent = `Updated ${timeStr}`;
+      } else {
+        $("actLastUpdated").textContent = "Live today";
+      }
+    } else {
+      ['cntRideAlong', 'cntSelfGen', 'cntInstallVisit', 'cntReferrals', 'cntUnsold'].forEach(id => $(id).textContent = '0');$("actLastUpdated").textContent = "No submissions today";
+    }
+  }, err => {
+    $("actLastUpdated").textContent = "Unavailable";
+    console.error("Activities error:", err);
+  });
+}
+
+/* FOLLOW-UP: read cmh_followup_tracker, scope to this rep's full name.
+   (Step-2 wiring; frame already reads live data — count of open leads for the rep.) */
+let followupData = null;
+function loadFollowupCard(who){
+  $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  if(followupData){ renderFollowup(who); return; }
+  onValue(ref(db, DB_FOLLOWUP), snap => {
+    followupData = snap.val() || {};
+    if(viewRep && viewRep.role === "HCA") renderFollowup(viewRep);
+  }, err => setBody("followupBody", '<div class="soon">Follow-up data unavailable.</div>'));
+}
+function renderFollowup(who){
+  const leads = (followupData && Array.isArray(followupData.leads) ? followupData.leads : [])
+    .filter(l => norm(l.hca) === norm(who.full));
+  const never = leads.filter(l => !l.followUps).length;
+  const stale = leads.filter(l => l.status && /stale/i.test(l.status)).length;
+  setBody("followupBody", `<div class="metrics">${metric(leads.length,"Open","blue")}${metric(never,"Never touched","blue")}</div>`);
+  $("followupNote").textContent = leads.length ? "" : "No open leads.";
+}
+
+/* SOLD: read cmh_sold_tracker for this rep. */
+let soldData = null;
+function loadSoldCard(who){
+  if(soldData){ renderSold(who); return; }
+  onValue(ref(db, DB_SOLD), snap => {
+    soldData = snap.val() || {};
+    if(viewRep && viewRep.role === "HCA") renderSold(viewRep);
+  }, err => setBody("soldBody", '<div class="soon">Sold data unavailable.</div>'));
+}
+function renderSold(who){
+  // sold node shape: hcas/<name> or jobs keyed; frame counts jobs for the rep by name.
+  let jobs = [];
+  if(soldData){
+    if(soldData.jobs){
+      const all = Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs);
+      jobs = all.filter(j => norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full));
+    }
+  }
+  const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
+  setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
+  $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
+}
+
+/* AR: fetch /exec?action=list, filter to this rep's AR name. */
+let arData = null;
+function loadArCard(who){
+  if(arData){ renderAr(who); return; }
+  setBody("arBody", '<div class="loading">Loading AR\u2026</div>');
+  // Read AR from Firebase cmh_ar (populated by the AR Automation's pushArToFirebase).
+  // Reliable, same-origin auth as the other cards \u2014 no cross-origin /exec fetch (which 404'd intermittently).
+  onValue(ref(db, "cmh_ar"), snap => {
+    arData = snap.val() || { rows: [] };
+    if(viewRep && viewRep.role === "HCA") renderAr(viewRep);
+  }, err => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
+}
+function lastName(n){ const p = String(n||"").trim().split(/\s+/); return p.length ? norm(p[p.length-1]) : ""; }
+function renderAr(who){
+  // AR feed may spell names differently ("Jay Milo" vs "Javierre Milo"). Match on exact
+  // ar-name OR shared LAST NAME (stable across nickname/spelling differences).
+  const wantExact = norm(who.ar);
+  const wantLast  = lastName(who.full) || lastName(who.ar);
+  const rows = (arData && Array.isArray(arData.rows) ? arData.rows : [])
+    .filter(r => { const rn = norm(r.salesRep); return rn === wantExact || (wantLast && lastName(r.salesRep) === wantLast); });
+  const total  = rows.reduce((s,r)=> s + (Number(r.balance)||0), 0);
+  const oldest = rows.reduce((m,r)=> Math.max(m, Number(r.days)||0), 0);
+  setBody("arBody", `<div class="metrics">${metric("$"+Math.round(total).toLocaleString(),"Balance","red")}${metric(rows.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
+  $("arNote").textContent = rows.length ? "" : "No open AR for this name.";
+}
+
+/* MY SCHEDULE: planned day from the weekly HCA schedule (effective week of Sun 9/27/26).
+   Blockers only — tech ride-along, sales meeting, 1:1, meeting-day flex, off shift — plus the
+   open 2-hour consult windows. Booked consults are NOT shown here; they live on the ServiceTitan board.
+   To change someone's schedule, edit their row in HCA_SCHEDULE (keyed by USERS.full).
+   Days: 0=Sun … 6=Sat. Hours are 24h. rot = ride-along tech for rotation weeks 1–4. */
 const SCHED_ANCHOR = new Date(2026, 8, 27);   // Sun 9/27/26 = rotation week 1
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
@@ -107,6 +523,8 @@ const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
   return { Hagen:MF, Doug:MF, Caleb:MF, "Dan K":MF, Conrad:MF, Younis:MF, Charles:MF, Nicco:MF,
            Alex:TS, Carter:TS, Peter:TS, Dewaynne:TS, Anderson:TS, "Dan D":SW, Emmanuel:SW }; })();
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+let schedDate = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })();
+let schedView = "week";   // "day" | "week"
 
 function schedIso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:w; return x+m; }
@@ -150,15 +568,14 @@ function schedPlan(p, d){
   return { blocks, book, lines, sh };
 }
 
-
-/* ---- new: effective-dated changes. The latest eff entry whose "from" is on or before the day wins. ---- */
+/* Effective-dated schedule changes: the latest eff entry whose "from" is on or before the day wins. */
 function schedFor(p, d){ const iso = schedIso(d); let out = p;
   (p.eff || []).filter(e => e.from <= iso).sort((a,b) => a.from < b.from ? -1 : 1).forEach(e => { out = Object.assign({}, out, e); });
   return out; }
-/* ---- packet-style cell text from a day plan ---- */
-function packetCell(p, d){
+/* Week cell text in master-packet terms: ● selling, R tech ride, MTG / 1:1, – off. */
+function schedPacketCell(p, d){
   const pl = schedPlan(schedFor(p, d), d);
-  if(!pl.sh) return { kind:"off", text:"–", sub:pl.blocks[0] && pl.blocks[0][3] !== "DAY OFF" ? pl.blocks[0][3] : "", book:0, pl };
+  if(!pl.sh) return { kind:"off", text:"–", sub: pl.blocks[0] && pl.blocks[0][3] !== "DAY OFF" ? pl.blocks[0][3] : "", book:0 };
   const parts = [];
   pl.blocks.forEach(b => { const t = b[3];
     if(b[2] === "ride") parts.push("R " + t.replace("TECH RIDE · ",""));
@@ -168,73 +585,105 @@ function packetCell(p, d){
   });
   const early = pl.sh[0] === 8 && pl.sh[1] === 16 && schedFor(p, d).crew === "eve";
   const kind = parts.some(x => x[0] === "R") ? "ride" : parts.length ? "meet" : "sell";
-  return { kind, text: parts.length ? parts.join(" + ") : "●", sub: early ? "(8–4)" : "", book: pl.book, pl };
+  return { kind, text: parts.length ? parts.join(" + ") : "●", sub: early ? "(8–4)" : "", book: pl.book };
 }
-const HCAS = Object.keys(HCA_SCHEDULE).sort();
-const todayD = (() => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); })();
-let who = HCAS[0], view = "week", cur = new Date(todayD);
-const sunOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
-const md = d => (d.getMonth()+1) + "/" + d.getDate();
-const addD = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
-
-function renderJump(){
-  const s0 = sunOf(todayD), cs = sunOf(cur).getTime();
-  $("jump").innerHTML = [0,1,2,3].map(i => { const s = addD(s0, 7*i);
-    return `<button type="button" data-w="${i}" class="${s.getTime()===cs?"on":""}">${i===0?"This week":i===1?"Next week":"Week of "+md(s)}</button>`; }).join("");
-  $("jump").querySelectorAll("button").forEach(b => b.onclick = () => { cur = addD(sunOf(todayD), 7*Number(b.dataset.w)); render(); });
+const schedAdd = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+const schedSun = d => schedAdd(d, -d.getDay());
+const schedMd = d => (d.getMonth()+1) + "/" + d.getDate();
+function schedToday(){ const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+function schedRenderJump(){
+  const el = $("schedJump"); if(!el) return;
+  const s0 = schedSun(schedToday()), cs = schedSun(schedDate).getTime();
+  el.innerHTML = [0,1,2,3].map(i => { const s = schedAdd(s0, 7*i);
+    return `<button type="button" data-w="${i}" class="${s.getTime()===cs?"on":""}">${i===0?"This week":i===1?"Next week":"Week of "+schedMd(s)}</button>`; }).join("");
+  el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { schedDate = schedAdd(schedSun(schedToday()), 7*Number(b.dataset.w)); renderSchedule(); }));
 }
-function renderWeek(){
-  const p = HCA_SCHEDULE[who], s = sunOf(cur);
-  $("title").textContent = "Week of Sun " + md(s) + " – Sat " + md(addD(s,6));
-  if(addD(s,6) < SCHED_ANCHOR){ $("body").innerHTML = '<div class="foot">This schedule starts the week of Sun 9/27/26.</div>'; return; }
-  let head = "", row = "", total = 0, rides = [], meets = [];
-  for(let i=0;i<7;i++){ const d = addD(s,i), isT = d.getTime() === todayD.getTime();
-    head += `<th class="${isT?"today":""}">${DAY_NAMES[i].slice(0,3)}<span>${md(d)}</span></th>`;
-    if(d < SCHED_ANCHOR){ row += `<td><div class="cell off">–<small>Before new schedule</small></div></td>`; continue; }
-    const c = packetCell(p, d); total += c.book;
-    if(c.kind === "ride") rides.push(DAY_NAMES[i].slice(0,3));
-    const body = c.kind === "sell" ? `<span class="dot">●</span>` : esc(c.text).replace(/ \+ /g, "<br>");
-    const slots = c.kind === "off" ? (c.sub ? `<small>${esc(c.sub)}</small>` : "") : `<span class="slots">${c.book} slot${c.book===1?"":"s"}</span>`;
-    row += `<td><div class="cell ${c.kind}${isT?" today":""}" role="button" tabindex="0" data-i="${i}" aria-label="Open ${DAY_NAMES[i]} ${md(d)}">${body}${c.sub && c.kind!=="off" ? `<small>${esc(c.sub)}</small>` : ""}${slots}</div></td>`;
+function schedBars(pl){
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  const bl = [];
+  pl.blocks.forEach(b => { if(b[3] === "SALES MEETING + 1:1 9:00"){ bl.push([b[0],9,b[2],"MTG 8:00"], [9,b[1],b[2],"1:1 9:00"]); } else bl.push(b); });
+  return bl.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+}
+function schedAxis(){
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  return [7,9,11,13,15,17,19].map(h => `<span style="left:${pct(h)}">${h>12?h-12:h}${h>=12?"p":"a"}</span>`).join("");
+}
+function renderScheduleWeek(p){
+  const s = schedSun(schedDate), todayT = schedToday().getTime();
+  $("schedDate").textContent = "Week of Sun " + schedMd(s) + " – Sat " + schedMd(schedAdd(s,6));
+  if(schedAdd(s,6) < SCHED_ANCHOR){ setBody("schedBody", '<div class="soon">This schedule starts the week of Sun 9/27/26.</div>'); return; }
+  let head = "", row = "", total = 0;
+  for(let i=0;i<7;i++){ const d = schedAdd(s,i), isT = d.getTime() === todayT;
+    head += `<th class="${isT?"today":""}">${DAY_NAMES[i].slice(0,3)}<span>${schedMd(d)}</span></th>`;
+    if(d < SCHED_ANCHOR){ row += `<td><div class="sched-cell off">–<small>Before new schedule</small></div></td>`; continue; }
+    const c = schedPacketCell(p, d); total += c.book;
+    const main = c.kind === "sell" ? `<span class="dot">●</span>` : esc(c.text).replace(/ \+ /g, "<br>");
+    const extra = c.kind === "off" ? (c.sub ? `<small>${esc(c.sub)}</small>` : "") : `${c.sub ? `<small>${esc(c.sub)}</small>` : ""}<span class="slots">${c.book} slot${c.book===1?"":"s"}</span>`;
+    row += c.kind === "off" ? `<td><div class="sched-cell off${isT?" today":""}">${main}${extra}</div></td>`
+      : `<td><div class="sched-cell ${c.kind}${isT?" today":""}" role="button" tabindex="0" data-i="${i}" aria-label="Open ${DAY_NAMES[i]} ${schedMd(d)}">${main}${extra}</div></td>`;
   }
-  const pe = schedFor(p, s.getTime() < SCHED_ANCHOR.getTime() ? SCHED_ANCHOR : addD(s,3));
-  const techs = pe.techs.map(t => t[1] ? `<b>${esc(t[0])}</b>` : esc(t[0])).join(", ");
-  $("body").innerHTML = `<table class="wk"><thead><tr>${head}</tr></thead><tbody><tr>${row}</tr></tbody></table>
-    <div class="legend"><span><i style="border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)"></i>● Selling</span><span><i style="border-color:rgba(59,130,246,.75);background:rgba(59,130,246,.3)"></i>R = tech ride</span><span><i style="border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.25)"></i>MTG / 1:1</span><span>– Off · tap a day to open it</span></div>
-    <div class="sum"><div class="metric"><strong>${total}</strong><span>Consults bookable this week</span></div>
-    <div>Shift <b>${schedClock(pe.sh[0])}–${schedClock(pe.sh[1])}</b> · Rotation week <b>${schedWeek(addD(s,3))+1}</b><br>Paired techs (bold = primary): ${techs}</div></div>`;
-  $("body").querySelectorAll(".cell[data-i]").forEach(el => { const go = () => { cur = addD(s, Number(el.dataset.i)); setView("day"); };
-    el.onclick = go; el.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } }; });
+  const pe = schedFor(p, schedAdd(s,3) < SCHED_ANCHOR ? SCHED_ANCHOR : schedAdd(s,3));
+  const techs = pe.techs.length ? pe.techs.map(t => t[1] ? `<b>${esc(t[0])}</b>` : esc(t[0])).join(", ") : "Overflow and unpaired leads";
+  setBody("schedBody",
+    `<table class="sched-wkt"><thead><tr>${head}</tr></thead><tbody><tr>${row}</tr></tbody></table>
+     <div class="sched-legend"><span><i style="border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)"></i>● Selling</span><span><i style="border-color:rgba(59,130,246,.75);background:rgba(59,130,246,.3)"></i>R = tech ride</span><span><i style="border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.25)"></i>MTG / 1:1</span><span>– Off · tap a day to open it</span></div>
+     <div class="sched-plan"><div class="metric" style="min-width:110px"><strong>${total}</strong><span>Consults bookable this week</span></div>
+       <div class="sched-techs">Shift ${schedClock(pe.sh[0])}–${schedClock(pe.sh[1])} · Rotation week ${schedWeek(schedAdd(s,3))+1}<br>Paired techs (bold = primary): ${techs}</div></div>`);
+  const body = $("schedBody");
+  if(body) body.querySelectorAll(".sched-cell[data-i]").forEach(el => {
+    const go = () => { schedDate = schedAdd(s, Number(el.dataset.i)); schedSetView("day"); };
+    el.addEventListener("click", go);
+    el.addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); } });
+  });
 }
-function renderDay(){
-  const p = HCA_SCHEDULE[who], d = cur;
-  $("title").textContent = DAY_NAMES[d.getDay()] + " " + md(d);
-  if(d < SCHED_ANCHOR){ $("body").innerHTML = '<div class="foot">This schedule starts the week of Sun 9/27/26.</div>'; return; }
-  const pe = schedFor(p, d), pl = schedPlan(pe, d), pct = h => ((h-7)/12*100).toFixed(3) + "%";
-  const bl = []; pl.blocks.forEach(b => { if(b[3] === "SALES MEETING + 1:1 9:00") bl.push([b[0],9,b[2],"MTG 8:00"],[9,b[1],b[2],"1:1 9:00"]); else bl.push(b); });
-  const axis = [7,9,11,13,15,17,19].map(h => `<span style="left:${pct(h)}">${h>12?h-12:h}${h>=12?"p":"a"}</span>`).join("");
-  const bars = bl.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+function schedSetView(v){
+  schedView = v;
+  [["schedDayBtn","day"],["schedWeekBtn","week"]].forEach(([id,val]) => { const b = $(id); b.className = v === val ? "on" : ""; b.setAttribute("aria-pressed", v === val ? "true" : "false"); });
+  $("schedTag").textContent = v === "week" ? "Planned week" : "Planned day";
+  $("schedPrev").setAttribute("aria-label", v === "week" ? "Previous week" : "Previous day");
+  $("schedNext").setAttribute("aria-label", v === "week" ? "Next week" : "Next day");
+  renderSchedule();
+}
+
+function renderSchedule(){
+  schedRenderJump();
+  const d = schedDate, who = viewRep;
+  $("schedDate").textContent = DAY_NAMES[d.getDay()] + " " + (d.getMonth()+1) + "/" + d.getDate();
+  const p = who && who.role === "HCA" ? HCA_SCHEDULE[who.full] : null;
+  if(!p){ setBody("schedBody", '<div class="soon">No schedule on file for this rep.</div>'); return; }
+  if(schedView === "week"){ renderScheduleWeek(p); return; }
+  if(d < SCHED_ANCHOR){ setBody("schedBody", '<div class="soon">This schedule starts the week of Sun 9/27/26.</div>'); return; }
+  const pl = schedPlan(schedFor(p, d), d);
+  const axis = schedAxis(), bars = schedBars(pl);
   const dow = d.getDay();
-  const techs = !pl.sh ? "—" : !pe.techs.length ? "Overflow and unpaired leads."
-    : (pe.techs.filter(t => (TECH_DAYS[t[0]]||[]).indexOf(dow) >= 0).map(t => `<b>${esc(t[0])}</b> ${t[1] ? "(primary)" : "(secondary)"}`).join(" · ") || "None of your paired techs work today.");
-  $("body").innerHTML = `<div class="axis">${axis}</div><div class="track">${bars}</div>
-    <div class="plan"><div class="lines">${pl.lines.join("<br>")}</div>
-    <div class="metric" style="min-width:110px"><strong>${pl.book}</strong><span>Consults bookable</span></div>
-    <div class="techs">${pl.sh ? `On shift ${schedClock(pl.sh[0])}–${schedClock(pl.sh[1])} · ` : ""}Rotation week ${schedWeek(d)+1}<br>Your techs working: ${techs}</div></div>`;
+  const techs = !pl.sh ? "—" : !p.techs.length ? "Overflow and unpaired leads."
+    : (p.techs.filter(t => (TECH_DAYS[t[0]]||[]).indexOf(dow) >= 0).map(t => `<b>${esc(t[0])}</b> ${t[1] ? "(primary)" : "(secondary)"}`).join(" · ") || "None of your paired techs work today.");
+  const shiftTxt = pl.sh ? `On shift ${schedClock(pl.sh[0])}–${schedClock(pl.sh[1])} · ` : "";
+  setBody("schedBody",
+    `<div class="sched-axis">${axis}</div>
+     <div class="sched-track">${bars}</div>
+     <div class="sched-plan">
+       <div class="sched-lines">${pl.lines.join("<br>")}</div>
+       <div class="metric" style="min-width:110px"><strong>${pl.book}</strong><span>Consults bookable</span></div>
+       <div class="sched-techs">${shiftTxt}Rotation week ${schedWeek(d)+1}<br>Your techs working: ${techs}</div>
+     </div>`);
 }
-function setView(v){ view = v;
-  [["vDay","day"],["vWeek","week"]].forEach(([id,val]) => { $(id).className = v===val ? "on" : ""; $(id).setAttribute("aria-pressed", v===val); });
-  $("tag").textContent = v === "week" ? "Planned week" : "Planned day";
-  $("prev").setAttribute("aria-label", v==="week" ? "Previous week" : "Previous day");
-  $("next").setAttribute("aria-label", v==="week" ? "Next week" : "Next day");
-  render(); }
-function render(){ renderJump(); view === "week" ? renderWeek() : renderDay(); }
-$("who").innerHTML = HCAS.map(n => `<option>${esc(n)}</option>`).join("");
-$("who").onchange = e => { who = e.target.value; render(); };
-$("prev").onclick = () => { cur = addD(cur, view==="week" ? -7 : -1); render(); };
-$("next").onclick = () => { cur = addD(cur, view==="week" ? 7 : 1); render(); };
-$("today").onclick = () => { cur = new Date(todayD); render(); };
-$("vDay").onclick = () => setView("day");
-$("vWeek").onclick = () => setView("week");
-setView("week");
-</script></body></html>
+function schedShift(n){ const k = schedView === "week" ? 7*n : n; schedDate = new Date(schedDate.getFullYear(), schedDate.getMonth(), schedDate.getDate()+k); renderSchedule(); }
+$("schedPrev").addEventListener("click", () => schedShift(-1));
+$("schedNext").addEventListener("click", () => schedShift(1));
+$("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=new Date(t.getFullYear(), t.getMonth(), t.getDate()); renderSchedule(); });
+$("schedDayBtn").addEventListener("click", () => schedSetView("day"));
+$("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
+
+/* CLEARANCE: shared count. */
+function loadClearanceCard(){
+  onValue(ref(db, DB_CLEARANCE), snap => {
+    const d = snap.val() || {};
+    const units = Array.isArray(d.units) ? d.units : (d.units ? Object.values(d.units) : []);
+    const avail = units.filter(u => u.status === "Available").length;
+    setBody("clearanceBody", `<div class="metrics">${metric(avail,"Available","orange")}${metric(units.length,"Total units","orange")}</div>`);
+  }, err => setBody("clearanceBody", '<div class="soon">Clearance unavailable.</div>'));
+}
+</script>
+</body>
+</html>
