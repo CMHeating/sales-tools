@@ -157,41 +157,58 @@ Shared external data:
   The only source of a *scheduled* install date.
 - **ServiceTitan alerts** arrive from `alerts@servicetitan.com`. Booked Job
   Alert is the **scheduled-appointment** alert and says nothing about a sale.
-- **BI (`All Leads` / `All Installs`)** — the report refreshes **05:40 Pacific,
-  Monday–Friday**, but nothing automatic moves it into Drive. See below.
+- **BI (`All Leads` / `All Installs`)** — Power BI, owned by Reliance, not by us.
+  The report recomputes at **05:40 Pacific, Mon–Fri**; it becomes **official when
+  Reliance releases it by email**, which is a separate, later event. See below.
 
-### The BI chain, and where it is currently broken
+### The BI chain — what the signal actually is
 
-Four links. Only the first runs on a clock, and links 3 and 4 are stale right
-now. Verified 2026-09-15 — re-verify before relying on any of it.
+Corrected 2026-10-02. An earlier version of this section (2026-09-15) described
+the repo copy of `daily-recap.gs` as if it were live behavior and concluded the
+BI export into Drive was manual. Both were wrong about the running system. What
+is true:
 
-1. **BI report refreshes** — 05:40 Pacific, weekdays. Deterministic.
-2. **A human exports to Drive** — manual, no fixed time. Export stamps across
-   9/5–9/14 ran 06:19, 07:04, 07:11, 08:06, 08:26, 11:33, 14:53, 22:07, 22:59
-   Pacific. This is the variable step, not email delivery.
-3. **`BI_LEADS_SHEET_ID`** (`daily-recap.gs:23`) points at
-   **`All Leads MTD July 2026.xlsx`, last modified 2026-08-03.** `readBiLeads_()`
-   has been reading a July snapshot since August. `BI_LEADS_TAB` is `""`, so it
-   takes the first sheet.
-4. **MTD lead figures are hardcoded** — `BI_MTD_LEADS`, `BI_MTD_MKT_LEADS`,
-   `BI_MTD_TECH_LEADS`, `BI_MTD_SG_LEADS` at `daily-recap.gs:2829-2832`, updated
-   by hand. The neighbouring notes reference 8/7. **Total L2C % and Marketed
-   L2C % on the L2C tab divide by these constants**, so both percentages are
-   only as current as the last hand edit.
+1. **05:40 Pacific, Mon–Fri — the Power BI report recomputes.** This is a
+   recompute, not a publication, and nothing downstream should treat it as one.
+2. **Reliance releases the report by email**, from one of two senders, carrying
+   the Power BI dashboard link and an attachment. Observed arrivals: 07:13 and
+   09:00 Pacific on consecutive days. **This email is the official marker** —
+   until it lands, that day's figures are not final.
+3. **Export into Drive is automated**, BI straight to the dated Uploads folder.
+   The growth automation's own output says so: *"BI backfills at the next clean
+   export (05:40 PT Mon-Fri, straight from BI to Drive)."*
+4. **MTD lead figures come from a `Growth Config` tab**, not from constants. The
+   `BI_MTD_*` literals still in this repo's copy are dead in the live script.
 
-Three more places carry a **weekly** model of BI that the 05:40 daily refresh
-contradicts — `BI_DAY_NOTE`, `RAN_LEADS_NOTE`, `RAN_INSTALLS_NOTE` and
-`titanRan_` all say some form of *"Monday's BI replaces this."* Two of those
-strings are written into **spreadsheet cell notes**, where a human reads them
-and plans around a Monday that no longer means anything.
+**A 05:41 trigger fires roughly 90 minutes before the data is official.** The
+live automation already avoids this by accident: it re-runs through the morning
+and commits the first export that passes its checks, which is why successful
+runs land anywhere from 07:08 to 14:09.
 
-Also live: `writeGrowthSheetForYesterday()` is **retired** — it returns
-immediately and writes nothing — but `installRecapTriggers` still creates a
-daily trigger for it at `growthWriteHour`, and the config comment above that
-value describes a 7am run while the value is `4`. Comment, value, and behavior
-are three different stories.
+### The repo copy of `daily-recap.gs` predates the live growth automation
 
-None of the above is fixed by moving a trigger to 05:41.
+No `Growth Config`, no partial-export guard, no `GROWTH MORNING AUTO` reporting.
+`writeGrowthSheetForYesterday()` is retired here and the live system has moved
+on entirely. **Do not reason about current growth-sheet behavior from this
+repo.** The live system reports its own state: it emails `Growth auto — …` to
+Geoff on every run, with the files it read, `data through:`, the plan, and what
+it committed or held. Read those before forming a theory.
+
+### Known live defect: the partial-export guard compares two bases
+
+The guard holds a BI import when installs "would drop" — e.g. *"installs would
+drop 80 -> 64 (partial export)"*. But the two numbers are not the same
+measurement: the sheet's figure includes live estimates for days BI has not
+reconciled, and BI's figure is reconciled through an earlier date (`data
+through:` typically yesterday). Comparing MTD-to-MTD across those two bases
+reads "the sheet is ahead on estimates" as "the export is incomplete."
+
+It held BI continuously from at least 9/22 to 9/24 while the sheet climbed 62 →
+80 against a BI figure of 47 then 64, and cleared by 9/28. It will recur any
+time estimates run ahead of reconciliation. The comparison needs to be
+like-for-like — BI's count for the days BI covers against the sheet's count for
+those same days — not two MTD totals. This is the house rule about stating the
+basis of a figure, failing inside a guard.
 
 ## Data Conventions
 

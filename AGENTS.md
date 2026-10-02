@@ -355,28 +355,23 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 - **State the basis of any figure.** Job-completion date and invoice date give
   different answers to the same question, and a number without its basis will
   be compared against one that used the other.
-- **BI refreshes at 05:40 Pacific, Monday through Friday — that is when the
-  report changes, not when the data reaches anything an agent can read.** The
-  chain has four links and only the first runs on a clock:
-
-  1. **BI report refreshes.** 05:40 Pacific, weekdays. Deterministic.
-  2. **A human exports `All Leads` / `All Installs` to Drive.** Manual, at no
-     fixed time. Export stamps observed 9/5–9/14: 06:19, 07:04, 07:11, 08:06,
-     08:26, 11:33, 14:53, 22:07, 22:59 Pacific.
-  3. **Code reads whatever file it was pointed at** — which is not necessarily
-     the newest one, or even the right month.
-  4. **MTD lead figures come from constants in the script source**, updated by
-     hand.
-
-  So "BI refreshed at 05:40" tells you nothing about whether today's numbers
-  are in Drive, and nothing about whether any script is reading them. Check the
-  file's modified time and the data's own last date. Never the clock.
-- **No BI refresh Saturday or Sunday.** A weekend run reads Friday's report.
-  Six of the ten HCAs work Saturdays, so a Saturday figure that looks flat is
-  usually Friday's data rather than a slow day.
+- **BI recomputes at 05:40 Pacific weekdays; it becomes official when Reliance
+  releases it by email.** Those are two different events, and the second one is
+  the one that matters. The email has arrived as late as 09:00 Pacific. Until it
+  lands, that day's figures are provisional no matter what the clock says.
+  *(Corrected 2026-10-02. The 2026-09-15 version of this rule said the export
+  into Drive was manual and inferred that from file timestamps and repo source.
+  The export is automated; the variable is the release.)*
+- **No BI on Saturday or Sunday.** A weekend run reads Friday. Six of the ten
+  HCAs work Saturdays, so a flat-looking Saturday is usually Friday's data.
 - **05:40 is Pacific *local*, and Pacific changes.** PDT ends 2026-11-01. A
-  trigger set in `America/Los_Angeles` follows the change; one set in UTC
-  drifts an hour that morning. Any schedule written down states which it uses.
+  schedule set in `America/Los_Angeles` follows it; one set in UTC drifts an
+  hour that morning. Any schedule written down states which it uses.
+- **Read the system's own reports before theorising about it.** The growth
+  automation emails its full state on every run — files read, `data through:`,
+  the plan, what it committed or held. A conclusion about live behavior drawn
+  from repo source while those emails sat unread is how the 2026-09-15 version
+  of the rule above got written. Artifacts are not the system; ask the system.
 
 ---
 
