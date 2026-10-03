@@ -185,6 +185,37 @@ live automation already avoids this by accident: it re-runs through the morning
 and commits the first export that passes its checks, which is why successful
 runs land anywhere from 07:08 to 14:09.
 
+### The dashboard refreshes twice, and the first pass looks plausible
+
+Verified 2026-10-03 by watching the dashboard directly. The 05:40 recompute
+produces numbers that **look fine but are incomplete**; the data refreshes again
+around the time Reliance releases it by email, and the post-release figures are
+materially different and correct.
+
+This is the mechanism behind the September "partial export" holds. Anything that
+grabs the dashboard between 05:40 and release captures the first-pass state,
+which is lower — and then the guard that compares it against the sheet reads the
+shortfall as a short export. **A plausible-looking number is the failure mode
+here, not an obviously broken one.** Gate on the release, not the clock.
+
+### Two different Reliance reports, easy to confuse
+
+Both arrive daily from Reliance FP&A in Toronto, and only one is the growth
+sheet's source:
+
+| | Carries | Use |
+|---|---|---|
+| **CM Daily Sales Report** (~07:15 PT) | Power BI link + the dashboard exported as **inline images only — no data file** | The leads / L2C / HCA / revenue source. Data must come off the dashboard; the mail cannot be parsed. |
+| **Daily Sales Report** (~09:00 PT) | Real `.xlsx` attachments | Reliance **group-wide install units vs budget** by region, with CM Heating as one row. Budget attainment, not L2C — no leads, no lead source, no HCA split. |
+
+The second one is a useful independent monthly cross-check on CM Heating's
+install count, and it is the only one an Apps Script could read directly. It is
+**not** a substitute for the dashboard.
+
+The release mail states its own coverage window in the body — *"for 10/1 through
+10/1"* — which is the right thing to latch a run on: it says which day was
+published, not merely that something arrived.
+
 ### The repo copy of `daily-recap.gs` predates the live growth automation
 
 No `Growth Config`, no partial-export guard, no `GROWTH MORNING AUTO` reporting.
