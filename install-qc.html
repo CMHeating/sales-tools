@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Install QC — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#c97d10;--green:#22c55e;--red:#ef4444;--blue:#4aa3df}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;padding-bottom:40px}
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 2px;flex-wrap:wrap}
+  .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
+  .who{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  select,input[type=date],input[type=text]{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;min-height:44px}
+  h1{font-family:"Playfair Display",serif;font-weight:800;font-size:28px;margin:6px 0 4px}
+  .sub{color:var(--mut);font-size:13.5px;margin:0 0 14px}
+  .tabs{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
+  .tab{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--mut);font:inherit;font-weight:800;cursor:pointer}
+  .tab[aria-selected=true]{background:var(--orange);border-color:var(--orange);color:#fff}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+  .card h2{font-family:"Playfair Display",serif;font-weight:700;font-size:18px;margin:0 0 8px}
+  .job{display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center;cursor:pointer}
+  .job:hover{border-color:#2d3d63}
+  .job b{font-size:17px}.job .m{color:var(--mut);font-size:13px}
+  .lanes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .lane{font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px;border:1px solid var(--line);color:var(--mut)}
+  .lane.ok{border-color:rgba(34,197,94,.6);color:#bbf7d0;background:rgba(34,197,94,.1)}
+  .lane.bad{border-color:rgba(239,68,68,.6);color:#fecaca;background:rgba(239,68,68,.1)}
+  .lane.mid{border-color:rgba(245,158,11,.6);color:#fde68a;background:rgba(245,158,11,.1)}
+  .st{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:3px 8px;background:var(--panel2);border:1px solid var(--line);color:var(--mut)}
+  .st.ready{color:#bbf7d0;border-color:rgba(34,197,94,.6)}
+  .row{padding:12px 0;border-top:1px solid var(--line)}.row:first-of-type{border-top:0}
+  .q{font-weight:700;margin-bottom:2px}.said{font-size:13px;color:var(--mut);margin-bottom:8px}
+  .said b{color:var(--text)}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1 1 0;min-width:96px;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+  .seg button[aria-checked=true].verified{background:rgba(34,197,94,.16);border-color:rgba(34,197,94,.7);color:#bbf7d0}
+  .seg button[aria-checked=true].missing{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.7);color:#fecaca}
+  .seg button[aria-checked=true].mismatch{background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.7);color:#fde68a}
+  .found{display:none;gap:8px;flex-wrap:wrap;margin-top:8px;padding:10px;border:1px solid rgba(245,158,11,.45);border-radius:12px;background:rgba(245,158,11,.06)}
+  .found.on{display:flex}.found input[type=text]{flex:2 1 220px}.found input[type=date]{flex:1 1 140px}
+  .btn{min-height:46px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;cursor:pointer}
+  .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .msg{font-size:13px;color:var(--mut)}.msg.err{color:#fecaca}.msg.ok{color:#bbf7d0}
+  a{color:var(--blue)}
+  #envBar{position:sticky;top:0;z-index:40;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px 10px;background:#7f1d1d;color:#fecaca}
+  .back{color:var(--mut);text-decoration:none;font-size:13px;cursor:pointer}
+  .empty{color:var(--mut);padding:18px 4px}
+  .hist{font-size:12px;color:var(--mut);line-height:1.6}
+</style>
+</head>
+<body>
+<div id="envBar">SANDBOX — fake data, nothing leaves this machine</div>
+<div class="wrap">
+  <div class="topbar"><span class="pill">CM HEATING</span>
+    <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Geoff</option><option>Lyle</option><option>Jon</option><option>Amy</option><option>Brittny</option></select></label></div>
+  <div id="list">
+    <h1>Install QC</h1><p class="sub">Verify what the HCA confirmed against ServiceTitan. Each lane checks its own items.</p>
+    <div class="tabs" role="tablist"><button class="tab" role="tab" id="tabQ" aria-selected="true">To review</button><button class="tab" role="tab" id="tabR" aria-selected="false">Ready to book</button></div>
+    <div id="rows"></div>
+  </div>
+  <div id="detail" style="display:none"></div>
+</div>
+<script>
+var $=function(id){return document.getElementById(id)};
+var META=null,TAB='q',CUR=null;
+var WHO_LANE={Geoff:'sales',Lyle:'install',Jon:'electrical'};
+var LANE_NAME={sales:'Sales',install:'Install',electrical:'Electrical'};
+var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-credit','r-payauth'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload']};
+var HCA_NAME={pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit auth','r-payauth':'Payment auth','r-dl':'Driver’s license','r-deed':'Mortgage / deed'};
+var STATE={yes:'Complete',work:'Working on it',no:'No',na:'N/A'};
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
+function me(){return $('me').value;}
+function dateLabel(iso){if(!iso)return 'TBD';var p=iso.split('-');return (+p[1])+'/'+(+p[2]);}
+function laneChip(k,l){var cls=l.signoff==='confirmed'&&!l.missing?'ok':(l.missing||l.signoff==='notready')?'bad':(l.checked||l.signoff)?'mid':'';
+  return '<span class="lane '+cls+'">'+LANE_NAME[k]+' '+l.checked+'/'+l.total+(l.signoff==='confirmed'?' ✓':'')+'</span>';}
+function showList(){CUR=null;$('detail').style.display='none';$('list').style.display='';loadList();}
+function loadList(){
+  $('tabQ').setAttribute('aria-selected',TAB==='q');$('tabR').setAttribute('aria-selected',TAB==='r');
+  api(TAB==='q'?'/api/queue':'/api/ready').then(function(d){
+    var jobs=(d.jobs||[]).filter(function(j){return TAB==='r'||j.status!=='ready';});
+    if(!jobs.length){$('rows').innerHTML='<div class="empty">'+(TAB==='q'?'Nothing waiting for review.':'Nothing ready to book yet.')+'</div>';return;}
+    $('rows').innerHTML=jobs.map(function(j){var ln=j.lanes?Object.keys(j.lanes).map(function(k){return laneChip(k,j.lanes[k]);}).join(''):'';
+      return '<div class="card job" data-job="'+esc(j.job)+'" tabindex="0" role="button"><div><b>'+esc(j.customer)+'</b><div class="m">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · HCA '+j.readiness.done+' of '+j.readiness.total+'</div></div><div><span class="st '+esc(j.status||'ready')+'">'+esc((j.status||'ready').replace('_',' '))+'</span></div>'+(ln?'<div class="lanes" style="grid-column:1/-1;justify-content:flex-start">'+ln+'</div>':'')+'</div>';}).join('');
+    document.querySelectorAll('[data-job]').forEach(function(e){var go=function(){openJob(e.dataset.job);};e.onclick=go;e.onkeydown=function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go();}};});
+  }).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
+}
+function openJob(job){
+  CUR=job;api('/api/record?job='+encodeURIComponent(job)).then(function(d){
+    if(!d.ok){return;}var r=d.record,j=d.job,h=r.hca||{},items=h.items||{},mylane=WHO_LANE[me()]||'';
+    function hcaSaid(ids){return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
+      var txt=i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
+      return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
+    var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
+    var html='<a class="back" id="backBtn">&larr; All jobs</a><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
+    if(h.notes)html+='<div class="card"><div class="said"><b>HCA notes:</b> '+esc(h.notes)+'</div></div>';
+    Object.keys(META.lanes).forEach(function(lane){
+      var L=(r.lanes||{})[lane]||{items:{}},mine=(lane===mylane),sum=r.lanesSummary[lane];
+      html+='<div class="card" data-lane="'+lane+'"><h2>'+LANE_NAME[lane]+' · '+META.lanes[lane].who+' '+laneChip(lane,sum)+'</h2>';
+      if(!mine)html+='<p class="sub" style="margin:0 0 6px">'+(mylane?'This lane belongs to '+META.lanes[lane].who+'.':'Sign in as Geoff, Lyle or Jon to verify a lane.')+'</p>';
+      META.lanes[lane].items.forEach(function(k){var it=L.items[k]||{},ids=HCA_FOR[k]||[];
+        html+='<div class="row" data-k="'+k+'"><div class="q">'+esc(META.labels[k])+'</div>'+(ids.length?'<div class="said">HCA said — '+hcaSaid(ids)+'</div>':'<div class="said">Manager-only item</div>')
+          +'<div class="seg" role="radiogroup" aria-label="'+esc(META.labels[k])+'">'+['verified','missing','mismatch'].map(function(res){return '<button type="button" role="radio" class="'+res+'" data-res="'+res+'" aria-checked="'+(it.result===res)+'"'+(mine?'':' disabled')+'>'+res[0].toUpperCase()+res.slice(1)+'</button>';}).join('')+'</div>'
+          +'<div class="found'+((it.result&&it.result!=='verified')?' on':'')+'"><input type="text" data-f="found" placeholder="What did you find in ServiceTitan?" value="'+esc(it.found||'')+'"'+(mine?'':' disabled')+'><input type="date" data-f="when" aria-label="Fix by" value="'+esc(it.when||'')+'"'+(mine?'':' disabled')+'></div></div>';});
+      html+='<div class="acts"><select data-so aria-label="Sign-off"'+(mine?'':' disabled')+'><option value="">Sign-off…</option><option value="confirmed"'+(L.signoff==='confirmed'?' selected':'')+'>✔ Confirmed</option><option value="attention"'+(L.signoff==='attention'?' selected':'')+'>⚠ Needs attention</option><option value="notready"'+(L.signoff==='notready'?' selected':'')+'>✖ Not ready</option></select><button class="btn go" data-save'+(mine?'':' disabled')+'>Save '+LANE_NAME[lane]+'</button><span class="msg" data-msg></span></div></div>';});
+    html+='<div class="card"><h2>History</h2><div class="hist">'+((r.history||[]).slice(-12).reverse().map(function(x){return esc(x.at.slice(5,16).replace('T',' '))+' · '+esc(x.by)+' · '+esc(x.field)+' → '+esc(x.to);}).join('<br>')||'—')+'</div></div>';
+    $('detail').innerHTML=html;$('list').style.display='none';$('detail').style.display='';
+    $('backBtn').onclick=showList;wireLanes(job);
+  });
+}
+function payState(p){if(!p)return '';if(p.indexOf('⏳')===0)return 'work';if(p==='N/A')return 'na';return p.indexOf('✔')===0?'yes':'no';}
+function wireLanes(job){
+  document.querySelectorAll('[data-lane]').forEach(function(card){var lane=card.dataset.lane;
+    card.querySelectorAll('.seg button').forEach(function(b){b.onclick=function(){var row=b.closest('.row');
+      row.querySelectorAll('.seg button').forEach(function(x){x.setAttribute('aria-checked',x===b);});
+      row.querySelector('.found').classList.toggle('on',b.dataset.res!=='verified');};});
+    card.querySelector('[data-save]').onclick=function(){
+      var items={},msg=card.querySelector('[data-msg]');msg.className='msg';msg.textContent='';
+      card.querySelectorAll('.row').forEach(function(row){var on=row.querySelector('.seg button[aria-checked=true]');if(!on)return;
+        items[row.dataset.k]={result:on.dataset.res,found:row.querySelector('[data-f=found]').value,when:row.querySelector('[data-f=when]').value};});
+      var body={job:job,lane:lane,by:me(),items:items},so=card.querySelector('[data-so]').value;if(so)body.signoff=so;
+      api('/api/lane',body).then(function(d){if(d.ok){msg.className='msg ok';msg.textContent='Saved · status '+d.record.status.replace('_',' ');setTimeout(function(){openJob(job);},500);}else{msg.className='msg err';msg.textContent=d.error||'Error';}});};});
+}
+$('tabQ').onclick=function(){TAB='q';loadList();};$('tabR').onclick=function(){TAB='r';loadList();};
+$('me').onchange=function(){if(CUR)openJob(CUR);};
+api('/api/meta').then(function(m){META=m;loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
+</script>
+</body>
+</html>
