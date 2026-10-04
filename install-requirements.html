@@ -240,9 +240,10 @@ function render(){
   else if(!LIVE_SEND){eb.className='demo';eb.style.display='';eb.textContent='DEMO — answers stay on this device, nothing is sent';}
 }
 /* ---- draft: this phone only, per job, until job records are stored server-side ---- */
+function cleanItems(){var o={};Object.keys(S.items||{}).forEach(function(k){var it=S.items[k]||{},v=k==='pay'?payState():it.v;if(v)o[k]={v:v,why:it.why||'',when:it.when||'',note:it.note||''};});return o;}
 var _rt=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
-  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:S.items}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}});},350);}}
+  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}});},350);}}
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
 function applyState(){$('pay').value=S.pay||'';$('notes').value=S.notes||'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
@@ -273,7 +274,7 @@ function submit(){
   var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length;
   var ready=needs.length?'⚠ Ready with notes':'✔ Ready';
   var b=$('submitBtn');b.disabled=true;b.textContent='Sending…';
-  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:S.items,submit:true}).then(function(d){b.textContent='Submit';
+  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
       if(d&&d.ok){submitted=true;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Sent to the managers.</b> (sandbox: logged to the outbox, not emailed)';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
       else{b.disabled=false;$('barTxt').textContent='Couldn’t save: '+((d&&d.error)||'error');}}).catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Sandbox server not reachable.';});return;}
   if(!LIVE_SEND){setTimeout(function(){b.textContent='Submit';$('needs').className='needs clear';$('needs').innerHTML='<b>Demo: this would go to the managers now.</b> Nothing was sent.';$('barTxt').innerHTML='<b>Demo submit done.</b> Nothing was sent.';b.disabled=false;},500);return;}
@@ -291,7 +292,7 @@ function openPark(){$('parkMsg').textContent='';$('parkModal').classList.add('on
 function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
   if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}
   S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();
-  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:S.items,parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){$('parkMsg').textContent=(x&&x.ok)?'Parked. Your team can see why and when.':'Couldn’t park: '+((x&&x.error)||'error');});return;}
+  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){$('parkMsg').textContent=(x&&x.ok)?'Parked. Your team can see why and when.':'Couldn’t park: '+((x&&x.error)||'error');});return;}
   /* STUB: stored on this phone only. Server-side parked storage needs Geoff's approval (new node + rules). */
   m.textContent='Saved on this device. Parking is not connected to the office yet (pilot build).';}
 

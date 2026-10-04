@@ -75,7 +75,15 @@ def seed():
         {"job": "900006", "customer": "Sample Foxtrot", "hca": "Chester Granard", "installDate": d(12), "department": "PLUM", "stage": "SOLD_ACTIVE"},
         {"job": "900007", "customer": "Sample Golf", "hca": "Samir Khoury", "installDate": d(-4), "department": "HVAC", "stage": "SOLD_DONE_FOLLOW_UP_LATER"},
     ]
+    pipeline = [
+        {"job": "800001", "customer": "Sample Hotel (backlog)", "hca": "Samir Khoury", "source": "backlog", "comboDate": d(5), "comboTab": "PENDING"},
+        {"job": "800002", "customer": "Sample India (backlog)", "hca": "Samir Khoury", "source": "backlog", "comboDate": "", "comboTab": "TBD"},
+        {"job": "800003", "customer": "Sample Juliet (pipeline)", "hca": "Samir Khoury", "source": "pipeline", "comboDate": "", "comboTab": ""},
+        {"job": "800004", "customer": "Sample Kilo (pipeline)", "hca": "Samir Khoury", "source": "pipeline", "comboDate": d(15), "comboTab": "PENDING"},
+        {"job": "800005", "customer": "Sample Lima (backlog)", "hca": "Chester Granard", "source": "backlog", "comboDate": "", "comboTab": "TBD"},
+    ]
     save("jobs.json", jobs)
+    save("pipeline.json", pipeline)
     save("records.json", {})
     open(os.path.join(DATA, "outbox.jsonl"), "w").close()
 
@@ -194,7 +202,8 @@ class H(SimpleHTTPRequestHandler):
                     rec = recs.get(j["job"], {"hca": {}})
                     out.append(dict(j, readiness=readiness(rec), status=derive_status(rec),
                                     parked=rec.get("parked")))
-                return self._json(200, {"ok": True, "jobs": out})
+                pipe = [p for p in load("pipeline.json", []) if not rep or p["hca"].lower() == rep]
+                return self._json(200, {"ok": True, "jobs": out, "pipeline": pipe})
             if u.path == "/api/record":
                 job = q.get("job", "")
                 meta = next((j for j in jobs if j["job"] == job), None)

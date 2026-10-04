@@ -1,0 +1,42 @@
+[
+ {
+  "job": "800001",
+  "customer": "Sample Hotel (backlog)",
+  "hca": "Samir Khoury",
+  "source": "backlog",
+  "comboDate": "2026-10-09",
+  "comboTab": "PENDING"
+ },
+ {
+  "job": "800002",
+  "customer": "Sample India (backlog)",
+  "hca": "Samir Khoury",
+  "source": "backlog",
+  "comboDate": "",
+  "comboTab": "TBD"
+ },
+ {
+  "job": "800003",
+  "customer": "Sample Juliet (pipeline)",
+  "hca": "Samir Khoury",
+  "source": "pipeline",
+  "comboDate": "",
+  "comboTab": ""
+ },
+ {
+  "job": "800004",
+  "customer": "Sample Kilo (pipeline)",
+  "hca": "Samir Khoury",
+  "source": "pipeline",
+  "comboDate": "2026-10-19",
+  "comboTab": "PENDING"
+ },
+ {
+  "job": "800005",
+  "customer": "Sample Lima (backlog)",
+  "hca": "Chester Granard",
+  "source": "backlog",
+  "comboDate": "",
+  "comboTab": "TBD"
+ }
+]

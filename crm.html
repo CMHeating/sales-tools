@@ -52,6 +52,8 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .proj-main{flex:1;display:flex;flex-direction:column;font-size:14px;line-height:1.25}
 .proj-main span{font-size:12px;color:var(--muted)}
 .proj-n{font-size:13px;font-weight:700;white-space:nowrap}
+.proj-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+.proj-tag{font-size:11px;font-weight:700;color:var(--muted)}
 .sched-ov{margin-top:14px}.sched-ov-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 
 .card.clearance{border-left-color:var(--orange)}
@@ -218,11 +220,11 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
             </div>
             <div class="act-fu" id="actFuNote"></div>
             <div class="act-week" id="actWeek"></div>
-            <div class="proj-list" id="projList"><div class="soon">Loading projects…</div></div>
+            <div class="proj-list" id="projList" style="display:none"></div>
           </div>
           <div class="card-foot act-foot">
             <span class="card-note" id="actLastUpdated">No submissions today</span>
-            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><a class="btn" id="actCompleteLink" href="install-requirements.html">Project completion</a></span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><a class="btn" id="actCompleteLink" href="install-requirements.html" style="display:none">Project completion</a></span>
           </div>
         </div>
 
@@ -254,6 +256,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
+<script src="js/install-projects.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -718,59 +721,24 @@ $("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=
 $("schedDayBtn").addEventListener("click", () => schedSetView("day"));
 $("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
 
-/* ===== INSTALL PROJECTS (pilot): sold jobs -> Daily Activities list + My Schedule overlay =====
-   Reads the sold tracker (cmh_sold_tracker) the CRM already loads. Readiness is a PLACEHOLDER until the
-   job record exists: j.readiness {done,total} is used when present, otherwise 0 of COMPLETION_TOTAL.
-   Colour: green = all done; red = install within RED_DAYS with items open (or j.readiness.overdue);
-   yellow = everything else. Links open install-check.html in HCA mode (#hca=1&...). */
-const COMPLETION_PAGE = "install-requirements.html";
-const COMPLETION_TOTAL = 8;
-const RED_DAYS = 3;
-function jobNum(j){ return String(j.jobNumber || j.job || j.number || j.jobNo || "").trim(); }
-function jobIsoDate(j){ return String(j.installDate || "").slice(0,10); }
-function jobLink(j, who){
-  const q = new URLSearchParams({ job: jobNum(j), cust: j.customer || "", date: jobIsoDate(j), rep: (who && who.full) || j.hca || j.salesRep || "" });
-  return COMPLETION_PAGE + "#" + q.toString();
-}
-function myProjects(who){
-  if(!soldData || !soldData.jobs || !who) return [];
-  const all = Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs);
-  return all.filter(j => (norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full)) && !/DONE|COMPLETE/i.test(j.stage || ""));
-}
-function projReady(j){
-  const r = j.readiness || {};
-  const total = r.total || COMPLETION_TOTAL, done = Math.min(r.done || 0, total);
-  const iso = jobIsoDate(j), today = pacificIso(new Date());
-  const days = iso ? Math.round((Date.parse(iso + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 86400000) : null;
-  let color = "y";
-  if(done >= total) color = "g";
-  else if(r.overdue || (days !== null && days <= RED_DAYS)) color = "r";
-  return { done, total, color, days };
-}
-function projDateLabel(j){
-  const iso = jobIsoDate(j); if(!iso) return "TBD";
-  const [y,m,d] = iso.split("-").map(Number); return m + "/" + d;
-}
-function projRow(j, who, sub){
-  const r = projReady(j);
-  return `<a class="proj-row" href="${esc(jobLink(j, who))}"><span class="proj-dot ${r.color}"></span>` +
-    `<span class="proj-main"><b>${esc(j.customer || "Unknown")}</b><span>${esc(sub)}</span></span><span class="proj-n">${r.done} of ${r.total}</span></a>`;
-}
+/* ===== INSTALL PROJECTS (pilot): sold + backlog/pipeline jobs -> Daily Activities list + My Schedule overlay =====
+   All logic lives in js/install-projects.js (shared with the sandbox preview). Reads the sold tracker node the CRM
+   already loads; backlog/pipeline jobs come from soldData.pipeline when the sync provides it.
+   PILOT: only the listed HCAs (or an admin viewing them) see the new list, overlay and link. Everyone else is unchanged. */
+const PILOT_HCAS = ["Samir Khoury"];
+function pilotOn(who){ return !!who && PILOT_HCAS.some(n => norm(n) === norm(who.full)); }
+function soldJobsAll(){ return !soldData || !soldData.jobs ? [] : (Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs)); }
+function pipelineAll(){ const p = soldData && soldData.pipeline; return !p ? [] : (Array.isArray(p) ? p : Object.values(p)); }
 function renderProjects(who){
-  const box = $("projList"); if(!box) return;
-  const rank = { r: 0, y: 1, g: 2 };
-  const rows = myProjects(who).map(j => ({ j, r: projReady(j) }))
-    .sort((a,b) => rank[a.r.color] - rank[b.r.color] || (jobIsoDate(a.j) || "9999").localeCompare(jobIsoDate(b.j) || "9999"));
-  if(!rows.length){ box.innerHTML = '<div class="soon">No open sold projects.</div>'; return; }
-  box.innerHTML = rows.map(({ j }) => projRow(j, who, projDateLabel(j))).join("");
+  const on = pilotOn(who), box = $("projList"), lk = $("actCompleteLink");
+  if(box) box.style.display = on ? "" : "none";
+  if(lk) lk.style.display = on ? "" : "none";
+  if(!on || !box) return;
+  box.innerHTML = CMHProjects.listHtml(soldJobsAll(), pipelineAll(), who, pacificIso(new Date()));
 }
 function schedOverlay(fromIso, toIso){
-  const who = viewRep;
-  const jobs = myProjects(who).filter(j => { const i = jobIsoDate(j); return i && i >= fromIso && i <= toIso; })
-    .sort((a,b) => jobIsoDate(a).localeCompare(jobIsoDate(b)));
-  if(!jobs.length) return "";
-  return '<div class="sched-ov"><div class="sched-ov-h">Your sold installs</div>' +
-    jobs.map(j => projRow(j, who, projDateLabel(j) + (j.department ? " · " + j.department : ""))).join("") + '</div>';
+  const who = viewRep; if(!pilotOn(who)) return "";
+  return CMHProjects.overlayHtml(soldJobsAll(), pipelineAll(), who, fromIso, toIso, pacificIso(new Date()));
 }
 /* ===== end INSTALL PROJECTS ===== */
 
