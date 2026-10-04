@@ -44,6 +44,16 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .act-day.today{box-shadow:inset 0 0 0 2px rgba(245,158,11,.6)}
 .act-foot{flex-wrap:wrap}
 .act-links{display:flex;gap:8px;flex-wrap:wrap}
+.proj-list{max-height:230px;overflow-y:auto;margin-top:12px;border-top:1px solid var(--line)}
+.proj-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.proj-row:hover{background:rgba(255,255,255,.05)}
+.proj-dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--yellow)}
+.proj-dot.g{background:var(--green)}.proj-dot.r{background:var(--red)}.proj-dot.y{background:var(--yellow)}
+.proj-main{flex:1;display:flex;flex-direction:column;font-size:14px;line-height:1.25}
+.proj-main span{font-size:12px;color:var(--muted)}
+.proj-n{font-size:13px;font-weight:700;white-space:nowrap}
+.sched-ov{margin-top:14px}.sched-ov-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+
 .card.clearance{border-left-color:var(--orange)}
 .card.install{border-left-color:#14b8a6}
 .card.schedule{border-left-color:#a78bfa;grid-column:1/-1}
@@ -208,10 +218,11 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
             </div>
             <div class="act-fu" id="actFuNote"></div>
             <div class="act-week" id="actWeek"></div>
+            <div class="proj-list" id="projList"><div class="soon">Loading projects…</div></div>
           </div>
           <div class="card-foot act-foot">
             <span class="card-note" id="actLastUpdated">No submissions today</span>
-            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a></span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><a class="btn" id="actCompleteLink" href="install-check.html#hca=1">Project completion</a></span>
           </div>
         </div>
 
@@ -502,6 +513,7 @@ function renderSold(who){
   const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
   setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
   $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
+  try{ renderProjects(who); if(typeof renderSchedule === "function") renderSchedule(); }catch(e){ console.error("projects", e); }
 }
 
 /* AR: fetch /exec?action=list, filter to this rep's AR name. */
@@ -659,7 +671,7 @@ function renderScheduleWeek(p){
     `<table class="sched-wkt"><thead><tr>${head}</tr></thead><tbody><tr>${row}</tr></tbody></table>
      <div class="sched-legend"><span><i style="border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)"></i>● Selling</span><span><i style="border-color:rgba(59,130,246,.75);background:rgba(59,130,246,.3)"></i>R = tech ride</span><span><i style="border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.25)"></i>MTG / 1:1</span><span>– Off · tap a day to open it</span></div>
      <div class="sched-plan"><div class="metric" style="min-width:110px"><strong>${total}</strong><span>Consults bookable this week</span></div>
-       <div class="sched-techs">Shift ${schedClock(pe.sh[0])}–${schedClock(pe.sh[1])} · Rotation week ${schedWeek(schedAdd(s,3))+1}<br>Paired techs (bold = primary): ${techs}</div></div>`);
+       <div class="sched-techs">Shift ${schedClock(pe.sh[0])}–${schedClock(pe.sh[1])} · Rotation week ${schedWeek(schedAdd(s,3))+1}<br>Paired techs (bold = primary): ${techs}</div></div>${schedOverlay(schedIso(s), schedIso(schedAdd(s,6)))}`);
   const body = $("schedBody");
   if(body) body.querySelectorAll(".sched-cell[data-i]").forEach(el => {
     const go = () => { schedDate = schedAdd(s, Number(el.dataset.i)); schedSetView("day"); };
@@ -697,7 +709,7 @@ function renderSchedule(){
        <div class="sched-lines">${pl.lines.join("<br>")}</div>
        <div class="metric" style="min-width:110px"><strong>${pl.book}</strong><span>Consults bookable</span></div>
        <div class="sched-techs">${shiftTxt}Rotation week ${schedWeek(d)+1}<br>Your techs working: ${techs}</div>
-     </div>`);
+     </div>${schedOverlay(schedIso(d), schedIso(d))}`);
 }
 function schedShift(n){ const k = schedView === "week" ? 7*n : n; schedDate = new Date(schedDate.getFullYear(), schedDate.getMonth(), schedDate.getDate()+k); renderSchedule(); }
 $("schedPrev").addEventListener("click", () => schedShift(-1));
@@ -705,6 +717,62 @@ $("schedNext").addEventListener("click", () => schedShift(1));
 $("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=new Date(t.getFullYear(), t.getMonth(), t.getDate()); renderSchedule(); });
 $("schedDayBtn").addEventListener("click", () => schedSetView("day"));
 $("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
+
+/* ===== INSTALL PROJECTS (pilot): sold jobs -> Daily Activities list + My Schedule overlay =====
+   Reads the sold tracker (cmh_sold_tracker) the CRM already loads. Readiness is a PLACEHOLDER until the
+   job record exists: j.readiness {done,total} is used when present, otherwise 0 of COMPLETION_TOTAL.
+   Colour: green = all done; red = install within RED_DAYS with items open (or j.readiness.overdue);
+   yellow = everything else. Links open install-check.html in HCA mode (#hca=1&...). */
+const COMPLETION_PAGE = "install-check.html";
+const COMPLETION_TOTAL = 8;
+const RED_DAYS = 3;
+function jobNum(j){ return String(j.jobNumber || j.job || j.number || j.jobNo || "").trim(); }
+function jobIsoDate(j){ return String(j.installDate || "").slice(0,10); }
+function jobLink(j, who){
+  const q = new URLSearchParams({ hca: "1", job: jobNum(j), cust: j.customer || "", date: jobIsoDate(j), rep: (who && who.full) || j.hca || j.salesRep || "" });
+  return COMPLETION_PAGE + "#" + q.toString();
+}
+function myProjects(who){
+  if(!soldData || !soldData.jobs || !who) return [];
+  const all = Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs);
+  return all.filter(j => (norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full)) && !/DONE|COMPLETE/i.test(j.stage || ""));
+}
+function projReady(j){
+  const r = j.readiness || {};
+  const total = r.total || COMPLETION_TOTAL, done = Math.min(r.done || 0, total);
+  const iso = jobIsoDate(j), today = pacificIso(new Date());
+  const days = iso ? Math.round((Date.parse(iso + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 86400000) : null;
+  let color = "y";
+  if(done >= total) color = "g";
+  else if(r.overdue || (days !== null && days <= RED_DAYS)) color = "r";
+  return { done, total, color, days };
+}
+function projDateLabel(j){
+  const iso = jobIsoDate(j); if(!iso) return "TBD";
+  const [y,m,d] = iso.split("-").map(Number); return m + "/" + d;
+}
+function projRow(j, who, sub){
+  const r = projReady(j);
+  return `<a class="proj-row" href="${esc(jobLink(j, who))}"><span class="proj-dot ${r.color}"></span>` +
+    `<span class="proj-main"><b>${esc(j.customer || "Unknown")}</b><span>${esc(sub)}</span></span><span class="proj-n">${r.done} of ${r.total}</span></a>`;
+}
+function renderProjects(who){
+  const box = $("projList"); if(!box) return;
+  const rank = { r: 0, y: 1, g: 2 };
+  const rows = myProjects(who).map(j => ({ j, r: projReady(j) }))
+    .sort((a,b) => rank[a.r.color] - rank[b.r.color] || (jobIsoDate(a.j) || "9999").localeCompare(jobIsoDate(b.j) || "9999"));
+  if(!rows.length){ box.innerHTML = '<div class="soon">No open sold projects.</div>'; return; }
+  box.innerHTML = rows.map(({ j }) => projRow(j, who, projDateLabel(j))).join("");
+}
+function schedOverlay(fromIso, toIso){
+  const who = viewRep;
+  const jobs = myProjects(who).filter(j => { const i = jobIsoDate(j); return i && i >= fromIso && i <= toIso; })
+    .sort((a,b) => jobIsoDate(a).localeCompare(jobIsoDate(b)));
+  if(!jobs.length) return "";
+  return '<div class="sched-ov"><div class="sched-ov-h">Your sold installs</div>' +
+    jobs.map(j => projRow(j, who, projDateLabel(j) + (j.department ? " · " + j.department : ""))).join("") + '</div>';
+}
+/* ===== end INSTALL PROJECTS ===== */
 
 /* CLEARANCE: shared count. */
 function loadClearanceCard(){
