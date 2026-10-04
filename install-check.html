@@ -690,7 +690,61 @@ function loadUpcoming(){
     else{var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t load the upcoming schedule'+(d&&d.error?(': '+qesc(d.error)):'')+'.</p>';var c=el('bucketsCard');if(c)c.style.display='block';}
   }).catch(function(){var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t reach the schedule for the upcoming bucket.</p>';var c=el('bucketsCard');if(c)c.style.display='block';});
 }
-var _resumed=parseResume();
+/* ===== HCA stage (pilot) — opened from the HCA CRM sold tracker: #hca=1&job=..&cust=..&date=..&rep=.. =====
+   The HCA completes their half of the install requirements and confirms what is already in ServiceTitan.
+   Manager-only controls are greyed out (locked fields still submit, same as the manager lane lock).
+   The queue / open-checks / upcoming lists are NOT loaded in this mode: an HCA must not see other jobs.
+   UI-level lock only (convenience, not enforcement). */
+var HCA_LOCK=['d-elec','d-install','d-sales','b-elec','b-labor','disc','rebate','sizematch','ready','by'];
+var HCA_REQUIRED=[['customer','Customer name'],['idate','Install date'],['hca','HCA name'],['pay','Payment readiness'],['mat','Materials list'],['photos','Layout photos'],['video','Walkthrough video']];
+var PARK_REASONS=['HOA approval','Financing pending','Date to firm up','Permit','Materials / equipment','Customer hold','Other'];
+function hcaParams(){var m=String(location.hash||'').match(/[#&]hca=1(?:&|$)/);if(!m)return null;var o={};String(location.hash).replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)o[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});return o;}
+function hcaMissing(){var out=[];HCA_REQUIRED.forEach(function(r){if(!v(r[0]))out.push(r[1]);});return out;}
+function hcaInit(){
+  var o=hcaParams();if(!o)return false;
+  ['queueCard','bucketsCard','resumeCard'].forEach(function(id){var e=el(id);if(e)e.style.display='none';});
+  if(o.cust)el('customer').value=o.cust;
+  if(o.date)el('idate').value=o.date;
+  if(o.rep||o.hcaname)setHca(o.rep||o.hcaname);
+  if(o.job)SOLD={customer:o.cust||'',soldby:o.rep||'',amount:'',soldon:'',est:'',job:o.job};
+  HCA_LOCK.forEach(function(id){var e=el(id);if(e){e.disabled=true;e.style.opacity='0.55';}});
+  var rb=el('roleBanner');if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='📋 <b>Complete the install requirements'+(o.job?(' — job #'+o.job):'')+'.</b> Confirm what is already in ServiceTitan. The greyed-out boxes belong to the managers. Not ready to finish? Use <b>Save &amp; exit</b> and say what is holding it up.';}
+  var cp=el('copyBtn');if(cp)cp.style.display='none';
+  var sb=el('sendBtn');if(sb)sb.style.display='none';
+  var hb=el('handoffBtn');if(hb){hb.textContent='Submit to managers';hb.className='go';}
+  var ex=document.createElement('button');ex.className='ghost';ex.id='parkBtn';ex.textContent='Save & exit';
+  var bar=document.querySelector('.bar-in');if(bar&&hb)bar.insertBefore(ex,hb);
+  var bt=el('bartxt');if(bt)bt.textContent='Fill in your part, then Submit to managers';
+  /* gate Submit on the required basics; the existing handler stays wired underneath */
+  if(hb){hb.onclick=function(){var miss=hcaMissing();if(miss.length){el('bartxt').textContent='Still needed: '+miss.join(', ')+'.';return;}sendToHca(true);};}
+  ex.onclick=openPark;
+  buildParkModal();
+  return true;
+}
+function buildParkModal(){
+  var d=document.createElement('div');d.id='parkModal';d.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center;padding:16px';
+  var opts=PARK_REASONS.map(function(r){return '<option>'+r+'</option>';}).join('');
+  d.innerHTML='<div class="card" style="max-width:420px;width:100%"><h2>Park this job</h2><p class="sub" style="margin:0 0 10px">Say what is holding it up and when you expect to wrap it up. You will get a reminder that morning.</p>'
+   +'<div class="full"><label>Reason</label><select id="parkReason"><option value="">Select…</option>'+opts+'</select></div>'
+   +'<div class="full"><label>Expected wrap-up date</label><input type="date" id="parkDate"></div>'
+   +'<div class="full"><label>Note</label><textarea id="parkNote" placeholder="e.g. HOA board meets the 15th"></textarea></div>'
+   +'<div id="parkMsg" class="sub" style="min-height:18px"></div>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="ghost" id="parkCancel">Back</button><button class="go" id="parkSave">Save &amp; exit</button></div></div>';
+  document.body.appendChild(d);
+  el('parkCancel').onclick=function(){d.style.display='none';};
+  el('parkSave').onclick=savePark;
+}
+function openPark(){var m=el('parkModal');if(m)m.style.display='flex';}
+function savePark(){
+  var r=v('parkReason'),dt=v('parkDate'),msg=el('parkMsg');
+  if(!r){msg.textContent='Pick a reason.';return;}
+  if(!dt){msg.textContent='Pick the date you expect to wrap up.';return;}
+  /* STUB — not stored server-side yet. Storage for parked jobs needs Geoff's approval (new node + rule). */
+  msg.textContent='Parking is not connected yet (pilot build) — nothing was saved.';
+  window.PARK_DRAFT={job:(SOLD&&SOLD.job)||'',customer:v('customer'),hca:v('hca'),reason:r,revisit:dt,note:v('parkNote'),fields:null};
+}
+var _hcaMode=hcaInit();
+var _resumed=_hcaMode?true:parseResume();
 if(!_resumed){
   parseQueue();
   if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
