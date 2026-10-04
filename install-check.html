@@ -571,6 +571,7 @@ function sendToHca(handoff){
      Lyle / Geoff get the email and can finish their part. Only the basics gate it. */
   var req=[['customer','Enter the customer name first.'],['idate','Add the install date.'],['hca','Pick the HCA name first.'],['by','Pick who checked it.']];
   for(var i=0;i<req.length;i++){if(!v(req[i][0])){var mf=el(req[i][0]);el('bartxt').textContent=req[i][1];if(mf){try{mf.focus();}catch(e){}try{mf.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}return;}}
+  var om=openMissing();if(om.length){el('bartxt').textContent='Add why and by-when for: '+om.join(', ')+'.';return;}
   var rr=computeVerdict();
   var finalStatus=rr.status;
   if(manualStatus!=null)finalStatus=manualStatus;
@@ -580,7 +581,7 @@ function sendToHca(handoff){
     city:v('city'),critical:v('critical'),
     jflag:rr.juris?((rr.juris.lvl==='no'?'NOT next-day: ':'Conditional: ')+rr.juris.msg):'',
     verdict:finalStatus,blockers:rr.blockers.join('; '),
-    notesflags:rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';})).join('; '),
+    notesflags:rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';})).concat(openItemsText()).join('; '),
     delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
     mat:v('mat'),matnotes:cap(v('mat-notes'),300),
     photos:v('photos'),video:v('video'),
@@ -690,6 +691,27 @@ function loadUpcoming(){
     else{var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t load the upcoming schedule'+(d&&d.error?(': '+qesc(d.error)):'')+'.</p>';var c=el('bucketsCard');if(c)c.style.display='block';}
   }).catch(function(){var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t reach the schedule for the upcoming bucket.</p>';var c=el('bucketsCard');if(c)c.style.display='block';});
 }
+/* ===== Checklist "No" => why + when. A No (or warning) on a checklist item reveals two required inputs:
+   why it is not done and the date it should be resolved. They ride along in notesflags. ===== */
+var CHECK_IDS=['mat','photos','video','heatload','ahri','pay','disc','rebate','b-elec','b-labor','sizematch'];
+var NO_WHY=['Waiting on customer','Waiting on financing','Waiting on equipment','Waiting on permit / HOA','Needs manager review','Other'];
+var OPENIT={};
+function isNoVal(x){return !!x&&(x.indexOf('✖')===0||x.indexOf('⚠')===0);}
+function checkLabel(id){var e=el(id);var l=e&&e.parentNode&&e.parentNode.querySelector('label');return l?String(l.textContent).replace(/\?$/,'').trim():id;}
+function syncOpenBox(id){
+  var e=el(id);if(!e)return;var box=el('ob-'+id);
+  if(isNoVal(e.value)){
+    if(!box){box=document.createElement('div');box.id='ob-'+id;box.style.cssText='margin-top:6px;padding:8px;border:1px solid var(--orange,#f90);border-radius:8px;display:flex;gap:6px;flex-wrap:wrap';
+      box.innerHTML='<select id="obw-'+id+'" aria-label="Why"><option value="">Why not done?</option>'+NO_WHY.map(function(r){return '<option>'+r+'</option>';}).join('')+'</select>'
+        +'<input type="date" id="obd-'+id+'" aria-label="Resolve by"><input type="text" id="obn-'+id+'" placeholder="Note (optional)" style="flex:1;min-width:120px">';
+      e.parentNode.appendChild(box);
+      ['obw-','obd-','obn-'].forEach(function(pf){el(pf+id).addEventListener('change',function(){OPENIT[id]={why:v('obw-'+id),when:v('obd-'+id),note:v('obn-'+id)};});el(pf+id).addEventListener('input',function(){OPENIT[id]={why:v('obw-'+id),when:v('obd-'+id),note:v('obn-'+id)};});});}
+    box.style.display='flex';
+  } else if(box){box.style.display='none';delete OPENIT[id];}
+}
+function openMissing(){var out=[];CHECK_IDS.forEach(function(id){var e=el(id);if(e&&!e.disabled&&isNoVal(e.value)){var o=OPENIT[id]||{};if(!o.why||!o.when)out.push(checkLabel(id));}});return out;}
+function openItemsText(){var out=[];CHECK_IDS.forEach(function(id){var e=el(id);if(e&&isNoVal(e.value)){var o=OPENIT[id]||{};out.push(checkLabel(id)+': NO — '+(o.why||'no reason')+(o.when?(' — by '+o.when):'')+(o.note?(' — '+o.note):''));}});return out;}
+CHECK_IDS.forEach(function(id){var e=el(id);if(e)e.addEventListener('change',function(){syncOpenBox(id);});});
 /* ===== HCA stage (pilot) — opened from the HCA CRM sold tracker: #hca=1&job=..&cust=..&date=..&rep=.. =====
    The HCA completes their half of the install requirements and confirms what is already in ServiceTitan.
    Manager-only controls are greyed out (locked fields still submit, same as the manager lane lock).
@@ -708,6 +730,8 @@ function hcaInit(){
   if(o.cust)el('customer').value=o.cust;
   if(o.date)el('idate').value=o.date;
   if(o.rep||o.hcaname)setHca(o.rep||o.hcaname);
+  /* "Checked by" is a manager control and locked in HCA mode, but sendToHca requires it: the HCA is the checker here. */
+  (function(){var h=v('hca'),b=el('by');if(b&&h){var ok=Array.prototype.some.call(b.options,function(op){return op.value===h||op.text===h;});if(!ok){var op=document.createElement('option');op.text=h;b.add(op);}b.value=h;}})();
   if(o.job)SOLD={customer:o.cust||'',soldby:o.rep||'',amount:'',soldon:'',est:'',job:o.job};
   HCA_LOCK.forEach(function(id){var e=el(id);if(e){e.disabled=true;e.style.opacity='0.55';}});
   /* Working-on-it: an HCA can mark an item they have started but not finished. It counts as answered
