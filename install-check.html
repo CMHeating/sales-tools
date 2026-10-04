@@ -695,10 +695,12 @@ function loadUpcoming(){
    Manager-only controls are greyed out (locked fields still submit, same as the manager lane lock).
    The queue / open-checks / upcoming lists are NOT loaded in this mode: an HCA must not see other jobs.
    UI-level lock only (convenience, not enforcement). */
+var WORKING='\u23F3 Working on it',HCA_WORKING=[];
 var HCA_LOCK=['d-elec','d-install','d-sales','b-elec','b-labor','disc','rebate','sizematch','ready','by'];
 var HCA_REQUIRED=[['customer','Customer name'],['idate','Install date'],['hca','HCA name'],['pay','Payment readiness'],['mat','Materials list'],['photos','Layout photos'],['video','Walkthrough video']];
 var PARK_REASONS=['HOA approval','Financing pending','Date to firm up','Permit','Materials / equipment','Customer hold','Other'];
 function hcaParams(){var m=String(location.hash||'').match(/[#&]hca=1(?:&|$)/);if(!m)return null;var o={};String(location.hash).replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)o[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});return o;}
+function hcaProgress(){var done=0,work=0;HCA_WORKING.forEach(function(id){var x=v(id);if(x===WORKING)work++;else if(x&&x.indexOf('\u2716')!==0&&x.indexOf('\u26A0')!==0)done++;});return {done:done,work:work,total:HCA_WORKING.length};}
 function hcaMissing(){var out=[];HCA_REQUIRED.forEach(function(r){if(!v(r[0]))out.push(r[1]);});return out;}
 function hcaInit(){
   var o=hcaParams();if(!o)return false;
@@ -708,6 +710,11 @@ function hcaInit(){
   if(o.rep||o.hcaname)setHca(o.rep||o.hcaname);
   if(o.job)SOLD={customer:o.cust||'',soldby:o.rep||'',amount:'',soldon:'',est:'',job:o.job};
   HCA_LOCK.forEach(function(id){var e=el(id);if(e){e.disabled=true;e.style.opacity='0.55';}});
+  /* Working-on-it: an HCA can mark an item they have started but not finished. It counts as answered
+     (so it can be submitted / saved) but stays an open item for the managers and for Amy's "ready to book". */
+  HCA_WORKING=['mat','photos','video','heatload','ahri','pay'];
+  HCA_WORKING.forEach(function(id){var e=el(id);if(e&&!Array.prototype.some.call(e.options,function(o){return o.text===WORKING;})){var o=document.createElement('option');o.text=WORKING;e.add(o,e.options[1]);}});
+  if(WARNVALS.indexOf(WORKING)<0)WARNVALS.push(WORKING);
   var rb=el('roleBanner');if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='📋 <b>Complete the install requirements'+(o.job?(' — job #'+o.job):'')+'.</b> Confirm what is already in ServiceTitan. The greyed-out boxes belong to the managers. Not ready to finish? Use <b>Save &amp; exit</b> and say what is holding it up.';}
   var cp=el('copyBtn');if(cp)cp.style.display='none';
   var sb=el('sendBtn');if(sb)sb.style.display='none';
@@ -716,7 +723,8 @@ function hcaInit(){
   var bar=document.querySelector('.bar-in');if(bar&&hb)bar.insertBefore(ex,hb);
   var bt=el('bartxt');if(bt)bt.textContent='Fill in your part, then Submit to managers';
   /* gate Submit on the required basics; the existing handler stays wired underneath */
-  if(hb){hb.onclick=function(){var miss=hcaMissing();if(miss.length){el('bartxt').textContent='Still needed: '+miss.join(', ')+'.';return;}sendToHca(true);};}
+  if(hb){hb.onclick=function(){var miss=hcaMissing();if(miss.length){el('bartxt').textContent='Still needed: '+miss.join(', ')+'.';return;}var pr=hcaProgress();if(pr.work){el('bartxt').textContent='Sending with '+pr.work+' item'+(pr.work>1?'s':'')+' still marked Working on it.';}sendToHca(true);};}
+  var _pw=document.querySelector('.wrap');if(_pw)_pw.addEventListener('change',function(){var pr=hcaProgress();var b=el('bartxt');if(b)b.textContent=pr.done+' of '+pr.total+' complete'+(pr.work?(' \u00B7 '+pr.work+' working on it'):'');});
   ex.onclick=openPark;
   buildParkModal();
   return true;
