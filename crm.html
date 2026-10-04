@@ -222,7 +222,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
           </div>
           <div class="card-foot act-foot">
             <span class="card-note" id="actLastUpdated">No submissions today</span>
-            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><a class="btn" id="actCompleteLink" href="install-check.html#hca=1">Project completion</a></span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><a class="btn" id="actCompleteLink" href="install-requirements.html">Project completion</a></span>
           </div>
         </div>
 
@@ -723,13 +723,13 @@ $("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
    job record exists: j.readiness {done,total} is used when present, otherwise 0 of COMPLETION_TOTAL.
    Colour: green = all done; red = install within RED_DAYS with items open (or j.readiness.overdue);
    yellow = everything else. Links open install-check.html in HCA mode (#hca=1&...). */
-const COMPLETION_PAGE = "install-check.html";
+const COMPLETION_PAGE = "install-requirements.html";
 const COMPLETION_TOTAL = 8;
 const RED_DAYS = 3;
 function jobNum(j){ return String(j.jobNumber || j.job || j.number || j.jobNo || "").trim(); }
 function jobIsoDate(j){ return String(j.installDate || "").slice(0,10); }
 function jobLink(j, who){
-  const q = new URLSearchParams({ hca: "1", job: jobNum(j), cust: j.customer || "", date: jobIsoDate(j), rep: (who && who.full) || j.hca || j.salesRep || "" });
+  const q = new URLSearchParams({ job: jobNum(j), cust: j.customer || "", date: jobIsoDate(j), rep: (who && who.full) || j.hca || j.salesRep || "" });
   return COMPLETION_PAGE + "#" + q.toString();
 }
 function myProjects(who){
