@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Install Requirements — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  /* Same tokens as install-check.html and crm.html so the three pages read as one product. */
+  :root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#c97d10;--green:#22c55e;--red:#ef4444;--blue:#4aa3df}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;padding-bottom:112px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px 40px;padding-left:max(16px,env(safe-area-inset-left,0));padding-right:max(16px,env(safe-area-inset-right,0))}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px}
+  .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
+  .back{color:var(--mut);text-decoration:none;font-size:13px}.back:hover{color:var(--text)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+  .card h2{font-family:"Playfair Display",serif;font-weight:700;font-size:17px;margin:0 0 4px;display:flex;align-items:center;gap:9px}
+  .card h2 .n{width:24px;height:24px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gold)}
+  .hint{color:var(--mut);font-size:13px;margin:0 0 12px}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+  /* hero */
+  .hero{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+  .hero h1{font-family:"Playfair Display",serif;font-weight:800;font-size:26px;line-height:1.1;margin:4px 0 8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:12px;font-weight:600;color:var(--mut);border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:4px 10px}
+  .chip b{color:var(--text);font-weight:700}
+  .ring{position:relative;width:92px;height:92px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .t{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:20px;line-height:1}
+  .ring .t small{font-size:11px;font-weight:600;color:var(--mut);margin-top:3px}
+  /* stage line */
+  .stages{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);overflow-x:auto;padding-top:4px}
+  .stages span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .stages i{width:9px;height:9px;border-radius:50%;background:var(--line);display:inline-block}
+  .stages .done i{background:var(--green)}.stages .now{color:var(--text)}.stages .now i{background:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.25)}
+  .stages em{width:14px;height:1px;background:var(--line);display:inline-block;font-style:normal}
+  /* needs you */
+  .needs{border-radius:14px;padding:12px 14px;margin-bottom:14px;border:1px solid rgba(245,158,11,.55);background:rgba(245,158,11,.1);color:#fde68a;font-size:14px;line-height:1.45}
+  .needs.clear{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.1);color:#bbf7d0}
+  .needs b{font-weight:800}
+  .needs ul{margin:6px 0 0;padding:0;list-style:none}
+  .needs li{display:flex;gap:8px;align-items:baseline;padding:3px 0}
+  .needs a{color:inherit;text-decoration:underline;cursor:pointer}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+  .dot.r{background:var(--red)}.dot.y{background:var(--gold)}.dot.g{background:var(--green)}
+  /* rows */
+  .row{padding:12px 0;border-top:1px solid var(--line)}
+  .row:first-of-type{border-top:0}
+  .row .q{font-weight:600;margin-bottom:8px;font-size:15px}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1 1 0;min-width:84px;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--mut);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+  .seg button[aria-checked=true].yes{background:rgba(34,197,94,.16);border-color:rgba(34,197,94,.7);color:#bbf7d0}
+  .seg button[aria-checked=true].work{background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.7);color:#fde68a}
+  .seg button[aria-checked=true].no{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.7);color:#fecaca}
+  .seg button[aria-checked=true].na{background:rgba(148,163,184,.14);border-color:var(--mut);color:var(--text)}
+  .seg button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  .why{display:none;gap:8px;flex-wrap:wrap;margin-top:8px;padding:10px;border:1px solid rgba(239,68,68,.45);border-radius:12px;background:rgba(239,68,68,.07)}
+  .why.on{display:flex}
+  select,input[type=date],input[type=text],textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:15px;min-height:46px}
+  .why select{flex:1 1 180px}.why input[type=date]{flex:1 1 140px}.why input[type=text]{flex:2 1 200px}
+  textarea{min-height:76px;resize:vertical}
+  label.l{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 6px}
+  /* bar */
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(10,22,40,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 0 max(10px,env(safe-area-inset-bottom,0))}
+  .bar-in{max-width:720px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:10px}
+  .bar-txt{flex:1;font-size:13px;color:var(--mut);line-height:1.3}
+  .bar-txt b{color:var(--text)}
+  .btn{min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+  .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .saved{font-size:12px;color:var(--mut)}
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0}
+  .modal.on{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:720px;padding:18px 16px max(18px,env(safe-area-inset-bottom,0))}
+  .sheet h2{font-family:"Playfair Display",serif;margin:0 0 6px}
+  .sheet .f{margin:10px 0}
+  .sheet .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  @media (min-width:640px){.modal{align-items:center}.sheet{border-radius:20px}}
+  @media (prefers-reduced-motion:no-preference){.ring circle.v{transition:stroke-dashoffset .4s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" href="crm.html">&larr; My CRM</a></div>
+
+  <section class="card hero" aria-label="Project">
+    <div>
+      <div class="eyebrow">Install requirements</div>
+      <h1 id="custName">—</h1>
+      <div class="chips"><span class="chip">Install <b id="chipDate">TBD</b></span><span class="chip">Job <b id="chipJob">—</b></span><span class="chip">HCA <b id="chipHca">—</b></span></div>
+    </div>
+    <div class="ring" aria-live="polite">
+      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="40" fill="none" stroke="#1e2a44" stroke-width="9"/><circle class="v" id="ringV" cx="46" cy="46" r="40" fill="none" stroke="#22c55e" stroke-width="9" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg>
+      <div class="t"><span id="ringN">0 of 0</span><small>complete</small></div>
+    </div>
+    <div class="stages" aria-label="Stage"><span class="done"><i></i>Sold</span><em></em><span class="now"><i></i>Requirements</span><em></em><span><i></i>Review</span><em></em><span><i></i>Ready</span><em></em><span><i></i>Installed</span></div>
+  </section>
+
+  <div id="needs" class="needs" role="status"></div>
+
+  <section class="card" id="sec-pay"><h2><span class="n">1</span>Payment</h2><p class="hint">Confirm it is arranged in ServiceTitan.</p>
+    <div class="row"><div class="q">Payment status</div>
+      <select id="pay" aria-label="Payment status"></select>
+      <div class="why" id="why-pay"></div></div>
+  </section>
+
+  <section class="card" id="sec-equip"><h2><span class="n">2</span>Equipment &amp; permit</h2><p class="hint">What has to be true for the install date.</p><div id="g-equip"></div></section>
+
+  <section class="card" id="sec-layout"><h2><span class="n">3</span>Layout &amp; materials</h2><p class="hint">Done and uploaded to the customer&rsquo;s ServiceTitan profile.</p><div id="g-layout"></div>
+    <div class="row"><label class="l" for="notes">Notes</label><textarea id="notes" placeholder="Special orders, back-ordered items, access, where equipment lands."></textarea></div>
+  </section>
+
+  <section class="card" id="sec-rental" style="display:none"><h2><span class="n">4</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
+</div>
+
+<div class="bar"><div class="bar-in">
+  <div class="bar-txt" id="barTxt">Loading…</div>
+  <button class="btn" id="parkBtn" type="button">Save &amp; exit</button>
+  <button class="btn go" id="submitBtn" type="button">Submit</button>
+</div></div>
+
+<div class="modal" id="parkModal" role="dialog" aria-modal="true" aria-labelledby="parkH"><div class="sheet">
+  <h2 id="parkH">Park this job</h2><p class="hint">Say what is holding it up and when you expect to wrap it up.</p>
+  <div class="f"><label class="l" for="parkReason">Reason</label><select id="parkReason"></select></div>
+  <div class="f"><label class="l" for="parkDate">Expected wrap-up date</label><input type="date" id="parkDate"></div>
+  <div class="f"><label class="l" for="parkNote">Note</label><textarea id="parkNote" placeholder="e.g. HOA board meets the 15th"></textarea></div>
+  <div class="hint" id="parkMsg" style="min-height:18px"></div>
+  <div class="acts"><button class="btn" id="parkBack" type="button">Back</button><button class="btn go" id="parkSave" type="button">Save &amp; exit</button></div>
+</div></div>
+
+<script>
+var $=function(id){return document.getElementById(id)};
+var SCHED="https://script.google.com/macros/s/AKfycbzj0JN8EhGOgHOXKnRN0ZNz_Fb4FhF_r-_A4vCZnEnADE80p0w1UfSWIrKxC6_D-3U1fA/exec";
+var WHYS=['Waiting on customer','Waiting on financing','Waiting on equipment','Waiting on permit / HOA','Needs manager review','Other'];
+var PARK=['HOA approval','Financing pending','Date to firm up','Permit','Materials / equipment','Customer hold','Other'];
+var PAY=['Select…','✔ Financed — approved & sales slip signed','⚠ Financed — approved, slip NOT signed','⚠ Financed — not yet approved','✔ Check/cash — half down received','⚠ Check/cash — half down NOT received','✔ Credit card — run / authorized','✔ Credit card — half down run','⚠ Credit card — half down NOT run','⚠ Credit card — not yet run','✔ Comfort Club rental — agreement signed','⚠ Comfort Club rental — agreement NOT signed','✔ Paid in full','⏳ Working on it','N/A'];
+/* id, question, section, yes-text sent to the manager page, offers N/A */
+var ITEMS=[
+ ['stock','Equipment in stock?','equip','✔ Yes — in stock',false],
+ ['permit','Permit / jurisdiction ready for the install date?','equip','✔ Yes — not needed or filed',true],
+ ['heatload','Heat load calc completed?','equip','✔ Yes',true],
+ ['ahri','AHRI match on file?','equip','✔ Yes — AHRI match on file',true],
+ ['mat','Materials list complete & ordered?','layout','✔ Yes — complete & ordered',false],
+ ['photos','Layout photos taken?','layout','✔ Yes',false],
+ ['video','Walkthrough video taken?','layout','✔ Yes',false],
+ ['r-contract','Rental contract signed?','rental','✔ Yes',false],
+ ['r-penny','Penny test done?','rental','✔ Yes',false],
+ ['r-credit','Credit authorization?','rental','✔ Yes',false],
+ ['r-payauth','Payment authorization?','rental','✔ Yes',false],
+ ['r-dl','Driver’s license on file?','rental','✔ Yes',false],
+ ['r-deed','Mortgage or deed on file?','rental','✔ Yes',false]];
+var REQUIRED=['pay','stock','permit','mat','photos','video'];   /* must be answered (Working counts) to submit */
+var WORKING='⏳ Working on it';
+var H={};   /* link params: cust, date, job, rep */
+(location.hash||'').replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)H[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});
+var S={items:{},pay:'',notes:''};          /* items[id]={v:yes|work|no|na, why, when, note} */
+var KEY='cmh_install_req_'+(H.job||H.cust||'x');
+var submitted=false;
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function isRental(){return /rental/i.test(S.pay);}
+function payState(){var p=S.pay;if(!p||p==='Select…')return '';if(p===WORKING)return 'work';if(p==='N/A')return 'na';if(p.indexOf('✔')===0)return 'yes';return 'no';}
+function stateOf(id){if(id==='pay')return payState();var o=S.items[id];return o?o.v:'';}
+function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[2]==='rental'&&!isRental())return;ids.push(it[0]);});return ids.filter(function(id){return stateOf(id)!=='na';});}
+function label(id){if(id==='pay')return 'Payment status';for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][1].replace(/\?$/,'');return id;}
+
+function build(){
+  ['equip','layout','rental'].forEach(function(g){
+    var box=$('g-'+g);box.innerHTML='';
+    ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
+      var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
+      var btns=[['yes','Complete'],['work','Working on it'],['no','No']].concat(it[4]?[['na','N/A']]:[]);
+      row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
+        +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
+        +'</div><div class="why" id="why-'+id+'"></div>';
+      box.appendChild(row);
+    });
+  });
+  $('pay').innerHTML=PAY.map(function(p,i){return '<option value="'+(i?esc(p):'')+'">'+esc(p)+'</option>';}).join('');
+  $('parkReason').innerHTML='<option value="">Select…</option>'+PARK.map(function(r){return '<option>'+r+'</option>';}).join('');
+  document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setItem(b.dataset.id,b.dataset.v);});});
+  $('pay').addEventListener('change',function(){S.pay=this.value;paintWhy('pay');render();save();});
+  $('notes').addEventListener('input',function(){S.notes=this.value;save();});
+}
+function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;paintWhy(id);render();save();}
+function whyBox(id,o){
+  return '<select data-k="why" aria-label="Why not done?"><option value="">Why not done?</option>'+WHYS.map(function(w){return '<option'+(o.why===w?' selected':'')+'>'+w+'</option>';}).join('')+'</select>'
+   +'<input type="date" data-k="when" aria-label="Resolve by" value="'+esc(o.when||'')+'">'
+   +'<input type="text" data-k="note" placeholder="Note (optional)" value="'+esc(o.note||'')+'">';
+}
+function paintWhy(id){
+  var box=$('why-'+id);if(!box)return;var st=stateOf(id),o=id==='pay'?(S.items.pay||(S.items.pay={})):(S.items[id]||(S.items[id]={}));
+  if(st==='no'){if(!box.innerHTML||box.dataset.id!==id){box.innerHTML=whyBox(id,o);box.dataset.id=id;
+      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){o[e.dataset.k]=e.value;render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
+    box.classList.add('on');}
+  else box.classList.remove('on');
+}
+function openNeeds(){
+  var out=[];active().forEach(function(id){var st=stateOf(id),o=S.items[id]||{};
+    if(st==='no')out.push({id:id,c:'r',t:label(id)+' — '+(o.why||'add a reason')+(o.when?' · by '+o.when:' · add a date')});
+    else if(st==='work')out.push({id:id,c:'y',t:label(id)+' — working on it'});});
+  return out;
+}
+function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push(label(id));});
+  if(isRental())ITEMS.forEach(function(it){if(it[2]==='rental'&&!stateOf(it[0]))m.push(label(it[0]));});
+  active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');}});
+  return m;}
+function render(){
+  var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length,total=act.length;
+  $('ringN').textContent=done+' of '+total;
+  $('ringV').setAttribute('stroke-dashoffset',String(251.3*(1-(total?done/total:0))));
+  $('sec-rental').style.display=isRental()?'':'none';
+  var needs=openNeeds(),nb=$('needs');
+  if(!needs.length&&done===total&&total>0){nb.className='needs clear';nb.innerHTML='<b>All set.</b> Everything on your side is complete. Submit it to the managers.';}
+  else if(!needs.length){nb.className='needs';nb.innerHTML='<b>Needs you.</b> Start with Payment, then work down. Tap Working on it for anything you have started.';}
+  else{nb.className='needs';nb.innerHTML='<b>Needs you</b> ('+needs.length+')<ul>'+needs.map(function(n){return '<li><span class="dot '+n.c+'"></span><a data-go="'+n.id+'">'+esc(n.t)+'</a></li>';}).join('')+'</ul>';
+    nb.querySelectorAll('[data-go]').forEach(function(a){a.onclick=function(){var r=$('row-'+a.dataset.go)||$('sec-pay');if(r.scrollIntoView)r.scrollIntoView({block:'center',behavior:'smooth'});};});}
+  document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-checked',stateOf(b.dataset.id)===b.dataset.v?'true':'false');});
+  var miss=missing();
+  $('barTxt').innerHTML=miss.length?('<b>Still needed:</b> '+esc(miss.slice(0,3).join(', '))+(miss.length>3?' +'+(miss.length-3):'')):'<b>Ready to submit.</b> '+done+' of '+total+' complete';
+  $('submitBtn').disabled=!!miss.length||submitted;
+}
+/* ---- draft: this phone only, per job, until job records are stored server-side ---- */
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
+  $('pay').value=S.pay||'';$('notes').value=S.notes||'';
+  Object.keys(S.items).forEach(function(id){paintWhy(id);});}
+
+/* ---- submit: same endpoint and fields the manager page uses ---- */
+function api(params){return new Promise(function(resolve,reject){
+  var cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6),s=document.createElement('script');
+  var t=setTimeout(function(){cleanup();reject(new Error('timeout'));},25000);
+  function cleanup(){clearTimeout(t);try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);}
+  window[cb]=function(d){cleanup();resolve(d);};
+  var q=new URLSearchParams(params);q.set('callback',cb);s.src=SCHED+'?'+q.toString();
+  s.onerror=function(){cleanup();reject(new Error('network'));};document.body.appendChild(s);});}
+function val(id){if(id==='pay')return S.pay&&S.pay!=='Select…'?S.pay:'';var st=stateOf(id);if(!st)return '';
+  if(st==='yes'){for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][3];}
+  return st==='work'?WORKING:st==='no'?'✖ No':'N/A';}
+function submit(){
+  var miss=missing();if(miss.length){$('barTxt').textContent='Still needed: '+miss.join(', ');return;}
+  var needs=openNeeds(),open=needs.map(function(n){return n.t;});
+  var rental=isRental()?(' | Rental: '+ITEMS.filter(function(it){return it[2]==='rental';}).map(function(it){return it[1].replace(/\?$/,'')+' '+(val(it[0])||'unanswered');}).join(', ')):'';
+  var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length;
+  var ready=needs.length?'⚠ Ready with notes':'✔ Ready';
+  var b=$('submitBtn');b.disabled=true;b.textContent='Sending…';
+  api({action:'installcheck',handoff:'1',customer:H.cust||'',idate:H.date||'',hca:H.rep||'',by:H.rep||'',ready:ready,city:'',critical:'',jflag:'',verdict:ready,
+    blockers:'',notesflags:open.concat(['HCA checklist '+done+' of '+act.length+rental]).join('; '),
+    delec:'',dinstall:'',dsales:'',mat:val('mat'),matnotes:(S.notes||'').slice(0,300),photos:val('photos'),video:val('video'),disconnect:'',outlet:'',belec:'',blabor:'',billnotes:'',
+    heatload:val('heatload'),sizematch:'',equip:'',sizenotes:'',disc:'',rebate:'',ahri:val('ahri'),discnotes:'',jobtype:H.type||'',pay:val('pay'),
+    gasline:'',venting:'',gaspermit:'',gasinspect:'',finish:'',soldcustomer:H.cust||'',soldby:H.rep||'',soldamount:'',soldon:'',soldest:'',soldjob:H.job||''})
+  .then(function(d){b.textContent='Submit';if(d&&d.ok){submitted=true;try{localStorage.removeItem(KEY);}catch(e){}$('needs').className='needs clear';$('needs').innerHTML='<b>Sent to the managers.</b> They will verify it against ServiceTitan.';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
+    else{b.disabled=false;$('barTxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed. Your answers are saved on this phone; try again.';}})
+  .catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Couldn’t reach the mailer. Your answers are saved on this phone; try again.';});
+}
+/* ---- park ---- */
+function openPark(){$('parkMsg').textContent='';$('parkModal').classList.add('on');$('parkReason').focus();}
+function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
+  if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}
+  S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();
+  /* STUB: stored on this phone only. Server-side parked storage needs Geoff's approval (new node + rules). */
+  m.textContent='Saved on this phone. Parking is not connected to the office yet (pilot build).';}
+
+(function init(){
+  $('custName').textContent=H.cust||'Choose a job from your CRM';
+  $('chipDate').textContent=H.date?(function(){var p=H.date.split('-');return (+p[1])+'/'+(+p[2]);})():'TBD';
+  $('chipJob').textContent=H.job||'—';$('chipHca').textContent=H.rep||'—';
+  build();load();render();
+  $('parkBtn').onclick=openPark;$('parkBack').onclick=function(){$('parkModal').classList.remove('on');};$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')$('parkModal').classList.remove('on');});
+  if(!H.cust&&!H.job){$('submitBtn').disabled=true;$('barTxt').textContent='Open this page from a job in your CRM.';}
+})();
+</script>
+</body>
+</html>
