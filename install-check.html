@@ -133,6 +133,19 @@
         <select id="photos"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Partial — see notes</option><option>✖ No</option></select></div>
       <div><label>Walkthrough video taken?</label>
         <select id="video"><option value="">Select…</option><option>✔ Yes</option><option>⚠ Partial — see notes</option><option>✖ No</option></select></div>
+      <div><label>Equipment in stock?</label>
+        <select id="stock"><option value="">Select…</option><option>✔ Yes — in stock</option><option>⚠ Ordered — ETA in notes</option><option>✖ No</option></select></div>
+      <div><label>Permit / jurisdiction ready for the install date?</label>
+        <select id="permit"><option value="">Select…</option><option>✔ Yes — not needed or filed</option><option>⚠ Pending</option><option>✖ No</option><option>N/A</option></select></div>
+      <div class="full" id="rentalBox" style="display:none"><label style="color:var(--orange)">Rental paperwork</label>
+        <div class="grid2">
+          <div><label>Rental contract signed?</label><select id="r-contract"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+          <div><label>Penny test done?</label><select id="r-penny"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+          <div><label>Credit authorization?</label><select id="r-credit"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+          <div><label>Payment authorization?</label><select id="r-payauth"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+          <div><label>Driver&rsquo;s license on file?</label><select id="r-dl"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+          <div><label>Mortgage or deed on file?</label><select id="r-deed"><option value="">Select…</option><option>✔ Yes</option><option>✖ No</option></select></div>
+        </div></div>
       <div class="full"><a class="link" href="hca-layout-cheatsheet.html" target="_blank">Layout Cheat Sheet</a></div>
       <div class="full"><label>Materials / layout notes</label><textarea id="mat-notes" placeholder="Special orders, back-ordered items, access, obstacles, where equipment lands."></textarea></div>
     </div>
@@ -179,6 +192,8 @@
           <option>✔ Check/cash — half down received</option>
           <option>⚠ Check/cash — half down NOT received</option>
           <option>✔ Credit card — run / authorized</option>
+          <option>✔ Credit card — half down run</option>
+          <option>⚠ Credit card — half down NOT run</option>
           <option>⚠ Credit card — not yet run</option>
           <option>✔ Comfort Club rental — agreement signed</option>
           <option>⚠ Comfort Club rental — agreement NOT signed</option>
@@ -238,7 +253,7 @@
 <script>
 var el=function(id){return document.getElementById(id)};
 var FIELDS=['customer','idate','hca','by','city','critical','jobtype','ready','pay',
-  'gasline','venting','gaspermit','gasinspect','finish','d-elec','d-install','d-sales','mat','mat-notes','photos','video','heatload','disconnect','outlet','b-elec','bill-notes','b-labor','size-notes','disc','rebate','ahri','sizematch','equip','disc-notes'];
+  'gasline','venting','gaspermit','gasinspect','finish','d-elec','d-install','d-sales','mat','mat-notes','photos','video','stock','permit','r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed','heatload','disconnect','outlet','b-elec','bill-notes','b-labor','size-notes','disc','rebate','ahri','sizematch','equip','disc-notes'];
 var SOLD={};
 var COMBO_REP='';  /* SALES REP pulled from the Combo Log, kept for the HCA cross-check */
 var QUEUE=[],qIdx=-1,qDone={};  /* morning review queue, handed in via the link's #q= payload */
@@ -251,7 +266,7 @@ var BLOCK={'d-elec':'✖ Not ready','d-install':'✖ Not ready','d-sales':'✖ N
   'heatload':'✖ No','sizematch':'✖ Mismatch'};
 var WARNVALS=['⚠ Needs attention','⚠ Partial — see notes','⚠ Needs fix','⚠ Review','⚠ Needs review','⚠ Pending','✖ No',
   '⚠ Financed — approved, slip NOT signed','⚠ Financed — not yet approved',
-  '⚠ Check/cash — half down NOT received','⚠ Credit card — not yet run',
+  '⚠ Check/cash — half down NOT received','⚠ Credit card — not yet run','⚠ Credit card — half down NOT run',
   '⚠ Comfort Club rental — agreement NOT signed'];
 /* Job-type scoping. A fireplace has no heat load, no AHRI cert, no equipment-to-load
    sizing and no disconnect, so those are dropped from the verdict entirely rather than
@@ -581,7 +596,7 @@ function sendToHca(handoff){
     city:v('city'),critical:v('critical'),
     jflag:rr.juris?((rr.juris.lvl==='no'?'NOT next-day: ':'Conditional: ')+rr.juris.msg):'',
     verdict:finalStatus,blockers:rr.blockers.join('; '),
-    notesflags:rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';})).concat(openItemsText()).join('; '),
+    notesflags:rr.warnings.concat(rr.unanswered.map(function(u){return u+' (unanswered)';})).concat(openItemsText()).concat(hcaSummaryText()?[hcaSummaryText()]:[]).join('; '),
     delec:v('d-elec'),dinstall:v('d-install'),dsales:v('d-sales'),
     mat:v('mat'),matnotes:cap(v('mat-notes'),300),
     photos:v('photos'),video:v('video'),
@@ -693,7 +708,7 @@ function loadUpcoming(){
 }
 /* ===== Checklist "No" => why + when. A No (or warning) on a checklist item reveals two required inputs:
    why it is not done and the date it should be resolved. They ride along in notesflags. ===== */
-var CHECK_IDS=['mat','photos','video','heatload','ahri','pay','disc','rebate','b-elec','b-labor','sizematch'];
+var CHECK_IDS=['mat','photos','video','stock','permit','r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed','heatload','ahri','pay','disc','rebate','b-elec','b-labor','sizematch'];
 var NO_WHY=['Waiting on customer','Waiting on financing','Waiting on equipment','Waiting on permit / HOA','Needs manager review','Other'];
 var OPENIT={};
 function isNoVal(x){return !!x&&(x.indexOf('✖')===0||x.indexOf('⚠')===0);}
@@ -719,11 +734,16 @@ CHECK_IDS.forEach(function(id){var e=el(id);if(e)e.addEventListener('change',fun
    UI-level lock only (convenience, not enforcement). */
 var WORKING='\u23F3 Working on it',HCA_WORKING=[];
 var HCA_LOCK=['d-elec','d-install','d-sales','b-elec','b-labor','disc','rebate','sizematch','ready','by'];
-var HCA_REQUIRED=[['customer','Customer name'],['idate','Install date'],['hca','HCA name'],['pay','Payment readiness'],['mat','Materials list'],['photos','Layout photos'],['video','Walkthrough video']];
+var HCA_REQUIRED=[['customer','Customer name'],['idate','Install date'],['hca','HCA name'],['pay','Payment readiness'],['mat','Materials list'],['photos','Layout photos'],['video','Walkthrough video'],['stock','Equipment in stock'],['permit','Permit status']];
+var HCA_ITEMS=['pay','mat','photos','video','heatload','ahri','stock','permit'],HCA_RENTAL=['r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed'];
+function isRental(){return /rental/i.test(v('pay'));}
+function syncRental(){var b=el('rentalBox');if(b)b.style.display=isRental()?'':'none';}
+function hcaActiveItems(){return HCA_ITEMS.concat(isRental()?HCA_RENTAL:[]).filter(function(id){var e=el(id);return e&&fieldActive(id)&&v(id)!=='N/A';});}
 var PARK_REASONS=['HOA approval','Financing pending','Date to firm up','Permit','Materials / equipment','Customer hold','Other'];
 function hcaParams(){var m=String(location.hash||'').match(/[#&]hca=1(?:&|$)/);if(!m)return null;var o={};String(location.hash).replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)o[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});return o;}
-function hcaProgress(){var done=0,work=0;HCA_WORKING.forEach(function(id){var x=v(id);if(x===WORKING)work++;else if(x&&x.indexOf('\u2716')!==0&&x.indexOf('\u26A0')!==0)done++;});return {done:done,work:work,total:HCA_WORKING.length};}
-function hcaMissing(){var out=[];HCA_REQUIRED.forEach(function(r){if(!v(r[0]))out.push(r[1]);});return out;}
+function hcaProgress(){var done=0,work=0,ids=hcaActiveItems();ids.forEach(function(id){var x=v(id);if(x===WORKING)work++;else if(x&&x.indexOf('\u2716')!==0&&x.indexOf('\u26A0')!==0)done++;});return {done:done,work:work,total:ids.length};}
+function hcaSummaryText(){if(!hcaParams())return '';var pr=hcaProgress();var rent=isRental()?(' | Rental: '+HCA_RENTAL.map(function(id){return checkLabel(id).replace(/\?$/,'')+' '+(v(id)||'unanswered');}).join(', ')):'';return 'HCA checklist '+pr.done+' of '+pr.total+(pr.work?(', '+pr.work+' working on it'):'')+rent;}
+function hcaMissing(){var out=[];HCA_REQUIRED.forEach(function(r){if(!v(r[0]))out.push(r[1]);});if(isRental())HCA_RENTAL.forEach(function(id){if(!v(id))out.push(checkLabel(id).replace(/\?$/,''));});return out;}
 function hcaInit(){
   var o=hcaParams();if(!o)return false;
   ['queueCard','bucketsCard','resumeCard'].forEach(function(id){var e=el(id);if(e)e.style.display='none';});
@@ -734,9 +754,10 @@ function hcaInit(){
   (function(){var h=v('hca'),b=el('by');if(b&&h){var ok=Array.prototype.some.call(b.options,function(op){return op.value===h||op.text===h;});if(!ok){var op=document.createElement('option');op.text=h;b.add(op);}b.value=h;}})();
   if(o.job)SOLD={customer:o.cust||'',soldby:o.rep||'',amount:'',soldon:'',est:'',job:o.job};
   HCA_LOCK.forEach(function(id){var e=el(id);if(e){e.disabled=true;e.style.opacity='0.55';}});
+  var _pay=el('pay');if(_pay)_pay.addEventListener('change',function(){syncRental();var pr=hcaProgress();var b=el('bartxt');if(b)b.textContent=pr.done+' of '+pr.total+' complete'+(pr.work?(' \u00B7 '+pr.work+' working on it'):'');});syncRental();
   /* Working-on-it: an HCA can mark an item they have started but not finished. It counts as answered
      (so it can be submitted / saved) but stays an open item for the managers and for Amy's "ready to book". */
-  HCA_WORKING=['mat','photos','video','heatload','ahri','pay'];
+  HCA_WORKING=['mat','photos','video','heatload','ahri','pay','stock','permit'];
   HCA_WORKING.forEach(function(id){var e=el(id);if(e&&!Array.prototype.some.call(e.options,function(o){return o.text===WORKING;})){var o=document.createElement('option');o.text=WORKING;e.add(o,e.options[1]);}});
   if(WARNVALS.indexOf(WORKING)<0)WARNVALS.push(WORKING);
   var rb=el('roleBanner');if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='📋 <b>Complete the install requirements'+(o.job?(' — job #'+o.job):'')+'.</b> Confirm what is already in ServiceTitan. The greyed-out boxes belong to the managers. Not ready to finish? Use <b>Save &amp; exit</b> and say what is holding it up.';}
