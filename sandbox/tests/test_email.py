@@ -46,7 +46,7 @@ with sync_playwright() as p:
     ok('subject: customer-what was sold', lines[0] == 'Subject: Sample Alpha-Mitsubishi Single Zone Ductless')
     for lab, val in [('CUSTOMER NAME', 'Sample Alpha'), ('INSTALL DATE', wd), ('PAYMENT', 'Financed'), ('DOWN PAYMENT COLLECTED', 'N/A (financed)'), ('VENDOR AND AVAILABILITY', 'Acme Supply - equipment available'), ('FILTER SIZE', '16x25x1'), ('ANY CONCERNS FOR INSTALL', 'None')]:
         ok('template line %s: %s' % (lab, val), ('\n' + lab + ': ' + val) in ('\n' + prev.split('\n\n', 1)[1]))
-    ok('payment line has no tick mark; signature is first name + last initial', '\u2714' not in prev and prev.rstrip().endswith('Samir K'))
+    ok('payment line has no tick mark; the email ends at ANY CONCERNS FOR INSTALL (no extra signature)', '\u2714' not in prev and prev.rstrip().endswith('ANY CONCERNS FOR INSTALL: None'))
     href = pg.get_attribute('#mailLink', 'href'); q = urllib.parse.parse_qs(href.split('?', 1)[1])
     ok('Open email draft is a mailto: with subject and body, recipient left for the HCA', href.startswith('mailto:?subject=') and q['subject'][0] == 'Sample Alpha-Mitsubishi Single Zone Ductless' and q['body'][0].startswith('CUSTOMER NAME: Sample Alpha'))
     pg.click('#copyEmail'); pg.wait_for_timeout(300); ok('Copy email gives feedback', len(pg.inner_text('#sentMsg')) > 5)
