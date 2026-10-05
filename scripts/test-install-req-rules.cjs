@@ -12,7 +12,7 @@ async function main() {
     await env.clearDatabase();
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
-      cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true } } },
+      cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true } },
       cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
@@ -23,6 +23,7 @@ async function main() {
     const hca1 = g('h1', 'hca-one@cmheating.com'), hca2 = g('h2', 'hca-two@cmheating.com');
     const hca1Pwd = g('h3', 'hca-one@cmheating.com', 'password', true), hca1Pin = g('h4', 'hca-one@cmheating.com', 'password', false);
     const mgrI = g('mi', 'mgr-install@cmheating.com'), mgrE = g('me', 'mgr-elec@cmheating.com'), mgrS = g('ms', 'mgr-sales@cmheating.com');
+    const adm2 = g('a2', 'adm-two@cmheating.com'), sched = g('sc', 'sched-one@cmheating.com'), schedPwd = g('sp', 'sched-one@cmheating.com', 'password', true);
     const admin = g('ad', 'admin-one@cmheating.com'), stranger = g('st', 'someone-else@cmheating.com'), anon = env.unauthenticatedContext().database();
     const J = j => 'cmh_install_req/hca-one/' + j;
 
@@ -68,8 +69,21 @@ async function main() {
     await no(mgrI.ref(J('j3/status')).remove());
     await ok(mgrI.ref(J('j3/status')).set('ready'));
     await no(hca1.ref(J('j3/status')).set('working'));
-    await ok(mgrI.ref(J('j3/status')).set('installed'));
+    await no(mgrI.ref(J('j3/status')).set('installed'));                                            // 2026-10-04: marking installed is admin-only
+    await no(sched.ref(J('j3/status')).set('installed'));
+    await ok(adm2.ref(J('j3/status')).set('installed'));
     await no(mgrI.ref(J('j3/status')).set('in_review'));
+    // roles (2026-10-04): schedulers read everything for booking but cannot write; admins send back and install; managers cannot send back
+    await ok(sched.ref(J('j1')).once('value')); await no(schedPwd.ref(J('j1')).once('value')); await ok(sched.ref('cmh_install_jobs/hca-one').once('value'));
+    await ok(sched.ref('cmh_install_roster/schedulers/sched-one@cmheating,com').once('value')); await no(sched.ref('cmh_install_roster/schedulers/sched-one@cmheating,com').set(null));
+    await no(sched.ref('cmh_install_roster').once('value')); await no(hca1.ref('cmh_install_roster/schedulers').once('value')); await no(mgrI.ref('cmh_install_roster/schedulers/sched-one@cmheating,com').once('value'));
+    await no(sched.ref(J('j2/status')).set('ready')); await no(sched.ref(J('j2/status')).set('working')); await no(sched.ref(J('j2/hca')).set({ pay: 'x' })); await no(sched.ref(J('j2/lanes/install/signoff')).set('confirmed'));
+    await no(sched.ref(J('j2/reopen')).set({ by: 'sched-one@cmheating.com', reason: 'nope', at: 't' }));
+    await no(mgrI.ref(J('j2/status')).set('working')); await no(mgrI.ref(J('j2/reopen')).set({ by: 'mgr-install@cmheating.com', reason: 'nope', at: 't' }));
+    await ok(adm2.ref(J('j2/status')).set('working')); await ok(adm2.ref(J('j2/reopen')).set({ by: 'adm-two@cmheating.com', reason: 'Photos missing', at: 't' }));
+    await no(adm2.ref(J('j2/reopen')).set({ by: 'someone@cmheating.com', reason: 'forged by', at: 't' })); await no(adm2.ref(J('j2/reopen')).set({ by: 'adm-two@cmheating.com', reason: 'x', at: 't' }));
+    await no(hca1.ref(J('j2/reopen')).set({ by: 'hca-one@cmheating.com', reason: 'self send back', at: 't' }));
+    await no(admin.ref(J('j2/status')).set('working'));   // a followup-roster admin is NOT an install admin until given the flag in cmh_install_roster
 
     // history: append-only, signed, and only by the job's owner / managers / admin (AUD-09)
     const e = { at: '2026-01-01', by: 'mgr-install@cmheating.com', field: 'lane.install.signoff' };

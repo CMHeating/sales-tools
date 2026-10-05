@@ -73,7 +73,7 @@
 </div>
 <script>
 var $=function(id){return document.getElementById(id)};
-var META=null,TAB='q',CUR=null;
+var META=null,TAB=/[#&?]view=ready/.test(location.hash+location.search)?'r':'q',CUR=null;
 var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);
 if(PRACTICE){document.getElementById('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';}
 var AS=(function(){var m=(location.hash+location.search).match(/[#&?]as=([^&]*)/);return m?decodeURIComponent(m[1]):'';})();

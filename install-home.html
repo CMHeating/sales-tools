@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Install tools — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#c97d10}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;padding-bottom:40px}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px}
+  .pill{display:inline-block;background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px;margin:18px 0 6px}
+  h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.1;margin:6px 0 6px}
+  p{color:#cdd7e6;margin:0 0 12px}.mut{color:var(--mut);font-size:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
+  .btn{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:800;text-decoration:none;margin:10px 0;cursor:pointer;width:100%}
+  .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
+  .btn:focus-visible{outline:2px solid #4aa3df;outline-offset:2px}
+  .role{display:inline-block;border:1px solid rgba(245,158,11,.6);color:#fde68a;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="pill">CM HEATING</span>
+  <h1>Install tools</h1>
+  <p class="mut" id="who">Sign in to see your tools.</p>
+  <div class="card" id="signin"><p>Sign in with your CM Heating Google account. Your role decides which buttons you see.</p><button class="btn go" id="gbtn" type="button">Sign in with Google</button></div>
+  <div class="card hidden" id="tools"><div id="roleLine"></div><div id="btns"></div><button class="btn" id="out" type="button">Sign out</button></div>
+  <p class="mut" id="msg" role="status"></p>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const app = initializeApp({
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0", authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com", projectId: "install-availability-tracker", appId: "1:187871662912:web:1d52671de23c4f38d620a5" });
+const auth = getAuth(app), db = getDatabase(app), $ = id => document.getElementById(id);
+const provider = new GoogleAuthProvider(); provider.setCustomParameters({ hd: "cmheating.com" });
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const keyOf = e => String(e || "").toLowerCase().replace(/\./g, ",");
+/* The role comes from the private roster in Firebase, never from this file. The database rules are the real lock; this page only decides what to show. */
+export function buttonsFor(role, name) {
+  const as = name ? "?as=" + encodeURIComponent(name) : "";
+  const b = {
+    hca: [["Open my CRM (Project completion lives there)", "crm.html", true]],
+    manager: [["Review queue", "install-qc.html" + as, true]],
+    scheduler: [["Ready to book", "install-qc.html?view=ready" + (name ? "&as=" + encodeURIComponent(name) : ""), true]],
+    admin: [["Admin page", "install-admin.html", true], ["Review queue", "install-qc.html" + as, false], ["Ready to book", "install-qc.html?view=ready" + (name ? "&as=" + encodeURIComponent(name) : ""), false]]
+  };
+  return b[role] || [];
+}
+async function roleOf(user) {
+  const k = keyOf(user.email), rd = async p => { try { return (await get(ref(db, p))).val(); } catch (e) { return null; } };
+  const m = await rd("cmh_install_roster/managers/" + k);
+  if (m) return { role: m.admin === true ? "admin" : "manager", name: m.name || "" };
+  if (await rd("cmh_install_roster/schedulers/" + k)) return { role: "scheduler", name: "" };
+  if (await rd("cmh_followup_roster/hcas/" + k)) return { role: "hca", name: "" };
+  return { role: "", name: "" };
+}
+const LABEL = { hca: "Sales rep (HCA)", manager: "Manager", scheduler: "Scheduler", admin: "Admin" };
+onAuthStateChanged(auth, async user => {
+  $("tools").classList.add("hidden"); $("signin").classList.toggle("hidden", !!user); $("msg").textContent = "";
+  if (!user) { $("who").textContent = "Sign in to see your tools."; return; }
+  let google = false; try { const t = await user.getIdTokenResult(); google = !!user.emailVerified && t.signInProvider === "google.com"; } catch (e) {}
+  if (!google || !/@cmheating\.com$/i.test(user.email || "")) { await signOut(auth); $("msg").textContent = "Please sign in with your @cmheating.com Google account."; $("signin").classList.remove("hidden"); return; }
+  const r = await roleOf(user); $("who").textContent = user.email;
+  if (!r.role) { $("msg").textContent = "Your account isn't set up for the install tools yet. Ask Geoff."; return; }
+  $("roleLine").innerHTML = '<span class="role">' + esc(LABEL[r.role]) + "</span>";
+  $("btns").innerHTML = buttonsFor(r.role, r.name).map(x => '<a class="btn' + (x[2] ? " go" : "") + '" href="' + esc(x[1]) + '">' + esc(x[0]) + "</a>").join("");
+  $("tools").classList.remove("hidden");
+});
+$("gbtn").onclick = async () => { try { await signInWithPopup(auth, provider); } catch (e) { if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) { try { await signInWithRedirect(auth, provider); } catch (e2) {} } } };
+$("out").onclick = () => signOut(auth);
+</script>
+</body>
+</html>
