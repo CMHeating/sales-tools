@@ -100,6 +100,9 @@ async function main() {
     await no(hca1.ref(J('j5/hca/items/rebate')).set({ v: 'work' }));
     await ok(hca1.ref(J('j5/hca/system')).set('Mitsubishi Single Zone Ductless'));                  // the email lines (2026-10-05)
     await no(hca1.ref(J('j5/hca/scope')).set('x'.repeat(61)));
+    await ok(hca1.ref(J('j5/hca/vendor')).set('Sample Vendor'));
+    await ok(hca1.ref(J('j5/hca/filterSize')).set('16x25x1'));
+    await no(hca1.ref(J('j5/hca/filterSize')).set('x'.repeat(31)));
     await no(mgrI.ref(J('j5/hca/system')).set('manager cannot edit the HCA lines'));
     await no(hca1.ref(J('j5/hca/items/heatload')).set({ v: 'na' }));                                // N/A only where it is offered (2026-10-05)
     await no(hca1.ref(J('j5/hca/items/permit')).set({ v: 'na' }));

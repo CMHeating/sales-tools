@@ -382,6 +382,10 @@ class H(SimpleHTTPRequestHandler):
                         h["rebateProgram"] = str(body["rebateProgram"] or "")[:60]
                     if "system" in body:
                         h["system"] = str(body["system"] or "")[:60]
+                    if "vendor" in body:
+                        h["vendor"] = str(body["vendor"] or "")[:60]
+                    if "filterSize" in body:
+                        h["filterSize"] = str(body["filterSize"] or "")[:30]
                     if "scope" in body:
                         h["scope"] = str(body["scope"] or "")[:60]
                     if "rebateAmount" in body:

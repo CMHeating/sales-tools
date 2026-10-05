@@ -80,6 +80,12 @@
       },
       "scope": {
        ".validate": "newData.isString() && newData.val().length <= 60"
+      },
+      "vendor": {
+       ".validate": "newData.isString() && newData.val().length <= 60"
+      },
+      "filterSize": {
+       ".validate": "newData.isString() && newData.val().length <= 30"
       }
      },
      "parked": {
