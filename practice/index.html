@@ -16,7 +16,12 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
   a.btn,button.btn{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:10px 16px;border-radius:14px;border:1px solid var(--line);background:#0d1526;color:var(--text);font:inherit;font-weight:700;text-decoration:none;margin-top:8px;cursor:pointer;width:100%}
   a.btn small{color:var(--mut);font-weight:500;font-size:12px}
-  a.btn.go,button.go{background:var(--orange);border-color:var(--orange);color:#fff}
+  a.btn.go,button.go{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 8px 20px rgba(201,125,16,.30)}
+  select{appearance:none;-webkit-appearance:none;margin:6px 0 12px;border-radius:999px;border:1px solid var(--line);color:var(--text);font:inherit;font-weight:700;padding:9px 38px 9px 18px;background:#0d1526 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") right 15px center no-repeat}
+  a.btn:hover,button.btn:hover{filter:brightness(1.12)}a.btn:active,button.btn:active{transform:translateY(1px)}
+  button.btn.role{flex:1;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;min-height:96px;border-radius:18px;padding:12px 8px}
+  .btn.role .ri{font-size:24px;line-height:1}.btn.role b{font-size:15px}.btn.role small{font-size:11.5px;color:var(--mut)}
+  button.btn.role.sel{background:rgba(201,125,16,.14);border-color:var(--orange);box-shadow:0 0 0 1px var(--orange) inset,0 8px 22px rgba(201,125,16,.22)}
   ol,ul{margin:0;padding-left:20px;color:var(--text);font-size:14px;line-height:1.6}li{margin-bottom:4px}
   .msg{font-size:13px;color:var(--mut);min-height:18px;margin-top:6px}
 </style>
@@ -31,13 +36,13 @@
     <h2>I'm trying this as…</h2>
     <p>Pick your role. Everyone sees the same practice data.</p>
     <div id="roles" role="tablist" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn go" type="button" role="tab" aria-selected="true" data-role="hca" style="flex:1;justify-content:center">HCA</button>
-      <button class="btn" type="button" role="tab" aria-selected="false" data-role="manager" style="flex:1;justify-content:center">Manager</button>
-      <button class="btn" type="button" role="tab" aria-selected="false" data-role="admin" style="flex:1;justify-content:center">Admin</button>
+      <button class="btn role sel" type="button" role="tab" aria-selected="true" data-role="hca"><span class="ri" aria-hidden="true">📋</span><b>HCA</b><small>Confirm a sold job</small></button>
+      <button class="btn role" type="button" role="tab" aria-selected="false" data-role="manager"><span class="ri" aria-hidden="true">✅</span><b>Manager</b><small>Verify your lane</small></button>
+      <button class="btn role" type="button" role="tab" aria-selected="false" data-role="admin"><span class="ri" aria-hidden="true">🗂️</span><b>Admin</b><small>Every project</small></button>
     </div>
     <div id="rolePanelM" style="display:none"><p style="margin-top:12px">You verify your own lane against ServiceTitan.</p>
       <select id="mgrWho" aria-label="Who are you"><option>Lyle</option><option>Jon</option></select>
-      <a class="btn go" id="mgrGo" href="../install-qc.html#practice=1&as=Lyle">Open my review queue</a>
+      <a class="btn go" id="mgrGo" href="../install-qc.html#practice=1&as=Lyle">Open my review queue &rarr;</a>
       <p style="margin-top:10px">Nothing to review yet? Switch to HCA, complete and submit a project, then come back.</p></div>
     <div id="rolePanelS" style="display:none"><p style="margin-top:12px">You book installs: you see every project and the Ready to book list.</p>
       <select id="schedWho" aria-label="Who are you"><option>Amy</option><option>Brittny</option></select>
@@ -47,7 +52,7 @@
   <div id="rolePanelA" class="card" style="display:none">
     <h2>Admin</h2><p>One screen over every project and every HCA: what is ready to book, what is stuck, what is due. You can send a project back to an HCA with a reason.</p>
     <select id="admWho" aria-label="Who are you"><option>Amy</option><option>Brittny</option><option>Geoff</option></select>
-    <a class="btn go" id="admGo" href="../install-admin.html#practice=1&as=Amy">Open the admin page</a>
+    <a class="btn go" id="admGo" href="../install-admin.html#practice=1&as=Amy">Open the admin page &rarr;</a>
     <p style="margin-top:10px">Tip: submit a couple of practice projects first (HCA role) so there is something to review.</p>
   </div>
 
@@ -100,7 +105,7 @@ function load(){
 }
 document.getElementById('reset').onclick=function(){fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(){document.getElementById('msg').textContent='Reset. Fresh practice data loaded.';load();});};
 document.querySelectorAll('#roles [data-role]').forEach(function(b){b.onclick=function(){var r=b.dataset.role;
-  document.querySelectorAll('#roles [data-role]').forEach(function(x){x.className='btn'+(x===b?' go':'');x.setAttribute('aria-selected',x===b);x.style.flex='1';x.style.justifyContent='center';});
+  document.querySelectorAll('#roles [data-role]').forEach(function(x){x.className='btn role'+(x===b?' sel':'');x.setAttribute('aria-selected',x===b);});
   document.getElementById('rolePanelH').style.display=r==='hca'?'':'none';document.getElementById('rolePanelM').style.display=r==='manager'?'':'none';document.getElementById('rolePanelS').style.display=r==='sched'?'':'none';document.getElementById('rolePanelA').style.display=r==='admin'?'':'none';};});
 document.getElementById('mgrWho').onchange=function(){document.getElementById('mgrGo').href='../install-qc.html#practice=1&as='+encodeURIComponent(this.value);};
 document.getElementById('admWho').onchange=function(){document.getElementById('admGo').href='../install-admin.html#practice=1&as='+encodeURIComponent(this.value);};
