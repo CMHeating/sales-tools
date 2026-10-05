@@ -63,7 +63,7 @@
 <body>
 <div id="envBar">SANDBOX — fake data, nothing leaves this machine</div>
 <div class="wrap">
-  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" id="homeBack" href="install-home.html">&larr; Install tools</a>
+  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" id="homeBack" href="crm.html">&larr; My CRM</a>
     <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Geoff</option><option>Lyle</option><option>Jon</option><option>Amy</option><option>Brittny</option></select></label></div>
   <div id="list">
     <h1>Install QC</h1><p class="sub">Verify what the HCA confirmed against ServiceTitan. Each lane checks its own items.</p><p class="sub" id="roleNote" style="color:var(--gold)"></p>
@@ -84,8 +84,10 @@ var AS=(function(){var m=(location.hash+location.search).match(/[#&?]as=([^&]*)/
 var PEOPLE=['Geoff','Lyle','Jon','Amy','Brittny'];
 var WHO_LANE={Geoff:'sales',Lyle:'install',Jon:'electrical'};
 var LANE_NAME={sales:'Sales',install:'Install',electrical:'Electrical'};
-var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload']};
-var HCA_NAME={pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit auth','r-payauth':'Payment auth','r-dl':'Driver’s license','r-deed':'Mortgage / deed'};
+var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload'],labor:['i-labor'],disconnect:['e-disconnect'],outlet:['e-outlet'],elabor:['e-labor'],rebate:['rebate','rb-balance','rb-ahri','rb-tc','rb-equip']};
+var REBATE_SHOWN={PSE:['rb-balance','rb-ahri','rb-tc'],PUD:['rb-balance','rb-ahri'],Gensco:['rb-balance','rb-equip'],Other:['rb-balance','rb-ahri']};
+function rebKey(p){p=String(p||'');return p==='PSE'||p==='PUD'||p==='Gensco'?p:(p.indexOf('Other')===0?'Other':'');}
+var HCA_NAME={pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit auth','r-payauth':'Payment auth','r-dl':'Driver’s license','r-deed':'Mortgage / deed','i-labor':'Install labor billed','e-disconnect':'Disconnect over 24"','e-outlet':"Service outlet within 25'",'e-labor':'Electrical labor billed',rebate:'Rebate eligible','rb-balance':'Balance point works','rb-ahri':'AHRI certificate','rb-tc':'Terms & conditions','rb-equip':'Correct equipment / model #s'};
 var STATE={yes:'Complete',work:'Working on it',no:'Not done',na:'N/A'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
@@ -97,7 +99,7 @@ function showList(){CUR=null;$('detail').style.display='none';$('list').style.di
 function loadList(){
   $('tabQ').setAttribute('aria-selected',TAB==='q');$('tabR').setAttribute('aria-selected',TAB==='r');
   api(TAB==='q'?'/api/queue':'/api/ready').then(function(d){
-    if(!d.ok){$('rows').innerHTML='<div class="empty">'+esc(d.error||'Could not load.')+'</div>';return;}
+    if(!d.ok){$('rows').innerHTML='<div class="empty">'+esc(d.error||'Could not load.')+(d.signin?' <a href="install-home.html">Sign in</a>':'')+'</div>';return;}
     var jobs=(d.jobs||[]).filter(function(j){return TAB==='r'||j.status!=='ready';});
     if(!jobs.length){$('rows').innerHTML='<div class="empty">'+(TAB==='q'?'Nothing waiting for review.':'Nothing ready to book yet.')+'</div>';return;}
     $('rows').innerHTML=jobs.map(function(j){var ln=j.lanes?Object.keys(j.lanes).map(function(k){return laneChip(k,j.lanes[k]);}).join(''):'';
@@ -109,8 +111,9 @@ function openJob(job){
   CUR=job;api('/api/record?job='+encodeURIComponent(job)).then(function(d){
     if(!d.ok){return;}var r=d.record,j=d.job,h=r.hca||{},items=h.items||{},mylane=LIVE?(Object.keys((META.me||{}).lanes||{}).filter(function(k){return META.me.lanes[k];})[0]||''):(WHO_LANE[me()]||'');
     var rental=/rental/i.test(h.pay||'');
-    function hcaSaid(ids){ids=ids.filter(function(i){return rental||i.indexOf('r-')!==0;});if(!ids.length)return 'No rental paperwork on this job';return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
-      var txt=i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
+    var rebYes=(items.rebate||{}).v==='yes',rebShown=rebYes?(REBATE_SHOWN[rebKey(h.rebateProgram)]||[]):[];
+    function hcaSaid(ids){ids=ids.filter(function(i){return (rental||i.indexOf('r-')!==0)&&(i.indexOf('rb-')!==0||rebShown.indexOf(i)>=0);});if(!ids.length)return 'No rental paperwork on this job';return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
+      var txt=i==='rebate'?(st==='yes'?('Yes — '+(h.rebateProgram||'program not chosen')):st==='na'?'No rebate':'not answered'):i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
       return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
     var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
     var html='<button class="back" type="button" id="backBtn">&larr; All jobs</button><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
