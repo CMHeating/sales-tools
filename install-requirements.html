@@ -251,7 +251,7 @@ function build(){
   ['ahri','rb-ahri'].forEach(function(id){var row=$('row-'+id);if(!row)return;var d=document.createElement('div');d.className='ahri';d.id='ahri-'+id;d.style.display='none';
     d.innerHTML='<div class="ahq"><div class="q2">Is it in ServiceTitan, or are you able to provide it?</div><textarea class="aht" rows="2" maxlength="120" placeholder="Optional: where it is, or who will send it"></textarea><div class="ahb"><button type="button" class="btn" data-ah="st">It is in ServiceTitan</button><button type="button" class="btn go" data-ah="prov">I can provide it</button></div></div><div class="ahdone" style="display:none"><b>AHRI:</b> <span></span> <button type="button" class="linkbtn ahedit">change</button></div>';
     row.appendChild(d);bindAhri(id);});
-  var pr=$('row-permit');if(pr){var jl=document.createElement('a');jl.id='jurLink';jl.className='linkbtn';jl.target='_blank';jl.rel='noopener';jl.style.cssText='display:none;margin-top:8px';jl.textContent='Check the jurisdiction timing sheet ↗';pr.appendChild(jl);}
+  var pr=$('row-permit');if(pr){var jl=document.createElement('a');jl.id='jurLink';jl.className='linkbtn';jl.target='_blank';jl.rel='noopener';jl.href=JURISDICTION_URL;jl.style.cssText='display:inline-block;margin-top:8px';jl.textContent='Check the jurisdiction timing sheet ↗';pr.appendChild(jl);}
   $('pay').innerHTML=PAY.map(function(p,i){return '<option value="'+(i?esc(p):'')+'">'+esc(p)+'</option>';}).join('');
   $('parkReason').innerHTML='<option value="">Select…</option>'+PARK.map(function(r){return '<option>'+r+'</option>';}).join('');
   document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setItem(b.dataset.id,b.dataset.v);});});
@@ -262,6 +262,7 @@ function build(){
   $('rebProg').addEventListener('change',rp);$('rebOther').addEventListener('input',rp);
 }
 var TRACKER_URL='https://install-availability-tracker.web.app/';
+var JURISDICTION_URL='https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0';   /* same link the Next Day Install Check page already publishes; the private config can override it */
 function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;
   if((id==='ahri'||id==='rb-ahri')&&v!=='yes')o.note='';   /* the ServiceTitan / provide-it answer only belongs to Complete */
   paintWhy(id);render();save();
@@ -460,7 +461,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
   $('chipJob').textContent=H.job||'—';$('chipHca').textContent=H.rep||'—';
   if(PRACTICE){var bk=document.querySelector('.topbar .back');if(bk){bk.href='practice/index.html';bk.textContent='← Practice home';}}
   build();
-  if(SANDBOX)remote('/api/config').then(function(d){var jl=$('jurLink');if(jl&&d&&d.ok&&/^https:\/\//.test(d.jurisdictionUrl||'')){jl.href=d.jurisdictionUrl;jl.style.display='';}}).catch(function(){});   /* the sheet link comes from the private config, never from this public page */load();render();
+  if(SANDBOX)remote('/api/config').then(function(d){var jl=$('jurLink');if(jl&&d&&d.ok&&/^https:\/\//.test(d.jurisdictionUrl||'')){jl.href=d.jurisdictionUrl;jl.style.display='';}}).catch(function(){});   /* optional override from the private config */load();render();
   $('parkBtn').onclick=openPark;$('parkBack').onclick=closePark;$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
   document.addEventListener('keydown',trapPark);
   if(!H.cust&&!H.job){
