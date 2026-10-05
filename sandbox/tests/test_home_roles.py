@@ -36,8 +36,8 @@ def ok(label, cond):
     print(('PASS ' if cond else 'FAIL ') + label)
     if not cond: FAILS.append(label)
 
-ROSTER = {'cmh_install_roster': {'managers': {'lyle@cmheating,com': {'install': True, 'name': 'Lyle'}, 'boss@cmheating,com': {'sales': True, 'install': True, 'electrical': True, 'admin': True, 'name': 'Geoff'}},
-                                 'schedulers': {'amy@cmheating,com': True}},
+ROSTER = {'cmh_install_roster': {'managers': {'mgr-one@cmheating,com': {'install': True, 'name': 'Mgr'}, 'admin-one@cmheating,com': {'sales': True, 'install': True, 'electrical': True, 'admin': True, 'name': 'Boss'}},
+                                 'schedulers': {'sched-one@cmheating,com': True}},
           'cmh_followup_roster': {'hcas': {'rep@cmheating,com': 'rep-one'}}}
 def visit(pw, email, provider='google.com'):
     b = pw.chromium.launch(headless=True); ctx = b.new_context(viewport={'width': 430, 'height': 900})
@@ -54,16 +54,16 @@ def visit(pw, email, provider='google.com'):
 with sync_playwright() as p:
     b, pg, errs, btns, role = visit(p, 'rep@cmheating.com')
     ok('HCA sees only the CRM link (no manager, scheduler or admin buttons)', len(btns) == 1 and 'CRM' in btns[0] and 'Sales rep' in role); ok('no errors (HCA)', not errs); b.close()
-    b, pg, errs, btns, role = visit(p, 'lyle@cmheating.com')
-    ok('manager sees Review queue only, with their name', btns == ['Review queue'] and 'as=Lyle' in pg.get_attribute('#btns a', 'href') and 'Manager' in role); b.close()
-    b, pg, errs, btns, role = visit(p, 'amy@cmheating.com')
+    b, pg, errs, btns, role = visit(p, 'mgr-one@cmheating.com')
+    ok('manager sees Review queue only, with their name', btns == ['Review queue'] and 'as=Mgr' in pg.get_attribute('#btns a', 'href') and 'Manager' in role); b.close()
+    b, pg, errs, btns, role = visit(p, 'sched-one@cmheating.com')
     ok('scheduler sees Ready to book only', btns == ['Ready to book'] and 'view=ready' in pg.get_attribute('#btns a', 'href') and 'Scheduler' in role); b.close()
-    b, pg, errs, btns, role = visit(p, 'boss@cmheating.com')
+    b, pg, errs, btns, role = visit(p, 'admin-one@cmheating.com')
     ok('admin sees Admin page, Review queue and Ready to book', btns == ['Admin page', 'Review queue', 'Ready to book'] and 'Admin' in role); b.close()
     b, pg, errs, btns, role = visit(p, 'nobody@cmheating.com')
     ok('someone not on any roster gets no tools and a clear message', not btns and not pg.is_visible('#tools') and 'isn\'t set up' in pg.inner_text('#msg')); b.close()
-    b, pg, errs, btns, role = visit(p, 'lyle@cmheating.com', provider='password')
+    b, pg, errs, btns, role = visit(p, 'mgr-one@cmheating.com', provider='password')
     ok('PIN/password session is refused (Google only)', not btns and not pg.is_visible('#tools')); b.close()
-    b, pg, errs, btns, role = visit(p, 'lyle@gmail.com')
+    b, pg, errs, btns, role = visit(p, 'mgr-one@gmail.com')
     ok('non-company Google account is refused', not btns and not pg.is_visible('#tools')); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
