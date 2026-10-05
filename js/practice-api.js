@@ -86,6 +86,7 @@
     var need = REQUIRED_HCA.concat(["rebate"], RENTAL_ITEMS.filter(function (i) { return i in st; }), REBATE_ITEMS.slice(1).filter(function (i) { return i in st; }));
     need.forEach(function (i) { if (!st[i]) out.push(i); });
     if (st.rebate === "yes" && !rebateKey(h2(rec).rebateProgram)) out.push("rebate program");
+    if (st.rebate === "yes" && !/\d/.test(h2(rec).rebateAmount || "")) out.push("rebate amount");
     Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
     return out;
   }
