@@ -13,6 +13,7 @@
   var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
   var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor", "e-labor"];
   /* Rebate: "rebate" is yes / na (= no rebate). When yes, a program is chosen and ALL of its questions must be Complete before the project can be Ready (the rebate gate). */
+  var NA_OK = ["ahri", "e-disconnect", "e-outlet", "r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];   /* items that may be answered N/A ("rebate" uses na for "No rebate") */
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
   var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance", "rb-equip"], Other: ["rb-balance", "rb-ahri"] };
   function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (/^Other: \S/.test(p) ? "Other" : ""); }
@@ -40,7 +41,7 @@
     var h = rec.hca || {}, items = h.items || {}, pay = h.pay || "";
     var ids = BASE_ITEMS.concat(/rental/i.test(pay) ? RENTAL_ITEMS : [], ["rebate"]), out = {};
     if ((items.rebate || {}).v === "yes") ids = ids.concat(REBATE_PROGRAM_ITEMS[rebateKey(h.rebateProgram)] || []);
-    ids.forEach(function (i) { out[i] = i === "pay" ? payState(pay) : ((items[i] || {}).v || ""); });
+    ids.forEach(function (i) { var v = i === "pay" ? payState(pay) : ((items[i] || {}).v || ""); out[i] = v === "na" && i !== "pay" && i !== "rebate" && NA_OK.indexOf(i) < 0 ? "" : v; });   /* a stale N/A on an item that no longer offers it is unanswered */
     return out;
   }
   function readiness(rec, todayIso) {
@@ -249,7 +250,7 @@
         for (var i = 0; i < ks.length; i++) {
           var k = ks[i], v = itemsIn[k];
           if (BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS).indexOf(k) < 0) return fail(400, "unknown item " + k);
-          if (HCA_STATES.indexOf(v.v) < 0 || (k === "rebate" && v.v !== "yes" && v.v !== "na")) return fail(400, "bad state for " + k);
+          if (HCA_STATES.indexOf(v.v) < 0 || (k === "rebate" && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && NA_OK.indexOf(k) < 0)) return fail(400, "bad state for " + k);
           var old = ((merged.hca.items || {})[k] || {}).v, it = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
           merged.hca.items = merged.hca.items || {}; merged.hca.items[k] = it; put(up, hk, job, "hca/items/" + k, it);
           if (old !== v.v) addHist(up, hk, job, me, "hca." + k, old === undefined ? null : old, v.v);

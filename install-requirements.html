@@ -314,7 +314,8 @@ var _rt=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
   if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
-function applyState(){$('rebAmt').value=S.rebateAmt||'';$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
+function normalizeNA(){ITEMS.forEach(function(it){var o=S.items&&S.items[it[0]];if(o&&o.v==='na'&&!it[4]&&it[0]!=='rebate')o.v='';});}   /* an N/A saved before the button was removed no longer counts as an answer */
+function applyState(){normalizeNA();$('rebAmt').value=S.rebateAmt||'';$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
   applyState();
   if(!SANDBOX||!H.job)return Promise.resolve();
