@@ -21,6 +21,7 @@ from urllib.parse import urlparse, parse_qs
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA = os.path.join(os.path.dirname(__file__), "data")
 LOCK = threading.Lock()
+MAX_BODY = 64 * 1024   # bytes; larger request bodies are refused
 
 # ---- the item model (must match install-requirements.html) -------------------------------------------
 BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video"]
@@ -40,6 +41,17 @@ LANE_LABELS = {
 RESULTS = ("verified", "missing", "mismatch")
 SIGNOFFS = ("confirmed", "attention", "notready")
 HCA_STATES = ("yes", "work", "no", "na")
+
+
+def find_job(jobs, pipe, job):
+    """Sold jobs first, then backlog/pipeline projects (they can be completed too)."""
+    for j in jobs:
+        if j["job"] == job:
+            return j
+    for p in pipe:
+        if p["job"] == job:
+            return dict(p, installDate=p.get("comboDate", ""), department=p.get("department", "HVAC"), stage="PIPELINE")
+    return None
 
 
 def now():
@@ -138,6 +150,24 @@ def lane_state(rec, lane):
     }
 
 
+REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video"]
+
+
+def hca_missing(rec):
+    """What stops an HCA submission / booking: unanswered required items, and any 'No' without why + by-when."""
+    h = rec.get("hca", {})
+    items = h.get("items", {})
+    states = hca_items(rec)
+    need = list(REQUIRED_HCA) + [i for i in RENTAL_ITEMS if i in states]
+    out = [i for i in need if not states.get(i)]
+    for k, v in states.items():
+        if v == "no":
+            it = items.get(k, {})
+            if not (it.get("why") and it.get("when")):
+                out.append(k + " (why and by when)")
+    return out
+
+
 def derive_status(rec):
     if rec.get("installed"):
         return "installed"
@@ -145,7 +175,7 @@ def derive_status(rec):
     if not h.get("submittedAt"):
         return "working"
     ls = [lane_state(rec, k) for k in LANES]
-    if all(x["signoff"] == "confirmed" and x["missing"] == 0 and x["checked"] == x["total"] for x in ls):
+    if not hca_missing(rec) and all(x["signoff"] == "confirmed" and x["missing"] == 0 and x["checked"] == x["total"] for x in ls):
         return "ready"
     if any(x["checked"] or x["signoff"] for x in ls):
         return "in_review"
@@ -192,7 +222,7 @@ class H(SimpleHTTPRequestHandler):
             return super().do_GET()
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         with LOCK:
-            jobs, recs = load("jobs.json", []), load("records.json", {})
+            jobs, recs, pipe_all = load("jobs.json", []), load("records.json", {}), load("pipeline.json", [])
             if u.path == "/api/jobs":
                 rep = q.get("rep", "").strip().lower()
                 out = []
@@ -206,7 +236,7 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(200, {"ok": True, "jobs": out, "pipeline": pipe})
             if u.path == "/api/record":
                 job = q.get("job", "")
-                meta = next((j for j in jobs if j["job"] == job), None)
+                meta = find_job(jobs, pipe_all, job)
                 if not meta:
                     return self._json(404, {"ok": False, "error": "unknown job"})
                 rec = recs.get(job, {"hca": {}})
@@ -237,18 +267,31 @@ class H(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
-        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._json(400, {"ok": False, "error": "bad length"})
+        if n < 0 or n > MAX_BODY:
+            return self._json(413, {"ok": False, "error": "body too large"})
         try:
             body = json.loads(self.rfile.read(n) or b"{}")
         except Exception:
             return self._json(400, {"ok": False, "error": "bad json"})
+        if not isinstance(body, dict):
+            return self._json(400, {"ok": False, "error": "body must be an object"})
+        try:
+            return self._post(u, body)
+        except (AttributeError, TypeError, ValueError, KeyError):
+            return self._json(400, {"ok": False, "error": "malformed request"})
+
+    def _post(self, u, body):
         with LOCK:
-            jobs, recs = load("jobs.json", []), load("records.json", {})
+            jobs, recs, pipe_all = load("jobs.json", []), load("records.json", {}), load("pipeline.json", [])
             if u.path == "/api/reset":
                 seed()
                 return self._json(200, {"ok": True})
             job = str(body.get("job", ""))
-            meta = next((j for j in jobs if j["job"] == job), None)
+            meta = find_job(jobs, pipe_all, job)
             if u.path in ("/api/hca", "/api/lane", "/api/install"):
                 if not meta:
                     return self._json(404, {"ok": False, "error": "unknown job"})
@@ -263,7 +306,12 @@ class H(SimpleHTTPRequestHandler):
                         h["pay"] = str(body["pay"])[:80]
                     if "notes" in body:
                         h["notes"] = str(body["notes"])[:600]
-                    for k, v in (body.get("items") or {}).items():
+                    items_in = body.get("items") or {}
+                    if not isinstance(items_in, dict) or not all(isinstance(v, dict) for v in items_in.values()):
+                        return self._json(400, {"ok": False, "error": "items must be an object of objects"})
+                    for k, v in items_in.items():
+                        if k not in BASE_ITEMS + RENTAL_ITEMS:
+                            return self._json(400, {"ok": False, "error": "unknown item " + k})
                         if v.get("v") not in HCA_STATES:
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
                         old = h.setdefault("items", {}).get(k, {}).get("v")
@@ -271,9 +319,14 @@ class H(SimpleHTTPRequestHandler):
                         if old != v["v"]:
                             history(rec, who, "hca." + k, old, v["v"])
                     if "parked" in body:
+                        if body["parked"] is not None and not isinstance(body["parked"], dict):
+                            return self._json(400, {"ok": False, "error": "parked must be an object"})
                         rec["parked"] = body["parked"] and {k: str(body["parked"].get(k, ""))[:200] for k in ("reason", "revisit", "note")} or None
                         history(rec, who, "parked", None, (rec["parked"] or {}).get("reason"))
                     if body.get("submit"):
+                        miss = hca_missing(rec)
+                        if miss:
+                            return self._json(400, {"ok": False, "error": "cannot submit, still needed: " + ", ".join(miss)})
                         h["submittedAt"] = now()
                         rec["parked"] = None
                         history(rec, who, "hca.submitted", None, "submitted")
@@ -285,7 +338,10 @@ class H(SimpleHTTPRequestHandler):
                     if lane not in LANES:
                         return self._json(400, {"ok": False, "error": "bad lane"})
                     l = rec.setdefault("lanes", {}).setdefault(lane, {"items": {}})
-                    for k, v in (body.get("items") or {}).items():
+                    litems = body.get("items") or {}
+                    if not isinstance(litems, dict) or not all(isinstance(v, dict) for v in litems.values()):
+                        return self._json(400, {"ok": False, "error": "items must be an object of objects"})
+                    for k, v in litems.items():
                         if k not in LANES[lane]["items"] or v.get("result") not in RESULTS:
                             return self._json(400, {"ok": False, "error": "bad item " + k})
                         if v["result"] != "verified" and not (v.get("found") and v.get("when")):

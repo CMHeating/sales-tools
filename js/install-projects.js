@@ -21,7 +21,8 @@
 
   /* readiness colour: green = all done; red = date within redDays with items open (or overdue No); yellow otherwise */
   function ready(j, todayIso) {
-    var r = j.readiness || {}, total = r.total || C.total, done = Math.min(r.done || 0, total);
+    var r = j.readiness || {};
+    var total = Math.max(1, Math.min(99, Math.floor(Number(r.total)) || C.total)), done = Math.max(0, Math.min(total, Math.floor(Number(r.done)) || 0));
     var i = iso(j), days = i ? Math.round((Date.parse(i + "T00:00:00Z") - Date.parse(todayIso + "T00:00:00Z")) / 86400000) : null;
     var color = "y";
     if (done >= total) color = "g";
@@ -42,13 +43,20 @@
   /* backlog/pipeline jobs for this HCA that are not already a sold job (by job number) */
   function pipelineFor(pipe, sold, who) {
     if (!who) return [];
-    var have = {}; (sold || []).forEach(function (j) { if (num(j)) have[num(j)] = 1; });
-    return (pipe || []).filter(function (j) { return norm(owner(j)) === norm(who.full) && !(num(j) && have[num(j)]); });
+    var haveJob = {}, haveProj = {};
+    (sold || []).forEach(function (j) { if (num(j)) haveJob[num(j)] = 1; if (j.projectId) haveProj[String(j.projectId)] = 1; });
+    return (pipe || []).filter(function (j) {
+      if (norm(owner(j)) !== norm(who.full)) return false;
+      if (num(j) && haveJob[num(j)]) return false;
+      if (j.projectId && haveProj[String(j.projectId)]) return false;
+      return true;
+    });
   }
 
   function row(j, who, sub, tag, todayIso) {
     var r = ready(j, todayIso);
-    return '<a class="proj-row" href="' + esc(link(j, who)) + '"><span class="proj-dot ' + r.color + '"></span>' +
+    var glyph = { g: "✓", y: "…", r: "!" }[r.color], word = { g: "complete", y: "in progress", r: "needs attention" }[r.color];
+    return '<a class="proj-row" href="' + esc(link(j, who)) + '"><span class="proj-dot ' + r.color + '" role="img" aria-label="' + word + '" title="' + word + '">' + glyph + "</span>" +
       '<span class="proj-main"><b>' + esc(j.customer || "Unknown") + "</b><span>" + esc(sub) + "</span></span>" +
       (tag ? '<span class="proj-tag">' + esc(tag) + "</span>" : "") +
       '<span class="proj-n">' + r.done + " of " + r.total + "</span></a>";
@@ -119,7 +127,7 @@
     return h + (grp ? "</optgroup>" : "");
   }
 
-  g.CMHProjects = { config: C, esc: esc, norm: norm, num: num, iso: iso, link: link, ready: ready, where: where,
+  g.CMHProjects = { config: C, statusGlyph: function (c) { return { g: "✓", y: "…", r: "!" }[c]; }, esc: esc, norm: norm, num: num, iso: iso, link: link, ready: ready, where: where,
     soldOpen: soldOpen, pipelineFor: pipelineFor, listHtml: listHtml, overlayHtml: overlayHtml, options: options, optionsHtml: optionsHtml };
   if (typeof module !== "undefined") module.exports = g.CMHProjects;
 })(typeof window !== "undefined" ? window : globalThis);

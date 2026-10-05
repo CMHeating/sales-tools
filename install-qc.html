@@ -41,7 +41,7 @@
   .seg button[aria-checked=true].missing{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.7);color:#fecaca}
   .seg button[aria-checked=true].mismatch{background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.7);color:#fde68a}
   .found{display:none;gap:8px;flex-wrap:wrap;margin-top:8px;padding:10px;border:1px solid rgba(245,158,11,.45);border-radius:12px;background:rgba(245,158,11,.06)}
-  .found.on{display:flex}.found input[type=text]{flex:2 1 220px}.found input[type=date]{flex:1 1 140px}
+  .found.on{display:flex}.found textarea{flex:2 1 220px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;resize:vertical;min-height:64px}.found input[type=date]{flex:1 1 140px}
   .btn{min-height:46px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;cursor:pointer}
   .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
   .btn[disabled]{opacity:.5;cursor:not-allowed}
@@ -49,8 +49,11 @@
   .msg{font-size:13px;color:var(--mut)}.msg.err{color:#fecaca}.msg.ok{color:#bbf7d0}
   a{color:var(--blue)}
   #envBar{position:sticky;top:0;z-index:40;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px 10px;background:#7f1d1d;color:#fecaca}
-  .back{color:var(--mut);text-decoration:none;font-size:13px;cursor:pointer}
+  .back{color:var(--mut);text-decoration:none;font-size:13px;cursor:pointer;background:none;border:0;font-family:inherit;padding:8px 0}.back:hover{color:var(--text)}
   .empty{color:var(--mut);padding:18px 4px}
+  .lanesum{cursor:pointer;list-style:none}.lanesum::-webkit-details-marker{display:none}.lanesum h2{margin:0}
+  .lanesum:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:8px}
+  @media (min-width:720px){.row{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;align-items:start}.row .q,.row .found{grid-column:1/-1}.row .said{margin:0;align-self:center}}
   .hist{font-size:12px;color:var(--mut);line-height:1.6}
 </style>
 </head>
@@ -71,9 +74,9 @@ var $=function(id){return document.getElementById(id)};
 var META=null,TAB='q',CUR=null;
 var WHO_LANE={Geoff:'sales',Lyle:'install',Jon:'electrical'};
 var LANE_NAME={sales:'Sales',install:'Install',electrical:'Electrical'};
-var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-credit','r-payauth'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload']};
+var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload']};
 var HCA_NAME={pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit auth','r-payauth':'Payment auth','r-dl':'Driver’s license','r-deed':'Mortgage / deed'};
-var STATE={yes:'Complete',work:'Working on it',no:'No',na:'N/A'};
+var STATE={yes:'Complete',work:'Working on it',no:'Not done',na:'N/A'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
 function me(){return $('me').value;}
@@ -99,17 +102,17 @@ function openJob(job){
       var txt=i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
       return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
     var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
-    var html='<a class="back" id="backBtn">&larr; All jobs</a><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
+    var html='<button class="back" type="button" id="backBtn">&larr; All jobs</button><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
     if(h.notes)html+='<div class="card"><div class="said"><b>HCA notes:</b> '+esc(h.notes)+'</div></div>';
     Object.keys(META.lanes).forEach(function(lane){
       var L=(r.lanes||{})[lane]||{items:{}},mine=(lane===mylane),sum=r.lanesSummary[lane];
-      html+='<div class="card" data-lane="'+lane+'"><h2>'+LANE_NAME[lane]+' · '+META.lanes[lane].who+' '+laneChip(lane,sum)+'</h2>';
+      html+='<details class="card" data-lane="'+lane+'"'+((mine||!mylane)?' open':'')+'><summary class="lanesum"><h2>'+LANE_NAME[lane]+' · '+META.lanes[lane].who+' '+laneChip(lane,sum)+'</h2></summary>';
       if(!mine)html+='<p class="sub" style="margin:0 0 6px">'+(mylane?'This lane belongs to '+META.lanes[lane].who+'.':'Sign in as Geoff, Lyle or Jon to verify a lane.')+'</p>';
       META.lanes[lane].items.forEach(function(k){var it=L.items[k]||{},ids=HCA_FOR[k]||[];
         html+='<div class="row" data-k="'+k+'"><div class="q">'+esc(META.labels[k])+'</div>'+(ids.length?'<div class="said">HCA said — '+hcaSaid(ids)+'</div>':'<div class="said">Manager-only item</div>')
           +'<div class="seg" role="radiogroup" aria-label="'+esc(META.labels[k])+'">'+['verified','missing','mismatch'].map(function(res){return '<button type="button" role="radio" class="'+res+'" data-res="'+res+'" aria-checked="'+(it.result===res)+'"'+(mine?'':' disabled')+'>'+res[0].toUpperCase()+res.slice(1)+'</button>';}).join('')+'</div>'
-          +'<div class="found'+((it.result&&it.result!=='verified')?' on':'')+'"><input type="text" data-f="found" placeholder="What did you find in ServiceTitan?" value="'+esc(it.found||'')+'"'+(mine?'':' disabled')+'><input type="date" data-f="when" aria-label="Fix by" value="'+esc(it.when||'')+'"'+(mine?'':' disabled')+'></div></div>';});
-      html+='<div class="acts"><select data-so aria-label="Sign-off"'+(mine?'':' disabled')+'><option value="">Sign-off…</option><option value="confirmed"'+(L.signoff==='confirmed'?' selected':'')+'>✔ Confirmed</option><option value="attention"'+(L.signoff==='attention'?' selected':'')+'>⚠ Needs attention</option><option value="notready"'+(L.signoff==='notready'?' selected':'')+'>✖ Not ready</option></select><button class="btn go" data-save'+(mine?'':' disabled')+'>Save '+LANE_NAME[lane]+'</button><span class="msg" data-msg></span></div></div>';});
+          +'<div class="found'+((it.result&&it.result!=='verified')?' on':'')+'"><textarea data-f="found" rows="2" placeholder="What did you find in ServiceTitan?"'+(mine?'':' disabled')+'>'+esc(it.found||'')+'</textarea><input type="date" data-f="when" aria-label="Fix by" value="'+esc(it.when||'')+'"'+(mine?'':' disabled')+'></div></div>';});
+      html+='<div class="acts"><select data-so aria-label="Sign-off"'+(mine?'':' disabled')+'><option value="">Sign-off…</option><option value="confirmed"'+(L.signoff==='confirmed'?' selected':'')+'>✔ Confirmed</option><option value="attention"'+(L.signoff==='attention'?' selected':'')+'>⚠ Needs attention</option><option value="notready"'+(L.signoff==='notready'?' selected':'')+'>✖ Not ready</option></select><button class="btn go" data-save'+(mine?'':' disabled')+'>Save '+LANE_NAME[lane]+'</button><span class="msg" data-msg></span></div></details>';});
     html+='<div class="card"><h2>History</h2><div class="hist">'+((r.history||[]).slice(-12).reverse().map(function(x){return esc(x.at.slice(5,16).replace('T',' '))+' · '+esc(x.by)+' · '+esc(x.field)+' → '+esc(x.to);}).join('<br>')||'—')+'</div></div>';
     $('detail').innerHTML=html;$('list').style.display='none';$('detail').style.display='';
     $('backBtn').onclick=showList;wireLanes(job);

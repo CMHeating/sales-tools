@@ -47,7 +47,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .proj-list{max-height:230px;overflow-y:auto;margin-top:12px;border-top:1px solid var(--line)}
 .proj-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
 .proj-row:hover{background:rgba(255,255,255,.05)}
-.proj-dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--yellow)}
+.proj-dot{width:18px;height:18px;border-radius:50%;flex:none;background:var(--yellow);color:#0a1628;font-size:11px;font-weight:900;line-height:18px;text-align:center}
 .proj-dot.g{background:var(--green)}.proj-dot.r{background:var(--red)}.proj-dot.y{background:var(--yellow)}
 .proj-main{flex:1;display:flex;flex-direction:column;font-size:14px;line-height:1.25}
 .proj-main span{font-size:12px;color:var(--muted)}
@@ -263,7 +263,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 <script src="js/install-projects.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const FIREBASE_CONFIG = {
@@ -325,6 +325,19 @@ function findByName(input){
 function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
 function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.className="status-pill "+cls; }
 
+const emailKeyOf = e => String(e || "").toLowerCase().split(".").join(",");
+const hcaSlug = n => String(n || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+let ownHcaKey = null;   // roster key for the signed-in HCA (their own subtree under the tracker nodes)
+/* Tracker data is partitioned per HCA under the verified-email rules. Read the viewed HCA's subtree; if it is
+   empty (data not partitioned yet) fall back to the legacy root layout so the page works before and after cutover. */
+function readTracker(base, who, cb, errCb){
+  const key = (currentUser && currentUser.role === "HCA" && ownHcaKey) ? ownHcaKey : hcaSlug(who.full);
+  onValue(ref(db, base + "/" + key), snap => {
+    const v = snap.val();
+    if(v) { cb(v, base + "/" + key); return; }
+    onValue(ref(db, base), s2 => cb(s2.val() || {}, base), errCb);
+  }, errCb);
+}
 let currentUser = null;   // {role,short,email,...}
 let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
 let actUnsubscribe = null; // store unsubscribe for activities listener
@@ -346,10 +359,13 @@ async function doLogin(name, pin){
    The database rules are the real control; the UI below only decides what to show and when to ask. ---- */
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ hd: "cmheating.com" });
-function isGoogle(){
-  const u = auth.currentUser;
-  return !!u && u.emailVerified === true && u.providerData.some(p => p.providerId === "google.com");
+let GOOGLE_SESSION = false;
+/* The tier is decided by the provider of the CURRENT sign-in (token claim), never by linked providers. */
+async function refreshTier(user){
+  try{ const t = await user.getIdTokenResult(); GOOGLE_SESSION = !!user.emailVerified && t.signInProvider === "google.com"; }
+  catch(e){ GOOGLE_SESSION = false; }
 }
+function isGoogle(){ return GOOGLE_SESSION; }
 async function googleSignIn(){
   try{ await signInWithPopup(auth, googleProvider); }
   catch(err){
@@ -375,10 +391,15 @@ const topLogin = $("btnLogin");
 if(topLogin){ topLogin.addEventListener("click", () => { const f=$("fName"); if(f) f.focus(); }); }
 $("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   const known = user ? findByEmail(user.email) : null;
-  if(!known){ currentUser=null; lock(); if(user) signOut(auth).catch(e=>console.error(e)); return; }
+  if(!known){ currentUser=null; GOOGLE_SESSION=false; ownHcaKey=null; lock(); if(user) signOut(auth).catch(e=>console.error(e)); return; }
   currentUser = known;
+  await refreshTier(user);
+  ownHcaKey = null;
+  if(known.role === "HCA" && isGoogle()){
+    try{ const snap = await get(ref(db, "cmh_followup_roster/hcas/" + emailKeyOf(user.email))); ownHcaKey = snap.val() || null; }catch(e){ ownHcaKey = null; }
+  }
   unlock();
 });
 
@@ -504,12 +525,14 @@ function loadActivitiesCard(who){
 /* FOLLOW-UP: read cmh_followup_tracker, scope to this rep's full name.
    (Step-2 wiring; frame already reads live data — count of open leads for the rep.) */
 let followupData = null;
+let followupKey = null;
 function loadFollowupCard(who){
   $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
   if(!isGoogle()){ setBody("followupBody", lockedCardHtml("your follow-ups")); $("followupNote").textContent = ""; return; }
-  if(followupData){ renderFollowup(who); return; }
-  onValue(ref(db, DB_FOLLOWUP), snap => {
-    followupData = snap.val() || {};
+  const want = (currentUser && currentUser.role === "HCA" && ownHcaKey ? ownHcaKey : hcaSlug(who.full));
+  if(followupData && followupKey === want){ renderFollowup(who); return; }
+  readTracker(DB_FOLLOWUP, who, (data, path) => {
+    followupData = data || {}; followupKey = want;
     if(viewRep && viewRep.role === "HCA") renderFollowup(viewRep);
   }, err => setBody("followupBody", '<div class="soon">Follow-up data unavailable.</div>'));
 }
@@ -524,11 +547,13 @@ function renderFollowup(who){
 
 /* SOLD: read cmh_sold_tracker for this rep. */
 let soldData = null;
+let soldKey = null;
 function loadSoldCard(who){
   if(!isGoogle()){ setBody("soldBody", lockedCardHtml("your sold jobs")); $("soldNote").textContent = ""; renderProjects(who); return; }
-  if(soldData){ renderSold(who); return; }
-  onValue(ref(db, DB_SOLD), snap => {
-    soldData = snap.val() || {};
+  const want = (currentUser && currentUser.role === "HCA" && ownHcaKey ? ownHcaKey : hcaSlug(who.full));
+  if(soldData && soldKey === want){ renderSold(who); return; }
+  readTracker(DB_SOLD, who, (data, path) => {
+    soldData = data || {}; soldKey = want;
     if(viewRep && viewRep.role === "HCA") renderSold(viewRep);
   }, err => setBody("soldBody", '<div class="soon">Sold data unavailable.</div>'));
 }

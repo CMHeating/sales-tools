@@ -22,6 +22,15 @@
 4. Merge the fragment into the codex branch rules, run both test files, then deploy rules (`firebase deploy --only database`). Geoff's action.
 5. install-requirements.html / install-qc.html still use the sandbox or demo mode; they get Google sign-in + real storage when the rules are deployed.
 
+## DEPLOYMENT ORDER (do not deploy rules first)
+The tracker rules from branch `codex/hca-crm-firebase-rules` partition data per HCA and replace the anonymous sync writer with a dedicated writer account. Deploying them before the rest is in place breaks the live CRM, sold tracker page and the nightly sync. Required order:
+1. Sync cutover: the Apps Script sync writes partitioned per-HCA data using the writer account (that branch's `apps-script/sold-job-tracker-sync.gs`; Geoff approves and runs it) and also writes `cmh_install_jobs`.
+2. Console: roster rows (`cmh_followup_roster`, `cmh_install_roster`), Google provider/authorized domains.
+3. Ship the CRM + pages from this branch (they read per-HCA subtrees and fall back to the legacy root layout, so this is safe before AND after).
+4. Compare the LIVE rules (console > Realtime Database > Rules) with `rules/database.rules.merged.PROPOSED.json`; the proposal denies any node it does not list (audit AUD-15: `cmh_hca_activity`, `cmh_ar`, `cmh_clearance` are not in it). Add what the live CRM needs.
+5. Re-run `scripts/test-install-req-rules.cjs` and that branch's tests, `firebase deploy --only database --dry-run`, then deploy. Firebase login must be current (`firebase login --reauth`).
+The merged proposal ALSO tightens the other session's sold/follow-up rules to require a Google sign-in provider (audit AUD-11); their test file needs `firebase: { sign_in_provider: 'google.com' }` on its contexts.
+
 ## Not covered yet
 - The follow-up tracker, follow-up/self-gen outreach pages and AR collections keep their own sign-in as is.
 - The PIN tier is still guessable (short numeric PIN); acceptable only because nothing sensitive sits behind it.

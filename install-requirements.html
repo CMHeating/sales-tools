@@ -11,7 +11,7 @@
   :root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#c97d10;--green:#22c55e;--red:#ef4444;--blue:#4aa3df}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;padding-bottom:112px;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;padding-bottom:140px;-webkit-font-smoothing:antialiased}
   .wrap{max-width:720px;margin:0 auto;padding:0 16px 40px;padding-left:max(16px,env(safe-area-inset-left,0));padding-right:max(16px,env(safe-area-inset-right,0))}
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px}
   .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
@@ -45,7 +45,7 @@
   .needs b{font-weight:800}
   .needs ul{margin:6px 0 0;padding:0;list-style:none}
   .needs li{display:flex;gap:8px;align-items:baseline;padding:3px 0}
-  .needs a{color:inherit;text-decoration:underline;cursor:pointer}
+  .needs a,.linkbtn{color:inherit;text-decoration:underline;cursor:pointer;background:none;border:0;font:inherit;padding:0;text-align:left}
   .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
   .dot.r{background:var(--red)}.dot.y{background:var(--gold)}.dot.g{background:var(--green)}
   /* rows */
@@ -161,7 +161,8 @@ var WORKING='⏳ Working on it';
 var H={};   /* link params: cust, date, job, rep */
 (location.hash||'').replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)H[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});
 /* ---- environment: sandbox (local test server, fake data) | live demo (nothing is sent) | live send ---- */
-var SANDBOX=/^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname);
+var SANDBOX_RE=/^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
+var SANDBOX=SANDBOX_RE.test(location.hostname);
 var LIVE_SEND=false;   /* live site: Submit is a DEMO (no email) until Geoff flips this to true */
 var REMOTE={status:'',lanes:null};
 function remote(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
@@ -181,7 +182,7 @@ function build(){
     var box=$('g-'+g);box.innerHTML='';
     ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
       var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
-      var btns=[['yes','Complete'],['work','Working on it'],['no','No']].concat(it[4]?[['na','N/A']]:[]);
+      var btns=[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
       row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
         +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
         +'</div><div class="why" id="why-'+id+'"></div>';
@@ -200,10 +201,14 @@ function whyBox(id,o){
    +'<input type="date" data-k="when" aria-label="Resolve by" value="'+esc(o.when||'')+'">'
    +'<input type="text" data-k="note" placeholder="Note (optional)" value="'+esc(o.note||'')+'">';
 }
+function curItem(id){return S.items[id]||(S.items[id]={});}
 function paintWhy(id){
-  var box=$('why-'+id);if(!box)return;var st=stateOf(id),o=id==='pay'?(S.items.pay||(S.items.pay={})):(S.items[id]||(S.items[id]={}));
-  if(st==='no'){if(!box.innerHTML||box.dataset.id!==id){box.innerHTML=whyBox(id,o);box.dataset.id=id;
-      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){o[e.dataset.k]=e.value;render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
+  var box=$('why-'+id);if(!box)return;var st=stateOf(id);
+  if(st==='no'){
+    var o=curItem(id);
+    if(!box.innerHTML||box.dataset.id!==id){box.innerHTML=whyBox(id,o);box.dataset.id=id;
+      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){curItem(id)[e.dataset.k]=e.value;render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
+    else box.querySelectorAll('[data-k]').forEach(function(e){e.value=o[e.dataset.k]||'';});   /* state may have been replaced (draft vs server) */
     box.classList.add('on');}
   else box.classList.remove('on');
 }
@@ -228,7 +233,7 @@ function render(){
   var needs=openNeeds(),nb=$('needs');
   if(!needs.length&&done===total&&total>0){nb.className='needs clear';nb.innerHTML='<b>All set.</b> Everything on your side is complete. Submit it to the managers.';}
   else if(!needs.length){nb.className='needs';nb.innerHTML='<b>Needs you.</b> Start with Payment, then work down. Tap Working on it for anything you have started.';}
-  else{nb.className='needs';nb.innerHTML='<b>Needs you</b> ('+needs.length+')<ul>'+needs.map(function(n){return '<li><span class="dot '+n.c+'"></span><a data-go="'+n.id+'">'+esc(n.t)+'</a></li>';}).join('')+'</ul>';
+  else{nb.className='needs';nb.innerHTML='<b>Needs you</b> ('+needs.length+')<ul>'+needs.map(function(n){return '<li><span class="dot '+n.c+'"></span><button type="button" class="linkbtn" data-go="'+n.id+'">'+esc(n.t)+'</button></li>';}).join('')+'</ul>';
     nb.querySelectorAll('[data-go]').forEach(function(a){a.onclick=function(){var r=$('row-'+a.dataset.go)||$('sec-pay');if(r.scrollIntoView)r.scrollIntoView({block:'center',behavior:'smooth'});};});}
   document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-checked',stateOf(b.dataset.id)===b.dataset.v?'true':'false');});
   var miss=missing();
@@ -288,7 +293,15 @@ function submit(){
   .catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Couldn’t reach the mailer. Your answers are saved on this phone; try again.';});
 }
 /* ---- park ---- */
-function openPark(){$('parkMsg').textContent='';$('parkModal').classList.add('on');$('parkReason').focus();}
+var _lastFocus=null;
+function openPark(){_lastFocus=document.activeElement;$('parkMsg').textContent='';$('parkModal').classList.add('on');$('parkReason').focus();}
+function closePark(){$('parkModal').classList.remove('on');if(_lastFocus&&_lastFocus.focus)_lastFocus.focus();}
+function trapPark(e){var m=$('parkModal');if(!m.classList.contains('on'))return;
+  if(e.key==='Escape'){closePark();return;}
+  if(e.key!=='Tab')return;var f=m.querySelectorAll('select,input,textarea,button:not([disabled])');if(!f.length)return;
+  var first=f[0],last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
 function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
   if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}
   S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();
@@ -301,8 +314,8 @@ function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkM
   $('chipDate').textContent=H.date?(function(){var p=H.date.split('-');return (+p[1])+'/'+(+p[2]);})():'TBD';
   $('chipJob').textContent=H.job||'—';$('chipHca').textContent=H.rep||'—';
   build();load();render();
-  $('parkBtn').onclick=openPark;$('parkBack').onclick=function(){$('parkModal').classList.remove('on');};$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')$('parkModal').classList.remove('on');});
+  $('parkBtn').onclick=openPark;$('parkBack').onclick=closePark;$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
+  document.addEventListener('keydown',trapPark);
   if(!H.cust&&!H.job){
     ['sec-pay','sec-equip','sec-layout','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
     $('custName').textContent='No project selected';
