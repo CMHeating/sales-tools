@@ -111,7 +111,7 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', { job: 'p1', submit: true }); r = await hca1.call('GET', '/api/record?job=p1'); ok('resubmitted: the old note is gone (no clock comparison)', !r.b.record.reopen);
 
     // --- rebate gate (2026-10-04): through the real code AND the real rules ---
-    const withReb = (prog, subs) => Object.assign({}, full, { rebateProgram: prog, items: Object.assign({}, full.items, { rebate: { v: 'yes' } }, subs) });
+    const withReb = (prog, subs) => Object.assign({}, full, { rebateProgram: prog, rebateAmount: '12', items: Object.assign({}, full.items, { rebate: { v: 'yes' } }, subs) });
     r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q1' }, withReb('PSE', { 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' }, 'rb-tc': { v: 'work' } }))); ok('PSE with T&Cs still Working on it saves', r.code === 200);
     r = await hca1.call('POST', '/api/hca', { job: 'q1', submit: true }); ok('...and can still be submitted (gate blocks booking, not submitting)', r.code === 200 && r.b.record.status === 'submitted');
     for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q1', lane, items: allVerified(lane), signoff: 'confirmed' });
@@ -123,6 +123,7 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', { job: 'q1', items: { 'rb-tc': { v: 'yes' } } }); r = await hca1.call('POST', '/api/hca', { job: 'q1', submit: true }); ok('HCA completes the T&Cs and resubmits', r.code === 200);
     for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q1', lane, items: allVerified(lane), signoff: 'confirmed' });
     r = await adm.call('GET', '/api/record?job=q1'); ok('rebate gate passed => READY (stored and shown)', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q1/status')) === 'ready');
+    r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q3' }, withReb('Gensco', { 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } }), { rebateAmount: '' })); r = await hca1.call('POST', '/api/hca', { job: 'q3', submit: true }); ok('rebate Yes without an amount cannot be submitted', r.code === 400 && /rebate amount/.test(r.b.error));
     r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q2' }, withReb('Gensco', { 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } }))); r = await hca1.call('POST', '/api/hca', { job: 'q2', submit: true }); ok('Gensco (no AHRI, no T&Cs) submits', r.code === 200);
     for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q2', lane, items: allVerified(lane), signoff: 'confirmed' });
     r = await adm.call('GET', '/api/record?job=q2'); ok('Gensco with balance point + equipment check Complete => READY', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q2/status')) === 'ready');

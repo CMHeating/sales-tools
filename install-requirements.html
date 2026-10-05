@@ -133,7 +133,7 @@
     <div class="row" id="rebProgBox" style="display:none"><label class="l" for="rebProg">Which program?</label>
       <select id="rebProg"><option value="">Select…</option><option>PSE</option><option>PUD</option><option>Gensco</option><option value="Other">Other</option></select>
       <input type="text" id="rebOther" maxlength="40" placeholder="Which program?" style="display:none;margin-top:8px">
-      <label class="l" for="rebAmt" style="margin-top:12px">Rebate amount</label><input type="text" id="rebAmt" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="$ amount, e.g. 1,500"></div>
+      <label class="l" for="rebAmt" style="margin-top:12px">Rebate amount</label><input type="text" id="rebAmt" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="Dollar amount"></div>
     <div id="g-rebsub"></div><div class="hint" id="rebNote" style="margin-top:10px;display:none"></div></section>
 
   <section class="card" id="sec-layout"><h2><span class="n">4</span>Layout &amp; materials</h2><p class="hint">Done and uploaded to the customer&rsquo;s ServiceTitan profile.</p><div id="g-layout"></div>
@@ -239,7 +239,7 @@ function build(){
   $('notes').addEventListener('input',function(){S.notes=this.value;save();});
   var rp=function(){var v=$('rebProg').value;S.rebateProg=v==='Other'?('Other'+($('rebOther').value.trim()?': '+$('rebOther').value.trim():'')):v;render();save();};
   $('rebProg').addEventListener('change',rp);$('rebOther').addEventListener('input',rp);
-  $('rebAmt').addEventListener('input',function(){var c=this.value.replace(/[^0-9.,$ ]/g,'');if(c!==this.value)this.value=c;S.rebateAmt=c;save();});
+  $('rebAmt').addEventListener('input',function(){var c=this.value.replace(/[^0-9.,$ ]/g,'');if(c!==this.value)this.value=c;S.rebateAmt=c;render();save();});
 }
 function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;paintWhy(id);render();save();}
 function whyBox(id,o){
@@ -271,7 +271,7 @@ function openNeeds(){
 }
 function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push(label(id));});
   if(isRental())ITEMS.forEach(function(it){if(it[2]==='rental'&&!stateOf(it[0]))m.push(label(it[0]));});
-  if(rebateYes()){if(!rebateSel(S.rebateProg))m.push('Rebate program');else if(!rebateKey(S.rebateProg))m.push('Rebate program name');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
+  if(rebateYes()){if(!rebateSel(S.rebateProg))m.push('Rebate program');else if(!rebateKey(S.rebateProg))m.push('Rebate program name');if(!/\d/.test(S.rebateAmt||''))m.push('Rebate amount');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
   active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');else if(o.when<todayPT())m.push(label(id)+' (date has passed)');}});
   return m;}
 function render(){
@@ -303,7 +303,7 @@ function render(){
   var fin=submitted||locked(),sb=$('submitBtn');
   if(fin){$('parkBtn').style.display='none';sb.textContent='Back to my projects';sb.dataset.back='1';sb.disabled=false;}   /* done: nothing left to save, so the way out is back to the list */
   else{$('parkBtn').style.display='';delete sb.dataset.back;if(sb.textContent!=='Sending…')sb.textContent='Submit';sb.disabled=!!miss.length;}
-  var lk=locked();document.querySelectorAll('.seg button,#pay,#notes,.why select,.why input').forEach(function(e){e.disabled=lk;});
+  var lk=locked();document.querySelectorAll('.seg button,#pay,#notes,.why select,.why input,#rebProg,#rebOther,#rebAmt').forEach(function(e){e.disabled=lk;});
   if(lk&&!submitted)submitted=true;
   var eb=$('envBar');if(SANDBOX){eb.className='sbx';eb.style.display='';eb.textContent=PRACTICE?'PRACTICE — fake projects, nothing is sent, nothing is real':LIVEDATA?'LIVE — real projects. Your answers are saved to the office as you go; Submit does not email anyone yet.':'SANDBOX — fake data, nothing leaves this machine';if(LIVEDATA)eb.className='demo';}
   else if(!LIVE_SEND){eb.className='demo';eb.style.display='';eb.textContent='DEMO — answers stay on this device, nothing is sent';}

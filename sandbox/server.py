@@ -180,6 +180,8 @@ def hca_missing(rec):
     out = [i for i in need if not states.get(i)]
     if states.get("rebate") == "yes" and not rebate_key(h.get("rebateProgram")):
         out.append("rebate program")
+    if states.get("rebate") == "yes" and not re.search(r"\d", h.get("rebateAmount") or ""):
+        out.append("rebate amount")
     for k, v in states.items():
         if v == "no":
             it = items.get(k, {})
