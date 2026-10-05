@@ -28,15 +28,40 @@
   <p>Thanks for trying this. Everything here is practice data. Your job: <b>try to break it</b> and tell Geoff what felt slow, confusing or wrong.</p>
 
   <div class="card">
+    <h2>I'm trying this as…</h2>
+    <p>Pick your role. Everyone sees the same practice data.</p>
+    <div id="roles" role="tablist" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn go" type="button" role="tab" aria-selected="true" data-role="hca" style="flex:1;justify-content:center">HCA</button>
+      <button class="btn" type="button" role="tab" aria-selected="false" data-role="manager" style="flex:1;justify-content:center">Manager</button>
+      <button class="btn" type="button" role="tab" aria-selected="false" data-role="sched" style="flex:1;justify-content:center">Scheduler</button>
+      <button class="btn" type="button" role="tab" aria-selected="false" data-role="admin" style="flex:1;justify-content:center">Admin</button>
+    </div>
+    <div id="rolePanelM" style="display:none"><p style="margin-top:12px">You verify your own lane against ServiceTitan.</p>
+      <select id="mgrWho" aria-label="Who are you"><option>Geoff</option><option>Lyle</option><option>Jon</option></select>
+      <a class="btn go" id="mgrGo" href="../install-qc.html#practice=1&as=Geoff">Open my review queue</a>
+      <p style="margin-top:10px">Nothing to review yet? Switch to HCA, complete and submit a project, then come back.</p></div>
+    <div id="rolePanelS" style="display:none"><p style="margin-top:12px">You book installs: you see every project and the Ready to book list.</p>
+      <select id="schedWho" aria-label="Who are you"><option>Amy</option><option>Brittny</option></select>
+      <a class="btn go" id="schedGo" href="../install-qc.html#practice=1&as=Amy">Open Ready to book</a></div>
+  </div>
+
+  <div id="rolePanelA" class="card" style="display:none">
+    <h2>Admin</h2><p>One screen over every project and every HCA: what is ready to book, what is stuck, what is due. You can send a project back to an HCA with a reason.</p>
+    <select id="admWho" aria-label="Who are you"><option>Amy</option><option>Brittny</option><option>Geoff</option></select>
+    <a class="btn go" id="admGo" href="../install-admin.html#practice=1&as=Amy">Open the admin page</a>
+    <p style="margin-top:10px">Tip: submit a couple of practice projects first (HCA role) so there is something to review.</p>
+  </div>
+
+  <div class="card" id="rolePanelH">
     <h2>Your practice projects</h2>
     <p>Tap one to open its completion checklist. Answers save as you tap.</p>
     <div id="jobs"><p>Loading…</p></div>
   </div>
 
   <div class="card">
-    <h2>The other screens</h2>
+    <h2>More</h2>
+    <a class="btn" href="guide.html">How it works <small>a one-page guide for everyone</small></a>
     <a class="btn" href="hca-home.html">Your home cards <small>Daily Activities + My Schedule</small></a>
-    <a class="btn" href="../install-qc.html#practice=1">Manager review screen <small>what Lyle, Jon and Geoff see</small></a>
   </div>
 
   <div class="card">
@@ -75,6 +100,12 @@ function load(){
   });
 }
 document.getElementById('reset').onclick=function(){fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(){document.getElementById('msg').textContent='Reset. Fresh practice data loaded.';load();});};
+document.querySelectorAll('#roles [data-role]').forEach(function(b){b.onclick=function(){var r=b.dataset.role;
+  document.querySelectorAll('#roles [data-role]').forEach(function(x){x.className='btn'+(x===b?' go':'');x.setAttribute('aria-selected',x===b);x.style.flex='1';x.style.justifyContent='center';});
+  document.getElementById('rolePanelH').style.display=r==='hca'?'':'none';document.getElementById('rolePanelM').style.display=r==='manager'?'':'none';document.getElementById('rolePanelS').style.display=r==='sched'?'':'none';document.getElementById('rolePanelA').style.display=r==='admin'?'':'none';};});
+document.getElementById('mgrWho').onchange=function(){document.getElementById('mgrGo').href='../install-qc.html#practice=1&as='+encodeURIComponent(this.value);};
+document.getElementById('admWho').onchange=function(){document.getElementById('admGo').href='../install-admin.html#practice=1&as='+encodeURIComponent(this.value);};
+document.getElementById('schedWho').onchange=function(){document.getElementById('schedGo').href='../install-qc.html#practice=1&as='+encodeURIComponent(this.value);};
 load();
 </script>
 </body>

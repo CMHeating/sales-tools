@@ -65,7 +65,7 @@
   <div class="topbar"><span class="pill">CM HEATING</span>
     <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Geoff</option><option>Lyle</option><option>Jon</option><option>Amy</option><option>Brittny</option></select></label></div>
   <div id="list">
-    <h1>Install QC</h1><p class="sub">Verify what the HCA confirmed against ServiceTitan. Each lane checks its own items.</p>
+    <h1>Install QC</h1><p class="sub">Verify what the HCA confirmed against ServiceTitan. Each lane checks its own items.</p><p class="sub" id="roleNote" style="color:var(--gold)"></p>
     <div class="tabs" role="tablist"><button class="tab" role="tab" id="tabQ" aria-selected="true">To review</button><button class="tab" role="tab" id="tabR" aria-selected="false">Ready to book</button></div>
     <div id="rows"></div>
   </div>
@@ -76,6 +76,8 @@ var $=function(id){return document.getElementById(id)};
 var META=null,TAB='q',CUR=null;
 var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);
 if(PRACTICE){document.getElementById('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';}
+var AS=(function(){var m=(location.hash+location.search).match(/[#&?]as=([^&]*)/);return m?decodeURIComponent(m[1]):'';})();
+var PEOPLE=['Geoff','Lyle','Jon','Amy','Brittny'];
 var WHO_LANE={Geoff:'sales',Lyle:'install',Jon:'electrical'};
 var LANE_NAME={sales:'Sales',install:'Install',electrical:'Electrical'};
 var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload']};
@@ -137,7 +139,7 @@ function wireLanes(job){
 }
 $('tabQ').onclick=function(){TAB='q';loadList();};$('tabR').onclick=function(){TAB='r';loadList();};
 $('me').onchange=function(){if(CUR)openJob(CUR);};
-api('/api/meta').then(function(m){META=m;loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
+api('/api/meta').then(function(m){META=m;if(PEOPLE.indexOf(AS)>=0){$('me').value=AS;if(AS==='Amy'||AS==='Brittny')TAB='r';var rn=document.getElementById('roleNote');if(rn)rn.textContent=(AS==='Amy'||AS==='Brittny')?'Scheduler view: you can see every project and every lane. Ready to book is your list. Verifying belongs to the lane owners.':'Manager view: verify the items in your own lane.';}loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
 </script>
 </body>
 </html>

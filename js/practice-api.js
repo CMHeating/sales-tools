@@ -96,6 +96,27 @@
     r.lanesSummary = {}; Object.keys(LANES).forEach(function (k) { r.lanesSummary[k] = laneState(rec, k); }); return r;
   }
 
+  function openItems(rec) {
+    var today = iso(new Date()), h = rec.hca || {}, st = hcaItems(rec), out = [];
+    Object.keys(st).forEach(function (k) {
+      var it = (h.items || {})[k] || {};
+      if (st[k] === "no") out.push({ who: "HCA", item: k, state: "not done", why: it.why || "", when: it.when || "", overdue: !!(it.when && it.when < today) });
+      else if (st[k] === "work") out.push({ who: "HCA", item: k, state: "working", why: "", when: "", overdue: false });
+    });
+    Object.keys(rec.lanes || {}).forEach(function (lane) {
+      var items = (rec.lanes[lane] || {}).items || {};
+      Object.keys(items).forEach(function (k) { var it = items[k];
+        if (it.result === "missing" || it.result === "mismatch") out.push({ who: LANES[lane].who, item: k, state: it.result, why: it.found || "", when: it.when || "", overdue: !!(it.when && it.when < today) }); });
+    });
+    return out;
+  }
+  function adminRow(meta, rec, source) {
+    rec = rec || { hca: {} }; var oi = openItems(rec), dues = oi.map(function (x) { return x.when; }).filter(Boolean).sort(), hist = rec.history || [], lanes = {};
+    Object.keys(LANES).forEach(function (k) { lanes[k] = laneState(rec, k); });
+    return Object.assign({}, meta, { source: source, status: deriveStatus(rec), readiness: readiness(rec), lanes: lanes, parked: rec.parked || null, openItems: oi,
+      nextDue: dues[0] || "", overdue: oi.some(function (x) { return x.overdue; }), lastActivity: hist.length ? hist[hist.length - 1].at : "", reopen: rec.reopen || null });
+  }
+
   function get(path, q, db) {
     var jobs = db.jobs, recs = db.records;
     if (path === "/api/jobs") {
@@ -117,6 +138,12 @@
     if (path === "/api/ready") {
       return [200, { ok: true, jobs: jobs.filter(function (j) { return recs[j.job] && deriveStatus(recs[j.job]) === "ready"; }).map(function (j) { return Object.assign({}, j, { readiness: readiness(recs[j.job]) }); }) }];
     }
+    if (path === "/api/admin") {
+      var rows = jobs.filter(function (j) { return !/DONE|COMPLETE/i.test(j.stage || ""); }).map(function (j) { return adminRow(j, recs[j.job], "sold"); });
+      var have = {}; rows.forEach(function (r) { have[r.job] = 1; });
+      db.pipeline.forEach(function (pj) { if (!have[pj.job]) rows.push(adminRow(findJob(db, pj.job), recs[pj.job], pj.source || "pipeline")); });
+      return [200, { ok: true, jobs: rows }];
+    }
     if (path === "/api/outbox") return [200, { ok: true, mail: db.outbox }];
     if (path === "/api/meta") return [200, { ok: true, lanes: LANES, labels: LANE_LABELS, sandbox: true, practice: true }];
     return [404, { ok: false, error: "no such endpoint" }];
@@ -125,7 +152,7 @@
   function post(path, body, db) {
     if (path === "/api/reset") { var s = seed(); db.jobs = s.jobs; db.pipeline = s.pipeline; db.records = {}; db.outbox = []; return [200, { ok: true }]; }
     var job = String(body.job == null ? "" : body.job), meta = findJob(db, job);
-    if (["/api/hca", "/api/lane", "/api/install"].indexOf(path) < 0) return [404, { ok: false, error: "no such endpoint" }];
+    if (["/api/hca", "/api/lane", "/api/install", "/api/reopen"].indexOf(path) < 0) return [404, { ok: false, error: "no such endpoint" }];
     if (!meta) return [404, { ok: false, error: "unknown job" }];
     var rec = db.records[job] = db.records[job] || { hca: {} }, who = str(body.by, 60);
     if (path === "/api/hca") {
@@ -151,7 +178,7 @@
       }
       if (body.submit) {
         var miss = hcaMissing(rec); if (miss.length) return [400, { ok: false, error: "cannot submit, still needed: " + miss.join(", ") }];
-        h.submittedAt = nowIso(); rec.parked = null; history(rec, who, "hca.submitted", null, "submitted");
+        h.submittedAt = nowIso(); delete rec.reopen; rec.parked = null; history(rec, who, "hca.submitted", null, "submitted");
         db.outbox.push({ at: nowIso(), to: ["Lyle", "Jon", "Geoff", "Amy"], subject: "Install requirements submitted — job " + job + " " + meta.customer, note: "PRACTICE: not sent", readiness: readiness(rec) });
       }
     } else if (path === "/api/lane") {
@@ -172,7 +199,19 @@
         if (SIGNOFFS.indexOf(body.signoff) < 0) return [400, { ok: false, error: "bad signoff" }];
         l.signoff = body.signoff; l.by = who; l.at = nowIso(); history(rec, who, "lane." + lane + ".signoff", null, body.signoff);
       }
-    } else { rec.installed = "installed" in body ? !!body.installed : true; history(rec, who, "installed", null, rec.installed); }
+    } else if (path === "/api/reopen") {
+      var reason = str(String(body.reason == null ? "" : body.reason).trim(), 200);
+      if (reason.length < 3) return [400, { ok: false, error: "say why you are sending it back" }];
+      if (["submitted", "in_review", "ready"].indexOf(deriveStatus(rec)) < 0) return [409, { ok: false, error: "only a submitted project can be sent back" }];
+      if (rec.hca) delete rec.hca.submittedAt;
+      rec.reopen = { by: who, reason: reason, at: nowIso() };
+      Object.keys(rec.lanes || {}).forEach(function (k) { delete rec.lanes[k].signoff; });
+      history(rec, who, "sent back", null, reason);
+      db.outbox.push({ at: nowIso(), to: [meta.hca], subject: "Sent back — job " + job + " " + meta.customer, note: "PRACTICE: not sent", reason: reason });
+    } else {
+      if (["ready", "installed"].indexOf(deriveStatus(rec)) < 0) return [409, { ok: false, error: "only a ready project can be marked installed" }];
+      rec.installed = "installed" in body ? !!body.installed : true; history(rec, who, "installed", null, rec.installed);
+    }
     return [200, { ok: true, record: pub(rec) }];
   }
 
