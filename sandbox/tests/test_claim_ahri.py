@@ -56,7 +56,7 @@ with sync_playwright() as p:
     ok('"It is in ServiceTitan" is saved on the item and shown as a summary', rec()['items']['ahri']['note'] == 'In ServiceTitan' and 'In ServiceTitan' in pg.inner_text('#ahri-ahri .ahdone'))
     pg.click('#ahri-ahri .ahedit'); pg.fill('#ahri-ahri .aht', 'Joe sends it Friday'); pg.click('#ahri-ahri [data-ah="prov"]'); pg.wait_for_timeout(700)
     ok('"I can provide it" saves the typed detail', rec()['items']['ahri']['note'] == 'Can provide: Joe sends it Friday')
-    pg.click('button[data-id="ahri"][data-v="work"]'); pg.wait_for_timeout(700)
+    pg.click('button[data-id="ahri"][data-v="na"]'); pg.wait_for_timeout(700)
     ok('changing AHRI away from Complete clears the answer and hides the box', not pg.is_visible('#ahri-ahri') and (rec()['items']['ahri'].get('note') or '') == '')
     # rebate AHRI certificate asks the same thing
     pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PSE'); pg.click('button[data-id="rb-ahri"][data-v="yes"]'); pg.wait_for_timeout(250)

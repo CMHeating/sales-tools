@@ -99,6 +99,9 @@ async function main() {
     await ok(hca1.ref(J('j5/hca/items/claim')).set({ v: 'yes' }));                                 // claim your spot on the install availability sheet (2026-10-05)
     await ok(hca1.ref(J('j5/hca/items/claim')).set({ v: 'na' }));
     await no(hca1.ref(J('j5/hca/items/claim')).set({ v: 'work' }));
+    await ok(hca1.ref(J('j5/hca/items/permitdelay')).set({ v: 'yes' }));
+    await ok(hca1.ref(J('j5/hca/items/permitdelay')).set({ v: 'na' }));
+    await no(hca1.ref(J('j5/hca/items/permitdelay')).set({ v: 'work' }));
     await ok(hca1.ref(J('j5/hca/items/downpay')).set({ v: 'no' }));                                // down payment collected: Yes / No / N/A (2026-10-05)
     await ok(hca1.ref(J('j5/hca/items/downpay')).set({ v: 'na' }));
     await ok(hca1.ref(J('j5/hca/items/rb-applied')).set({ v: 'na' }));
