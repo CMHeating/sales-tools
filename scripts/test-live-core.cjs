@@ -91,6 +91,21 @@ async function main() {
     r = await adm.call('POST', '/api/install', { job: 'j1' }); ok('admin marks installed', r.code === 200 && r.b.record.status === 'installed');
     r = await mI.call('POST', '/api/lane', { job: 'j1', lane: 'install', items: { labor: { result: 'verified' } } }); ok('installed projects are closed (409)', r.code === 409);
 
+
+    // --- verifier findings (2026-10-04): concurrent saves, stuck jobs, stale status ---
+    const raw = async p => { let v; await env.withSecurityRulesDisabled(async c => { v = (await c.database().ref(p).once('value')).val(); }); return v; };
+    r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'j2' }, full)); r = await hca1.call('POST', '/api/hca', { job: 'j2', submit: true }); ok('j2 submitted', r.code === 200);
+    await adm.call('POST', '/api/lane', { job: 'j2', lane: 'sales', items: allVerified('sales'), signoff: 'confirmed' });
+    const both = await Promise.all([mI.call('POST', '/api/lane', { job: 'j2', lane: 'install', items: allVerified('install'), signoff: 'confirmed' }), mE.call('POST', '/api/lane', { job: 'j2', lane: 'electrical', items: allVerified('electrical'), signoff: 'confirmed' })]);
+    ok('two managers confirm the last lanes at the same moment: both succeed', both.every(x => x.code === 200));
+    ok('the STORED status ends as ready (never stuck on in_review while the page says ready)', (await raw('cmh_install_req/hca-one/j2/status')) === 'ready');
+    r = await adm.call('POST', '/api/install', { job: 'j2' }); ok('Mark installed works after the concurrent saves', r.code === 200 && r.b.record.status === 'installed');
+    r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'p1' }, full)); r = await hca1.call('POST', '/api/hca', { job: 'p1', submit: true }); ok('p1 submitted', r.code === 200);
+    r = await hca1.call('POST', '/api/hca', { job: 'p1', items: { stock: { v: 'no' } } }); ok('HCA edits a submitted project into an incomplete state (Not done, no reason): it returns to the HCA', r.code === 200 && r.b.record.status === 'working' && (await raw('cmh_install_req/hca-one/p1/status')) === 'working');
+    r = await mI.call('POST', '/api/lane', { job: 'p1', lane: 'install', items: allVerified('install'), signoff: 'confirmed' }); ok('managers cannot start reviewing it while it is with the HCA (409)', r.code === 409);
+    r = await hca1.call('POST', '/api/hca', { job: 'p1', items: { stock: { v: 'yes' } } }); r = await hca1.call('POST', '/api/hca', { job: 'p1', submit: true }); ok('HCA completes it and resubmits', r.code === 200 && r.b.record.status === 'submitted');
+    await adm.call('POST', '/api/reopen', { job: 'p1', reason: 'Recheck photos' }); r = await hca1.call('GET', '/api/record?job=p1'); ok('send-back note shown while with the HCA', r.b.record.reopen && r.b.record.reopen.reason === 'Recheck photos');
+    r = await hca1.call('POST', '/api/hca', { job: 'p1', submit: true }); r = await hca1.call('GET', '/api/record?job=p1'); ok('resubmitted: the old note is gone (no clock comparison)', !r.b.record.reopen);
     // --- admin view and history ---
     r = await adm.call('GET', '/api/admin'); ok('admin list covers every HCA, sold + pipeline', r.code === 200 && r.b.jobs.length === 4 && r.b.jobs.some(j => j.job === 'k1') && r.b.jobs.some(j => j.job === 'p1' && j.source === 'pipeline'));
     r = await adm.call('GET', '/api/record?job=j1'); ok('history is complete and signed with the person', r.b.record.history.length > 10 && r.b.record.history.every(h => /@cmheating\.com$/.test(h.by)));

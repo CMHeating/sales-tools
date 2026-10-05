@@ -16,6 +16,7 @@
   #envBar{text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px 10px;background:#7f1d1d;color:#fecaca}
   .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
   .top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:16px 0 4px}
+  .back{color:var(--mut);text-decoration:none;font-size:13px;display:inline-block;padding:8px 0}.back:hover{color:var(--text)}
   .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
   .who{font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;gap:8px;align-items:center}
   h1{font-family:"Playfair Display",serif;font-size:30px;margin:6px 0 2px}.sub{color:var(--mut);font-size:14px;margin:0 0 14px}
@@ -59,6 +60,7 @@
 <div class="wrap">
   <div class="top"><span class="pill">CM HEATING</span>
     <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Amy</option><option>Brittny</option><option>Geoff</option></select></label></div>
+  <a class="back" id="homeBack" href="install-home.html">&larr; Install tools</a>
   <h1>Install Admin</h1>
   <p class="sub">Every project, every HCA, in one place. What is ready to book, what is stuck, and what is due.</p>
 
@@ -77,6 +79,7 @@
 var $=function(id){return document.getElementById(id)};
 var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);
 var AS=(function(){var m=(location.hash+location.search).match(/[#&?]as=([^&]*)/);return m?decodeURIComponent(m[1]):'';})();
+if(PRACTICE){var hb=document.getElementById('homeBack');hb.href='practice/index.html';hb.textContent='\u2190 Practice home';}
 var LIVE=!PRACTICE&&/[#&?]live=1/.test(location.hash+location.search);
 if(PRACTICE)$('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';
 if(LIVE){$('envBar').textContent='LIVE — real projects. Send back and Mark installed change real records.';$('envBar').className='demo';var wh=document.querySelector('.who');if(wh)wh.style.display='none';}

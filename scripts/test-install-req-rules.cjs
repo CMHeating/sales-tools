@@ -6,6 +6,9 @@
 const fs = require('node:fs');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 let n = 0; const ok = async p => { n++; return assertSucceeds(p); }, no = async p => { n++; return assertFails(p); };
+const LANEKEYS = { sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] };
+const lanesFull = () => Object.fromEntries(Object.entries(LANEKEYS).map(([l, ks]) => [l, { signoff: 'confirmed', items: Object.fromEntries(ks.map(k => [k, { result: 'verified' }])) }]));
+const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: Object.fromEntries(['stock', 'permit', 'mat', 'photos', 'video'].map(k => [k, { v: 'yes' }])) };
 async function main() {
   const env = await initializeTestEnvironment({ projectId: 'demo-hca-rules', database: { rules: fs.readFileSync('database.rules.json', 'utf8') } });
   try {
@@ -13,12 +16,14 @@ async function main() {
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
       cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
-      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true } },
+      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true, j4: true, j5: true } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
         j2: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' } },
-        j3b: { status: 'ready', hca: { pay: 'x', submittedAt: 't' }, lanes: { sales: { signoff: 'confirmed' }, install: { signoff: 'confirmed' }, electrical: { signoff: 'confirmed' } } },
-        j3: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' }, lanes: { sales: { signoff: 'confirmed' }, install: { signoff: 'confirmed' }, electrical: { signoff: 'confirmed' } } } } }
+        j3b: { status: 'ready', hca: HCAFULL, lanes: lanesFull() },
+        j3: { status: 'in_review', hca: HCAFULL, lanes: lanesFull() },
+        j4: { status: 'in_review', hca: HCAFULL, lanes: { sales: lanesFull().sales, install: { signoff: 'confirmed', items: { ...lanesFull().install.items, 'stock-ok': { result: 'missing', found: 'x', when: '2026-12-01' } } }, electrical: lanesFull().electrical } },
+        j5: { status: 'working', hca: { pay: 'x' } } } }
     }));
     const g = (uid, email, provider = 'google.com', verified = true) => env.authenticatedContext(uid, { email, email_verified: verified, firebase: { sign_in_provider: provider } }).database();
     const hca1 = g('h1', 'hca-one@cmheating.com'), hca2 = g('h2', 'hca-two@cmheating.com');
@@ -47,7 +52,9 @@ async function main() {
     await no(hca1.ref(J('j1/lanes/install')).set({ signoff: 'confirmed' }));
     // status: cannot submit without submittedAt, can submit with it, cannot roll back a reviewed job (AUD-02)
     await no(hca1.ref(J('j1/status')).set('submitted'));
-    await ok(hca1.ref(J('j1')).update({ 'hca/submittedAt': 't', status: 'submitted' }));
+    await no(hca1.ref(J('j1')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': 'Select…' }));      // 2026-10-04: no empty submissions, even straight to the database
+    await no(hca1.ref(J('j1')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/items': { photos: { v: 'yes' } } }));
+    await ok(hca1.ref(J('j1')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/items': HCAFULL.items }));
     await no(hca1.ref(J('j1/status')).set('ready'));
     await no(hca1.ref(J('j2/status')).set('working'));                                              // AUD-02 step 1
     await no(hca1.ref(J('j2/hca')).set({ pay: 'rewritten' }));                                      // AUD-02 step 2
@@ -67,6 +74,8 @@ async function main() {
     await no(mgrI.ref(J('j2/status')).set('ready'));                                                // in review, no lanes
     await no(mgrI.ref(J('j2/status')).set('installed'));
     await no(mgrI.ref(J('j2/status')).set('working'));
+    await no(adm2.ref(J('j4/status')).set('ready'));                                                // a lane item is still Missing: cannot be ready, even for an admin writing directly
+    await no(mgrI.ref(J('j4/status')).set('ready'));
     await no(mgrI.ref(J('j3/status')).remove());
     await ok(mgrI.ref(J('j3/status')).set('ready'));
     await no(hca1.ref(J('j3/status')).set('working'));
@@ -86,6 +95,9 @@ async function main() {
     await no(hca1.ref(J('j2/reopen')).set({ by: 'hca-one@cmheating.com', reason: 'self send back', at: 't' }));
     await ok(mgrI.ref(J('j3b/status')).set('in_review')); // ready -> in review when a manager finds something missing (see seed j3b)
     await ok(sched.ref('cmh_install_roster/hcas').once('value')); await ok(mgrI.ref('cmh_install_roster/hcas').once('value')); await no(hca1.ref('cmh_install_roster/hcas').once('value')); await no(anon.ref('cmh_install_roster/hcas').once('value')); await no(mgrI.ref('cmh_install_roster/hcas/x').set('y'));
+    await no(mgrI.ref(J('j5/lanes/install/items/labor')).set({ result: 'verified', by: 'x' }));          // lanes closed while the project is with the HCA
+    await no(hca1.ref(J('j9x/history/h1')).set({ at: 't', by: 'hca-one@cmheating.com', field: 'installed' }));  // history only on real projects
+    await ok(hca1.ref(J('j1/history/h1')).set({ at: 't', by: 'hca-one@cmheating.com', field: 'hca.stock' }));
     await no(admin.ref(J('j2/status')).set('working'));   // a followup-roster admin is NOT an install admin until given the flag in cmh_install_roster
 
     // history: append-only, signed, and only by the job's owner / managers / admin (AUD-09)

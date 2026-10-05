@@ -13,7 +13,7 @@ Key = the person's email, lowercase, every `.` replaced by `,` (for example `fir
   - Admin (all three lanes, send back, mark installed): `{ "name": "Admin", "sales": true, "install": true, "electrical": true, "admin": true }`
 - `cmh_install_roster/schedulers/<key>`: `true`. Read-only plus Ready to book. Add more people here later.
 - HCAs stay in `cmh_followup_roster/hcas/<key>` as today.
-- Role decisions 2026-10-04 (owner): two install managers, two admins, the coordinator is a scheduler row (make it an admin row if they should send back or mark installed); further schedulers are added later.
+- Role decisions 2026-10-04 (owner): two install managers; admins are the owner, the second admin and the coordinator (all admin rows); the scheduler row (read-only) is optional and unused for now.
 - An email on no roster lands as no access on `install-home.html`; PIN/password sessions and non-@cmheating.com accounts are refused.
 
 ## GO-LIVE CHECKLIST (do in this order; stop if any step differs from expected)

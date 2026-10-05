@@ -112,7 +112,7 @@ def pay_state(pay):
     if pay.startswith("⏳"):
         return "work"
     if pay == "N/A":
-        return "na"
+        return ""   # payment is never N/A
     return "yes" if pay.startswith("✔") else "no"
 
 

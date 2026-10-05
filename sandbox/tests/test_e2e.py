@@ -161,7 +161,7 @@ with sync_playwright() as p:
     for k in ['mat-ok', 'stock-ok', 'labor', 'sizing', 'permit-ok']: q.click(f'[data-lane=install] [data-k="{k}"] button.verified')
     q.select_option('[data-lane=install] [data-so]', 'attention'); q.click('[data-lane=install] [data-save]'); q.wait_for_timeout(900)
     ok('QC: a lane touched -> in review', call('/api/record?job=900001')[1]['record']['status'] == 'in_review')
-    pg.reload(); pg.wait_for_timeout(900)
+    pg.goto(url('900001', 'Sample+Alpha', 2)); pg.reload(); pg.wait_for_timeout(900)   # a submitted project sends the HCA back to the list, so reopen it
     ok('HCA page locks while in review and shows the manager finding', pg.locator('.seg button').first.is_disabled() and 'found missing' in pg.inner_text('#needs'))
     call('/api/lane', {'job': '900001', 'by': 'Lyle', 'lane': 'install', 'items': {'layout-ok': {'result': 'verified'}}, 'signoff': 'confirmed'})
     lanes_all('900001')

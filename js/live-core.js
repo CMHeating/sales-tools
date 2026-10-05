@@ -31,7 +31,7 @@
   function rid() { return "h" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   /* ---- record logic (same rules as practice-api.js; status comes from the stored value) ---- */
-  function payState(p) { if (!p || p === "Select…") return ""; if (p.indexOf("⏳") === 0) return "work"; if (p === "N/A") return "na"; return p.indexOf("✔") === 0 ? "yes" : "no"; }
+  function payState(p) { if (!p || p === "Select…") return ""; if (p.indexOf("⏳") === 0) return "work"; if (p === "N/A") return ""; return p.indexOf("✔") === 0 ? "yes" : "no"; }
   function hcaItems(rec) {
     var h = rec.hca || {}, items = h.items || {}, pay = h.pay || "";
     var ids = BASE_ITEMS.concat(/rental/i.test(pay) ? RENTAL_ITEMS : []), out = {};
@@ -73,7 +73,7 @@
   function normalize(raw) {
     var rec = Object.assign({}, raw || {}); rec.hca = Object.assign({}, rec.hca || {});
     var hist = rec.history; rec.history = isObj(hist) ? Object.keys(hist).map(function (k) { return hist[k]; }).sort(function (a, b) { return String(a.at).localeCompare(String(b.at)); }) : (Array.isArray(hist) ? hist : []);
-    if (rec.reopen && rec.hca.submittedAt && String(rec.reopen.at || "") <= String(rec.hca.submittedAt)) delete rec.reopen;
+    if (rec.reopen && rec.status !== "working") delete rec.reopen;   /* the note belongs to the HCA while the project is sent back; a resubmit moves status on */
     if (rec.status === "installed") rec.installed = true;
     return rec;
   }
@@ -159,8 +159,17 @@
     }
     function put(up, hk, job, rel, val) { up["cmh_install_req/" + hk + "/" + job + "/" + rel] = val; }
     function addHist(up, hk, job, me, field, from, to) { put(up, hk, job, "history/" + rid(), histEntry(me, field, from, to)); }
-    function commit(hk, job, up) {
-      return store.update(up).then(function () { return loadRec(hk, job); }).then(function (rec) { return [200, { ok: true, record: pub(rec) }]; });
+    /* Two managers can save at the same moment and each write a status from a stale read. After a lane write, re-read and correct the stored status
+       (ready only when the whole gate holds, otherwise in review). One re-check is enough: the rules refuse anything else. */
+    function reconcile(hk, job, rec) {
+      if (["submitted", "in_review", "ready"].indexOf(rec.status) < 0) return Promise.resolve(rec);
+      var want = deriveStatus(Object.assign({}, rec, { status: "submitted" })); want = want === "ready" ? "ready" : "in_review";
+      if (want === rec.status) return Promise.resolve(rec);
+      var fix = {}; fix["cmh_install_req/" + hk + "/" + job + "/status"] = want;
+      return store.update(fix).then(function () { return loadRec(hk, job); });
+    }
+    function commit(hk, job, up, lanes) {
+      return store.update(up).then(function () { return loadRec(hk, job); }).then(function (rec) { return lanes ? reconcile(hk, job, rec) : rec; }).then(function (rec) { return [200, { ok: true, record: pub(rec) }]; });
     }
 
     function get(path, q) {
@@ -243,6 +252,7 @@
           put(up, hk, job, "hca/submittedAt", nowIso()); put(up, hk, job, "status", "submitted"); put(up, hk, job, "parked", null);
           addHist(up, hk, job, me, "hca.submitted", null, "submitted");
         } else if (!stored) put(up, hk, job, "status", "working");
+        else if (stored === "submitted" && hcaMissing(merged).length) put(up, hk, job, "status", "working");   /* edited into an incomplete state: it is with the HCA again, never stuck in review */
         return commit(hk, job, up);
       }
       if (path === "/api/lane") {
@@ -272,7 +282,7 @@
         if (touched) { up["cmh_install_req/" + hk + "/" + job + "/lanes/" + lane + "/by"] = str(me.email, 80); up["cmh_install_req/" + hk + "/" + job + "/lanes/" + lane + "/at"] = nowIso(); }
         var next = deriveStatus(Object.assign({}, m2, { status: "submitted" }));
         up["cmh_install_req/" + hk + "/" + job + "/status"] = next === "ready" ? "ready" : "in_review";
-        return commit(hk, job, up);
+        return commit(hk, job, up, true);
       }
       if (path === "/api/reopen") {
         if (me.role !== "admin") return fail(403, "Only an admin can send a project back.");
@@ -287,6 +297,7 @@
       if (me.role !== "admin") return fail(403, "Only an admin can mark a project installed.");
       if (status !== "ready") return fail(409, "only a ready project can be marked installed");
       put(up, hk, job, "status", "installed"); addHist(up, hk, job, me, "installed", null, "true");
+      if (stored !== "ready") { var heal = {}; heal["cmh_install_req/" + hk + "/" + job + "/status"] = "ready"; return store.update(heal).then(function () { return commit(hk, job, up); }); }   /* a stale stored status is healed first; the rules only allow installed from ready */
       return commit(hk, job, up);
     }
 
