@@ -16,7 +16,7 @@
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px}
   .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
   .back{color:var(--mut);text-decoration:none;font-size:13px}.back:hover{color:var(--text)}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
   .card h2{font-family:"Playfair Display",serif;font-weight:700;font-size:17px;margin:0 0 4px;display:flex;align-items:center;gap:9px}
   .card h2 .n{width:24px;height:24px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--gold)}
   .hint{color:var(--mut);font-size:13px;margin:0 0 12px}
@@ -31,6 +31,11 @@
   .chip b{color:var(--text);font-weight:700}
   .ring{position:relative;width:92px;height:92px}
   .ring svg{transform:rotate(-90deg)}
+  /* the ring "heats up" as the project gets dialed in: blue -> gold -> orange + flame (>=80%) -> green check (done) */
+  .ring circle.v{stroke:#4aa3df}.ring.warm circle.v{stroke:#f59e0b}.ring.hot circle.v{stroke:#f97316;filter:drop-shadow(0 0 6px rgba(249,115,22,.65))}.ring.done circle.v{stroke:#22c55e;filter:drop-shadow(0 0 6px rgba(34,197,94,.5))}
+  .flame{position:absolute;top:-10px;right:-6px;font-size:20px;display:none;transform-origin:50% 90%;pointer-events:none}
+  .ring.hot .flame{display:block}
+  .ring.done .flame{display:block;width:24px;height:24px;border-radius:50%;background:#22c55e;color:#06210f;font-size:14px;font-weight:900;line-height:24px;text-align:center}
   .ring .t{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:20px;line-height:1}
   .ring .t small{font-size:11px;font-weight:600;color:var(--mut);margin-top:3px}
   /* stage line */
@@ -82,7 +87,9 @@
   .sheet .f{margin:10px 0}
   .sheet .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
   @media (min-width:640px){.modal{align-items:center}.sheet{border-radius:20px}}
-  @media (prefers-reduced-motion:no-preference){.ring circle.v{transition:stroke-dashoffset .4s ease}}
+  @media (prefers-reduced-motion:no-preference){.ring circle.v{transition:stroke-dashoffset .4s ease,stroke .4s ease}
+    .ring.hot .flame{animation:flicker 1s ease-in-out infinite alternate}.ring.bump{animation:bump .35s ease}.ring.done .t{animation:pop .5s ease}
+    @keyframes flicker{0%{transform:scale(1) rotate(-5deg)}100%{transform:scale(1.2) rotate(6deg)}}@keyframes bump{50%{transform:scale(1.07)}}@keyframes pop{40%{transform:scale(1.18)}}}
 </style>
 </head>
 <body>
@@ -98,7 +105,7 @@
     </div>
     <div class="ring" aria-live="polite">
       <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="40" fill="none" stroke="#1e2a44" stroke-width="9"/><circle class="v" id="ringV" cx="46" cy="46" r="40" fill="none" stroke="#22c55e" stroke-width="9" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/></svg>
-      <div class="t"><span id="ringN">0 of 0</span><small>complete</small></div>
+      <div class="t"><span id="ringN">0 of 0</span><small id="ringSub">complete</small></div><span class="flame" id="flame" aria-hidden="true">🔥</span>
     </div>
     <div class="stages" aria-label="Stage"><span class="done"><i></i>Sold</span><em></em><span class="now"><i></i>Requirements</span><em></em><span><i></i>Review</span><em></em><span><i></i>Ready</span><em></em><span><i></i>Installed</span></div>
   </section>
@@ -228,7 +235,13 @@ function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push
 function render(){
   var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length,total=act.length;
   $('ringN').textContent=done+' of '+total;
-  $('ringV').setAttribute('stroke-dashoffset',String(251.3*(1-(total?done/total:0))));
+  var pct=total?done/total:0;
+  $('ringV').setAttribute('stroke-dashoffset',String(251.3*(1-pct)));
+  var ring=document.querySelector('.ring'),heat=pct>=1?'done':pct>=0.8?'hot':pct>=0.4?'warm':'cold';
+  if(ring){var prev=ring.dataset.done?Number(ring.dataset.done):0;ring.className='ring '+heat;ring.dataset.done=String(done);
+    if(done>prev){ring.classList.add('bump');setTimeout(function(){ring.classList.remove('bump');},400);}}
+  $('flame').textContent=heat==='done'?'✓':'🔥';
+  $('ringSub').textContent=heat==='done'?'dialed in':heat==='hot'?'almost there':'complete';
   $('sec-rental').style.display=isRental()?'':'none';
   var needs=openNeeds(),nb=$('needs');
   if(!needs.length&&done===total&&total>0){nb.className='needs clear';nb.innerHTML='<b>All set.</b> Everything on your side is complete. Submit it to the managers.';}
