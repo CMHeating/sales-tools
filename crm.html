@@ -52,6 +52,9 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .proj-main{flex:1;display:flex;flex-direction:column;font-size:14px;line-height:1.25}
 .proj-main span{font-size:12px;color:var(--muted)}
 .proj-n{font-size:13px;font-weight:700;white-space:nowrap}
+.btn[aria-disabled=true]{opacity:.4;pointer-events:none;cursor:not-allowed}
+#projPick{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;color:#fff;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;padding:9px 12px;max-width:260px}
+#projPick option,#projPick optgroup{color:#0a1628}
 .proj-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
 .proj-tag{font-size:11px;font-weight:700;color:var(--muted)}
 .sched-ov{margin-top:14px}.sched-ov-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
@@ -225,7 +228,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
           </div>
           <div class="card-foot act-foot">
             <span class="card-note" id="actLastUpdated">No submissions today</span>
-            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><a class="btn" id="actCompleteLink" href="install-requirements.html" style="display:none">Project completion</a></span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><select id="projPick" aria-label="Choose a project" style="display:none"><option value="">Choose a project…</option></select><a class="btn" id="actCompleteLink" href="#" aria-disabled="true" tabindex="-1" style="display:none">Project completion</a></span>
           </div>
         </div>
 
@@ -756,12 +759,26 @@ function pilotOn(who){ return !!who && PILOT_HCAS.some(n => norm(n) === norm(who
 function soldJobsAll(){ return !soldData || !soldData.jobs ? [] : (Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs)); }
 function pipelineAll(){ const p = soldData && soldData.pipeline; return !p ? [] : (Array.isArray(p) ? p : Object.values(p)); }
 function renderProjects(who){
-  const on = pilotOn(who), box = $("projList"), lk = $("actCompleteLink");
+  const on = pilotOn(who), box = $("projList"), lk = $("actCompleteLink"), pick = $("projPick");
   if(box) box.style.display = on ? "" : "none";
   if(lk) lk.style.display = on ? "" : "none";
+  if(pick) pick.style.display = on ? "" : "none";
   if(!on || !box) return;
-  if(!isGoogle()){ box.innerHTML = lockedCardHtml("your projects"); return; }
+  if(!isGoogle()){ box.innerHTML = lockedCardHtml("your projects"); setProjectChoice(pick, lk, []); return; }
+  setProjectChoice(pick, lk, CMHProjects.options(soldJobsAll(), pipelineAll(), who, pacificTodayIso()));
   box.innerHTML = CMHProjects.listHtml(soldJobsAll(), pipelineAll(), who, pacificTodayIso());
+}
+/* "Project completion" stays greyed out until a project is chosen; the choice carries the job into the page. */
+function setProjectChoice(pick, lk, opts){
+  if(!pick || !lk) return;
+  pick.innerHTML = CMHProjects.optionsHtml(opts);
+  pick.disabled = !opts.length;
+  const sync = () => {
+    const o = opts[Number(pick.value)];
+    if(pick.value !== "" && o){ lk.href = o.link; lk.removeAttribute("aria-disabled"); lk.removeAttribute("tabindex"); }
+    else { lk.href = "#"; lk.setAttribute("aria-disabled", "true"); lk.setAttribute("tabindex", "-1"); }
+  };
+  pick.onchange = sync; sync();
 }
 function schedOverlay(fromIso, toIso){
   const who = viewRep; if(!pilotOn(who)) return "";

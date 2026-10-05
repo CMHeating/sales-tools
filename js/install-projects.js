@@ -94,7 +94,32 @@
     return html;
   }
 
+
+  /* Project picker for the "Project completion" button: sold projects first (red, yellow, green; soonest first),
+     then backlog / pipeline (not in Combo Log, TBD, then scheduled). Each option carries its own link. */
+  function options(sold, pipe, who, todayIso) {
+    var out = [];
+    sortRows(soldOpen(sold, who), todayIso).forEach(function (j) {
+      var r = ready(j, todayIso);
+      out.push({ label: (j.customer || "Unknown") + " — " + dateLabel(iso(j)) + " · " + r.done + " of " + r.total, link: link(j, who), group: "Sold" });
+    });
+    var order = { none: 0, tbd: 1, sched: 2 };
+    pipelineFor(pipe, sold, who).sort(function (a, b) { return order[where(a).k] - order[where(b).k] || (iso(a) || "9999").localeCompare(iso(b) || "9999"); })
+      .forEach(function (j) {
+        out.push({ label: (j.customer || "Unknown") + " — " + (j.source === "pipeline" ? "Pipeline" : "Backlog") + " · " + where(j).t, link: link(j, who), group: "Backlog & pipeline" });
+      });
+    return out;
+  }
+  function optionsHtml(opts) {
+    var h = '<option value="">Choose a project…</option>', grp = "";
+    opts.forEach(function (o, i) {
+      if (o.group !== grp) { if (grp) h += "</optgroup>"; grp = o.group; h += '<optgroup label="' + esc(grp) + '">'; }
+      h += '<option value="' + i + '">' + esc(o.label) + "</option>";
+    });
+    return h + (grp ? "</optgroup>" : "");
+  }
+
   g.CMHProjects = { config: C, esc: esc, norm: norm, num: num, iso: iso, link: link, ready: ready, where: where,
-    soldOpen: soldOpen, pipelineFor: pipelineFor, listHtml: listHtml, overlayHtml: overlayHtml };
+    soldOpen: soldOpen, pipelineFor: pipelineFor, listHtml: listHtml, overlayHtml: overlayHtml, options: options, optionsHtml: optionsHtml };
   if (typeof module !== "undefined") module.exports = g.CMHProjects;
 })(typeof window !== "undefined" ? window : globalThis);

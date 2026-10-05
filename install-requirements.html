@@ -303,7 +303,13 @@ function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkM
   build();load();render();
   $('parkBtn').onclick=openPark;$('parkBack').onclick=function(){$('parkModal').classList.remove('on');};$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
   document.addEventListener('keydown',function(e){if(e.key==='Escape')$('parkModal').classList.remove('on');});
-  if(!H.cust&&!H.job){$('submitBtn').disabled=true;$('barTxt').textContent='Open this page from a job in your CRM.';}
+  if(!H.cust&&!H.job){
+    ['sec-pay','sec-equip','sec-layout','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
+    $('custName').textContent='No project selected';
+    var hero=document.querySelector('.hero');var note=document.createElement('div');note.className='needs';note.style.gridColumn='1/-1';
+    note.innerHTML='<b>Pick a project first.</b> Go back to your CRM, choose a sold, backlog or pipeline project in Daily Activities, then tap Project completion.<div style="margin-top:10px"><a class="btn go" href="crm.html" style="display:inline-flex;align-items:center;text-decoration:none">Back to my CRM</a></div>';
+    hero.appendChild(note);document.querySelector('.ring').style.display='none';document.querySelector('.stages').style.display='none';
+    $('submitBtn').disabled=true;$('parkBtn').disabled=true;$('barTxt').textContent='Choose a project in your CRM.';}
 })();
 </script>
 </body>
