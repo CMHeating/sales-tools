@@ -94,7 +94,8 @@ function loadList(){
 function openJob(job){
   CUR=job;api('/api/record?job='+encodeURIComponent(job)).then(function(d){
     if(!d.ok){return;}var r=d.record,j=d.job,h=r.hca||{},items=h.items||{},mylane=WHO_LANE[me()]||'';
-    function hcaSaid(ids){return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
+    var rental=/rental/i.test(h.pay||'');
+    function hcaSaid(ids){ids=ids.filter(function(i){return rental||i.indexOf('r-')!==0;});if(!ids.length)return 'No rental paperwork on this job';return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
       var txt=i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
       return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
     var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
