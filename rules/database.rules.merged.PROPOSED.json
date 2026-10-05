@@ -1,0 +1,149 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "cmh_followup_tracker": {
+      ".read": "auth != null && (root.child('cmh_followup_roster/writers/' + auth.uid).val() == true || (auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true))",
+      ".write": "auth != null && root.child('cmh_followup_roster/writers/' + auth.uid).val() == true",
+      "$hcaKey": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey"
+      }
+    },
+    "cmh_followup_roster": {
+      "hcas": {
+        "$emailKey": {
+          ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase().replace('.', ',') == $emailKey",
+          ".write": false
+        }
+      },
+      "admins": {
+        "$emailKey": {
+          ".read": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase().replace('.', ',') == $emailKey",
+          ".write": false
+        }
+      },
+      "writers": {
+        ".read": false,
+        ".write": false
+      }
+    },
+    "cmh_followup_log": {
+      "$hcaKey": {
+        ".read": "auth != null && (root.child('cmh_followup_roster/writers/' + auth.uid).val() == true || (auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && (root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey || root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true)))",
+        "$entry": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && !data.exists() && newData.child('by').val() == auth.token.email && newData.child('hcaKey').val() == $hcaKey && (root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey || root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+          ".validate": "newData.hasChildren(['hcaKey','hca','customer','status','at','by'])",
+          "hcaKey": {
+            ".validate": "newData.isString() && newData.val() == $hcaKey"
+          },
+          "hca": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "customer": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "status": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "at": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "by": {
+            ".validate": "newData.isString() && newData.val() == auth.token.email"
+          },
+          "leadKey": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "followUpDate": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "source": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "cmh_sold_tracker": {
+      ".read": "auth != null && (root.child('cmh_sold_writers/' + auth.uid).val() == true || (auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true))",
+      ".write": "auth != null && root.child('cmh_sold_writers/' + auth.uid).val() == true",
+      "$hcaKey": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey"
+      }
+    },
+    "cmh_sold_writers": {
+      ".read": false,
+      ".write": false
+    },
+    "cmh_schedule": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cmh_availability": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cmh_edit_locks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cmh_audit_logs": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cmh_financing": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cmh_install_checks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cmh_install_roster": {
+      ".read": false,
+      ".write": false,
+      "managers": {
+        "$emailKey": {
+          ".read": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && auth.token.email.toLowerCase().replace('.', ',') == $emailKey",
+          ".write": false
+        }
+      }
+    },
+    "cmh_install_req": {
+      ".read": false,
+      ".write": false,
+      "$hcaKey": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && (root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey || root.child('cmh_install_roster/managers/' + auth.token.email.toLowerCase().replace('.', ',')).exists() || root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true)",
+        "$job": {
+          "hca": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey && root.child('cmh_install_req/' + $hcaKey + '/' + $job + '/status').val() != 'in_review' && root.child('cmh_install_req/' + $hcaKey + '/' + $job + '/status').val() != 'ready' && root.child('cmh_install_req/' + $hcaKey + '/' + $job + '/status').val() != 'installed'"
+          },
+          "parked": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey && root.child('cmh_install_req/' + $hcaKey + '/' + $job + '/status').val() != 'in_review' && root.child('cmh_install_req/' + $hcaKey + '/' + $job + '/status').val() != 'ready' && root.child('cmh_install_req/' + $hcaKey + '/' + $job + '/status').val() != 'installed'"
+          },
+          "lanes": {
+            "$lane": {
+              ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && root.child('cmh_install_roster/managers/' + auth.token.email.toLowerCase().replace('.', ',') + '/' + $lane).val() == true",
+              ".validate": "$lane == 'sales' || $lane == 'install' || $lane == 'electrical'"
+            }
+          },
+          "status": {
+            ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && ((root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey && (newData.val() == 'working' || newData.val() == 'submitted')) || root.child('cmh_install_roster/managers/' + auth.token.email.toLowerCase().replace('.', ',')).exists())",
+            ".validate": "newData.isString() && (newData.val() == 'working' || newData.val() == 'submitted' || newData.val() == 'in_review' || newData.val() == 'ready' || newData.val() == 'installed')"
+          },
+          "history": {
+            "$h": {
+              ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && !data.exists() && newData.child('by').val() == auth.token.email",
+              ".validate": "newData.hasChildren(['at','by','field'])"
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}

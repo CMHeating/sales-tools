@@ -13,11 +13,11 @@
 ## What is built (this branch, not deployed)
 - crm.html: "Sign in with Google" on the lock screen; badge shows the tier; sold, follow-up, project list and schedule overlay show a "Sign in with Google" prompt on a PIN session; Samir-only pilot gate for the new list/overlay/link.
   Tested headless with stubbed Firebase modules (15 checks): PIN vs Google, pilot vs non-pilot HCA, own jobs only.
-- rules fragment + `scripts/test-install-req-rules.cjs`: WRITTEN, NOT RUN (no Java on this Mac, so no emulator).
+- rules fragment + `scripts/test-install-req-rules.cjs`: RUN 2026-10-04 in the Firebase emulator against the codex branch rules (commit 5f810a9) merged with the fragment: the existing `test-database-rules.cjs` and the new test both pass. `rules/database.rules.merged.PROPOSED.json` is that merged file. NOT deployed. Re-run both tests if the codex rules change.
 
 ## What Geoff has to do / decide
 1. Firebase console: Authentication > Google provider enabled, authorized domains include the live site (the follow-up tracker already uses Google sign-in, so this is probably done).
-2. Install Java (e.g. `brew install openjdk`) so the rules tests can run, or run them elsewhere. Do not deploy rules before they pass.
+2. Java is installed (openjdk 27, keg-only). Run tests with `PATH=/opt/homebrew/opt/openjdk/bin:$PATH firebase emulators:exec --project demo-hca-rules --only database '...'`. Do not deploy rules before they pass.
 3. Create `cmh_install_roster/managers/<email key>` rows for Lyle, Jon, Geoff, Amy, Brittny (lane flags) in the console.
 4. Merge the fragment into the codex branch rules, run both test files, then deploy rules (`firebase deploy --only database`). Geoff's action.
 5. install-requirements.html / install-qc.html still use the sandbox or demo mode; they get Google sign-in + real storage when the rules are deployed.
