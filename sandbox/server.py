@@ -29,6 +29,8 @@ RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-dee
 # Rebate (2026-10-04): "rebate" is answered yes / na (= no rebate). When yes, a program is chosen and its questions must all be Complete
 # for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
 NA_OK = ["ahri", "e-disconnect", "e-outlet"] + ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]   # items that may be answered N/A ("rebate" uses na for "No rebate")
+# "claim" = "ready to claim your spot on the install availability sheet?" (yes / na = no): stored, never counted or required
+CLAIM_ITEMS = ["claim"]
 REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"]
 REBATE_PROGRAM_ITEMS = {"PSE": ["rb-balance", "rb-ahri", "rb-tc"], "PUD": ["rb-balance", "rb-ahri"], "Gensco": ["rb-balance", "rb-equip"], "Other": ["rb-balance", "rb-ahri"]}
 
@@ -180,8 +182,6 @@ def hca_missing(rec):
     out = [i for i in need if not states.get(i)]
     if states.get("rebate") == "yes" and not rebate_key(h.get("rebateProgram")):
         out.append("rebate program")
-    if states.get("rebate") == "yes" and not re.search(r"\d", h.get("rebateAmount") or ""):
-        out.append("rebate amount")
     for k, v in states.items():
         if v == "no":
             it = items.get(k, {})
@@ -335,6 +335,8 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(200, {"ok": True, "mail": lines})
             if u.path == "/api/meta":
                 return self._json(200, {"ok": True, "lanes": LANES, "labels": LANE_LABELS, "sandbox": True})
+            if u.path == "/api/config":
+                return self._json(200, {"ok": True, "jurisdictionUrl": os.environ.get("CMH_JURISDICTION_URL", "")})
         return self._json(404, {"ok": False, "error": "no such endpoint"})
 
     def do_POST(self):
@@ -388,15 +390,13 @@ class H(SimpleHTTPRequestHandler):
                         h["filterSize"] = str(body["filterSize"] or "")[:30]
                     if "scope" in body:
                         h["scope"] = str(body["scope"] or "")[:60]
-                    if "rebateAmount" in body:
-                        h["rebateAmount"] = re.sub(r"[^0-9.,$ ]", "", str(body["rebateAmount"] or ""))[:20]
                     items_in = body.get("items") or {}
                     if not isinstance(items_in, dict) or not all(isinstance(v, dict) for v in items_in.values()):
                         return self._json(400, {"ok": False, "error": "items must be an object of objects"})
                     for k, v in items_in.items():
-                        if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS:
+                        if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS + CLAIM_ITEMS:
                             return self._json(400, {"ok": False, "error": "unknown item " + k})
-                        if v.get("v") not in HCA_STATES or (k == "rebate" and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k != "rebate" and k not in NA_OK):
+                        if v.get("v") not in HCA_STATES or (k in ("rebate", "claim") and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k not in ("rebate", "claim") and k not in NA_OK):
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
                         old = h.setdefault("items", {}).get(k, {}).get("v")
                         h["items"][k] = {"v": v["v"], "why": str(v.get("why", ""))[:60], "when": str(v.get("when", ""))[:10], "note": str(v.get("note", ""))[:200]}

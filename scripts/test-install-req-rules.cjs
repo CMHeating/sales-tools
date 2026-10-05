@@ -15,8 +15,8 @@ async function main() {
     await env.clearDatabase();
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
-      cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
-      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true, j4: true, j5: true, r1: true, r2: true, r3: true, r4: true, r5: true, r6: true, r7: true, r8: true, r9: true, r10: true } },
+      cmh_install_roster: { config: { jurisdictionUrl: 'https://example.test/jurisdiction-sheet' }, managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
+      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true, j4: true, j5: true, r1: true, r2: true, r3: true, r4: true, r5: true, r6: true, r7: true, r8: true, r9: true } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
         j2: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' } },
@@ -25,13 +25,12 @@ async function main() {
         j4: { status: 'in_review', hca: HCAFULL, lanes: { sales: lanesFull().sales, install: { signoff: 'confirmed', items: { ...lanesFull().install.items, 'stock-ok': { result: 'missing', found: 'x', when: '2026-12-01' } } }, electrical: lanesFull().electrical } },
         j5: { status: 'working', hca: { pay: 'x' } },
         r1: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'PSE', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' }, 'rb-tc': { v: 'work' } } }, lanes: lanesFull() },
-        r2: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'PSE', rebateAmount: '12', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' }, 'rb-tc': { v: 'yes' } } }, lanes: lanesFull() },
-        r3: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Gensco', rebateAmount: '12', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } } }, lanes: lanesFull() },
+        r2: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'PSE', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' }, 'rb-tc': { v: 'yes' } } }, lanes: lanesFull() },
+        r3: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Gensco', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } } }, lanes: lanesFull() },
         r4: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Gensco', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'no' } } }, lanes: lanesFull() },
         r6: { status: 'in_review', hca: { ...HCAFULL, items: { ...HCAFULL.items, rebate: { v: 'work' } } }, lanes: lanesFull() },
         r7: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Other', items: { ...HCAFULL.items, rebate: { v: 'yes' },'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() },
-        r8: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Other: Some Co-op', rebateAmount: '12', items: { ...HCAFULL.items, rebate: { v: 'yes' },'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() },
-        r10: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'PUD', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() },
+        r8: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Other: Some Co-op', items: { ...HCAFULL.items, rebate: { v: 'yes' },'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() },
         r9: { status: 'in_review', hca: { ...HCAFULL, items: Object.fromEntries(Object.entries(HCAFULL.items).filter(([k]) => k !== 'rebate')) }, lanes: lanesFull() },
         r5: { status: 'in_review', hca: { ...HCAFULL, items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() } } }
     }));
@@ -95,9 +94,18 @@ async function main() {
     await no(adm2.ref(J('r6/status')).set('ready'));                                                // rebate answered "Working": only Yes / No count
     await no(adm2.ref(J('r7/status')).set('ready'));                                                // "Other" with no program name
     await ok(adm2.ref(J('r8/status')).set('ready'));                                                // "Other: <name>" with balance + AHRI Complete
-    await no(adm2.ref(J('r10/status')).set('ready'));                                               // rebate yes, program + questions Complete, but no amount
     await no(adm2.ref(J('r9/status')).set('ready'));                                                // rebate never answered
     await no(hca1.ref(J('j5/hca/items/rebate')).set({ v: 'work' }));
+    await ok(hca1.ref(J('j5/hca/items/claim')).set({ v: 'yes' }));                                 // claim your spot on the install availability sheet (2026-10-05)
+    await ok(hca1.ref(J('j5/hca/items/claim')).set({ v: 'na' }));
+    await no(hca1.ref(J('j5/hca/items/claim')).set({ v: 'work' }));
+    await ok(hca1.ref('cmh_install_roster/config/jurisdictionUrl').once('value'));                    // the jurisdiction sheet link: any signed-in staff Google user may read it
+    await ok(mgrI.ref('cmh_install_roster/config/jurisdictionUrl').once('value'));
+    await no(hca1Pwd.ref('cmh_install_roster/config/jurisdictionUrl').once('value'));
+    await ok(stranger.ref('cmh_install_roster/config/jurisdictionUrl').once('value'));                 // any verified @cmheating.com Google user (it is only a link)
+    await no(g('ou', 'outsider@gmail.com').ref('cmh_install_roster/config/jurisdictionUrl').once('value'));
+    await no(anon.ref('cmh_install_roster/config/jurisdictionUrl').once('value'));
+    await no(adm2.ref('cmh_install_roster/config/jurisdictionUrl').set('https://example.test/other'));   // console-managed only
     await ok(hca1.ref(J('j5/hca/system')).set('Mitsubishi Single Zone Ductless'));                  // the email lines (2026-10-05)
     await no(hca1.ref(J('j5/hca/scope')).set('x'.repeat(61)));
     await ok(hca1.ref(J('j5/hca/vendor')).set('Sample Vendor'));

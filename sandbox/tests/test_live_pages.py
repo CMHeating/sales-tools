@@ -24,7 +24,7 @@ export const update=async(r,up)=>{for(const k of Object.keys(up))setp(k,up[k]===
 AUTHJS = """export const getAuth=()=>({});
 export const onAuthStateChanged=(a,f)=>{setTimeout(()=>f(window.__USER||null),0);return ()=>{};};"""
 DB0 = {'cmh_followup_roster': {'hcas': {'hca-one@cmheating,com': 'hca-one'}},
-       'cmh_install_roster': {'managers': {'mgr-install@cmheating,com': {'name': 'Mgr Install', 'install': True}, 'admin-one@cmheating,com': {'name': 'Admin One', 'sales': True, 'install': True, 'electrical': True, 'admin': True}},
+       'cmh_install_roster': {'config': {'jurisdictionUrl': 'https://example.test/jurisdiction-sheet'}, 'managers': {'mgr-install@cmheating,com': {'name': 'Mgr Install', 'install': True}, 'admin-one@cmheating,com': {'name': 'Admin One', 'sales': True, 'install': True, 'electrical': True, 'admin': True}},
                               'schedulers': {'sched-one@cmheating,com': True}, 'hcas': {'hca-one': 'HCA One'}},
        'cmh_install_jobs': {'hca-one': {'j1': {'job': 'j1', 'customer': 'Sample One', 'hca': 'HCA One', 'installDate': '2026-12-01', 'department': 'HVAC', 'stage': 'SOLD_ACTIVE'}}}}
 def ok(label, cond):
@@ -44,6 +44,7 @@ def page(pw, email, hash_, file, provider='google.com', db=None):
 with sync_playwright() as p:
     b, pg, errs, ext = page(p, 'hca-one@cmheating.com', 'job=j1&cust=Sample+One&date=2026-12-01&rep=HCA+One&live=1', 'install-requirements.html')
     ok('HCA page in live mode shows the LIVE banner, not sandbox/practice', 'LIVE' in pg.inner_text('#envBar') and 'PRACTICE' not in pg.inner_text('#envBar'))
+    ok('jurisdiction link appears (from the private config) under Permit, opens in a new tab', pg.is_visible('#jurLink') and pg.get_attribute('#jurLink', 'href') == 'https://example.test/jurisdiction-sheet' and pg.get_attribute('#jurLink', 'target') == '_blank')
     ok('live mode: no tab-close warning text (answers are saved as you go)', 'saved to the office as you go' in pg.inner_text('#leaveHint'))
     pg.select_option('#pay', index=1)
     for i in ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor', 'e-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
