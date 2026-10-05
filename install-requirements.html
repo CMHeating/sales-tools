@@ -188,6 +188,7 @@ var ITEMS=[
  ['rb-applied','Rebate applied to the estimate?','pay2','✔ Yes',false],
  ['stock','Equipment in stock?','equip','✔ Yes — in stock',false],
  ['permit','Permit / jurisdiction ready for the install date?','equip','✔ Yes — not needed or filed',false],
+ ['permitdelay','Potential permit delays?','equip','✔ Yes',false],
  ['heatload','Heat load calc completed?','equip','✔ Yes',false],
  ['ahri','AHRI match on file?','equip','✔ Yes — AHRI match on file',true],
  ['rebate','Rebate eligible?','rebate','✔ Yes — rebate eligible',false],
@@ -233,8 +234,9 @@ var submitted=false;
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function isRental(){return /rental/i.test(S.pay)||ITEMS.some(function(it){var st=it[2]==='rental'&&S.items[it[0]];return st&&st.v&&st.v!=='na';});}   /* once any rental paperwork is answered it stays on the list; mark it N/A to remove it */
 function payState(){var p=S.pay;if(!p||p==='Select…')return '';if(p===WORKING)return 'work';if(p==='N/A')return '';if(p.indexOf('✔')===0)return 'yes';return 'no';}   /* payment is never N/A: an old N/A answer counts as not answered */
-function stateOf(id){if(id==='pay')return payState();var o=S.items[id];return o?o.v:'';}
-function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[0]==='rebate'||it[0]==='claim'||it[0]==='downpay'||it[0]==='rb-applied')return;if(it[2]==='rental'&&!isRental())return;if(it[2]==='rebsub'&&shownRebate().indexOf(it[0])<0)return;ids.push(it[0]);});return ids.filter(function(id){return stateOf(id)!=='na';});}
+function rawState(id){if(id==='pay')return payState();var o=S.items[id];return o?o.v:'';}
+function stateOf(id){var v=rawState(id);if(id==='heatload'&&v==='no'&&/^Mini split/.test((S.items[id]||{}).why||''))return 'na';return v;}   /* Heat load "No" because it is a mini split is acceptable: it counts as not applicable, no date needed */
+function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[0]==='rebate'||it[0]==='claim'||it[0]==='downpay'||it[0]==='rb-applied'||it[0]==='permitdelay')return;if(it[2]==='rental'&&!isRental())return;if(it[2]==='rebsub'&&shownRebate().indexOf(it[0])<0)return;ids.push(it[0]);});return ids.filter(function(id){return stateOf(id)!=='na';});}
 function label(id){if(id==='pay')return 'Payment status';for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][1].replace(/\?$/,'');return id;}
 
 function build(){
@@ -242,7 +244,7 @@ function build(){
     var box=$('g-'+g);box.innerHTML='';
     ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
       var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
-      var btns=(id==='rebate'||id==='claim'||id==='rb-applied')?[['yes','Yes'],['na','No']]:id==='downpay'?[['yes','Yes'],['no','No'],['na','N/A']]:id==='e-labor'?[['yes','Yes'],['no','No']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
+      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:id==='heatload'?[['yes','Yes'],['no','No']]:id==='e-labor'?[['yes','Yes'],['no','No']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
       row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
         +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
         +'</div><div class="why" id="why-'+id+'"></div>';
@@ -280,18 +282,19 @@ function bindAhri(id){var box=$('ahri-'+id);if(!box)return;
   box.querySelector('[data-ah=st]').onclick=function(){pick('st');};box.querySelector('[data-ah=prov]').onclick=function(){pick('prov');};
   box.querySelector('.ahedit').onclick=function(){box.dataset.edit='1';paintAhri(id);box.querySelector('.aht').focus();};}
 function whyBox(id,o){
-  return '<select data-k="why" aria-label="Why not done?"><option value="">Why not done?</option>'+WHYS.map(function(w){return '<option'+(o.why===w?' selected':'')+'>'+w+'</option>';}).join('')+'</select>'
-   +'<input type="date" data-k="when" aria-label="Resolve by (Pacific time)" min="'+todayPT()+'" value="'+esc(o.when||'')+'">'
+  var W=id==='heatload'?['Mini split (no heat load needed)'].concat(WHYS):WHYS;
+  return '<select data-k="why" aria-label="Why not done?"><option value="">'+(id==='heatload'?'Why no heat load calc?':'Why not done?')+'</option>'+W.map(function(w){return '<option'+(o.why===w?' selected':'')+'>'+w+'</option>';}).join('')+'</select>'
+   +'<input type="date" data-k="when"'+(id==='heatload'&&/^Mini split/.test(o.why||'')?' style="display:none"':'')+' aria-label="Resolve by (Pacific time)" min="'+todayPT()+'" value="'+esc(o.when||'')+'">'
    +'<input type="text" data-k="note" placeholder="Note (optional)" value="'+esc(o.note||'')+'">';
 }
 function todayPT(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});}
 function curItem(id){return S.items[id]||(S.items[id]={});}
 function paintWhy(id){
-  var box=$('why-'+id);if(!box)return;var st=stateOf(id);
+  var box=$('why-'+id);if(!box)return;var st=rawState(id);
   if(st==='no'&&id!=='downpay'){
     var o=curItem(id);
     if(!box.innerHTML||box.dataset.id!==id){box.innerHTML=whyBox(id,o);box.dataset.id=id;
-      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){if(e.dataset.k==='when'&&e.value&&e.value<todayPT())e.value='';curItem(id)[e.dataset.k]=e.value;render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
+      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){if(e.dataset.k==='when'&&e.value&&e.value<todayPT())e.value='';curItem(id)[e.dataset.k]=e.value;if(id==='heatload'&&e.dataset.k==='why'){var de=box.querySelector('[data-k=when]');if(de)de.style.display=/^Mini split/.test(e.value)?'none':'';}render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
     else box.querySelectorAll('[data-k]').forEach(function(e){e.value=o[e.dataset.k]||'';});   /* state may have been replaced (draft vs server) */
     box.classList.add('on');}
   else box.classList.remove('on');
@@ -337,7 +340,7 @@ function render(){
   else if(!needs.length){nb.className='needs';nb.innerHTML='<b>Needs you.</b> '+(S.pay?'Work down the list.':'Start with Payment, then work down.')+' Tap Working on it for anything you have started.';}
   else{nb.className='needs';nb.innerHTML='<b>'+(miss.length||mgr?'Needs you':'Optional, still open')+'</b> ('+needs.length+')<ul>'+needs.map(function(n){return '<li><span class="dot '+n.c+'"></span><button type="button" class="linkbtn" data-go="'+n.id+'">'+esc(n.t)+'</button></li>';}).join('')+'</ul>';
     nb.querySelectorAll('[data-go]').forEach(function(a){a.onclick=function(){var r=$('row-'+a.dataset.go)||$('sec-pay');if(r.scrollIntoView)r.scrollIntoView({block:'center',behavior:'smooth'});};});}
-  document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-checked',stateOf(b.dataset.id)===b.dataset.v?'true':'false');});
+  document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-checked',rawState(b.dataset.id)===b.dataset.v?'true':'false');});
   $('barTxt').innerHTML=submitted&&!miss.length?'<b>Submitted.</b> '+done+' of '+total+' complete':miss.length?('<b>Still needed:</b> '+esc(miss.slice(0,3).join(', '))+(miss.length>3?' +'+(miss.length-3):'')):'<b>Ready to submit.</b> '+done+' of '+total+' complete'+(done<total?' ('+(total-done)+' optional open)':'');
   var fin=submitted||locked(),sb=$('submitBtn');
   if(fin){$('parkBtn').style.display='none';sb.textContent='Back to my projects';sb.dataset.back='1';sb.disabled=false;}   /* done: nothing left to save, so the way out is back to the list */
@@ -353,7 +356,7 @@ var _rt=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
   if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',vendor:S.vendor||'',filterSize:S.filter||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
-function normalizeNA(){ITEMS.forEach(function(it){var o=S.items&&S.items[it[0]];if(o&&o.v==='na'&&!it[4]&&it[0]!=='rebate'&&it[0]!=='claim'&&it[0]!=='rb-applied')o.v='';});}   /* an N/A saved before the button was removed no longer counts as an answer */
+function normalizeNA(){ITEMS.forEach(function(it){var o=S.items&&S.items[it[0]];if(o&&o.v==='na'&&!it[4]&&it[0]!=='rebate'&&it[0]!=='claim'&&it[0]!=='rb-applied'&&it[0]!=='permitdelay')o.v='';});}   /* an N/A saved before the button was removed no longer counts as an answer */
 function applyState(){normalizeNA();$('vendorTxt').value=S.vendor||'';$('filterTxt').value=S.filter||'';$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
   applyState();
@@ -394,6 +397,7 @@ function buildInstallEmail(){
   if((S.notes||'').trim())concerns.push(S.notes.trim());
   active().forEach(function(id){var s2=st(id);if(s2==='no')concerns.push(label(id)+' not done'+((S.items[id]||{}).when?' (by '+S.items[id].when+')':''));else if(s2==='work')concerns.push(label(id)+' in progress');});
   if(stateOf('claim')==='na')concerns.push('Not on the install availability sheet yet');
+  if(stateOf('permitdelay')==='yes')concerns.push('Potential permit delays');
   ['ahri','rb-ahri'].forEach(function(id){var n=((S.items[id]||{}).note)||'';if(/^Can provide/.test(n)){var t=n.replace(/^Can provide:?\s*/,'').trim();concerns.push((id==='ahri'?'AHRI match':'AHRI certificate')+': I can provide it'+(t?' ('+t+')':''));}});
   if(rebateYes()){concerns.push('Rebate: '+(S.rebateProg||'program TBD')+(rebateGateOk()?'':' (not secured yet)')+(stateOf('rb-applied')==='yes'?'; applied to the estimate':'; NOT applied to the estimate yet'));}
   var rows=[['CUSTOMER NAME',H.cust||''],['INSTALL DATE',dayLabel(H.date)||'TBD'],['PAYMENT',pay||'See ServiceTitan'],['DOWN PAYMENT COLLECTED',st('downpay')==='yes'?'Yes':st('downpay')==='no'?'No':st('downpay')==='na'?'N/A':downPayment(S.pay)],
