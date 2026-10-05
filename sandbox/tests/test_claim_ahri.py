@@ -47,7 +47,7 @@ with sync_playwright() as p:
     pop.value.close()
     pg.click('button[data-id="claim"][data-v="na"]'); pg.wait_for_timeout(300)
     ok('No: nothing opens, the note hides, the rest of the process continues', not pg.is_visible('#claimNote') and pg.is_enabled('button[data-id="stock"][data-v="yes"]'))
-    ok('the answer is saved but never blocks or counts (ring unchanged at 0 of 12)', pg.inner_text('#ringN').replace('\n', ' ') == '0 of 12')
+    ok('the answer is saved but never blocks or counts (ring unchanged at 0 of 9)', pg.inner_text('#ringN').replace('\n', ' ') == '0 of 9')
     ok('the jurisdiction timing sheet is linked under Permit and opens in a new tab', pg.is_visible('#jurLink') and pg.get_attribute('#jurLink', 'href').startswith('https://docs.google.com/spreadsheets/') and pg.get_attribute('#jurLink', 'target') == '_blank')
     # AHRI follow-up
     pg.click('button[data-id="ahri"][data-v="yes"]'); pg.wait_for_timeout(250)
@@ -64,7 +64,7 @@ with sync_playwright() as p:
     pg.click('#ahri-rb-ahri [data-ah="st"]'); pg.wait_for_timeout(600)
     # full flow: claim = No, AHRI "I can provide it" -> email concerns + manager sees the note
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
-    for i in ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor', 'e-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
+    for i in ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('button[data-id="rebate"][data-v="na"]'); pg.click('button[data-id="claim"][data-v="na"]')
     pg.click('button[data-id="ahri"][data-v="yes"]'); pg.fill('#ahri-ahri .aht', 'Joe sends it Friday'); pg.click('#ahri-ahri [data-ah="prov"]'); pg.wait_for_timeout(600)
     pg.click('#submitBtn'); pg.wait_for_timeout(900)

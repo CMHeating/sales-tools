@@ -28,13 +28,13 @@ def handler(route):
 
 import urllib.parse, datetime
 URL = ORIGIN + 'install-requirements.html#job=900001&cust=Sample+Alpha&date=%s&rep=Samir+Khoury&practice=1' % d(5)
-BASE7 = ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor', 'e-labor']
+BASE7 = ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor']
 with sync_playwright() as p:
     b = p.chromium.launch(headless=True); ctx = b.new_context(viewport={'width': 390, 'height': 900}); ctx.route('**/*', handler)
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     api = lambda method, path, body=None: pg.evaluate("""async ([m,p,b]) => { const r = await fetch(p, {method:m, headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); return [r.status, await r.json()]; }""", [method, path, body])
     pg.goto(ORIGIN + 'practice/index.html'); pg.wait_for_timeout(500); api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800)
-    ok('Vendor sits in the Equipment section right under the stock question; Filter size has its own box; no "what was sold" box', pg.is_visible('#row-stock #vendorTxt') and pg.is_visible('#filterTxt') and pg.locator('#sysDesc').count() == 0)
+    ok('Vendor sits in the Equipment section right under the stock question; Filter size sits under it; no "what was sold" box', pg.is_visible('#row-stock #vendorTxt') and pg.is_visible('#row-stock #filterTxt') and pg.locator('#sysDesc').count() == 0)
     pg.select_option('#pay', index=1)
     for i in BASE7: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('button[data-id="rebate"][data-v="na"]'); pg.fill('#vendorTxt', 'Acme Supply'); pg.fill('#filterTxt', '16x25x1'); pg.wait_for_timeout(600)

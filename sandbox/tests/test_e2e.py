@@ -22,7 +22,7 @@ def call(path, body=None, raw=None, headers=None):
         try: return e.code, json.load(e)
         except Exception: return e.code, {}
 
-FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor', 'e-labor']}, rebate={'v': 'na'})}
+FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'})}
 def hca(job, **kw): return call('/api/hca', dict({'job': job, 'by': 'Test HCA'}, **kw))
 def lanes_all(job, result='verified'):
     from_meta = call('/api/meta')[1]['lanes']
@@ -108,16 +108,16 @@ with sync_playwright() as p:
     pg.goto(url('900002', 'Sample+Bravo', 6)); pg.reload(); pg.wait_for_timeout(700)
     ok('sandbox banner on localhost', 'SANDBOX' in pg.inner_text('#envBar'))
     ok('AUD-hostname: attacker host names do not count as sandbox', pg.evaluate("[SANDBOX_RE.test('localhost.attacker.invalid'),SANDBOX_RE.test('evil.example.com'),SANDBOX_RE.test('10.0.0.5.evil.com'),SANDBOX_RE.test('127.0.0.1'),SANDBOX_RE.test('localhost'),SANDBOX_RE.test('192.168.1.20')]") == [False, False, False, True, True, True])
-    ok('"No" is labelled "Not done"', pg.inner_text('button[data-id="photos"][data-v="no"]') == 'Not done')
+    ok('"No" is labelled "Not done"', pg.inner_text('button[data-id="stock"][data-v="no"]') == 'Not done')
     ok('Needs-you entries are real buttons (keyboard reachable)', pg.evaluate("document.querySelectorAll('#needs a[data-go]').length") == 0)
     # AUD-12: draft restore vs server state
     pg.evaluate("localStorage.clear()")
-    call('/api/reset', {}); hca('900002', pay=FULL['pay'], items={'photos': {'v': 'no', 'why': 'Waiting on customer', 'when': d(12)}})
-    pg.evaluate("localStorage.setItem('cmh_install_req_900002', JSON.stringify({items:{photos:{v:'no',why:'Waiting on customer',when:'%s'}},pay:'',notes:''}))" % d(10))
+    call('/api/reset', {}); hca('900002', pay=FULL['pay'], items={'stock': {'v': 'no', 'why': 'Waiting on customer', 'when': d(12)}})
+    pg.evaluate("localStorage.setItem('cmh_install_req_900002', JSON.stringify({items:{stock:{v:'no',why:'Waiting on customer',when:'%s'}},pay:'',notes:''}))" % d(10))
     pg.reload(); pg.wait_for_timeout(800)
-    pg.fill('#why-photos input[type=date]', d(20)); pg.wait_for_timeout(500)
-    ok('AUD-12 editing the date after a draft+server restore changes the CURRENT state', pg.evaluate("S.items.photos.when") == d(20))
-    ok('AUD-12 ...and it reaches the server', call('/api/record?job=900002')[1]['record']['hca']['items']['photos']['when'] == d(20))
+    pg.fill('#why-stock input[type=date]', d(20)); pg.wait_for_timeout(500)
+    ok('AUD-12 editing the date after a draft+server restore changes the CURRENT state', pg.evaluate("S.items.stock.when") == d(20))
+    ok('AUD-12 ...and it reaches the server', call('/api/record?job=900002')[1]['record']['hca']['items']['stock']['when'] == d(20))
     # AUD-19: park dialog focus management
     pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_timeout(500)
     pg.focus('#parkBtn'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
@@ -133,9 +133,9 @@ with sync_playwright() as p:
     pg.select_option('#pay', index=1)
     for i in ['stock', 'permit', 'mat', 'photos']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     ok('ring warms up around halfway', heat()[0] == 'warm')
-    for i in ['heatload', 'ahri', 'i-labor', 'e-disconnect', 'e-outlet']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    h = heat(); ok('at 10/12 the ring is hot with a flame and "almost there"', h[0] == 'hot' and h[1] != 'none' and h[2] == '🔥' and 'almost' in h[3])
-    pg.click('button[data-id="video"][data-v="yes"]'); pg.click('button[data-id="e-labor"][data-v="yes"]'); h = heat(); ok('at 12/12 the flame becomes a check and the ring is "dialed in"', h[0] == 'done' and h[2] == '✓' and 'dialed' in h[3])
+    for i in ['heatload', 'ahri', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
+    h = heat(); ok('at 8/9 the ring is hot with a flame and "almost there"', h[0] == 'hot' and h[1] != 'none' and h[2] == '🔥' and 'almost' in h[3])
+    pg.click('button[data-id="video"][data-v="yes"]'); h = heat(); ok('at 9/9 the flame becomes a check and the ring is "dialed in"', h[0] == 'done' and h[2] == '✓' and 'dialed' in h[3])
     pg.evaluate("localStorage.clear()")
     # empty state
     pg.goto(B + '/install-requirements.html'); pg.reload(); pg.wait_for_timeout(500)
@@ -144,12 +144,12 @@ with sync_playwright() as p:
     call('/api/reset', {})
     pg.goto(url('900001', 'Sample+Alpha', 2)); pg.reload(); pg.wait_for_timeout(700)
     pg.select_option('#pay', index=1)
-    for i, v in [('stock', 'yes'), ('permit', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('i-labor', 'yes'), ('e-labor', 'yes'), ('photos', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
+    for i, v in [('stock', 'yes'), ('permit', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('i-labor', 'yes'), ('photos', 'yes'), ('stock', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
     pg.click('button[data-id="rebate"][data-v="na"]')
     ok('submit blocked: Not done needs why + by-when', pg.is_disabled('#submitBtn'))
-    pg.select_option('#why-photos select', 'Waiting on customer'); pg.fill('#why-photos input[type=date]', d(1)); pg.wait_for_timeout(600)
+    pg.select_option('#why-stock select', 'Waiting on customer'); pg.fill('#why-stock input[type=date]', d(1)); pg.wait_for_timeout(600)
     rec = call('/api/record?job=900001')[1]['record']
-    ok('answers saved while typing', rec['hca']['items']['photos']['v'] == 'no' and rec['readiness']['done'] == 9)
+    ok('answers saved while typing', rec['hca']['items']['stock']['v'] == 'no' and rec['readiness']['done'] == 8)
     pg.click('#submitBtn'); pg.wait_for_timeout(700)
     ok('submit -> submitted + one outbox entry, nothing emailed', call('/api/record?job=900001')[1]['record']['status'] == 'submitted' and len(call('/api/outbox')[1]['mail']) == 1)
     q = ctx.new_page(); q.on('pageerror', lambda e: errs.append(str(e))); q.goto(B + '/install-qc.html'); q.wait_for_timeout(600)
