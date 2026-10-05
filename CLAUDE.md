@@ -266,7 +266,11 @@ delinquent for ignoring it.
 
 ## Design Patterns
 
-**The HCA-facing pages share one light look — the "CRM" style** (restyled 2026-09-26,
+**DECISION 2026-10-04 (Geoff): the HCA toolkit uses the DARK navy look — Outfit (UI) + Playfair Display (headings).** This is what the live `crm.html` has used since `cece77c` (2026-09-26, "Refactor crm.html for new design language", which replaced the short-lived light restyle `35223a9`), and what `install-check.html`, `install-requirements.html`, `install-qc.html`, `install-admin.html` and the `practice/` pages use. Geoff: "the white is too white". Tokens: background `#0a1628` (soft radial glow allowed), panels `#111a2e` / `#131f33`, hairline `#1e2a44`, text `#e6edf7`, muted `#94a3b8`, brand orange `#c97d10`, gold `#f59e0b`; cards 18px radius; pill buttons. Status colours (green `#22c55e`, amber `#f59e0b`, red `#ef4444`) ARE allowed in this style, but never as the only signal: pair every colour with a glyph or word (✓ complete, … in progress, ! needs attention). Copy the `:root` block from `install-requirements.html`.
+The light "CRM style" section below is **superseded by this decision**; it still describes `index.html`, `sold-job-tracker.html`, `clearance.html`, `follow-up-tracker.html`, `ar-collections.html` and `hca-1on1.html`, which are still light and are pending a restyle. Do not add new pages in the light style.
+
+
+**(SUPERSEDED, see the decision above) The HCA-facing pages shared one light look — the "CRM" style** (restyled 2026-09-26,
 commits `35223a9`…`37bb589`, plus `0fe6622` for the 1:1 page): `crm.html`, `index.html`,
 `sold-job-tracker.html`, `clearance.html`, `follow-up-tracker.html`, `ar-collections.html` and `hca-1on1.html`. Match it exactly when
 editing any of them or adding a page the HCAs use:

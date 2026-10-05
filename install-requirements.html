@@ -274,6 +274,7 @@ function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.
     if(!d||!d.ok)return;var r=d.record,h=r.hca||{};
     REMOTE.status=r.status;REMOTE.lanes=r.lanes||null;REMOTE.reopen=r.reopen||null;
     if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',parked:r.parked||undefined};applyState();}
+    else{S={items:{},pay:'',notes:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
     if(r.status==='submitted'||r.status==='in_review'||r.status==='ready')submitted=true;
     render();});}
 
