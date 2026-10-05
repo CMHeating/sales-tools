@@ -57,7 +57,7 @@
     }
     return null;
   }
-  function payState(p) { if (!p || p === "Select…") return ""; if (p.indexOf("⏳") === 0) return "work"; if (p === "N/A") return "na"; return p.indexOf("✔") === 0 ? "yes" : "no"; }
+  function payState(p) { if (!p || p === "Select…") return ""; if (p.indexOf("⏳") === 0) return "work"; if (p === "N/A") return ""; return p.indexOf("✔") === 0 ? "yes" : "no"; }
   function hcaItems(rec) {
     var h = rec.hca || {}, items = h.items || {}, pay = h.pay || "";
     var ids = BASE_ITEMS.concat(/rental/i.test(pay) ? RENTAL_ITEMS : []), out = {};
