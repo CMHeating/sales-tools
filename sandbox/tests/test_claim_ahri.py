@@ -48,7 +48,7 @@ with sync_playwright() as p:
     pg.click('button[data-id="claim"][data-v="na"]'); pg.wait_for_timeout(300)
     ok('No: nothing opens, the note hides, the rest of the process continues', not pg.is_visible('#claimNote') and pg.is_enabled('button[data-id="stock"][data-v="yes"]'))
     ok('the answer is saved but never blocks or counts (ring unchanged at 0 of 12)', pg.inner_text('#ringN').replace('\n', ' ') == '0 of 12')
-    ok('jurisdiction link stays hidden in practice (the sheet URL lives in the private config, not this public page)', not pg.is_visible('#jurLink'))
+    ok('the jurisdiction timing sheet is linked under Permit and opens in a new tab', pg.is_visible('#jurLink') and pg.get_attribute('#jurLink', 'href').startswith('https://docs.google.com/spreadsheets/') and pg.get_attribute('#jurLink', 'target') == '_blank')
     # AHRI follow-up
     pg.click('button[data-id="ahri"][data-v="yes"]'); pg.wait_for_timeout(250)
     ok('AHRI Complete asks: in ServiceTitan or can you provide it?', pg.is_visible('#ahri-ahri .ahq') and 'servicetitan' in pg.inner_text('#ahri-ahri').lower() and 'provide' in pg.inner_text('#ahri-ahri').lower())
