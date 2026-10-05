@@ -47,6 +47,9 @@
   .btn{min-height:46px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;cursor:pointer}
   .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
   .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .btn.go,a.btn.go,button.go{box-shadow:0 8px 20px rgba(201,125,16,.30)}.btn:hover,a.btn:hover,button.btn:hover,.tab:hover{filter:brightness(1.12)}.btn:active,.tab:active{transform:translateY(1px)}
+  .who select{appearance:none;-webkit-appearance:none;border-radius:999px;padding:9px 38px 9px 18px;font-weight:700;background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") right 15px center no-repeat}
+
   .acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
   .msg{font-size:13px;color:var(--mut)}.msg.err{color:#fecaca}.msg.ok{color:#bbf7d0}
   a{color:var(--blue)}
@@ -113,7 +116,7 @@ function openJob(job){
     var rental=/rental/i.test(h.pay||'');
     var rebYes=(items.rebate||{}).v==='yes',rebShown=rebYes?(REBATE_SHOWN[rebKey(h.rebateProgram)]||[]):[];
     function hcaSaid(ids){ids=ids.filter(function(i){return (rental||i.indexOf('r-')!==0)&&(i.indexOf('rb-')!==0||rebShown.indexOf(i)>=0);});if(!ids.length)return 'No rental paperwork on this job';return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
-      var txt=i==='rebate'?(st==='yes'?('Yes — '+(h.rebateProgram||'program not chosen')):st==='na'?'No rebate':'not answered'):i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
+      var txt=i==='rebate'?(st==='yes'?('Yes — '+(h.rebateProgram||'program not chosen')+(h.rebateAmount?' · amount '+(/^\$/.test(h.rebateAmount.trim())?'':'$')+h.rebateAmount.trim():'')):st==='na'?'No rebate':'not answered'):i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
       return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
     var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
     var html='<button class="back" type="button" id="backBtn">&larr; All jobs</button><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';

@@ -49,7 +49,7 @@ def visit(pw, email, provider='google.com'):
     pg.add_init_script(f"window.__DB={json.dumps(ROSTER)};window.__ADMIN=false;"
         f"window.__USER={{email:{json.dumps(email)},emailVerified:{json.dumps(provider=='google.com')},providerData:[],getIdTokenResult:async()=>({{signInProvider:{json.dumps(provider)}}})}};")
     pg.goto(B + '/install-home.html'); pg.wait_for_timeout(900)
-    return b, pg, errs, [a.inner_text() for a in pg.locator('#btns a').all()], pg.inner_text('#roleLine') if pg.is_visible('#tools') else ''
+    return b, pg, errs, [a.inner_text() for a in pg.locator('#btns a b').all()], pg.inner_text('#roleLine') if pg.is_visible('#tools') else ''
 
 with sync_playwright() as p:
     b, pg, errs, btns, role = visit(p, 'rep@cmheating.com')

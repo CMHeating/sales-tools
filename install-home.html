@@ -18,6 +18,11 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
   .btn{display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:800;text-decoration:none;margin:10px 0;cursor:pointer;width:100%}
   .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
+  a.tool{display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 16px;border-radius:18px;border:1px solid var(--line);background:var(--panel2);color:var(--text);text-decoration:none;margin:10px 0}
+  a.tool .ti{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--panel);border:1px solid var(--line);flex:none}
+  a.tool b{display:block;font-size:16px}a.tool small{display:block;color:var(--mut);font-size:13px;margin-top:2px}a.tool .ch{margin-left:auto;color:var(--mut);font-size:22px}
+  a.tool.go{background:rgba(201,125,16,.14);border-color:var(--orange);box-shadow:0 0 0 1px var(--orange) inset,0 8px 22px rgba(201,125,16,.20)}a.tool.go .ti{background:var(--orange);border-color:var(--orange)}
+  a.tool:hover{filter:brightness(1.12)}a.tool:focus-visible{outline:2px solid #4aa3df;outline-offset:2px}
   .btn:focus-visible{outline:2px solid #4aa3df;outline-offset:2px}
   .role{display:inline-block;border:1px solid rgba(245,158,11,.6);color:#fde68a;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
   .hidden{display:none}
@@ -46,12 +51,14 @@ const keyOf = e => String(e || "").toLowerCase().replace(/\./g, ",");
 /* The role comes from the private roster in Firebase, never from this file. The database rules are the real lock; this page only decides what to show. */
 export function buttonsFor(role, name) {
   const as = name ? "?as=" + encodeURIComponent(name) : "";
+  const rb = "install-qc.html?view=ready" + (name ? "&as=" + encodeURIComponent(name) : "");
   const b = {
-    hca: [["Open my CRM (Project completion lives there)", "crm.html", true]],
-    manager: [["Review queue", "install-qc.html" + as, true]],
-    scheduler: [["Ready to book", "install-qc.html?view=ready" + (name ? "&as=" + encodeURIComponent(name) : ""), true]],
-    admin: [["Admin page", "install-admin.html", true], ["Review queue", "install-qc.html" + as, false], ["Ready to book", "install-qc.html?view=ready" + (name ? "&as=" + encodeURIComponent(name) : ""), false]]
+    hca: [["Open my CRM", "crm.html", true, "Project completion lives there", "📋"]],
+    manager: [["Review queue", "install-qc.html" + as, true, "Verify your lane against ServiceTitan", "✅"]],
+    scheduler: [["Ready to book", rb, true, "Fully verified and ready to schedule", "📅"]],
+    admin: [["Admin page", "install-admin.html", true, "Every project, every HCA", "🗂️"], ["Review queue", "install-qc.html" + as, false, "Verify a lane against ServiceTitan", "✅"], ["Ready to book", rb, false, "Fully verified and ready to schedule", "📅"]]
   };
+
   return b[role] || [];
 }
 async function roleOf(user) {
@@ -71,7 +78,7 @@ onAuthStateChanged(auth, async user => {
   const r = await roleOf(user); $("who").textContent = user.email;
   if (!r.role) { $("msg").textContent = "Your account isn't set up for the install tools yet. Ask Geoff."; return; }
   $("roleLine").innerHTML = '<span class="role">' + esc(LABEL[r.role]) + "</span>";
-  $("btns").innerHTML = buttonsFor(r.role, r.name).map(x => '<a class="btn' + (x[2] ? " go" : "") + '" href="' + esc(x[1]) + '">' + esc(x[0]) + "</a>").join("");
+  $("btns").innerHTML = buttonsFor(r.role, r.name).map(x => '<a class="tool' + (x[2] ? " go" : "") + '" href="' + esc(x[1]) + '"><span class="ti" aria-hidden="true">' + x[4] + '</span><span><b>' + esc(x[0]) + '</b><small>' + esc(x[3]) + '</small></span><span class="ch" aria-hidden="true">&rsaquo;</span></a>').join("");
   $("tools").classList.remove("hidden");
 });
 $("gbtn").onclick = async () => { try { await signInWithPopup(auth, provider); } catch (e) { if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) { try { await signInWithRedirect(auth, provider); } catch (e2) {} } } };

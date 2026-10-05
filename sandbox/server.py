@@ -376,6 +376,8 @@ class H(SimpleHTTPRequestHandler):
                         h["notes"] = str(body["notes"])[:600]
                     if "rebateProgram" in body:
                         h["rebateProgram"] = str(body["rebateProgram"] or "")[:60]
+                    if "rebateAmount" in body:
+                        h["rebateAmount"] = re.sub(r"[^0-9.,$ ]", "", str(body["rebateAmount"] or ""))[:20]
                     items_in = body.get("items") or {}
                     if not isinstance(items_in, dict) or not all(isinstance(v, dict) for v in items_in.values()):
                         return self._json(400, {"ok": False, "error": "items must be an object of objects"})

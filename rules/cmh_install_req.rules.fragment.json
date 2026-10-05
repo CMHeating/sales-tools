@@ -71,6 +71,9 @@
       },
       "rebateProgram": {
        ".validate": "newData.isString() && newData.val().length <= 60"
+      },
+      "rebateAmount": {
+       ".validate": "newData.isString() && newData.val().length <= 20"
       }
      },
      "parked": {

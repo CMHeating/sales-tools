@@ -144,5 +144,13 @@ with sync_playwright() as p:
     ok('Submit stays blocked until both labor items are answered', pg.is_disabled('#submitBtn') and 'labor' in pg.inner_text('#barTxt').lower())
     pg.click('button[data-id="i-labor"][data-v="yes"]'); ok('still blocked with only install labor answered', pg.is_disabled('#submitBtn'))
     pg.click('button[data-id="e-labor"][data-v="yes"]'); pg.wait_for_timeout(200); ok('both labor items answered => Submit enabled (disconnect/outlet stay optional)', not pg.is_disabled('#submitBtn'))
+    # floating progress ring
+    api('POST', '/api/reset', {}); pg.set_viewport_size({'width': 390, 'height': 700}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(700)
+    pg.evaluate('window.scrollTo(0, 0)'); pg.wait_for_timeout(300)
+    ok('floating ring hidden while the header ring is in view', not pg.is_visible('#fring'))
+    pg.click('button[data-id="stock"][data-v="yes"]'); pg.evaluate("window.scrollTo(0, 1400)"); pg.wait_for_timeout(500)
+    ok('floating ring appears after scrolling down and shows progress', pg.is_visible('#fring') and '/' in pg.inner_text('#fringT'))
+    pg.click('#fring'); pg.wait_for_timeout(900)
+    ok('tapping it returns to the top; ring hides again', pg.evaluate("window.scrollY") < 50 and not pg.is_visible('#fring'))
     ok('no page errors', not errs); print(errs[:3]); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
