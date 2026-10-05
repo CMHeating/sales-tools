@@ -54,6 +54,19 @@ c, r = call('/api/hca', raw=b'x' * 70000); ok('AUD-18 oversized body -> 413', c 
 c, r = call('/api/hca', raw=b'{bad'); ok('bad json -> 400', c == 400)
 ok('server still healthy after bad requests', call('/api/meta')[0] == 200)
 
+
+# ---------- admin API ----------
+call('/api/reset', {})
+hca('900002', **FULL); hca('900002', submit=True)
+call('/api/lane', {'job': '900002', 'by': 'Lyle', 'lane': 'install', 'items': {'layout-ok': {'result': 'missing', 'found': 'No photos', 'when': d(-1)}}, 'signoff': 'attention'})
+c, r = call('/api/admin'); rows = {j['job']: j for j in r['jobs']}
+ok('admin API lists sold + pipeline for every HCA with open items', c == 200 and '800001' in rows and '900005' in rows and any(x['overdue'] for x in rows['900002']['openItems']))
+c, r = call('/api/reopen', {'job': '900002', 'by': 'Amy', 'reason': ''}); ok('send back needs a reason', c == 400)
+c, r = call('/api/install', {'job': '900002', 'by': 'Amy'}); ok('cannot mark a non-ready project installed', c == 409)
+c, r = call('/api/reopen', {'job': '900002', 'by': 'Amy', 'reason': 'Photos missing'}); ok('send back works and reopens the HCA section', c == 200 and r['record']['status'] == 'working' and r['record']['reopen']['by'] == 'Amy')
+ok('send back clears manager sign-offs', not any(l.get('signoff') for l in (call('/api/record?job=900002')[1]['record'].get('lanes') or {}).values()))
+c, r = call('/api/reopen', {'job': '900002', 'by': 'Amy', 'reason': 'again'}); ok('cannot send back a project that is already back with the HCA', c == 409)
+hca('900002', submit=True); ok('resubmitting clears the sent-back note', 'reopen' not in call('/api/record?job=900002')[1]['record'])
 # ---------- shared module (node) ----------
 js = r'''
 const P = require(process.argv[1] + '/js/install-projects.js'); const who = {full: 'A B'}; let bad = [];

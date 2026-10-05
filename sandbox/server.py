@@ -194,6 +194,36 @@ def public(rec):
     return r
 
 
+def open_items(rec):
+    """Everything still open on a project, from the HCA and from the managers, with by-when dates."""
+    today = dt.date.today().isoformat()
+    h = rec.get("hca", {}); out = []
+    for k, v in hca_items(rec).items():
+        it = h.get("items", {}).get(k, {})
+        if v == "no":
+            w = it.get("when", "")
+            out.append({"who": "HCA", "item": k, "state": "not done", "why": it.get("why", ""), "when": w, "overdue": bool(w and w < today)})
+        elif v == "work":
+            out.append({"who": "HCA", "item": k, "state": "working", "why": "", "when": "", "overdue": False})
+    for lane, l in (rec.get("lanes") or {}).items():
+        for k, it in (l.get("items") or {}).items():
+            if it.get("result") in ("missing", "mismatch"):
+                w = it.get("when", "")
+                out.append({"who": LANES[lane]["who"], "item": k, "state": it["result"], "why": it.get("found", ""), "when": w, "overdue": bool(w and w < today)})
+    return out
+
+
+def admin_row(meta, rec, source):
+    rec = rec or {"hca": {}}
+    oi = open_items(rec)
+    dues = sorted(x["when"] for x in oi if x["when"])
+    hist = rec.get("history") or []
+    return dict(meta, source=source, status=derive_status(rec), readiness=readiness(rec),
+                lanes={k: lane_state(rec, k) for k in LANES}, parked=rec.get("parked"), openItems=oi,
+                nextDue=dues[0] if dues else "", overdue=any(x["overdue"] for x in oi),
+                lastActivity=(hist[-1]["at"] if hist else ""), reopen=rec.get("reopen"))
+
+
 # ---- HTTP ---------------------------------------------------------------------------------------------
 class H(SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
@@ -254,6 +284,14 @@ class H(SimpleHTTPRequestHandler):
                 out = [dict(j, readiness=readiness(recs[j["job"]])) for j in jobs
                        if j["job"] in recs and derive_status(recs[j["job"]]) == "ready"]
                 return self._json(200, {"ok": True, "jobs": out})
+            if u.path == "/api/admin":
+                rows = [admin_row(j, recs.get(j["job"]), "sold") for j in jobs if not re.search("DONE|COMPLETE", j.get("stage", ""), re.I)]
+                have = {r["job"] for r in rows}
+                for pj in pipe_all:
+                    if pj["job"] in have: continue
+                    m = find_job(jobs, pipe_all, pj["job"])
+                    rows.append(admin_row(m, recs.get(pj["job"]), pj.get("source", "pipeline")))
+                return self._json(200, {"ok": True, "jobs": rows})
             if u.path == "/api/outbox":
                 try:
                     with open(os.path.join(DATA, "outbox.jsonl"), encoding="utf-8") as f:
@@ -292,7 +330,7 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(200, {"ok": True})
             job = str(body.get("job", ""))
             meta = find_job(jobs, pipe_all, job)
-            if u.path in ("/api/hca", "/api/lane", "/api/install"):
+            if u.path in ("/api/hca", "/api/lane", "/api/install", "/api/reopen"):
                 if not meta:
                     return self._json(404, {"ok": False, "error": "unknown job"})
                 rec = recs.setdefault(job, {"hca": {}})
@@ -328,6 +366,7 @@ class H(SimpleHTTPRequestHandler):
                         if miss:
                             return self._json(400, {"ok": False, "error": "cannot submit, still needed: " + ", ".join(miss)})
                         h["submittedAt"] = now()
+                        rec.pop("reopen", None)
                         rec["parked"] = None
                         history(rec, who, "hca.submitted", None, "submitted")
                         with open(os.path.join(DATA, "outbox.jsonl"), "a", encoding="utf-8") as f:
@@ -355,7 +394,22 @@ class H(SimpleHTTPRequestHandler):
                             return self._json(400, {"ok": False, "error": "bad signoff"})
                         l["signoff"], l["by"], l["at"] = body["signoff"], who, now()
                         history(rec, who, "lane.%s.signoff" % lane, None, body["signoff"])
+                elif u.path == "/api/reopen":
+                    reason = str(body.get("reason", "")).strip()[:200]
+                    if len(reason) < 3:
+                        return self._json(400, {"ok": False, "error": "say why you are sending it back"})
+                    if derive_status(rec) not in ("submitted", "in_review", "ready"):
+                        return self._json(409, {"ok": False, "error": "only a submitted project can be sent back"})
+                    rec.get("hca", {}).pop("submittedAt", None)
+                    rec["reopen"] = {"by": who, "reason": reason, "at": now()}
+                    for l in (rec.get("lanes") or {}).values():
+                        l.pop("signoff", None)          # managers re-confirm after the HCA fixes things
+                    history(rec, who, "sent back", None, reason)
+                    with open(os.path.join(DATA, "outbox.jsonl"), "a", encoding="utf-8") as f:
+                        f.write(json.dumps({"at": now(), "to": [meta["hca"]], "subject": "Sent back — job " + job + " " + meta["customer"], "note": "SANDBOX: not sent", "reason": reason}) + "\n")
                 else:
+                    if derive_status(rec) not in ("ready", "installed"):
+                        return self._json(409, {"ok": False, "error": "only a ready project can be marked installed"})
                     rec["installed"] = bool(body.get("installed", True))
                     history(rec, who, "installed", None, rec["installed"])
                 save("records.json", recs)

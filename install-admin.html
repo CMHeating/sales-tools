@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<script>if(/[#&?]practice=1/.test(location.hash+location.search)){document.write('<script src="js/practice-api.js"><\/script>');}</script>
+<title>Install Admin — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--gold:#f59e0b;--orange:#c97d10;--green:#22c55e;--red:#ef4444;--blue:#4aa3df}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;padding-bottom:48px}
+  #envBar{text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px 10px;background:#7f1d1d;color:#fecaca}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:16px 0 4px}
+  .pill{background:var(--orange);color:#fff;font-weight:800;letter-spacing:.06em;font-size:12px;padding:6px 12px;border-radius:999px}
+  .who{font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;gap:8px;align-items:center}
+  h1{font-family:"Playfair Display",serif;font-size:30px;margin:6px 0 2px}.sub{color:var(--mut);font-size:14px;margin:0 0 14px}
+  select,input[type=search],textarea{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;min-height:44px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:14px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;text-align:left;color:inherit;font:inherit;cursor:pointer}
+  .tile[aria-pressed=true]{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange) inset}
+  .tile b{display:block;font-size:28px;line-height:1.1}.tile span{font-size:12px;color:var(--mut);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+  .tile.bad b{color:#fecaca}.tile.good b{color:#bbf7d0}.tile.warn b{color:#fde68a}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.filters input{flex:1 1 220px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  .card h2{font-family:"Playfair Display",serif;font-size:18px;margin:0 0 10px}
+  .row{display:grid;grid-template-columns:2.2fr 1.2fr 1fr 1fr 1fr 1.4fr 1.2fr;gap:10px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);margin-bottom:8px;cursor:pointer;width:100%;text-align:left;color:inherit;font:inherit}
+  .row:hover,.row:focus-visible{border-color:#2d3d63;outline:none}.row[aria-expanded=true]{border-color:var(--orange)}
+  .row.head{background:none;border:0;color:var(--mut);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:default;padding:0 14px}
+  .row b{font-size:16px}.row small,.muted{color:var(--mut);font-size:12px}
+  .chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:800;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+  .chip.ready{color:#bbf7d0;border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)}.chip.in_review,.chip.submitted{color:#bfdbfe;border-color:rgba(74,163,223,.6)}
+  .chip.working{color:#fde68a;border-color:rgba(245,158,11,.6)}.chip.installed{color:#d1d5db}.chip.none{color:var(--mut)}
+  .chip.bad{color:#fecaca;border-color:rgba(239,68,68,.6);background:rgba(239,68,68,.1)}.chip.warn{color:#fde68a;border-color:rgba(245,158,11,.6)}
+  .lane{font-size:11px;font-weight:800;border-radius:6px;padding:2px 6px;border:1px solid var(--line);color:var(--mut);margin-right:3px}.lane.ok{color:#bbf7d0;border-color:rgba(34,197,94,.6)}.lane.bad{color:#fecaca;border-color:rgba(239,68,68,.6)}.lane.mid{color:#fde68a;border-color:rgba(245,158,11,.6)}
+  .bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--orange)}.bar i.done{background:var(--green)}
+  .detail{border:1px solid var(--orange);border-radius:18px;padding:16px;margin:-2px 0 12px;background:var(--panel)}
+  .detail h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:14px 0 6px}.detail h3:first-child{margin-top:0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  ul.list{margin:0;padding:0;list-style:none}ul.list li{padding:6px 0;border-top:1px solid var(--line);font-size:14px}ul.list li:first-child{border-top:0}
+  .btn{min-height:46px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:800;cursor:pointer}
+  .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}.btn.danger{border-color:rgba(239,68,68,.6);color:#fecaca}.btn[disabled]{opacity:.45;cursor:not-allowed}
+  .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:flex-start}
+  textarea{width:100%;min-height:76px}.msg{font-size:13px;color:var(--mut);margin-top:6px;min-height:18px}.msg.ok{color:#bbf7d0}.msg.err{color:#fecaca}
+  table{width:100%;border-collapse:collapse;font-size:14px}th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:left;padding:6px 8px}td{padding:8px;border-top:1px solid var(--line)}
+  .empty{color:var(--mut);padding:18px 4px}
+  @media (max-width:860px){
+    .row{grid-template-columns:1fr 1fr;gap:6px 10px}.row.head{display:none}.grid2{grid-template-columns:1fr}
+    .row>div:nth-child(1){grid-column:1/-1}
+  }
+</style>
+</head>
+<body>
+<div id="envBar">SANDBOX — fake data, nothing leaves this machine</div>
+<div class="wrap">
+  <div class="top"><span class="pill">CM HEATING</span>
+    <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Amy</option><option>Brittny</option><option>Geoff</option></select></label></div>
+  <h1>Install Admin</h1>
+  <p class="sub">Every project, every HCA, in one place. What is ready to book, what is stuck, and what is due.</p>
+
+  <div class="tiles" id="tiles" role="group" aria-label="Filter by status"></div>
+  <div class="filters">
+    <select id="fHca" aria-label="HCA"><option value="">All HCAs</option></select>
+    <select id="fWhen" aria-label="Install date"><option value="">Any install date</option><option value="3">Within 3 days</option><option value="7">Within 7 days</option><option value="nodate">No date yet</option></select>
+    <input type="search" id="fQ" placeholder="Search customer or job #" aria-label="Search">
+  </div>
+
+  <div id="list"></div>
+  <div class="card" id="scoreCard" style="margin-top:18px"><h2>By HCA</h2><div id="score"></div>
+    <p class="muted" style="margin-top:8px">"Gaps found" counts items a manager marked Missing or Mismatch after the HCA said Complete. It is a coaching view for admins, not shown to HCAs.</p></div>
+</div>
+<script>
+var $=function(id){return document.getElementById(id)};
+var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);
+var AS=(function(){var m=(location.hash+location.search).match(/[#&?]as=([^&]*)/);return m?decodeURIComponent(m[1]):'';})();
+if(PRACTICE)$('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';
+var NAMES={pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit authorization','r-payauth':'Payment authorization','r-dl':'Driver’s license','r-deed':'Mortgage / deed'};
+var ROWS=[],META={labels:{}},FILTER='all',OPEN=null;
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
+function label(k){return NAMES[k]||META.labels[k]||k;}
+function todayIso(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function daysTo(iso){if(!iso)return null;return Math.round((Date.parse(iso+'T00:00:00Z')-Date.parse(todayIso()+'T00:00:00Z'))/86400000);}
+function dlabel(iso){if(!iso)return 'TBD';var p=iso.split('-');return (+p[1])+'/'+(+p[2]);}
+function started(r){return r.status!=='working'||r.readiness.done>0||r.readiness.working>0||r.readiness.open>0||!!r.reopen;}
+function atRisk(r){var d=daysTo(r.installDate);return r.status!=='ready'&&r.status!=='installed'&&d!==null&&d<=3;}
+function bucket(r){if(r.status==='ready')return 'ready';if(r.status==='in_review'||r.status==='submitted')return 'review';if(r.status==='installed')return 'installed';return started(r)?'hca':'notstarted';}
+function urgency(r){return (r.overdue?0:atRisk(r)?1:(r.status==='in_review'||r.status==='submitted')?2:3)+'|'+(r.installDate||'9999');}
+function matches(r){
+  if(FILTER==='ready'&&bucket(r)!=='ready')return false;if(FILTER==='review'&&bucket(r)!=='review')return false;if(FILTER==='hca'&&bucket(r)!=='hca')return false;
+  if(FILTER==='notstarted'&&bucket(r)!=='notstarted')return false;if(FILTER==='risk'&&!atRisk(r))return false;if(FILTER==='overdue'&&!r.overdue)return false;
+  var h=$('fHca').value;if(h&&r.hca!==h)return false;var w=$('fWhen').value,d=daysTo(r.installDate);
+  if(w==='nodate'&&r.installDate)return false;if((w==='3'||w==='7')&&!(d!==null&&d<=Number(w)))return false;
+  var q=$('fQ').value.trim().toLowerCase();if(q&&(r.customer+' '+r.job).toLowerCase().indexOf(q)<0)return false;return true;}
+function lanesHtml(l){return Object.keys(l).map(function(k){var x=l[k],c=x.signoff==='confirmed'&&!x.missing?'ok':(x.missing||x.signoff==='notready')?'bad':(x.checked||x.signoff)?'mid':'';return '<span class="lane '+c+'" title="'+esc(k)+' '+x.checked+'/'+x.total+'">'+k[0].toUpperCase()+(x.signoff==='confirmed'&&!x.missing?' ✓':'')+'</span>';}).join('');}
+function statusChip(r){var m={ready:'Ready to book',in_review:'In review',submitted:'Submitted',working:started(r)?'With HCA':'Not started',installed:'Installed'};return '<span class="chip '+(started(r)||r.status!=='working'?r.status:'none')+'">'+m[r.status]+(r.reopen?' · sent back':'')+'</span>';}
+function render(){
+  var counts={ready:0,review:0,hca:0,notstarted:0,risk:0,overdue:0};
+  ROWS.forEach(function(r){var b=bucket(r);if(counts[b]!=null)counts[b]++;if(atRisk(r))counts.risk++;if(r.overdue)counts.overdue++;});
+  var T=[['all','All projects',ROWS.length,''],['ready','Ready to book',counts.ready,'good'],['review','In review',counts.review,''],['hca','With HCAs',counts.hca,'warn'],['notstarted','Not started',counts.notstarted,''],['risk','Install within 3 days, not ready',counts.risk,'bad'],['overdue','Overdue items',counts.overdue,'bad']];
+  $('tiles').innerHTML=T.map(function(t){return '<button type="button" class="tile '+t[3]+'" data-f="'+t[0]+'" aria-pressed="'+(FILTER===t[0])+'"><b>'+t[2]+'</b><span>'+t[1]+'</span></button>';}).join('');
+  document.querySelectorAll('.tile').forEach(function(b){b.onclick=function(){FILTER=b.dataset.f;OPEN=null;render();};});
+  var rows=ROWS.filter(matches).sort(function(a,b){return urgency(a)<urgency(b)?-1:1;});
+  if(!rows.length){$('list').innerHTML='<div class="empty">Nothing matches. Clear a filter above.</div>';}
+  else{
+    var h='<div class="row head" aria-hidden="true"><div>Project</div><div>HCA</div><div>Install</div><div>Status</div><div>HCA items</div><div>Lanes</div><div>Open / next due</div></div>';
+    rows.forEach(function(r){var d=daysTo(r.installDate),pct=r.readiness.total?Math.round(100*r.readiness.done/r.readiness.total):0,risk=atRisk(r);
+      h+='<button type="button" class="row" data-job="'+esc(r.job)+'" aria-expanded="'+(OPEN===r.job)+'"><div><b>'+esc(r.customer)+'</b><br><small>job '+esc(r.job)+' · '+esc(r.source==='sold'?'sold':r.source)+'</small></div>'
+        +'<div>'+esc(r.hca)+'</div><div>'+dlabel(r.installDate)+(d!==null?'<br><small'+(risk?' style="color:#fecaca"':'')+'>'+(d<0?(-d)+' days ago':d===0?'today':'in '+d+' days')+'</small>':'')+'</div>'
+        +'<div>'+statusChip(r)+'</div><div>'+r.readiness.done+' of '+r.readiness.total+'<div class="bar"><i class="'+(pct>=100?'done':'')+'" style="width:'+pct+'%"></i></div></div>'
+        +'<div>'+lanesHtml(r.lanes)+'</div><div>'+(r.openItems.length?'<span class="chip '+(r.overdue?'bad':'warn')+'">'+r.openItems.length+' open</span>'+(r.nextDue?'<br><small'+(r.overdue?' style="color:#fecaca"':'')+'>due '+dlabel(r.nextDue)+'</small>':''):'<span class="muted">—</span>')+'</div></button>';
+      if(OPEN===r.job)h+='<div class="detail" id="detail" role="region" aria-label="Project detail"></div>';});
+    $('list').innerHTML=h;
+    document.querySelectorAll('.row[data-job]').forEach(function(b){b.onclick=function(){OPEN=(OPEN===b.dataset.job)?null:b.dataset.job;render();};});
+    if(OPEN)openDetail(OPEN);
+  }
+  score();
+}
+function score(){
+  var by={};ROWS.forEach(function(r){var s=by[r.hca]=by[r.hca]||{n:0,pct:0,ready:0,review:0,hca:0,overdue:0,gaps:0,parked:0};s.n++;s.pct+=r.readiness.total?r.readiness.done/r.readiness.total:0;var b=bucket(r);if(s[b]!=null)s[b]++;if(r.overdue)s.overdue++;if(r.parked)s.parked++;
+    r.openItems.forEach(function(x){if(x.who!=='HCA'&&(x.state==='missing'||x.state==='mismatch'))s.gaps++;});});
+  var h='<table><thead><tr><th>HCA</th><th>Projects</th><th>Avg. done</th><th>Ready</th><th>In review</th><th>With HCA</th><th>Overdue</th><th>Parked</th><th>Gaps found</th></tr></thead><tbody>';
+  Object.keys(by).sort().forEach(function(k){var s=by[k];h+='<tr><td><b>'+esc(k)+'</b></td><td>'+s.n+'</td><td>'+Math.round(100*s.pct/s.n)+'%</td><td>'+s.ready+'</td><td>'+s.review+'</td><td>'+s.hca+'</td><td>'+(s.overdue?'<span class="chip bad">'+s.overdue+'</span>':'0')+'</td><td>'+s.parked+'</td><td>'+s.gaps+'</td></tr>';});
+  $('score').innerHTML=h+'</tbody></table>';
+}
+function reminderText(r){
+  var items=r.openItems.filter(function(x){return true;}).map(function(x){return '• '+label(x.item)+' — '+(x.state==='working'?'still working on it':x.state)+(x.why?' ('+x.why+')':'')+(x.when?' — needed by '+dlabel(x.when):'');}).join('\n');
+  return 'Hi '+r.hca.split(' ')[0]+', quick check on '+r.customer+' (job '+r.job+')'+(r.installDate?', install '+dlabel(r.installDate):'')+':\n'+(items||'• Everything on your side looks complete. Please submit it for review.')+'\nThanks!';
+}
+function openDetail(job){
+  var r=ROWS.filter(function(x){return x.job===job;})[0];if(!r)return;
+  api('/api/record?job='+encodeURIComponent(job)).then(function(d){
+    var el=$('detail');if(!el||!d.ok)return;var rec=d.record,h=rec.hca||{},items=h.items||{};
+    var said=Object.keys(NAMES).filter(function(k){return items[k]||k==='pay'&&h.pay;}).map(function(k){var v=k==='pay'?h.pay:(({yes:'Complete',work:'Working on it',no:'Not done',na:'N/A'})[(items[k]||{}).v]||'');return '<li><b>'+esc(label(k))+':</b> '+esc(v)+'</li>';}).join('')||'<li class="muted">Nothing answered yet.</li>';
+    var open=r.openItems.map(function(x){return '<li><span class="chip '+(x.overdue?'bad':'warn')+'">'+esc(x.who)+'</span> <b>'+esc(label(x.item))+'</b> — '+esc(x.state)+(x.why?': '+esc(x.why):'')+(x.when?' · by '+dlabel(x.when):'')+(x.overdue?' <span style="color:#fecaca">(overdue)</span>':'')+'</li>';}).join('')||'<li class="muted">Nothing open.</li>';
+    var hist=(rec.history||[]).slice(-10).reverse().map(function(x){return '<li class="muted">'+esc(x.at.slice(5,16).replace('T',' '))+' · '+esc(x.by)+' · '+esc(x.field)+' → '+esc(x.to)+'</li>';}).join('')||'<li class="muted">—</li>';
+    el.innerHTML='<div class="grid2"><div><h3>Needs attention</h3><ul class="list">'+open+'</ul>'+(rec.parked?'<h3>Parked</h3><p>'+esc(rec.parked.reason)+' · back by '+dlabel(rec.parked.revisit)+(rec.parked.note?'<br><span class="muted">'+esc(rec.parked.note)+'</span>':'')+'</p>':'')+(r.reopen?'<h3>Sent back</h3><p>'+esc(r.reopen.by)+': '+esc(r.reopen.reason)+'</p>':'')+'<h3>What the HCA said</h3><ul class="list">'+said+'</ul></div>'
+      +'<div><h3>Lanes</h3><p>'+lanesHtml(r.lanes)+' <span class="muted">Sales · Install · Electrical</span></p><h3>History</h3><ul class="list">'+hist+'</ul></div></div>'
+      +'<h3>Reminder for the HCA (a draft to paste into your own message; nothing is sent from here)</h3><textarea id="remind" readonly>'+esc(reminderText(r))+'</textarea>'
+      +'<div class="acts"><button class="btn" id="copyBtn" type="button">Copy reminder</button><button class="btn go" id="installedBtn" type="button"'+(r.status==='ready'?'':' disabled')+'>Mark installed</button></div>'
+      +'<h3>Send back to the HCA</h3><textarea id="why" placeholder="Why? (required, the HCA will see this)"'+((r.status==='submitted'||r.status==='in_review'||r.status==='ready')?'':' disabled')+'></textarea>'
+      +'<div class="acts"><button class="btn danger" id="backBtn" type="button"'+((r.status==='submitted'||r.status==='in_review'||r.status==='ready')?'':' disabled')+'>Send back to HCA</button><span class="msg" id="msg" role="status"></span></div>';
+    $('copyBtn').onclick=function(){var t=$('remind');t.select();try{navigator.clipboard&&navigator.clipboard.writeText(t.value);document.execCommand&&document.execCommand('copy');}catch(e){}$('msg').className='msg ok';$('msg').textContent='Copied. Paste it into your own email or text.';};
+    $('installedBtn').onclick=function(){api('/api/install',{job:job,by:$('me').value}).then(function(x){if(x.ok)reload();else{$('msg').className='msg err';$('msg').textContent=x.error||'Could not save';}});};
+    $('backBtn').onclick=function(){var why=$('why').value.trim();if(why.length<3){$('msg').className='msg err';$('msg').textContent='Say why you are sending it back.';return;}
+      api('/api/reopen',{job:job,by:$('me').value,reason:why}).then(function(x){if(x.ok){OPEN=job;reload();}else{$('msg').className='msg err';$('msg').textContent=x.error||'Could not send back';}});};
+  });
+}
+function reload(){return api('/api/admin').then(function(d){ROWS=d.jobs||[];var hs=Object.keys(ROWS.reduce(function(a,r){a[r.hca]=1;return a;},{})).sort(),cur=$('fHca').value;
+  $('fHca').innerHTML='<option value="">All HCAs</option>'+hs.map(function(h){return '<option'+(h===cur?' selected':'')+'>'+esc(h)+'</option>';}).join('');render();});}
+['fHca','fWhen'].forEach(function(id){$(id).onchange=function(){OPEN=null;render();};});$('fQ').oninput=function(){OPEN=null;render();};
+if(['Amy','Brittny','Geoff'].indexOf(AS)>=0)$('me').value=AS;
+api('/api/meta').then(function(m){META=m;return reload();}).catch(function(){$('list').innerHTML='<div class="empty">The admin page runs on the practice or sandbox system for now (not connected to live yet).</div>';});
+</script>
+</body>
+</html>
