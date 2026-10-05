@@ -12,11 +12,12 @@ async function main() {
     await env.clearDatabase();
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
-      cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true } },
-      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true } },
+      cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
+      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
         j2: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' } },
+        j3b: { status: 'ready', hca: { pay: 'x', submittedAt: 't' }, lanes: { sales: { signoff: 'confirmed' }, install: { signoff: 'confirmed' }, electrical: { signoff: 'confirmed' } } },
         j3: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' }, lanes: { sales: { signoff: 'confirmed' }, install: { signoff: 'confirmed' }, electrical: { signoff: 'confirmed' } } } } }
     }));
     const g = (uid, email, provider = 'google.com', verified = true) => env.authenticatedContext(uid, { email, email_verified: verified, firebase: { sign_in_provider: provider } }).database();
@@ -83,6 +84,8 @@ async function main() {
     await ok(adm2.ref(J('j2/status')).set('working')); await ok(adm2.ref(J('j2/reopen')).set({ by: 'adm-two@cmheating.com', reason: 'Photos missing', at: 't' }));
     await no(adm2.ref(J('j2/reopen')).set({ by: 'someone@cmheating.com', reason: 'forged by', at: 't' })); await no(adm2.ref(J('j2/reopen')).set({ by: 'adm-two@cmheating.com', reason: 'x', at: 't' }));
     await no(hca1.ref(J('j2/reopen')).set({ by: 'hca-one@cmheating.com', reason: 'self send back', at: 't' }));
+    await ok(mgrI.ref(J('j3b/status')).set('in_review')); // ready -> in review when a manager finds something missing (see seed j3b)
+    await ok(sched.ref('cmh_install_roster/hcas').once('value')); await ok(mgrI.ref('cmh_install_roster/hcas').once('value')); await no(hca1.ref('cmh_install_roster/hcas').once('value')); await no(anon.ref('cmh_install_roster/hcas').once('value')); await no(mgrI.ref('cmh_install_roster/hcas/x').set('y'));
     await no(admin.ref(J('j2/status')).set('working'));   // a followup-roster admin is NOT an install admin until given the flag in cmh_install_roster
 
     // history: append-only, signed, and only by the job's owner / managers / admin (AUD-09)
