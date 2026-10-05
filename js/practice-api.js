@@ -177,6 +177,7 @@
       if ("pay" in body) h.pay = str(body.pay, 80);
       if ("notes" in body) h.notes = str(body.notes, 600);
       if ("rebateProgram" in body) h.rebateProgram = str(body.rebateProgram, 60);
+      if ("rebateAmount" in body) h.rebateAmount = str(body.rebateAmount, 40).replace(/[^0-9.,$ ]/g, "").slice(0, 20);
       var itemsIn = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
       if (!isObj(itemsIn) || !Object.keys(itemsIn).every(function (k) { return isObj(itemsIn[k]); })) return [400, { ok: false, error: "items must be an object of objects" }];
       var ks = Object.keys(itemsIn);
