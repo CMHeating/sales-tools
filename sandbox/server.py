@@ -28,6 +28,7 @@ BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "vi
 RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]
 # Rebate (2026-10-04): "rebate" is answered yes / na (= no rebate). When yes, a program is chosen and its questions must all be Complete
 # for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
+NA_OK = ["ahri", "e-disconnect", "e-outlet"] + ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]   # items that may be answered N/A ("rebate" uses na for "No rebate")
 REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"]
 REBATE_PROGRAM_ITEMS = {"PSE": ["rb-balance", "rb-ahri", "rb-tc"], "PUD": ["rb-balance", "rb-ahri"], "Gensco": ["rb-balance", "rb-equip"], "Other": ["rb-balance", "rb-ahri"]}
 
@@ -134,7 +135,8 @@ def hca_items(rec):
         ids += REBATE_PROGRAM_ITEMS.get(rebate_key(h.get("rebateProgram")), [])
     out = {}
     for i in ids:
-        out[i] = pay_state(pay) if i == "pay" else (items.get(i, {}).get("v") or "")
+        v = pay_state(pay) if i == "pay" else (items.get(i, {}).get("v") or "")
+        out[i] = "" if v == "na" and i != "pay" and i != "rebate" and i not in NA_OK else v   # a stale N/A on an item that no longer offers it is unanswered
     return out
 
 
@@ -384,7 +386,7 @@ class H(SimpleHTTPRequestHandler):
                     for k, v in items_in.items():
                         if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS:
                             return self._json(400, {"ok": False, "error": "unknown item " + k})
-                        if v.get("v") not in HCA_STATES or (k == "rebate" and v.get("v") not in ("yes", "na")):
+                        if v.get("v") not in HCA_STATES or (k == "rebate" and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k != "rebate" and k not in NA_OK):
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
                         old = h.setdefault("items", {}).get(k, {}).get("v")
                         h["items"][k] = {"v": v["v"], "why": str(v.get("why", ""))[:60], "when": str(v.get("when", ""))[:10], "note": str(v.get("note", ""))[:200]}

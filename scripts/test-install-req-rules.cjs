@@ -95,7 +95,13 @@ async function main() {
     await no(adm2.ref(J('r7/status')).set('ready'));                                                // "Other" with no program name
     await ok(adm2.ref(J('r8/status')).set('ready'));                                                // "Other: <name>" with balance + AHRI Complete
     await no(adm2.ref(J('r9/status')).set('ready'));                                                // rebate never answered
-    await no(hca1.ref(J('j5/hca/items/rebate')).set({ v: 'work' }));                                // the rebate row is Yes / No only
+    await no(hca1.ref(J('j5/hca/items/rebate')).set({ v: 'work' }));
+    await no(hca1.ref(J('j5/hca/items/heatload')).set({ v: 'na' }));                                // N/A only where it is offered (2026-10-05)
+    await no(hca1.ref(J('j5/hca/items/permit')).set({ v: 'na' }));
+    await no(hca1.ref(J('j5/hca/items/i-labor')).set({ v: 'na' }));
+    await ok(hca1.ref(J('j5/hca/items/ahri')).set({ v: 'na' }));
+    await ok(hca1.ref(J('j5/hca/items/e-outlet')).set({ v: 'na' }));
+    await ok(hca1.ref(J('j5/hca/items/r-dl')).set({ v: 'na' }));                                // the rebate row is Yes / No only
     await no(hca1.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/rebateProgram': 'garbage', 'hca/items': { ...HCAFULL.items, rebate: { v: 'yes' } } }));                                                // rebate yes but no program chosen
     await no(adm2.ref(J('j4/status')).set('ready'));                                                // a lane item is still Missing: cannot be ready, even for an admin writing directly
     await no(mgrI.ref(J('j4/status')).set('ready'));

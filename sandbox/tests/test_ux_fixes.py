@@ -152,5 +152,13 @@ with sync_playwright() as p:
     ok('floating ring appears after scrolling down and shows progress', pg.is_visible('#fring') and '/' in pg.inner_text('#fringT'))
     pg.click('#fring'); pg.wait_for_timeout(900)
     ok('tapping it returns to the top; ring hides again', pg.evaluate("window.scrollY") < 50 and not pg.is_visible('#fring'))
+    # Codex review (PR #51): an N/A saved before the button was removed must not count as an answer
+    api('POST', '/api/reset', {}); pg.goto(URL)
+    pg.evaluate("() => { const d = JSON.parse(localStorage.getItem('cmh_practice_db_v1')); d.records['900001'] = {hca: {pay: '\\u2714 Paid in full', items: {heatload: {v: 'na'}, permit: {v: 'na'}, stock: {v: 'yes'}}}}; localStorage.setItem('cmh_practice_db_v1', JSON.stringify(d)); }")
+    pg.reload(); pg.wait_for_timeout(800)
+    ok('stale N/A on Heat load / Permit is unanswered after load (rows show no selection, both still count in the total)', pg.locator('button[data-id="heatload"][aria-checked="true"]').count() == 0 and pg.locator('button[data-id="permit"][aria-checked="true"]').count() == 0 and pg.inner_text('#ringN').replace('\n', ' ') == '2 of 12')
+    c, r = api('POST', '/api/hca', {'job': '900001', 'items': {'heatload': {'v': 'na'}}}); ok('API refuses N/A on Heat load', c == 400)
+    c, r = api('POST', '/api/hca', {'job': '900001', 'items': {'permit': {'v': 'na'}}}); ok('API refuses N/A on Permit', c == 400)
+    c, r = api('POST', '/api/hca', {'job': '900001', 'items': {'ahri': {'v': 'na'}, 'e-outlet': {'v': 'na'}}}); ok('API still accepts N/A on AHRI and Service outlet', c == 200)
     ok('no page errors', not errs); print(errs[:3]); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
