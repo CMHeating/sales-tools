@@ -222,7 +222,7 @@ function paintWhy(id){
     box.classList.add('on');}
   else box.classList.remove('on');
 }
-function managerFindings(){var out=[];if(!REMOTE.lanes)return out;
+function managerFindings(){var out=[];if(REMOTE.reopen)out.push({id:'',c:'r',t:'Sent back by '+(REMOTE.reopen.by||'a manager')+': '+REMOTE.reopen.reason});if(!REMOTE.lanes)return out;
   Object.keys(REMOTE.lanes).forEach(function(l){var it=(REMOTE.lanes[l]||{}).items||{};Object.keys(it).forEach(function(k){var x=it[k];
     if(x.result==='missing'||x.result==='mismatch')out.push({id:'',c:'r',t:'Manager '+(x.by||l)+' found '+x.result+': '+k+' — '+(x.found||'')+(x.when?' · by '+x.when:'')});});});return out;}
 function openNeeds(){
@@ -272,8 +272,9 @@ function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.
   if(!SANDBOX||!H.job)return Promise.resolve();
   return remote('/api/record?job='+encodeURIComponent(H.job)).then(function(d){
     if(!d||!d.ok)return;var r=d.record,h=r.hca||{};
-    REMOTE.status=r.status;REMOTE.lanes=r.lanes||null;
+    REMOTE.status=r.status;REMOTE.lanes=r.lanes||null;REMOTE.reopen=r.reopen||null;
     if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',parked:r.parked||undefined};applyState();}
+    else{S={items:{},pay:'',notes:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
     if(r.status==='submitted'||r.status==='in_review'||r.status==='ready')submitted=true;
     render();});}
 
@@ -296,7 +297,7 @@ function submit(){
   var ready=needs.length?'⚠ Ready with notes':'✔ Ready';
   var b=$('submitBtn');b.disabled=true;b.textContent='Sending…';
   if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
-      if(d&&d.ok){submitted=true;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Sent to the managers.</b> (sandbox: logged to the outbox, not emailed)';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
+      if(d&&d.ok){submitted=true;REMOTE.reopen=null;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Sent to the managers.</b> (sandbox: logged to the outbox, not emailed)';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
       else{b.disabled=false;$('barTxt').textContent='Couldn’t save: '+((d&&d.error)||'error');}}).catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Sandbox server not reachable.';});return;}
   if(!LIVE_SEND){setTimeout(function(){b.textContent='Submit';$('needs').className='needs clear';$('needs').innerHTML='<b>Demo: this would go to the managers now.</b> Nothing was sent.';$('barTxt').innerHTML='<b>Demo submit done.</b> Nothing was sent.';b.disabled=false;},500);return;}
   api({action:'installcheck',handoff:'1',customer:H.cust||'',idate:H.date||'',hca:H.rep||'',by:H.rep||'',ready:ready,city:'',critical:'',jflag:'',verdict:ready,
