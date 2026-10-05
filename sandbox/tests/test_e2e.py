@@ -108,7 +108,7 @@ with sync_playwright() as p:
     pg.goto(url('900002', 'Sample+Bravo', 6)); pg.reload(); pg.wait_for_timeout(700)
     ok('sandbox banner on localhost', 'SANDBOX' in pg.inner_text('#envBar'))
     ok('AUD-hostname: attacker host names do not count as sandbox', pg.evaluate("[SANDBOX_RE.test('localhost.attacker.invalid'),SANDBOX_RE.test('evil.example.com'),SANDBOX_RE.test('10.0.0.5.evil.com'),SANDBOX_RE.test('127.0.0.1'),SANDBOX_RE.test('localhost'),SANDBOX_RE.test('192.168.1.20')]") == [False, False, False, True, True, True])
-    ok('"No" is labelled "Not done"', pg.inner_text('button[data-id="stock"][data-v="no"]') == 'Not done')
+    ok('"No" is labelled "Not done"', pg.inner_text('button[data-id="permit"][data-v="no"]') == 'Not done')
     ok('Needs-you entries are real buttons (keyboard reachable)', pg.evaluate("document.querySelectorAll('#needs a[data-go]').length") == 0)
     # AUD-12: draft restore vs server state
     pg.evaluate("localStorage.clear()")

@@ -236,7 +236,7 @@ function build(){
     var box=$('g-'+g);box.innerHTML='';
     ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
       var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
-      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:(id==='heatload'||id==='rb-balance')?[['yes','Yes'],['no','No']]:(id==='i-labor')?[['yes','Yes'],['no','No']]:(id==='mat'||id==='photos'||id==='video')?[['yes','Yes'],['work','Working on it']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
+      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:(id==='heatload'||id==='rb-balance'||id==='stock')?[['yes','Yes'],['no','No']]:(id==='i-labor')?[['yes','Yes'],['no','No']]:(id==='mat'||id==='photos'||id==='video')?[['yes','Yes'],['work','Working on it']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
       row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
         +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
         +'</div><div class="why" id="why-'+id+'"></div>';

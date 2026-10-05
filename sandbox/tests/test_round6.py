@@ -62,10 +62,15 @@ with sync_playwright() as p:
     pg.click('button[data-id="rb-balance"][data-v="no"]'); pg.wait_for_timeout(300)
     ok('No on the balance point asks why and by when (rebate gate fails)', pg.is_visible('#why-rb-balance') and 'not secured' in pg.inner_text('#rebNote').lower())
     pg.click('button[data-id="rb-balance"][data-v="yes"]'); pg.click('button[data-id="rebate"][data-v="na"]'); pg.wait_for_timeout(200)
+    # equipment in stock is Yes / No
+    ok('Equipment in stock? is Yes / No', lab('stock') == ['Yes', 'No'])
+    pg.click('button[data-id="stock"][data-v="no"]'); pg.wait_for_timeout(300)
+    ok('No asks why and by when', pg.is_visible('#why-stock'))
+    pg.click('button[data-id="stock"][data-v="yes"]'); pg.wait_for_timeout(200)
     # potential permit delays
     ok('"Potential permit delays?" sits right after the Permit question with Yes / No', pg.is_visible('#sec-equip #row-permitdelay') and pg.eval_on_selector_all('button[data-id="permitdelay"]', 'els => els.map(e => e.textContent.trim())') == ['Yes', 'No'])
     pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.wait_for_timeout(500)
-    ok('saved, not counted, and needs no reason/date', rec()['items']['permitdelay']['v'] == 'yes' and pg.inner_text('#ringN').replace('\\n', ' ') == '1 of 9' and not pg.is_visible('#why-permitdelay'))
+    ok('saved, not counted, and needs no reason/date', rec()['items']['permitdelay']['v'] == 'yes' and pg.inner_text('#ringN').replace('\\n', ' ') == '2 of 9' and not pg.is_visible('#why-permitdelay'))
     c, r = api('POST', '/api/hca', {'job': '900001', 'items': {'permitdelay': {'v': 'work'}}}); ok('only Yes or No is accepted', c == 400)
     # electrical labor is Yes / No only
     labels = pg.eval_on_selector_all('button[data-id="i-labor"]', 'els => els.map(e => e.textContent.trim())')
