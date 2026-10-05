@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HCA home (practice) — CM Heating</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  /* Mirrors the live CRM tokens/classes so the two cards look the same as in crm.html. */
+  :root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:Outfit,system-ui,sans-serif;padding-bottom:40px}
+  #envBar{text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px;background:#7f1d1d;color:#fecaca}
+  .main{max-width:900px;margin:0 auto;padding:16px}
+  h1{font-family:"Playfair Display",serif;font-size:26px;margin:6px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:14px;overflow:hidden}
+  .card-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .card-head h2{margin:0;font-family:"Playfair Display",serif;font-size:18px}.tag{font-size:11px;color:var(--muted);font-weight:700}
+  .card-body{padding:14px 16px}.card-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+  .btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 14px;font:inherit;font-size:12px;font-weight:900;letter-spacing:.04em;cursor:pointer;text-decoration:none}
+  .metrics{display:flex;gap:16px;flex-wrap:wrap}.metric{border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:92px}.metric strong{display:block;font-size:22px}.metric span{font-size:12px;color:var(--muted)}
+  select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font:inherit;padding:8px 12px}
+  .soon{color:var(--muted);padding:8px 0;font-size:14px}
+  .proj-list{max-height:260px;overflow-y:auto;margin-top:12px;border-top:1px solid var(--line)}
+  .proj-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}.proj-row:hover{background:rgba(255,255,255,.05)}
+  .proj-dot{width:18px;height:18px;border-radius:50%;flex:none;background:var(--yellow);color:#0a1628;font-size:11px;font-weight:900;line-height:18px;text-align:center}.proj-dot.g{background:var(--green)}.proj-dot.r{background:var(--red)}.proj-dot.y{background:var(--yellow)}
+  .proj-main{flex:1;display:flex;flex-direction:column;font-size:14px;line-height:1.25}.proj-main span{font-size:12px;color:var(--muted)}.proj-n{font-size:13px;font-weight:700;white-space:nowrap}
+  .btn[aria-disabled=true]{opacity:.4;pointer-events:none}
+  .proj-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+  .sched-nav{display:flex;align-items:center;gap:8px;padding:12px 16px;flex-wrap:wrap}.sched-date{flex:1;text-align:center;font-weight:700}
+  .sched-ov{margin:6px 16px 14px}.sched-ov-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+</style>
+</head>
+<body>
+<div id="envBar">PRACTICE — fake data. These are the two cards you will see in your CRM. Nothing here is real.</div>
+<div class="main">
+  <h1>HCA home <select id="rep" aria-label="HCA"><option>Samir Khoury</option><option>Chester Granard</option></select></h1>
+
+  <div class="card" id="actCard">
+    <div class="card-head"><h2>Daily Activities</h2><span class="tag">Sold + backlog / pipeline</span></div>
+    <div class="card-body"><div class="metrics"><div class="metric"><strong>0</strong><span>Ride Alongs</span></div><div class="metric"><strong>0</strong><span>Self-Gen</span></div><div class="metric"><strong>0</strong><span>Referrals</span></div></div>
+      <div class="proj-list" id="projList"></div></div>
+    <div class="card-foot"><a class="btn" href="#" onclick="return false">File today's recap</a><select id="projPick" aria-label="Choose a project"></select><a class="btn" id="actCompleteLink" href="#" aria-disabled="true">Project completion</a></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>My Schedule</h2><span class="tag" id="schedTag">Week</span></div>
+    <div class="sched-nav"><button class="btn" id="prev">&lsaquo;</button><div class="sched-date" id="schedDate"></div><button class="btn" id="next">&rsaquo;</button><button class="btn" id="today">Today</button><button class="btn" id="vDay">Day</button><button class="btn" id="vWeek">Week</button></div>
+    <div id="schedBody"></div>
+  </div>
+</div>
+<script src="../js/practice-api.js"></script>
+<script src="../js/install-projects.js"></script>
+<script>
+CMHProjects.config.page = "../install-requirements.html"; CMHProjects.config.hashExtra = "&practice=1";
+var $ = function (id) { return document.getElementById(id); };
+var DATA = { jobs: [], pipeline: [] }, view = "week", cur = new Date(); cur.setHours(0, 0, 0, 0);
+function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function who() { return { full: $("rep").value }; }
+function load() {
+  fetch("/api/jobs?rep=" + encodeURIComponent($("rep").value)).then(function (r) { return r.json(); }).then(function (d) {
+    /* the API returns readiness + status per job; shape it like the sold tracker nodes */
+    DATA.jobs = d.jobs || []; DATA.pipeline = d.pipeline || []; render();
+  });
+}
+function render() {
+  var t = iso(new Date()), w = who();
+  $("projList").innerHTML = CMHProjects.listHtml(DATA.jobs, DATA.pipeline, w, t);
+  var opts = CMHProjects.options(DATA.jobs, DATA.pipeline, w, t), pick = $("projPick"), lk = $("actCompleteLink");
+  pick.innerHTML = CMHProjects.optionsHtml(opts);
+  pick.onchange = function () { var o = opts[Number(pick.value)]; if (pick.value !== "" && o) { lk.href = o.link; lk.removeAttribute("aria-disabled"); } else { lk.href = "#"; lk.setAttribute("aria-disabled", "true"); } };
+  pick.onchange();
+  var from, to, label;
+  if (view === "day") { from = to = iso(cur); label = cur.toDateString().slice(0, 10); }
+  else { var s = new Date(cur); s.setDate(s.getDate() - s.getDay()); var e = new Date(s); e.setDate(e.getDate() + 6); from = iso(s); to = iso(e); label = "Week of " + (s.getMonth() + 1) + "/" + s.getDate(); }
+  $("schedDate").textContent = label; $("schedTag").textContent = view === "day" ? "Day" : "Week";
+  $("schedBody").innerHTML = CMHProjects.overlayHtml(DATA.jobs, DATA.pipeline, w, from, to, t) || '<div class="soon" style="padding:0 16px 14px">Nothing scheduled in this range.</div>';
+}
+$("rep").onchange = load;
+$("prev").onclick = function () { cur.setDate(cur.getDate() - (view === "week" ? 7 : 1)); render(); };
+$("next").onclick = function () { cur.setDate(cur.getDate() + (view === "week" ? 7 : 1)); render(); };
+$("today").onclick = function () { cur = new Date(); cur.setHours(0, 0, 0, 0); render(); };
+$("vDay").onclick = function () { view = "day"; render(); }; $("vWeek").onclick = function () { view = "week"; render(); };
+load();
+</script>
+</body>
+</html>
