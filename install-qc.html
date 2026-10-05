@@ -120,7 +120,7 @@ function openJob(job){
       return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
     var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
     var html='<button class="back" type="button" id="backBtn">&larr; All jobs</button><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
-    if(h.system||h.scope||h.notes)html+='<div class="card"><div class="said">'+(h.system?'<b>Sold:</b> '+esc(h.system)+'<br>':'')+(h.scope?'<b>Install time / electrical:</b> '+esc(h.scope)+'<br>':'')+(h.notes?'<b>HCA notes:</b> '+esc(h.notes):'')+'</div></div>';
+    if(h.system||h.vendor||h.filterSize||h.scope||h.notes)html+='<div class="card"><div class="said">'+(h.system?'<b>Sold:</b> '+esc(h.system)+'<br>':'')+(h.vendor?'<b>Vendor:</b> '+esc(h.vendor)+'<br>':'')+(h.filterSize?'<b>Filter size:</b> '+esc(h.filterSize)+'<br>':'')+(h.scope?'<b>Install time / electrical:</b> '+esc(h.scope)+'<br>':'')+(h.notes?'<b>HCA notes:</b> '+esc(h.notes):'')+'</div></div>';
     Object.keys(META.lanes).forEach(function(lane){
       var L=(r.lanes||{})[lane]||{items:{}},mine=LIVE?!!(((META.me||{}).lanes||{})[lane]):(lane===mylane),sum=r.lanesSummary[lane];
       html+='<details class="card" data-lane="'+lane+'"'+((mine||!mylane)?' open':'')+'><summary class="lanesum"><h2>'+LANE_NAME[lane]+' · '+META.lanes[lane].who+' '+laneChip(lane,sum)+'</h2></summary>';
