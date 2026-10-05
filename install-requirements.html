@@ -123,11 +123,19 @@
 
   <section class="card" id="sec-equip"><h2><span class="n">2</span>Equipment &amp; permit</h2><p class="hint">What has to be true for the install date.</p><div id="g-equip"></div></section>
 
-  <section class="card" id="sec-layout"><h2><span class="n">3</span>Layout &amp; materials</h2><p class="hint">Done and uploaded to the customer&rsquo;s ServiceTitan profile.</p><div id="g-layout"></div>
+  <section class="card" id="sec-rebate"><h2><span class="n">3</span>Rebate</h2><p class="hint">Utility or program rebate on this job.</p><div id="g-rebate"></div>
+    <div class="row" id="rebProgBox" style="display:none"><label class="l" for="rebProg">Which program?</label>
+      <select id="rebProg"><option value="">Select…</option><option>PSE</option><option>PUD</option><option>Gensco</option><option value="Other">Other</option></select>
+      <input type="text" id="rebOther" maxlength="40" placeholder="Which program?" style="display:none;margin-top:8px"></div>
+    <div id="g-rebsub"></div><div class="hint" id="rebNote" style="margin-top:10px;display:none"></div></section>
+
+  <section class="card" id="sec-layout"><h2><span class="n">4</span>Layout &amp; materials</h2><p class="hint">Done and uploaded to the customer&rsquo;s ServiceTitan profile.</p><div id="g-layout"></div>
     <div class="row"><label class="l" for="notes">Notes</label><textarea id="notes" placeholder="Special orders, back-ordered items, access, where equipment lands."></textarea></div>
   </section>
 
-  <section class="card" id="sec-rental" style="display:none"><h2><span class="n">4</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
+  <section class="card" id="sec-elec"><h2><span class="n">5</span>Electrical</h2><p class="hint">Same checks as the Next Day Install Check. Jon verifies them against ServiceTitan.</p><div id="g-elec"></div></section>
+
+  <section class="card" id="sec-rental" style="display:none"><h2><span class="n">6</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
   <p class="hint" id="leaveHint" style="margin:4px 2px 90px">Closing this page does not save your work with the office. Your answers stay on this device only until you tap <b>Save &amp; exit</b> or <b>Submit</b>.</p>
 </div>
 
@@ -158,16 +166,31 @@ var ITEMS=[
  ['permit','Permit / jurisdiction ready for the install date?','equip','✔ Yes — not needed or filed',false],
  ['heatload','Heat load calc completed?','equip','✔ Yes',true],
  ['ahri','AHRI match on file?','equip','✔ Yes — AHRI match on file',true],
+ ['rebate','Rebate eligible?','rebate','✔ Yes — rebate eligible',false],
+ ['rb-balance','Balance point works for the program?','rebsub','✔ Yes',false],
+ ['rb-ahri','AHRI certificate on file?','rebsub','✔ Yes',false],
+ ['rb-tc','Terms & conditions done?','rebsub','✔ Yes',false],
+ ['rb-equip','Correct equipment? Double-check model #s','rebsub','✔ Yes',false],
  ['mat','Materials list complete & ordered?','layout','✔ Yes — complete & ordered',false],
  ['photos','Layout photos taken?','layout','✔ Yes',false],
  ['video','Walkthrough video taken?','layout','✔ Yes',false],
+ ['i-labor','Install labor billed correctly?','layout','✔ Yes — billed correctly',false],
+ ['e-disconnect','Disconnect over 24" checked?','elec','✔ Yes',true],
+ ['e-outlet','Service outlet within 25\' checked?','elec','✔ Yes',true],
+ ['e-labor','Electrical labor billed correctly?','elec','✔ Yes — billed correctly',false],
  ['r-contract','Rental contract signed?','rental','✔ Yes',true],
  ['r-penny','Penny test done?','rental','✔ Yes',true],
  ['r-credit','Credit authorization?','rental','✔ Yes',true],
  ['r-payauth','Payment authorization?','rental','✔ Yes',true],
  ['r-dl','Driver’s license on file?','rental','✔ Yes',true],
  ['r-deed','Mortgage or deed on file?','rental','✔ Yes',true]];
-var REQUIRED=['pay','stock','permit','mat','photos','video'];   /* must be answered (Working counts) to submit */
+var REQUIRED=['pay','stock','permit','mat','photos','video','rebate','i-labor','e-labor'];   /* rebate: answer Yes or No on every job */
+var REBATE_SHOWN={PSE:['rb-balance','rb-ahri','rb-tc'],PUD:['rb-balance','rb-ahri'],Gensco:['rb-balance','rb-equip'],Other:['rb-balance','rb-ahri']};   /* which questions each program asks; the rebate gate = all of them Complete */
+function rebateKey(p){p=String(p||'');return p==='PSE'||p==='PUD'||p==='Gensco'?p:(/^Other: \S/.test(p)?'Other':'');}
+function rebateSel(p){p=String(p||'');return rebateKey(p)||(p.indexOf('Other')===0?'Other':'');}   /* what the picker shows, even before the name is typed */
+function rebateYes(){return stateOf('rebate')==='yes';}
+function shownRebate(){return rebateYes()?(REBATE_SHOWN[rebateSel(S.rebateProg)]||[]):[];}
+function rebateGateOk(){return !rebateYes()||(!!rebateKey(S.rebateProg)&&shownRebate().every(function(i){return stateOf(i)==='yes';}));}   /* must be answered (Working counts) to submit */
 var WORKING='⏳ Working on it';
 var H={};   /* link params: cust, date, job, rep */
 (location.hash||'').replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)H[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});
@@ -179,7 +202,7 @@ var SANDBOX=SANDBOX_RE.test(location.hostname)||PRACTICE||LIVEDATA;
 var LIVE_SEND=false;   /* live site: Submit is a DEMO (no email) until Geoff flips this to true */
 var REMOTE={status:'',lanes:null};
 function remote(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
-var S={items:{},pay:'',notes:''};          /* items[id]={v:yes|work|no|na, why, when, note} */
+var S={items:{},pay:'',notes:'',rebateProg:''};          /* items[id]={v:yes|work|no|na, why, when, note} */
 var KEY=(PRACTICE?'cmh_practice_req_':LIVEDATA?'cmh_live_req_':'cmh_install_req_')+(H.job||H.cust||'x');   /* practice drafts never mix with real ones */
 var submitted=false;
 
@@ -187,15 +210,15 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 function isRental(){return /rental/i.test(S.pay)||ITEMS.some(function(it){var st=it[2]==='rental'&&S.items[it[0]];return st&&st.v&&st.v!=='na';});}   /* once any rental paperwork is answered it stays on the list; mark it N/A to remove it */
 function payState(){var p=S.pay;if(!p||p==='Select…')return '';if(p===WORKING)return 'work';if(p==='N/A')return '';if(p.indexOf('✔')===0)return 'yes';return 'no';}   /* payment is never N/A: an old N/A answer counts as not answered */
 function stateOf(id){if(id==='pay')return payState();var o=S.items[id];return o?o.v:'';}
-function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[2]==='rental'&&!isRental())return;ids.push(it[0]);});return ids.filter(function(id){return stateOf(id)!=='na';});}
+function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[0]==='rebate')return;if(it[2]==='rental'&&!isRental())return;if(it[2]==='rebsub'&&shownRebate().indexOf(it[0])<0)return;ids.push(it[0]);});return ids.filter(function(id){return stateOf(id)!=='na';});}
 function label(id){if(id==='pay')return 'Payment status';for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][1].replace(/\?$/,'');return id;}
 
 function build(){
-  ['equip','layout','rental'].forEach(function(g){
+  ['equip','rebate','rebsub','layout','elec','rental'].forEach(function(g){
     var box=$('g-'+g);box.innerHTML='';
     ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
       var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
-      var btns=[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
+      var btns=id==='rebate'?[['yes','Yes'],['na','No']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
       row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
         +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
         +'</div><div class="why" id="why-'+id+'"></div>';
@@ -207,6 +230,8 @@ function build(){
   document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setItem(b.dataset.id,b.dataset.v);});});
   $('pay').addEventListener('change',function(){S.pay=this.value;paintWhy('pay');render();save();});
   $('notes').addEventListener('input',function(){S.notes=this.value;save();});
+  var rp=function(){var v=$('rebProg').value;S.rebateProg=v==='Other'?('Other'+($('rebOther').value.trim()?': '+$('rebOther').value.trim():'')):v;render();save();};
+  $('rebProg').addEventListener('change',rp);$('rebOther').addEventListener('input',rp);
 }
 function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;paintWhy(id);render();save();}
 function whyBox(id,o){
@@ -233,10 +258,12 @@ function openNeeds(){
   var out=[];active().forEach(function(id){var st=stateOf(id),o=S.items[id]||{};
     if(st==='no')out.push({id:id,c:'r',t:label(id)+' — '+(o.why||'add a reason')+(o.when?' · by '+o.when:' · add a date')});
     else if(st==='work')out.push({id:id,c:'y',t:label(id)+' — working on it'});});
+  if(rebateYes()&&!rebateGateOk()&&!rebateKey(S.rebateProg))out.push({id:'rebate',c:'y',t:(rebateSel(S.rebateProg)==='Other'?'Rebate — type the program name':'Rebate — choose the program')});
   return out.concat(managerFindings());
 }
 function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push(label(id));});
   if(isRental())ITEMS.forEach(function(it){if(it[2]==='rental'&&!stateOf(it[0]))m.push(label(it[0]));});
+  if(rebateYes()){if(!rebateSel(S.rebateProg))m.push('Rebate program');else if(!rebateKey(S.rebateProg))m.push('Rebate program name');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
   active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');else if(o.when<todayPT())m.push(label(id)+' (date has passed)');}});
   return m;}
 function render(){
@@ -250,6 +277,9 @@ function render(){
   $('flame').textContent=heat==='done'?'✓':'🔥';
   $('ringSub').textContent=heat==='done'?'dialed in':heat==='hot'?'almost there':'complete';
   $('sec-rental').style.display=isRental()?'':'none';
+  $('rebProgBox').style.display=rebateYes()?'':'none';$('rebOther').style.display=rebateSel(S.rebateProg)==='Other'?'':'none';
+  var shownR=shownRebate();ITEMS.forEach(function(it){if(it[2]==='rebsub'){var rw=$('row-'+it[0]);if(rw)rw.style.display=shownR.indexOf(it[0])>=0?'':'none';}});
+  var rn=$('rebNote');if(rebateYes()&&!rebateGateOk()){rn.style.display='';rn.style.color='#fde68a';rn.textContent='Rebate not secured yet. The project can be submitted, but it cannot be booked until every rebate question above is Complete (or Rebate eligible is set to No).';}else if(rebateYes()){rn.style.display='';rn.style.color='#bbf7d0';rn.textContent='Rebate requirements met.';}else rn.style.display='none';
   var needs=openNeeds(),nb=$('needs'),miss=missing(),mgr=managerFindings().length;
   if(locked()&&REMOTE.status!=='installed'){var who=REMOTE.lanes?Object.keys(REMOTE.lanes).reduce(function(a,l){var L=REMOTE.lanes[l]||{};Object.keys(L.items||{}).forEach(function(k){a.push(L.items[k].by);});return a;},[]).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;}):[];nb.className='needs clear';nb.innerHTML='<b>Under review.</b> '+(who.length?esc(who.join(' and '))+' '+(who.length>1?'are':'is')+' checking this project':'The managers are checking this project')+' against ServiceTitan, so editing is paused to keep your answers from colliding. If anything is missing it comes back to you here with what to fix.'+(mgr?'<ul>'+managerFindings().map(function(n){return '<li><span class="dot r"></span>'+esc(n.t)+'</li>';}).join('')+'</ul>':'');}
   else if(locked()){nb.className='needs clear';nb.innerHTML='<b>Installed.</b> This project is closed.';}
@@ -273,17 +303,17 @@ function render(){
 function cleanItems(){var o={};Object.keys(S.items||{}).forEach(function(k){var it=S.items[k]||{},v=k==='pay'?payState():it.v;if(v)o[k]={v:v,why:it.why||'',when:it.when||'',note:it.note||''};});return o;}
 var _rt=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
-  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
+  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
-function applyState(){$('pay').value=S.pay||'';$('notes').value=S.notes||'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
+function applyState(){$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
   applyState();
   if(!SANDBOX||!H.job)return Promise.resolve();
   return remote('/api/record?job='+encodeURIComponent(H.job)).then(function(d){
     if(!d||!d.ok){if(d&&d.error&&LIVEDATA)$('barTxt').textContent=d.error;return;}var r=d.record,h=r.hca||{};
     REMOTE.status=r.status;REMOTE.lanes=r.lanes||null;REMOTE.reopen=r.reopen||null;
-    if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',parked:r.parked||undefined};applyState();}
-    else{S={items:{},pay:'',notes:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
+    if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',rebateProg:h.rebateProgram||'',parked:r.parked||undefined};applyState();}
+    else{S={items:{},pay:'',notes:'',rebateProg:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
     submitted=/^(submitted|in_review|ready|installed)$/.test(r.status);
     render();});}
 
@@ -306,7 +336,7 @@ function submit(){if($('submitBtn').dataset.back){location.href=backHref();retur
   var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length;
   var ready=needs.length?'⚠ Ready with notes':'✔ Ready';
   var b=$('submitBtn');b.disabled=true;b.textContent='Sending…';
-  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
+  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
       if(d&&d.ok){submitted=true;REMOTE.reopen=null;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. '+(LIVEDATA?'Nobody is emailed yet; they will see it in their review queue.':'(sandbox: logged to the outbox, not emailed)')+'';$('barTxt').innerHTML='<b>Submitted.</b>';render();setTimeout(function(){if(submitted)location.href=backHref();},2500);}
       else{b.disabled=false;$('barTxt').textContent='Couldn’t save: '+((d&&d.error)||'error');}}).catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Sandbox server not reachable.';});return;}
   if(!LIVE_SEND){setTimeout(function(){b.textContent='Submit';$('needs').className='needs clear';$('needs').innerHTML='<b>Demo: this would go to the managers now.</b> Nothing was sent.';$('barTxt').innerHTML='<b>Demo submit done.</b> Nothing was sent.';b.disabled=false;},500);return;}
@@ -333,12 +363,12 @@ function trapPark(e){var m=$('parkModal');if(!m.classList.contains('on'))return;
   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
 var _parking=false;
-function parked(msg){_parking=false;$('parkSave').disabled=false;closePark();$('barTxt').innerHTML='<b>Parked.</b> '+esc(msg);}
+function parked(msg){_parking=false;$('parkSave').disabled=false;closePark();$('barTxt').innerHTML='<b>Parked.</b> '+esc(msg);setTimeout(function(){location.href=backHref();},1200);}   /* Save & exit really exits: back to the project list */
 function savePark(){if(_parking)return;var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
   if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}if(d<todayPT()){m.textContent='That date has passed. Pick today or later.';return;}
   S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();
   if(SANDBOX&&H.job){_parking=true;$('parkSave').disabled=true;m.textContent='Saving…';
-    remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){
+    remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){
       if(x&&x.ok)parked('Your team can see why and when. Your answers are kept.');
       else{_parking=false;$('parkSave').disabled=false;m.textContent='Couldn’t park: '+((x&&x.error)||'error')+'. Your answers are kept; try again.';}}).catch(function(){_parking=false;$('parkSave').disabled=false;m.textContent='Couldn’t reach the server. Your answers are kept; try again.';});return;}
   /* STUB: stored on this phone only. Server-side parked storage needs Geoff's approval (new node + rules). */
@@ -356,7 +386,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
   $('parkBtn').onclick=openPark;$('parkBack').onclick=closePark;$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
   document.addEventListener('keydown',trapPark);
   if(!H.cust&&!H.job){
-    ['sec-pay','sec-equip','sec-layout','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
+    ['sec-pay','sec-equip','sec-rebate','sec-layout','sec-elec','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
     $('custName').textContent='No project selected';
     var hero=document.querySelector('.hero');var note=document.createElement('div');note.className='needs';note.style.gridColumn='1/-1';
     note.innerHTML='<b>Pick a project first.</b> Go back to your CRM, choose a sold, backlog or pipeline project in Daily Activities, then tap Project completion.<div style="margin-top:10px"><a class="btn go" href="'+(PRACTICE?'practice/index.html':'crm.html')+'" style="display:inline-flex;align-items:center;text-decoration:none">'+(PRACTICE?'Back to practice home':'Back to my CRM')+'</a></div>';

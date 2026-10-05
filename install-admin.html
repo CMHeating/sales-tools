@@ -60,7 +60,7 @@
 <div class="wrap">
   <div class="top"><span class="pill">CM HEATING</span>
     <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Amy</option><option>Brittny</option><option>Geoff</option></select></label></div>
-  <a class="back" id="homeBack" href="install-home.html">&larr; Install tools</a>
+  <a class="back" id="homeBack" href="crm.html">&larr; My CRM</a>
   <h1>Install Admin</h1>
   <p class="sub">Every project, every HCA, in one place. What is ready to book, what is stuck, and what is due.</p>
 
@@ -83,7 +83,7 @@ if(PRACTICE){var hb=document.getElementById('homeBack');hb.href='practice/index.
 var LIVE=!PRACTICE&&/[#&?]live=1/.test(location.hash+location.search);
 if(PRACTICE)$('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';
 if(LIVE){$('envBar').textContent='LIVE — real projects. Send back and Mark installed change real records.';$('envBar').className='demo';var wh=document.querySelector('.who');if(wh)wh.style.display='none';}
-var NAMES={pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit authorization','r-payauth':'Payment authorization','r-dl':'Driver’s license','r-deed':'Mortgage / deed'};
+var NAMES={'i-labor':'Install labor billed','e-disconnect':'Disconnect over 24"','e-outlet':"Service outlet within 25'",'e-labor':'Electrical labor billed',rebate:'Rebate eligible','rb-balance':'Balance point works','rb-ahri':'AHRI certificate','rb-tc':'Terms & conditions','rb-equip':'Correct equipment / model #s',pay:'Payment',stock:'Equipment in stock',permit:'Permit',heatload:'Heat load',ahri:'AHRI match',mat:'Materials list',photos:'Layout photos',video:'Walkthrough video','r-contract':'Rental contract','r-penny':'Penny test','r-credit':'Credit authorization','r-payauth':'Payment authorization','r-dl':'Driver’s license','r-deed':'Mortgage / deed'};
 var ROWS=[],META={labels:{}},FILTER='all',OPEN=null;
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
@@ -155,7 +155,7 @@ function openDetail(job){
       api('/api/reopen',{job:job,by:$('me').value,reason:why}).then(function(x){if(x.ok){OPEN=job;reload();}else{$('msg').className='msg err';$('msg').textContent=x.error||'Could not send back';}});};
   });
 }
-function reload(){return api('/api/admin').then(function(d){if(!d.ok){$('list').innerHTML='<div class="card"><p class="muted">'+esc(d.error||'Could not load.')+'</p></div>';return;}ROWS=d.jobs||[];var hs=Object.keys(ROWS.reduce(function(a,r){a[r.hca]=1;return a;},{})).sort(),cur=$('fHca').value;
+function reload(){return api('/api/admin').then(function(d){if(!d.ok){$('list').innerHTML='<div class="card"><p class="muted">'+esc(d.error||'Could not load.')+(d.signin?' <a href="install-home.html">Sign in</a>':'')+'</p></div>';return;}ROWS=d.jobs||[];var hs=Object.keys(ROWS.reduce(function(a,r){a[r.hca]=1;return a;},{})).sort(),cur=$('fHca').value;
   $('fHca').innerHTML='<option value="">All HCAs</option>'+hs.map(function(h){return '<option'+(h===cur?' selected':'')+'>'+esc(h)+'</option>';}).join('');render();});}
 ['fHca','fWhen'].forEach(function(id){$(id).onchange=function(){OPEN=null;render();};});$('fQ').oninput=function(){OPEN=null;render();};
 if(['Amy','Brittny','Geoff'].indexOf(AS)>=0)$('me').value=AS;
