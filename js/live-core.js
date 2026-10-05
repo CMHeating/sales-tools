@@ -9,9 +9,9 @@
 (function (g) {
   "use strict";
   var MAX_BODY = 64 * 1024;
-  var BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video", "i-labor"];
+  var BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-labor"];
   var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
-  var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor"];
+  var REQUIRED_HCA = ["pay", "stock", "mat", "photos", "video", "i-labor"];
   /* Rebate: "rebate" is yes / na (= no rebate). When yes, a program is chosen and ALL of its questions must be Complete before the project can be Ready (the rebate gate). */
   var NA_OK = ["ahri", "r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];   /* items that may be answered N/A ("rebate" uses na for "No rebate") */
   var CLAIM_ITEMS = ["claim", "downpay", "rb-applied", "permitdelay"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */

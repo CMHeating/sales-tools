@@ -128,7 +128,8 @@
   <section class="card" id="sec-pay"><h2><span class="n">2</span>Payment</h2><p class="hint">Confirm it is arranged in ServiceTitan.</p>
     <div class="row"><div class="q">Payment status</div>
       <select id="pay" aria-label="Payment status"></select>
-      <div class="why" id="why-pay"></div></div>
+      <div class="why" id="why-pay"></div>
+      <p class="hint" id="rentalHint" style="margin:8px 0 0">Rental? Pick a rental payment above and the rental paperwork questions appear. Otherwise there is nothing to do for rental.</p></div>
     <div id="g-pay2"></div>
   </section>
 
@@ -183,7 +184,6 @@ var ITEMS=[
  ['downpay','Down payment collected?','pay2','✔ Yes',true],
  ['rb-applied','Rebate applied to the estimate?','pay2','✔ Yes',false],
  ['stock','Equipment in stock?','equip','✔ Yes — in stock',false],
- ['permit','Permit / jurisdiction ready for the install date?','equip','✔ Yes — not needed or filed',false],
  ['permitdelay','Potential permit delays?','equip','✔ Yes',false],
  ['heatload','Heat load calc completed?','equip','✔ Yes',false],
  ['ahri','AHRI match on file?','equip','✔ Yes — AHRI match on file',true],
@@ -191,7 +191,7 @@ var ITEMS=[
  ['rb-balance','Balance point works for the program?','rebsub','✔ Yes',false],
  ['rb-ahri','AHRI certificate on file?','rebsub','✔ Yes',false],
  ['rb-tc','Terms & conditions done?','rebsub','✔ Yes',false],
- ['mat','Materials list complete & ordered?','layout','✔ Yes — complete & ordered',false],
+ ['mat','Materials list complete?','layout','✔ Yes — complete & ordered',false],
  ['photos','Layout photos taken?','layout','✔ Yes',false],
  ['video','Walkthrough video taken?','layout','✔ Yes',false],
  ['i-labor','Install labor billed correctly?','layout','✔ Yes — billed correctly',false],
@@ -201,7 +201,7 @@ var ITEMS=[
  ['r-payauth','Payment authorization?','rental','✔ Yes',true],
  ['r-dl','Driver’s license on file?','rental','✔ Yes',true],
  ['r-deed','Mortgage or deed on file?','rental','✔ Yes',true]];
-var REQUIRED=['pay','stock','permit','mat','photos','video','rebate','i-labor'];   /* rebate: answer Yes or No on every job */
+var REQUIRED=['pay','stock','mat','photos','video','rebate','i-labor'];   /* rebate: answer Yes or No on every job */
 var REBATE_SHOWN={PSE:['rb-balance','rb-ahri','rb-tc'],PUD:['rb-balance','rb-ahri'],Gensco:['rb-balance'],Other:['rb-balance','rb-ahri']};   /* which questions each program asks; the rebate gate = all of them Complete */
 function rebateKey(p){p=String(p||'');return p==='PSE'||p==='PUD'||p==='Gensco'?p:(/^Other: \S/.test(p)?'Other':'');}
 function rebateSel(p){p=String(p||'');return rebateKey(p)||(p.indexOf('Other')===0?'Other':'');}   /* what the picker shows, even before the name is typed */
@@ -236,7 +236,7 @@ function build(){
     var box=$('g-'+g);box.innerHTML='';
     ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
       var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
-      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:(id==='heatload'||id==='rb-balance')?[['yes','Yes'],['no','No']]:(id==='i-labor')?[['yes','Yes'],['no','No']]:(id==='mat'||id==='photos'||id==='video')?[['yes','Yes'],['work','Working on it']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
+      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:(id==='heatload'||id==='rb-balance'||id==='stock')?[['yes','Yes'],['no','No']]:(id==='i-labor')?[['yes','Yes'],['no','No']]:(id==='mat'||id==='photos'||id==='video')?[['yes','Yes'],['work','Working on it']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
       row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
         +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
         +'</div><div class="why" id="why-'+id+'"></div>';
@@ -247,7 +247,7 @@ function build(){
     d.innerHTML='<div class="ahq"><div class="q2">Is it in ServiceTitan, or are you able to provide it?</div><textarea class="aht" rows="2" maxlength="120" placeholder="Optional: where it is, or who will send it"></textarea><div class="ahb"><button type="button" class="btn" data-ah="st">It is in ServiceTitan</button><button type="button" class="btn go" data-ah="prov">I can provide it</button></div></div><div class="ahdone" style="display:none"><b>AHRI:</b> <span></span> <button type="button" class="linkbtn ahedit">change</button></div>';
     row.appendChild(d);bindAhri(id);});
   var sr=$('row-stock');if(sr){var vr=document.createElement('div');vr.className='vendor';vr.style.cssText='margin-top:10px';vr.innerHTML='<label class="l" for="vendorTxt">Vendor</label><input type="text" id="vendorTxt" maxlength="60" autocomplete="off" placeholder="Where the equipment is coming from">';sr.appendChild(vr);var fr=document.createElement('div');fr.className='vendor';fr.style.cssText='margin-top:10px';fr.innerHTML='<label class="l" for="filterTxt">Filter size</label><input type="text" id="filterTxt" maxlength="30" autocomplete="off" placeholder="Filter size">';sr.appendChild(fr);}
-  var pr=$('row-permit');if(pr){var jl=document.createElement('a');jl.id='jurLink';jl.className='linkbtn';jl.target='_blank';jl.rel='noopener';jl.href=JURISDICTION_URL;jl.style.cssText='display:inline-block;margin-top:8px';jl.textContent='Check the jurisdiction timing sheet ↗';pr.appendChild(jl);}
+  var pr=$('row-permitdelay');if(pr){var jl=document.createElement('a');jl.id='jurLink';jl.className='linkbtn';jl.target='_blank';jl.rel='noopener';jl.href=JURISDICTION_URL;jl.style.cssText='display:inline-block;margin-top:8px';jl.textContent='Check the jurisdiction timing sheet ↗';pr.appendChild(jl);}
   $('pay').innerHTML=PAY.map(function(p,i){return '<option value="'+(i?esc(p):'')+'">'+esc(p)+'</option>';}).join('');
   $('parkReason').innerHTML='<option value="">Select…</option>'+PARK.map(function(r){return '<option>'+r+'</option>';}).join('');
   document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setItem(b.dataset.id,b.dataset.v);});});
