@@ -67,6 +67,12 @@ with sync_playwright() as p:
     pg.click('button[data-id="stock"][data-v="no"]'); pg.wait_for_timeout(300)
     ok('No asks why and by when', pg.is_visible('#why-stock'))
     pg.click('button[data-id="stock"][data-v="yes"]'); pg.wait_for_timeout(200)
+    # rental paperwork only for rentals
+    ok('rental paperwork stays hidden unless a rental payment is chosen, with a hint saying how to get it', not pg.is_visible('#sec-rental') and 'rental payment' in pg.inner_text('#rentalHint').lower())
+    pg.select_option('#pay', label=[o for o in pg.eval_on_selector_all('#pay option', 'els => els.map(e => e.textContent)') if 'rental' in o.lower()][0]); pg.wait_for_timeout(200)
+    ok('choosing a rental payment brings up the six rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 6)
+    pg.select_option('#pay', index=0); pg.wait_for_timeout(200)
+    ok('and they go away again when the payment is not a rental (nothing answered)', not pg.is_visible('#sec-rental'))
     # potential permit delays
     ok('"Potential permit delays?" sits right after the Permit question with Yes / No', pg.is_visible('#sec-equip #row-permitdelay') and pg.eval_on_selector_all('button[data-id="permitdelay"]', 'els => els.map(e => e.textContent.trim())') == ['Yes', 'No'])
     pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.wait_for_timeout(500)
