@@ -133,7 +133,7 @@
     <div class="row" id="rebProgBox" style="display:none"><label class="l" for="rebProg">Which program?</label>
       <select id="rebProg"><option value="">Select…</option><option>PSE</option><option>PUD</option><option>Gensco</option><option value="Other">Other</option></select>
       <input type="text" id="rebOther" maxlength="40" placeholder="Which program?" style="display:none;margin-top:8px">
-      <label class="l" for="rebAmt" style="margin-top:12px">Rebate amount</label><input type="text" id="rebAmt" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="$ amount, e.g. 1,500"></div>
+      <label class="l" for="rebAmt" style="margin-top:12px">Rebate amount</label><input type="text" id="rebAmt" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="Dollar amount"></div>
     <div id="g-rebsub"></div><div class="hint" id="rebNote" style="margin-top:10px;display:none"></div></section>
 
   <section class="card" id="sec-layout"><h2><span class="n">4</span>Layout &amp; materials</h2><p class="hint">Done and uploaded to the customer&rsquo;s ServiceTitan profile.</p><div id="g-layout"></div>
@@ -143,6 +143,11 @@
   <section class="card" id="sec-elec"><h2><span class="n">5</span>Electrical</h2><p class="hint">Same checks as the Next Day Install Check. Jon verifies them against ServiceTitan.</p><div id="g-elec"></div></section>
 
   <section class="card" id="sec-rental" style="display:none"><h2><span class="n">6</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
+
+  <section class="card" id="sec-email"><h2><span class="n">7</span>Heads-up for Install</h2><p class="hint">After you submit, we build the sold-job email to Install for you to review and send. These lines fill it in. Optional.</p>
+    <div class="row"><label class="l" for="sysDesc">What was sold?</label><input type="text" id="sysDesc" maxlength="60" autocomplete="off" placeholder="Brand and system type"></div>
+    <div class="row"><label class="l" for="vendorTxt">Vendor</label><input type="text" id="vendorTxt" maxlength="60" autocomplete="off" placeholder="Where the equipment is coming from"></div>
+    <div class="row"><label class="l" for="filterTxt">Filter size</label><input type="text" id="filterTxt" maxlength="30" autocomplete="off" placeholder="Filter size"></div></section>
   <p class="hint" id="leaveHint" style="margin:4px 2px 90px">Closing this page does not save your work with the office. Your answers stay on this device only until you tap <b>Save &amp; exit</b> or <b>Submit</b>.</p>
 </div>
 
@@ -152,6 +157,13 @@
   <button class="btn go" id="submitBtn" type="button">Submit</button>
 </div></div>
 
+<div class="modal" id="sentModal" role="dialog" aria-modal="true" aria-labelledby="sentH"><div class="sheet">
+  <h2 id="sentH">Submitted &#10003;</h2><p class="hint">The managers will verify it against ServiceTitan. Now send the heads-up to Install: open the draft, check it, and send it from your own email. Nothing is sent from this page.</p>
+  <pre id="emailPrev" tabindex="0" style="white-space:pre-wrap;word-break:break-word;font:inherit;font-size:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;max-height:38vh;overflow:auto"></pre>
+  <div class="hint" id="sentMsg" style="min-height:18px"></div>
+  <div class="acts" style="flex-wrap:wrap"><button class="btn" id="copyEmail" type="button">Copy email</button><a class="btn go" id="mailLink" href="#" style="display:inline-flex;align-items:center;text-decoration:none">Open email draft</a></div>
+  <div class="acts"><button class="btn" id="sentBack" type="button">Back to my projects</button></div>
+</div></div>
 <div class="modal" id="parkModal" role="dialog" aria-modal="true" aria-labelledby="parkH"><div class="sheet">
   <h2 id="parkH">Park this job</h2><p class="hint">Say what is holding it up and when you expect to wrap it up.</p>
   <div class="f"><label class="l" for="parkReason">Reason</label><select id="parkReason"></select></div>
@@ -209,7 +221,7 @@ var SANDBOX=SANDBOX_RE.test(location.hostname)||PRACTICE||LIVEDATA;
 var LIVE_SEND=false;   /* live site: Submit is a DEMO (no email) until Geoff flips this to true */
 var REMOTE={status:'',lanes:null};
 function remote(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
-var S={items:{},pay:'',notes:'',rebateProg:'',rebateAmt:''};          /* items[id]={v:yes|work|no|na, why, when, note} */
+var S={items:{},pay:'',notes:'',rebateProg:'',rebateAmt:'',system:'',vendor:'',filter:''};          /* items[id]={v:yes|work|no|na, why, when, note} */
 var KEY=(PRACTICE?'cmh_practice_req_':LIVEDATA?'cmh_live_req_':'cmh_install_req_')+(H.job||H.cust||'x');   /* practice drafts never mix with real ones */
 var submitted=false;
 
@@ -237,9 +249,10 @@ function build(){
   document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setItem(b.dataset.id,b.dataset.v);});});
   $('pay').addEventListener('change',function(){S.pay=this.value;paintWhy('pay');render();save();});
   $('notes').addEventListener('input',function(){S.notes=this.value;save();});
+  $('sysDesc').addEventListener('input',function(){S.system=this.value;save();});$('vendorTxt').addEventListener('input',function(){S.vendor=this.value;save();});$('filterTxt').addEventListener('input',function(){S.filter=this.value;save();});
   var rp=function(){var v=$('rebProg').value;S.rebateProg=v==='Other'?('Other'+($('rebOther').value.trim()?': '+$('rebOther').value.trim():'')):v;render();save();};
   $('rebProg').addEventListener('change',rp);$('rebOther').addEventListener('input',rp);
-  $('rebAmt').addEventListener('input',function(){var c=this.value.replace(/[^0-9.,$ ]/g,'');if(c!==this.value)this.value=c;S.rebateAmt=c;save();});
+  $('rebAmt').addEventListener('input',function(){var c=this.value.replace(/[^0-9.,$ ]/g,'');if(c!==this.value)this.value=c;S.rebateAmt=c;render();save();});
 }
 function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;paintWhy(id);render();save();}
 function whyBox(id,o){
@@ -271,7 +284,7 @@ function openNeeds(){
 }
 function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push(label(id));});
   if(isRental())ITEMS.forEach(function(it){if(it[2]==='rental'&&!stateOf(it[0]))m.push(label(it[0]));});
-  if(rebateYes()){if(!rebateSel(S.rebateProg))m.push('Rebate program');else if(!rebateKey(S.rebateProg))m.push('Rebate program name');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
+  if(rebateYes()){if(!rebateSel(S.rebateProg))m.push('Rebate program');else if(!rebateKey(S.rebateProg))m.push('Rebate program name');if(!/\d/.test(S.rebateAmt||''))m.push('Rebate amount');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
   active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');else if(o.when<todayPT())m.push(label(id)+' (date has passed)');}});
   return m;}
 function render(){
@@ -303,7 +316,7 @@ function render(){
   var fin=submitted||locked(),sb=$('submitBtn');
   if(fin){$('parkBtn').style.display='none';sb.textContent='Back to my projects';sb.dataset.back='1';sb.disabled=false;}   /* done: nothing left to save, so the way out is back to the list */
   else{$('parkBtn').style.display='';delete sb.dataset.back;if(sb.textContent!=='Sending…')sb.textContent='Submit';sb.disabled=!!miss.length;}
-  var lk=locked();document.querySelectorAll('.seg button,#pay,#notes,.why select,.why input').forEach(function(e){e.disabled=lk;});
+  var lk=locked();document.querySelectorAll('.seg button,#pay,#notes,.why select,.why input,#rebProg,#rebOther,#rebAmt,#sysDesc,#vendorTxt,#filterTxt').forEach(function(e){e.disabled=lk;});
   if(lk&&!submitted)submitted=true;
   var eb=$('envBar');if(SANDBOX){eb.className='sbx';eb.style.display='';eb.textContent=PRACTICE?'PRACTICE — fake projects, nothing is sent, nothing is real':LIVEDATA?'LIVE — real projects. Your answers are saved to the office as you go; Submit does not email anyone yet.':'SANDBOX — fake data, nothing leaves this machine';if(LIVEDATA)eb.className='demo';}
   else if(!LIVE_SEND){eb.className='demo';eb.style.display='';eb.textContent='DEMO — answers stay on this device, nothing is sent';}
@@ -312,18 +325,18 @@ function render(){
 function cleanItems(){var o={};Object.keys(S.items||{}).forEach(function(k){var it=S.items[k]||{},v=k==='pay'?payState():it.v;if(v)o[k]={v:v,why:it.why||'',when:it.when||'',note:it.note||''};});return o;}
 var _rt=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
-  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
+  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',system:S.system||'',vendor:S.vendor||'',filterSize:S.filter||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
 function normalizeNA(){ITEMS.forEach(function(it){var o=S.items&&S.items[it[0]];if(o&&o.v==='na'&&!it[4]&&it[0]!=='rebate')o.v='';});}   /* an N/A saved before the button was removed no longer counts as an answer */
-function applyState(){normalizeNA();$('rebAmt').value=S.rebateAmt||'';$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
+function applyState(){normalizeNA();$('sysDesc').value=S.system||'';$('vendorTxt').value=S.vendor||'';$('filterTxt').value=S.filter||'';$('rebAmt').value=S.rebateAmt||'';$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
   applyState();
   if(!SANDBOX||!H.job)return Promise.resolve();
   return remote('/api/record?job='+encodeURIComponent(H.job)).then(function(d){
     if(!d||!d.ok){if(d&&d.error&&LIVEDATA)$('barTxt').textContent=d.error;return;}var r=d.record,h=r.hca||{};
     REMOTE.status=r.status;REMOTE.lanes=r.lanes||null;REMOTE.reopen=r.reopen||null;
-    if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',rebateProg:h.rebateProgram||'',rebateAmt:h.rebateAmount||'',parked:r.parked||undefined};applyState();}
-    else{S={items:{},pay:'',notes:'',rebateProg:'',rebateAmt:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
+    if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',rebateProg:h.rebateProgram||'',rebateAmt:h.rebateAmount||'',system:h.system||'',vendor:h.vendor||'',filter:h.filterSize||'',parked:r.parked||undefined};applyState();}
+    else{S={items:{},pay:'',notes:'',rebateProg:'',rebateAmt:'',system:'',vendor:'',filter:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
     submitted=/^(submitted|in_review|ready|installed)$/.test(r.status);
     render();});}
 
@@ -338,6 +351,35 @@ function api(params){return new Promise(function(resolve,reject){
 function val(id){if(id==='pay')return S.pay&&S.pay!=='Select…'?S.pay:'';var st=stateOf(id);if(!st)return '';
   if(st==='yes'){for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][3];}
   return st==='work'?WORKING:st==='no'?'✖ No':'N/A';}
+var INSTALL_TO='';   /* recipient: leave blank in the public page; the HCA addresses the draft (a shared mailbox address can be added here if the owner approves) */
+function dayLabel(iso){var m=/^(\d{4})-(\d\d)-(\d\d)/.exec(String(iso||''));if(!m)return '';var d=new Date(+m[1],+m[2]-1,+m[3],12);return d.toLocaleDateString('en-US',{weekday:'long'})+' '+(+m[2])+'/'+(+m[3]);}
+function shortName(n){var p=String(n||'').trim().split(/\s+/);return p.length>1?p[0]+' '+p[p.length-1][0]:p[0]||'';}
+function downPayment(p){p=String(p||'');
+  if(/half down NOT|not yet run/i.test(p))return 'No';
+  if(/half down|run \/ authorized/i.test(p))return 'Yes';
+  if(/Financed/i.test(p))return 'N/A (financed)';
+  if(/rental/i.test(p))return 'N/A (rental)';
+  if(/Paid in full/i.test(p))return 'Paid in full';
+  return 'See ServiceTitan';}
+function buildInstallEmail(){
+  var st=stateOf,pay=String(S.pay||'').replace(/^[^A-Za-z]+/,'').trim();
+  var avail=st('stock')==='yes'?'equipment available':st('stock')==='work'?'availability still being confirmed':st('stock')==='no'?'equipment NOT available yet':'availability not answered';
+  var concerns=[];
+  if((S.notes||'').trim())concerns.push(S.notes.trim());
+  active().forEach(function(id){var s2=st(id);if(s2==='no')concerns.push(label(id)+' not done'+((S.items[id]||{}).when?' (by '+S.items[id].when+')':''));else if(s2==='work')concerns.push(label(id)+' in progress');});
+  if(rebateYes()){concerns.push('Rebate: '+(S.rebateProg||'program TBD')+(S.rebateAmt?(', $'+String(S.rebateAmt).replace(/^\$/,'').trim()):'')+(rebateGateOk()?'':' (not secured yet)'));}
+  var rows=[['CUSTOMER NAME',H.cust||''],['INSTALL DATE',dayLabel(H.date)||'TBD'],['PAYMENT',pay||'See ServiceTitan'],['DOWN PAYMENT COLLECTED',downPayment(S.pay)],
+    ['VENDOR AND AVAILABILITY',((S.vendor||'').trim()||'vendor not entered')+' - '+avail],['FILTER SIZE',(S.filter||'').trim()||'not entered'],['ANY CONCERNS FOR INSTALL',concerns.length?concerns.join('; '):'None']];
+  var subject=(H.cust||'Sold job')+((S.system||'').trim()?'-'+S.system.trim():'');
+  var body=rows.map(function(r){return r[0]+': '+r[1];}).join('\n\n')+'\n\n'+shortName(H.rep);
+  return {subject:subject,body:body};
+}
+function showSent(){var m=buildInstallEmail();$('emailPrev').textContent='Subject: '+m.subject+'\n\n'+m.body;
+  $('mailLink').href='mailto:'+encodeURIComponent(INSTALL_TO).replace(/%40/g,'@')+'?subject='+encodeURIComponent(m.subject)+'&body='+encodeURIComponent(m.body);
+  $('sentMsg').textContent='';$('sentModal').classList.add('on');$('mailLink').focus();
+  $('copyEmail').onclick=function(){var t='Subject: '+m.subject+'\n\n'+m.body;var ok=function(){$('sentMsg').textContent='Copied. Paste it into a new email to Install.';};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,function(){$('sentMsg').textContent='Could not copy; select the text above instead.';});else $('sentMsg').textContent='Select the text above and copy it.';};
+  $('sentBack').onclick=function(){location.href=backHref();};}
 function backHref(){var bk=document.querySelector('.topbar .back');return bk?bk.getAttribute('href'):'crm.html';}
 function submit(){if($('submitBtn').dataset.back){location.href=backHref();return;}
   var miss=missing();if(miss.length){$('barTxt').textContent='Still needed: '+miss.join(', ');return;}
@@ -346,8 +388,8 @@ function submit(){if($('submitBtn').dataset.back){location.href=backHref();retur
   var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length;
   var ready=needs.length?'⚠ Ready with notes':'✔ Ready';
   var b=$('submitBtn');b.disabled=true;b.textContent='Sending…';
-  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
-      if(d&&d.ok){submitted=true;REMOTE.reopen=null;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. '+(LIVEDATA?'Nobody is emailed yet; they will see it in their review queue.':'(sandbox: logged to the outbox, not emailed)')+'';$('barTxt').innerHTML='<b>Submitted.</b>';render();setTimeout(function(){if(submitted)location.href=backHref();},2500);}
+  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',system:S.system||'',vendor:S.vendor||'',filterSize:S.filter||'',items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
+      if(d&&d.ok){submitted=true;REMOTE.reopen=null;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. '+(LIVEDATA?'Nobody is emailed yet; they will see it in their review queue.':'(sandbox: logged to the outbox, not emailed)')+'';$('barTxt').innerHTML='<b>Submitted.</b>';render();showSent();}
       else{b.disabled=false;$('barTxt').textContent='Couldn’t save: '+((d&&d.error)||'error');}}).catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Sandbox server not reachable.';});return;}
   if(!LIVE_SEND){setTimeout(function(){b.textContent='Submit';$('needs').className='needs clear';$('needs').innerHTML='<b>Demo: this would go to the managers now.</b> Nothing was sent.';$('barTxt').innerHTML='<b>Demo submit done.</b> Nothing was sent.';b.disabled=false;},500);return;}
   api({action:'installcheck',handoff:'1',customer:H.cust||'',idate:H.date||'',hca:H.rep||'',by:H.rep||'',ready:ready,city:'',critical:'',jflag:'',verdict:ready,
@@ -355,7 +397,7 @@ function submit(){if($('submitBtn').dataset.back){location.href=backHref();retur
     delec:'',dinstall:'',dsales:'',mat:val('mat'),matnotes:(S.notes||'').slice(0,300),photos:val('photos'),video:val('video'),disconnect:'',outlet:'',belec:'',blabor:'',billnotes:'',
     heatload:val('heatload'),sizematch:'',equip:'',sizenotes:'',disc:'',rebate:'',ahri:val('ahri'),discnotes:'',jobtype:H.type||'',pay:val('pay'),
     gasline:'',venting:'',gaspermit:'',gasinspect:'',finish:'',soldcustomer:H.cust||'',soldby:H.rep||'',soldamount:'',soldon:'',soldest:'',soldjob:H.job||''})
-  .then(function(d){b.textContent='Submit';if(d&&d.ok){submitted=true;try{localStorage.removeItem(KEY);}catch(e){}$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. They will verify it against ServiceTitan.';$('barTxt').innerHTML='<b>Submitted.</b>';render();setTimeout(function(){if(submitted)location.href=backHref();},2500);}
+  .then(function(d){b.textContent='Submit';if(d&&d.ok){submitted=true;try{localStorage.removeItem(KEY);}catch(e){}$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. They will verify it against ServiceTitan.';$('barTxt').innerHTML='<b>Submitted.</b>';render();showSent();}
     else{b.disabled=false;$('barTxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed. Your answers are saved on this phone; try again.';}})
   .catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Couldn’t reach the mailer. Your answers are saved on this phone; try again.';});
 }
@@ -378,7 +420,7 @@ function savePark(){if(_parking)return;var r=$('parkReason').value,d=$('parkDate
   if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}if(d<todayPT()){m.textContent='That date has passed. Pick today or later.';return;}
   S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();
   if(SANDBOX&&H.job){_parking=true;$('parkSave').disabled=true;m.textContent='Saving…';
-    remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){
+    remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',rebateAmount:S.rebateAmt||'',system:S.system||'',vendor:S.vendor||'',filterSize:S.filter||'',items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){
       if(x&&x.ok)parked('Your team can see why and when. Your answers are kept.');
       else{_parking=false;$('parkSave').disabled=false;m.textContent='Couldn’t park: '+((x&&x.error)||'error')+'. Your answers are kept; try again.';}}).catch(function(){_parking=false;$('parkSave').disabled=false;m.textContent='Couldn’t reach the server. Your answers are kept; try again.';});return;}
   /* STUB: stored on this phone only. Server-side parked storage needs Geoff's approval (new node + rules). */
@@ -397,7 +439,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
   $('parkBtn').onclick=openPark;$('parkBack').onclick=closePark;$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
   document.addEventListener('keydown',trapPark);
   if(!H.cust&&!H.job){
-    ['sec-pay','sec-equip','sec-rebate','sec-layout','sec-elec','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
+    ['sec-pay','sec-equip','sec-rebate','sec-layout','sec-elec','sec-rental','sec-email','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
     $('custName').textContent='No project selected';
     var hero=document.querySelector('.hero');var note=document.createElement('div');note.className='needs';note.style.gridColumn='1/-1';
     note.innerHTML='<b>Pick a project first.</b> Go back to your CRM, choose a sold, backlog or pipeline project in Daily Activities, then tap Project completion.<div style="margin-top:10px"><a class="btn go" href="'+(PRACTICE?'practice/index.html':'crm.html')+'" style="display:inline-flex;align-items:center;text-decoration:none">'+(PRACTICE?'Back to practice home':'Back to my CRM')+'</a></div>';

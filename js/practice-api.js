@@ -86,6 +86,7 @@
     var need = REQUIRED_HCA.concat(["rebate"], RENTAL_ITEMS.filter(function (i) { return i in st; }), REBATE_ITEMS.slice(1).filter(function (i) { return i in st; }));
     need.forEach(function (i) { if (!st[i]) out.push(i); });
     if (st.rebate === "yes" && !rebateKey(h2(rec).rebateProgram)) out.push("rebate program");
+    if (st.rebate === "yes" && !/\d/.test(h2(rec).rebateAmount || "")) out.push("rebate amount");
     Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
     return out;
   }
@@ -178,6 +179,10 @@
       if ("pay" in body) h.pay = str(body.pay, 80);
       if ("notes" in body) h.notes = str(body.notes, 600);
       if ("rebateProgram" in body) h.rebateProgram = str(body.rebateProgram, 60);
+      if ("system" in body) h.system = str(body.system, 60);
+      if ("scope" in body) h.scope = str(body.scope, 60);
+      if ("vendor" in body) h.vendor = str(body.vendor, 60);
+      if ("filterSize" in body) h.filterSize = str(body.filterSize, 30);
       if ("rebateAmount" in body) h.rebateAmount = str(body.rebateAmount, 40).replace(/[^0-9.,$ ]/g, "").slice(0, 20);
       var itemsIn = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
       if (!isObj(itemsIn) || !Object.keys(itemsIn).every(function (k) { return isObj(itemsIn[k]); })) return [400, { ok: false, error: "items must be an object of objects" }];
