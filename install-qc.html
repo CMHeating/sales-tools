@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<script>if(/[#&?]practice=1/.test(location.hash+location.search)){document.write('<script src="js/practice-api.js"><\/script>');}</script>
 <title>Install QC — CM Heating</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
@@ -72,6 +74,8 @@
 <script>
 var $=function(id){return document.getElementById(id)};
 var META=null,TAB='q',CUR=null;
+var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);
+if(PRACTICE){document.getElementById('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';}
 var WHO_LANE={Geoff:'sales',Lyle:'install',Jon:'electrical'};
 var LANE_NAME={sales:'Sales',install:'Install',electrical:'Electrical'};
 var HCA_FOR={'ahri-ok':['ahri'],financing:['pay'],slip:['pay'],auths:['r-contract','r-penny','r-credit','r-payauth','r-dl','r-deed'],'mat-ok':['mat'],'stock-ok':['stock'],'layout-ok':['photos','video'],'permit-ok':['permit'],sizing:['heatload']};

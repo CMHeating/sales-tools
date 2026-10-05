@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<script>if(/[#&?]practice=1/.test(location.hash+location.search)){document.write('<script src="js/practice-api.js"><\/script>');}</script>
 <title>Install Requirements — CM Heating</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
@@ -169,12 +171,13 @@ var H={};   /* link params: cust, date, job, rep */
 (location.hash||'').replace(/^#/,'').split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)H[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));});
 /* ---- environment: sandbox (local test server, fake data) | live demo (nothing is sent) | live send ---- */
 var SANDBOX_RE=/^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})$/;
-var SANDBOX=SANDBOX_RE.test(location.hostname);
+var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);   /* in-browser practice mode: fake data, nothing sent (js/practice-api.js) */
+var SANDBOX=SANDBOX_RE.test(location.hostname)||PRACTICE;
 var LIVE_SEND=false;   /* live site: Submit is a DEMO (no email) until Geoff flips this to true */
 var REMOTE={status:'',lanes:null};
 function remote(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
 var S={items:{},pay:'',notes:''};          /* items[id]={v:yes|work|no|na, why, when, note} */
-var KEY='cmh_install_req_'+(H.job||H.cust||'x');
+var KEY=(PRACTICE?'cmh_practice_req_':'cmh_install_req_')+(H.job||H.cust||'x');   /* practice drafts never mix with real ones */
 var submitted=false;
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -254,7 +257,7 @@ function render(){
   $('submitBtn').disabled=!!miss.length||submitted||locked();
   var lk=locked();document.querySelectorAll('.seg button,#pay,#notes,.why select,.why input').forEach(function(e){e.disabled=lk;});
   if(lk&&!submitted)submitted=true;
-  var eb=$('envBar');if(SANDBOX){eb.className='sbx';eb.style.display='';eb.textContent='SANDBOX — fake data, nothing leaves this machine';}
+  var eb=$('envBar');if(SANDBOX){eb.className='sbx';eb.style.display='';eb.textContent=PRACTICE?'PRACTICE — fake projects, nothing is sent, nothing is real':'SANDBOX — fake data, nothing leaves this machine';}
   else if(!LIVE_SEND){eb.className='demo';eb.style.display='';eb.textContent='DEMO — answers stay on this device, nothing is sent';}
 }
 /* ---- draft: this phone only, per job, until job records are stored server-side ---- */
@@ -326,6 +329,7 @@ function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkM
   $('custName').textContent=H.cust||'Choose a job from your CRM';
   $('chipDate').textContent=H.date?(function(){var p=H.date.split('-');return (+p[1])+'/'+(+p[2]);})():'TBD';
   $('chipJob').textContent=H.job||'—';$('chipHca').textContent=H.rep||'—';
+  if(PRACTICE){var bk=document.querySelector('.topbar .back');if(bk){bk.href='practice/index.html';bk.textContent='← Practice home';}}
   build();load();render();
   $('parkBtn').onclick=openPark;$('parkBack').onclick=closePark;$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
   document.addEventListener('keydown',trapPark);
@@ -333,7 +337,7 @@ function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkM
     ['sec-pay','sec-equip','sec-layout','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
     $('custName').textContent='No project selected';
     var hero=document.querySelector('.hero');var note=document.createElement('div');note.className='needs';note.style.gridColumn='1/-1';
-    note.innerHTML='<b>Pick a project first.</b> Go back to your CRM, choose a sold, backlog or pipeline project in Daily Activities, then tap Project completion.<div style="margin-top:10px"><a class="btn go" href="crm.html" style="display:inline-flex;align-items:center;text-decoration:none">Back to my CRM</a></div>';
+    note.innerHTML='<b>Pick a project first.</b> Go back to your CRM, choose a sold, backlog or pipeline project in Daily Activities, then tap Project completion.<div style="margin-top:10px"><a class="btn go" href="'+(PRACTICE?'practice/index.html':'crm.html')+'" style="display:inline-flex;align-items:center;text-decoration:none">'+(PRACTICE?'Back to practice home':'Back to my CRM')+'</a></div>';
     hero.appendChild(note);document.querySelector('.ring').style.display='none';document.querySelector('.stages').style.display='none';
     $('submitBtn').disabled=true;$('parkBtn').disabled=true;$('barTxt').textContent='Choose a project in your CRM.';}
 })();

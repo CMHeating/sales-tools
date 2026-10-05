@@ -5,7 +5,7 @@
    Pipeline   { customer, job, hca, source:'backlog'|'pipeline', comboDate (ISO or ''), comboTab ('PENDING'|'TBD'|''), readiness? }
    "Where is it" for a pipeline job comes from the Combo Log: a date, the TBD tab, or not in the Combo Log yet. */
 (function (g) {
-  var C = { page: "install-requirements.html", total: 8, redDays: 3 };
+  var C = { page: "install-requirements.html", total: 8, redDays: 3, hashExtra: "" };
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function norm(v) { return String(v || "").trim().toLowerCase(); }
@@ -16,7 +16,7 @@
 
   function link(j, who) {
     var q = new URLSearchParams({ job: num(j), cust: j.customer || "", date: iso(j), rep: (who && who.full) || owner(j) });
-    return C.page + "#" + q.toString();
+    return C.page + "#" + q.toString() + (C.hashExtra || "");
   }
 
   /* readiness colour: green = all done; red = date within redDays with items open (or overdue No); yellow otherwise */

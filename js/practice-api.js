@@ -1,0 +1,203 @@
+/* PRACTICE MODE API — a faithful in-browser port of sandbox/server.py, so the practice site works on any static host
+   (GitHub Pages) with NO server. Loaded only when the URL carries `practice=1`. Fake data only; everything lives in this
+   browser's localStorage; nothing is sent anywhere. It intercepts fetch('/api/...') and answers from localStorage.
+   Keep in step with sandbox/server.py (sandbox/tests/test_practice.py runs the same checks through this file). */
+(function (g) {
+  "use strict";
+  var KEY = "cmh_practice_db_v1", MAX_BODY = 64 * 1024;
+  var BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video"];
+  var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
+  var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video"];
+  var LANES = {
+    sales: { who: "Geoff", items: ["disc", "rebate", "ahri-ok", "financing", "slip", "auths"] },
+    install: { who: "Lyle", items: ["mat-ok", "stock-ok", "layout-ok", "labor", "sizing", "permit-ok"] },
+    electrical: { who: "Jon", items: ["panel", "disconnect", "outlet", "elabor"] }
+  };
+  var LANE_LABELS = { disc: "Discounts correct", rebate: "Rebate submitted / eligible", "ahri-ok": "Equipment is an AHRI match",
+    financing: "Financing arranged and approved", slip: "Sales slip signed", auths: "Authorizations done",
+    "mat-ok": "Materials list complete", "stock-ok": "Equipment in stock", "layout-ok": "Layout photos and video",
+    labor: "Install labor billed correctly", sizing: "Equipment matches the load", "permit-ok": "Permit ready",
+    panel: "Panel / breaker scope", disconnect: "Disconnect", outlet: "Service outlet", elabor: "Electrical labor billed correctly" };
+  var RESULTS = ["verified", "missing", "mismatch"], SIGNOFFS = ["confirmed", "attention", "notready"], HCA_STATES = ["yes", "work", "no", "na"];
+
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function dayOffset(n) { var d = new Date(); d.setDate(d.getDate() + n); return iso(d); }
+  function nowIso() { return new Date().toISOString().replace(/\.\d+Z$/, "+00:00"); }
+  function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
+  function str(x, n) { return String(x == null ? "" : x).slice(0, n); }
+
+  function seed() {
+    var d = dayOffset;
+    return {
+      jobs: [
+        { job: "900001", customer: "Sample Alpha", hca: "Samir Khoury", installDate: d(2), department: "HVAC", stage: "SOLD_ACTIVE" },
+        { job: "900002", customer: "Sample Bravo", hca: "Samir Khoury", installDate: d(6), department: "HVAC", stage: "SOLD_ACTIVE" },
+        { job: "900003", customer: "Sample Charlie (rental)", hca: "Samir Khoury", installDate: d(9), department: "HVAC", stage: "SOLD_ACTIVE" },
+        { job: "900004", customer: "Sample Delta", hca: "Samir Khoury", installDate: "", department: "HVAC", stage: "SOLD_NEEDS_ATTENTION" },
+        { job: "900005", customer: "Sample Echo", hca: "Chester Granard", installDate: d(3), department: "HVAC", stage: "SOLD_ACTIVE" },
+        { job: "900006", customer: "Sample Foxtrot", hca: "Chester Granard", installDate: d(12), department: "PLUM", stage: "SOLD_ACTIVE" },
+        { job: "900007", customer: "Sample Golf", hca: "Samir Khoury", installDate: d(-4), department: "HVAC", stage: "SOLD_DONE_FOLLOW_UP_LATER" }],
+      pipeline: [
+        { job: "800001", customer: "Sample Hotel (backlog)", hca: "Samir Khoury", source: "backlog", comboDate: d(5), comboTab: "PENDING" },
+        { job: "800002", customer: "Sample India (backlog)", hca: "Samir Khoury", source: "backlog", comboDate: "", comboTab: "TBD" },
+        { job: "800003", customer: "Sample Juliet (pipeline)", hca: "Samir Khoury", source: "pipeline", comboDate: "", comboTab: "" },
+        { job: "800004", customer: "Sample Kilo (pipeline)", hca: "Samir Khoury", source: "pipeline", comboDate: d(15), comboTab: "PENDING" },
+        { job: "800005", customer: "Sample Lima (backlog)", hca: "Chester Granard", source: "backlog", comboDate: "", comboTab: "TBD" }],
+      records: {}, outbox: []
+    };
+  }
+  function load() { try { var d = JSON.parse(g.localStorage.getItem(KEY)); if (d && d.jobs && d.records) return d; } catch (e) { } var s = seed(); save(s); return s; }
+  function save(db) { try { g.localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { } }
+
+  function findJob(db, job) {
+    for (var i = 0; i < db.jobs.length; i++) if (db.jobs[i].job === job) return db.jobs[i];
+    for (var k = 0; k < db.pipeline.length; k++) if (db.pipeline[k].job === job) {
+      var p = db.pipeline[k]; return Object.assign({}, p, { installDate: p.comboDate || "", department: p.department || "HVAC", stage: "PIPELINE" });
+    }
+    return null;
+  }
+  function payState(p) { if (!p || p === "Select…") return ""; if (p.indexOf("⏳") === 0) return "work"; if (p === "N/A") return "na"; return p.indexOf("✔") === 0 ? "yes" : "no"; }
+  function hcaItems(rec) {
+    var h = rec.hca || {}, items = h.items || {}, pay = h.pay || "";
+    var ids = BASE_ITEMS.concat(/rental/i.test(pay) ? RENTAL_ITEMS : []), out = {};
+    ids.forEach(function (i) { out[i] = i === "pay" ? payState(pay) : ((items[i] || {}).v || ""); });
+    return out;
+  }
+  function readiness(rec) {
+    var st = hcaItems(rec), keys = Object.keys(st).filter(function (k) { return st[k] !== "na"; });
+    var done = 0, work = 0, no = [];
+    keys.forEach(function (k) { if (st[k] === "yes") done++; else if (st[k] === "work") work++; else if (st[k] === "no") no.push(k); });
+    var today = iso(new Date()), overdue = no.some(function (k) { var w = (((rec.hca || {}).items || {})[k] || {}).when; return w && w < today; });
+    return { done: done, total: keys.length, working: work, open: no.length, overdue: overdue };
+  }
+  function laneState(rec, lane) {
+    var l = (rec.lanes || {})[lane] || {}, items = l.items || {}, need = LANES[lane].items;
+    var res = need.map(function (i) { return (items[i] || {}).result; });
+    return { checked: res.filter(Boolean).length, total: need.length, missing: res.filter(function (r) { return r === "missing" || r === "mismatch"; }).length, signoff: l.signoff || "" };
+  }
+  function hcaMissing(rec) {
+    var items = (rec.hca || {}).items || {}, st = hcaItems(rec), out = [];
+    var need = REQUIRED_HCA.concat(RENTAL_ITEMS.filter(function (i) { return i in st; }));
+    need.forEach(function (i) { if (!st[i]) out.push(i); });
+    Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
+    return out;
+  }
+  function deriveStatus(rec) {
+    if (rec.installed) return "installed";
+    if (!(rec.hca || {}).submittedAt) return "working";
+    var ls = Object.keys(LANES).map(function (k) { return laneState(rec, k); });
+    if (!hcaMissing(rec).length && ls.every(function (x) { return x.signoff === "confirmed" && x.missing === 0 && x.checked === x.total; })) return "ready";
+    if (ls.some(function (x) { return x.checked || x.signoff; })) return "in_review";
+    return "submitted";
+  }
+  function history(rec, who, field, from, to) { (rec.history = rec.history || []).push({ at: nowIso(), by: who || "?", field: field, from: from, to: to }); }
+  function pub(rec) {
+    var r = Object.assign({}, rec); r.readiness = readiness(rec); r.status = deriveStatus(rec);
+    r.lanesSummary = {}; Object.keys(LANES).forEach(function (k) { r.lanesSummary[k] = laneState(rec, k); }); return r;
+  }
+
+  function get(path, q, db) {
+    var jobs = db.jobs, recs = db.records;
+    if (path === "/api/jobs") {
+      var rep = String(q.rep || "").trim().toLowerCase(), out = [];
+      jobs.forEach(function (j) { if (rep && j.hca.toLowerCase() !== rep) return; var rec = recs[j.job] || { hca: {} };
+        out.push(Object.assign({}, j, { readiness: readiness(rec), status: deriveStatus(rec), parked: rec.parked || null })); });
+      return [200, { ok: true, jobs: out, pipeline: db.pipeline.filter(function (p) { return !rep || p.hca.toLowerCase() === rep; }) }];
+    }
+    if (path === "/api/record") {
+      var meta = findJob(db, q.job || ""); if (!meta) return [404, { ok: false, error: "unknown job" }];
+      return [200, { ok: true, job: meta, record: pub(recs[q.job] || { hca: {} }) }];
+    }
+    if (path === "/api/queue") {
+      var o2 = []; jobs.forEach(function (j) { var rec = recs[j.job]; if (!rec || !(rec.hca || {}).submittedAt) return;
+        var lanes = {}; Object.keys(LANES).forEach(function (k) { lanes[k] = laneState(rec, k); });
+        o2.push(Object.assign({}, j, { status: deriveStatus(rec), readiness: readiness(rec), lanes: lanes })); });
+      return [200, { ok: true, jobs: o2 }];
+    }
+    if (path === "/api/ready") {
+      return [200, { ok: true, jobs: jobs.filter(function (j) { return recs[j.job] && deriveStatus(recs[j.job]) === "ready"; }).map(function (j) { return Object.assign({}, j, { readiness: readiness(recs[j.job]) }); }) }];
+    }
+    if (path === "/api/outbox") return [200, { ok: true, mail: db.outbox }];
+    if (path === "/api/meta") return [200, { ok: true, lanes: LANES, labels: LANE_LABELS, sandbox: true, practice: true }];
+    return [404, { ok: false, error: "no such endpoint" }];
+  }
+
+  function post(path, body, db) {
+    if (path === "/api/reset") { var s = seed(); db.jobs = s.jobs; db.pipeline = s.pipeline; db.records = {}; db.outbox = []; return [200, { ok: true }]; }
+    var job = String(body.job == null ? "" : body.job), meta = findJob(db, job);
+    if (["/api/hca", "/api/lane", "/api/install"].indexOf(path) < 0) return [404, { ok: false, error: "no such endpoint" }];
+    if (!meta) return [404, { ok: false, error: "unknown job" }];
+    var rec = db.records[job] = db.records[job] || { hca: {} }, who = str(body.by, 60);
+    if (path === "/api/hca") {
+      if (["in_review", "ready", "installed"].indexOf(deriveStatus(rec)) >= 0) return [409, { ok: false, error: "locked: job is in review" }];
+      var h = rec.hca = rec.hca || {};
+      if ("pay" in body) h.pay = str(body.pay, 80);
+      if ("notes" in body) h.notes = str(body.notes, 600);
+      var itemsIn = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
+      if (!isObj(itemsIn) || !Object.keys(itemsIn).every(function (k) { return isObj(itemsIn[k]); })) return [400, { ok: false, error: "items must be an object of objects" }];
+      var ks = Object.keys(itemsIn);
+      for (var i = 0; i < ks.length; i++) {
+        var k = ks[i], v = itemsIn[k];
+        if ((BASE_ITEMS.concat(RENTAL_ITEMS)).indexOf(k) < 0) return [400, { ok: false, error: "unknown item " + k }];
+        if (HCA_STATES.indexOf(v.v) < 0) return [400, { ok: false, error: "bad state for " + k }];
+        h.items = h.items || {}; var old = (h.items[k] || {}).v;
+        h.items[k] = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
+        if (old !== v.v) history(rec, who, "hca." + k, old === undefined ? null : old, v.v);
+      }
+      if ("parked" in body) {
+        if (body.parked !== null && !isObj(body.parked)) return [400, { ok: false, error: "parked must be an object" }];
+        rec.parked = body.parked && Object.keys(body.parked).length ? { reason: str(body.parked.reason, 200), revisit: str(body.parked.revisit, 200), note: str(body.parked.note, 200) } : null;
+        history(rec, who, "parked", null, rec.parked ? rec.parked.reason : null);
+      }
+      if (body.submit) {
+        var miss = hcaMissing(rec); if (miss.length) return [400, { ok: false, error: "cannot submit, still needed: " + miss.join(", ") }];
+        h.submittedAt = nowIso(); rec.parked = null; history(rec, who, "hca.submitted", null, "submitted");
+        db.outbox.push({ at: nowIso(), to: ["Lyle", "Jon", "Geoff", "Amy"], subject: "Install requirements submitted — job " + job + " " + meta.customer, note: "PRACTICE: not sent", readiness: readiness(rec) });
+      }
+    } else if (path === "/api/lane") {
+      var lane = body.lane; if (!LANES[lane]) return [400, { ok: false, error: "bad lane" }];
+      var L = rec.lanes = rec.lanes || {}; L[lane] = L[lane] || { items: {} }; var l = L[lane]; l.items = l.items || {};
+      var li = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
+      if (!isObj(li) || !Object.keys(li).every(function (k) { return isObj(li[k]); })) return [400, { ok: false, error: "items must be an object of objects" }];
+      var lk = Object.keys(li);
+      for (var j = 0; j < lk.length; j++) {
+        var key = lk[j], it = li[key];
+        if (LANES[lane].items.indexOf(key) < 0 || RESULTS.indexOf(it.result) < 0) return [400, { ok: false, error: "bad item " + key }];
+        if (it.result !== "verified" && !(it.found && it.when)) return [400, { ok: false, error: "missing/mismatch needs what was found and a by-when date" }];
+        var o = (l.items[key] || {}).result;
+        l.items[key] = { result: it.result, found: str(it.found, 200), when: str(it.when, 10), note: str(it.note, 200), by: who, at: nowIso() };
+        if (o !== it.result) history(rec, who, "lane." + lane + "." + key, o === undefined ? null : o, it.result);
+      }
+      if ("signoff" in body) {
+        if (SIGNOFFS.indexOf(body.signoff) < 0) return [400, { ok: false, error: "bad signoff" }];
+        l.signoff = body.signoff; l.by = who; l.at = nowIso(); history(rec, who, "lane." + lane + ".signoff", null, body.signoff);
+      }
+    } else { rec.installed = "installed" in body ? !!body.installed : true; history(rec, who, "installed", null, rec.installed); }
+    return [200, { ok: true, record: pub(rec) }];
+  }
+
+  function handle(method, urlStr, bodyText) {
+    var u = new URL(urlStr, "http://x/"), path = u.pathname.replace(/^.*?(\/api\/)/, "/api/"), db = load();
+    if (method === "GET") { var q = {}; u.searchParams.forEach(function (v, k) { q[k] = v; }); return get(path, q, db); }
+    if ((bodyText || "").length > MAX_BODY) return [413, { ok: false, error: "body too large" }];
+    var body; try { body = JSON.parse(bodyText || "{}"); } catch (e) { return [400, { ok: false, error: "bad json" }]; }
+    if (!isObj(body)) return [400, { ok: false, error: "body must be an object" }];
+    var r; try { r = post(path, body, db); } catch (e) { return [400, { ok: false, error: "malformed request" }]; }
+    save(db); return r;
+  }
+
+  if (g.fetch && !g.__cmhPractice) {
+    g.__cmhPractice = true;
+    var realFetch = g.fetch.bind(g);
+    g.fetch = function (input, init) {
+      var url = typeof input === "string" ? input : (input && input.url) || "", u;
+      try { u = new URL(url, g.location.href); } catch (e) { return realFetch(input, init); }
+      if (u.pathname.indexOf("/api/") < 0 || u.origin !== g.location.origin) return realFetch(input, init);
+      var method = ((init && init.method) || (input && input.method) || "GET").toUpperCase();
+      var r = handle(method, u.href, init && init.body ? String(init.body) : "");
+      return Promise.resolve(new Response(JSON.stringify(r[1]), { status: r[0], headers: { "Content-Type": "application/json" } }));
+    };
+  }
+  g.CMHPracticeApi = { handle: handle, reset: function () { save(seed()); } };
+  if (typeof module !== "undefined") module.exports = g.CMHPracticeApi;
+})(typeof window !== "undefined" ? window : globalThis);
