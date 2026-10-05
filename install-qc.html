@@ -87,8 +87,8 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json();});}
 function me(){return $('me').value;}
 function dateLabel(iso){if(!iso)return 'TBD';var p=iso.split('-');return (+p[1])+'/'+(+p[2]);}
-function laneChip(k,l){var cls=l.signoff==='confirmed'&&!l.missing?'ok':(l.missing||l.signoff==='notready')?'bad':(l.checked||l.signoff)?'mid':'';
-  return '<span class="lane '+cls+'">'+LANE_NAME[k]+' '+l.checked+'/'+l.total+(l.signoff==='confirmed'?' ✓':'')+'</span>';}
+function laneChip(k,l){var cls=l.signoff==='confirmed'&&!l.missing&&l.checked>=l.total?'ok':(l.missing||l.signoff==='notready')?'bad':(l.checked||l.signoff)?'mid':'';
+  return '<span class="lane '+cls+'">'+LANE_NAME[k]+' '+l.checked+'/'+l.total+(l.signoff==='confirmed'&&l.checked>=l.total?' ✓':'')+'</span>';}
 function showList(){CUR=null;$('detail').style.display='none';$('list').style.display='';loadList();}
 function loadList(){
   $('tabQ').setAttribute('aria-selected',TAB==='q');$('tabR').setAttribute('aria-selected',TAB==='r');
@@ -131,15 +131,16 @@ function wireLanes(job){
       row.querySelectorAll('.seg button').forEach(function(x){x.setAttribute('aria-checked',x===b);});
       row.querySelector('.found').classList.toggle('on',b.dataset.res!=='verified');};});
     card.querySelector('[data-save]').onclick=function(){
-      var items={},msg=card.querySelector('[data-msg]');msg.className='msg';msg.textContent='';
+      var items={},msg=card.querySelector('[data-msg]');msg.className='msg';msg.textContent='';var tp=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}),pastW=false;
       card.querySelectorAll('.row').forEach(function(row){var on=row.querySelector('.seg button[aria-checked=true]');if(!on)return;
-        items[row.dataset.k]={result:on.dataset.res,found:row.querySelector('[data-f=found]').value,when:row.querySelector('[data-f=when]').value};});
+        items[row.dataset.k]={result:on.dataset.res,found:row.querySelector('[data-f=found]').value,when:row.querySelector('[data-f=when]').value};var w=items[row.dataset.k].when;if(w&&w<tp)pastW=true;});if(pastW){msg.className='msg err';msg.textContent='A fix-by date has passed. Pick today or later (Pacific time).';return;}
       var body={job:job,lane:lane,by:me(),items:items},so=card.querySelector('[data-so]').value;if(so)body.signoff=so;
-      api('/api/lane',body).then(function(d){if(d.ok){msg.className='msg ok';msg.textContent='Saved · status '+d.record.status.replace('_',' ');setTimeout(function(){openJob(job);},500);}else{msg.className='msg err';msg.textContent=d.error||'Error';}});};});
+      api('/api/lane',body).then(function(d){if(d.ok){msg.className='msg ok';msg.textContent='Saved · status '+d.record.status.replace('_',' ');var sb=document.querySelector('#detail .st');if(sb){sb.className='st '+d.record.status;sb.textContent=d.record.status.replace('_',' ');}setTimeout(function(){openJob(job);},500);}else{msg.className='msg err';msg.textContent=d.error||'Error';}});};});
 }
 $('tabQ').onclick=function(){TAB='q';loadList();};$('tabR').onclick=function(){TAB='r';loadList();};
-$('me').onchange=function(){if(CUR)openJob(CUR);};
-api('/api/meta').then(function(m){META=m;if(PEOPLE.indexOf(AS)>=0){$('me').value=AS;if(AS==='Amy'||AS==='Brittny')TAB='r';var rn=document.getElementById('roleNote');if(rn)rn.textContent=(AS==='Amy'||AS==='Brittny')?'Scheduler view: you can see every project and every lane. Ready to book is your list. Verifying belongs to the lane owners.':'Manager view: verify the items in your own lane.';}loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
+function roleNote(){var n=me(),rn=$('roleNote');if(!rn)return;rn.textContent=(n==='Amy'||n==='Brittny')?'Scheduler view: you can see every project and every lane. Ready to book is your list. Verifying belongs to the lane owners.':'Manager view: verify the items in your own lane.';}
+$('me').onchange=function(){roleNote();if(CUR)openJob(CUR);else loadList();};
+api('/api/meta').then(function(m){META=m;if(PEOPLE.indexOf(AS)>=0){$('me').value=AS;if(AS==='Amy'||AS==='Brittny')TAB='r';var rn=document.getElementById('roleNote');if(rn)roleNote();}loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
 </script>
 </body>
 </html>
