@@ -164,7 +164,8 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
   <div id="locked" class="locked">
     <div class="lock">🔒</div>
     <h2>Staff login required</h2>
-    <p>Enter your first name and the same PIN you use for the other HCA tools.</p>
+    <p>Sign in with your CM Heating Google account to see customer information (sold jobs, projects, follow-ups). Or use your first name and PIN for schedules and tools.</p>
+    <button id="btnGoogle" class="btn primary" type="button" style="margin-bottom:12px">Sign in with Google</button>
     <form id="loginForm" class="loginform" autocomplete="off">
       <input id="fName" class="linput" type="text" placeholder="First name" autocomplete="off">
       <input id="fPin"  class="linput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off">
@@ -260,7 +261,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
@@ -338,6 +339,28 @@ async function doLogin(name, pin){
     msg.textContent = "Incorrect PIN, or your account isn't set up yet.";
   }
 }
+/* ---- Two tiers. PIN = schedules and tools. Google (verified @cmheating.com) = customer information.
+   The database rules are the real control; the UI below only decides what to show and when to ask. ---- */
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ hd: "cmheating.com" });
+function isGoogle(){
+  const u = auth.currentUser;
+  return !!u && u.emailVerified === true && u.providerData.some(p => p.providerId === "google.com");
+}
+async function googleSignIn(){
+  try{ await signInWithPopup(auth, googleProvider); }
+  catch(err){
+    console.error("Google sign-in:", err);
+    if(err && (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment")){
+      try{ await signInWithRedirect(auth, googleProvider); }catch(e2){ console.error(e2); }
+    }
+  }
+}
+function lockedCardHtml(what){
+  return `<div class="soon">Customer information is behind your Google sign-in.<br><button class="btn primary" type="button" data-gsign style="margin-top:10px">Sign in with Google to see ${esc(what)}</button></div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-gsign]"); if(b) googleSignIn(); });
+const _gb = $("btnGoogle"); if(_gb) _gb.addEventListener("click", googleSignIn);
 const loginForm = $("loginForm");
 if(loginForm){
   loginForm.addEventListener("submit", e => {
@@ -371,7 +394,7 @@ function unlock(){
   $("content").classList.add("show");
   $("btnLogin").classList.add("hidden");
   $("btnLogout").classList.remove("hidden");
-  badge(`● ${currentUser.role}: ${currentUser.short}`, "ok");
+  badge(`● ${currentUser.role}: ${currentUser.short} · ${isGoogle() ? "Google" : "PIN — customer info locked"}`, isGoogle() ? "ok" : "");
 
   const isAdmin = currentUser.role === "ADMIN";
   if(isAdmin){
@@ -480,6 +503,7 @@ function loadActivitiesCard(who){
 let followupData = null;
 function loadFollowupCard(who){
   $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  if(!isGoogle()){ setBody("followupBody", lockedCardHtml("your follow-ups")); $("followupNote").textContent = ""; return; }
   if(followupData){ renderFollowup(who); return; }
   onValue(ref(db, DB_FOLLOWUP), snap => {
     followupData = snap.val() || {};
@@ -498,6 +522,7 @@ function renderFollowup(who){
 /* SOLD: read cmh_sold_tracker for this rep. */
 let soldData = null;
 function loadSoldCard(who){
+  if(!isGoogle()){ setBody("soldBody", lockedCardHtml("your sold jobs")); $("soldNote").textContent = ""; renderProjects(who); return; }
   if(soldData){ renderSold(who); return; }
   onValue(ref(db, DB_SOLD), snap => {
     soldData = snap.val() || {};
@@ -726,6 +751,7 @@ $("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
    already loads; backlog/pipeline jobs come from soldData.pipeline when the sync provides it.
    PILOT: only the listed HCAs (or an admin viewing them) see the new list, overlay and link. Everyone else is unchanged. */
 const PILOT_HCAS = ["Samir Khoury"];
+function pacificTodayIso(){ return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function pilotOn(who){ return !!who && PILOT_HCAS.some(n => norm(n) === norm(who.full)); }
 function soldJobsAll(){ return !soldData || !soldData.jobs ? [] : (Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs)); }
 function pipelineAll(){ const p = soldData && soldData.pipeline; return !p ? [] : (Array.isArray(p) ? p : Object.values(p)); }
@@ -734,11 +760,13 @@ function renderProjects(who){
   if(box) box.style.display = on ? "" : "none";
   if(lk) lk.style.display = on ? "" : "none";
   if(!on || !box) return;
-  box.innerHTML = CMHProjects.listHtml(soldJobsAll(), pipelineAll(), who, pacificIso(new Date()));
+  if(!isGoogle()){ box.innerHTML = lockedCardHtml("your projects"); return; }
+  box.innerHTML = CMHProjects.listHtml(soldJobsAll(), pipelineAll(), who, pacificTodayIso());
 }
 function schedOverlay(fromIso, toIso){
   const who = viewRep; if(!pilotOn(who)) return "";
-  return CMHProjects.overlayHtml(soldJobsAll(), pipelineAll(), who, fromIso, toIso, pacificIso(new Date()));
+  if(!isGoogle()) return '<div class="sched-ov">' + lockedCardHtml("your sold installs") + "</div>";
+  return CMHProjects.overlayHtml(soldJobsAll(), pipelineAll(), who, fromIso, toIso, pacificTodayIso());
 }
 /* ===== end INSTALL PROJECTS ===== */
 
