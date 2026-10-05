@@ -122,5 +122,9 @@ with sync_playwright() as p:
     ok('after Submit: Save & exit is gone and the button says Back to my projects', not pg.is_visible('#parkBtn') and pg.inner_text('#submitBtn') == 'Back to my projects')
     pg.wait_for_timeout(2600); ok('after Submit the page returns to the project list by itself', 'practice/index.html' in pg.url)
     pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); ok('reopening a submitted project also offers Back to my projects (no Save & exit)', not pg.is_visible('#parkBtn') and pg.inner_text('#submitBtn') == 'Back to my projects')
+    # N/A rules (owner, 2026-10-04): Permit/jurisdiction is always considered (no N/A); AHRI keeps N/A (not a full system); Heat load N/A is being checked, unchanged
+    api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(700)
+    na = lambda i: pg.locator(f'button[data-id="{i}"][data-v="na"]').count()
+    ok('Permit has no N/A; AHRI and Heat load still do', na('permit') == 0 and na('ahri') == 1 and na('heatload') == 1)
     ok('no page errors', not errs); print(errs[:3]); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
