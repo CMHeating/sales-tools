@@ -74,6 +74,21 @@ with sync_playwright() as p:
     # --- reset ---
     pg.goto(ORIGIN + 'practice/index.html'); pg.wait_for_timeout(500); pg.click('#reset'); pg.wait_for_timeout(500)
     ok('reset puts the practice data back', api('GET', '/api/record?job=900001')[1]['record']['status'] == 'working')
+    # --- Codex review (PR #45) regressions, through the in-browser API ---
+    api('POST', '/api/reset', {})
+    api('POST', '/api/hca', dict({'job': '800001', 'by': 'T'}, pay='✔ Paid in full', items={k: {'v': 'yes'} for k in ['stock', 'permit', 'mat', 'photos', 'video']}))
+    api('POST', '/api/hca', {'job': '800001', 'by': 'T', 'submit': True})
+    ok('CODEX-2 a submitted backlog/pipeline project reaches the manager queue', any(j['job'] == '800001' for j in api('GET', '/api/queue')[1]['jobs']))
+    for lane, v in api('GET', '/api/meta')[1]['lanes'].items(): api('POST', '/api/lane', {'job': '800001', 'by': v['who'], 'lane': lane, 'items': {k: {'result': 'verified'} for k in v['items']}, 'signoff': 'confirmed'})
+    ok('CODEX-2 ...and, once verified, the Ready to book list', any(j['job'] == '800001' for j in api('GET', '/api/ready')[1]['jobs']))
+    api('POST', '/api/reset', {}); api('POST', '/api/hca', {'job': '800003', 'by': 'T', 'pay': '✔ Paid in full', 'items': {'stock': {'v': 'yes'}}})
+    pj = {j['job']: j for j in api('GET', '/api/jobs?rep=Samir%20Khoury')[1]['pipeline']}
+    ok('CODEX-3 jobs list returns readiness/status for pipeline projects', pj['800003']['readiness']['done'] == 2 and pj['800002']['readiness']['done'] == 0)
+    api('POST', '/api/reset', {}); pg.goto(ORIGIN + 'install-requirements.html#job=900002&cust=Sample+Bravo&date=%s&rep=Samir+Khoury&practice=1' % d(6)); pg.reload(); pg.wait_for_timeout(700)
+    pg.select_option('#pay', index=1); pg.click('button[data-id="stock"][data-v="yes"]'); pg.wait_for_timeout(600)
+    pg.goto(ORIGIN + 'practice/index.html'); pg.wait_for_timeout(500); pg.click('#reset'); pg.wait_for_timeout(600)
+    pg.goto(ORIGIN + 'install-requirements.html#job=900002&cust=Sample+Bravo&date=%s&rep=Samir+Khoury&practice=1' % d(6)); pg.reload(); pg.wait_for_timeout(900)
+    ok('CODEX-1 reset also clears the per-project drafts (a fresh project is really fresh)', pg.inner_text('#ringN').replace('\n', ' ') == '0 of 8' and pg.evaluate("Object.keys(localStorage).filter(k=>k.indexOf('cmh_practice_req_')===0&&localStorage[k].indexOf('yes')>=0).length") == 0)
     # --- ADMIN page ---
     api('POST', '/api/reset', {})
     full = {'pay': '✔ Financed — approved & sales slip signed', 'items': {k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video']}}

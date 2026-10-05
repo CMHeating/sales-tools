@@ -54,6 +54,11 @@ def find_job(jobs, pipe, job):
     return None
 
 
+def all_projects(jobs, pipe):
+    """Sold jobs first, then every backlog/pipeline project (they can be completed and reviewed too)."""
+    return list(jobs) + [find_job(jobs, pipe, p["job"]) for p in pipe if not any(j["job"] == p["job"] for j in jobs)]
+
+
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
@@ -262,7 +267,8 @@ class H(SimpleHTTPRequestHandler):
                     rec = recs.get(j["job"], {"hca": {}})
                     out.append(dict(j, readiness=readiness(rec), status=derive_status(rec),
                                     parked=rec.get("parked")))
-                pipe = [p for p in load("pipeline.json", []) if not rep or p["hca"].lower() == rep]
+                pipe = [dict(p, readiness=readiness(recs.get(p["job"], {"hca": {}})), status=derive_status(recs.get(p["job"], {"hca": {}})), parked=(recs.get(p["job"]) or {}).get("parked"))
+                        for p in load("pipeline.json", []) if not rep or p["hca"].lower() == rep]
                 return self._json(200, {"ok": True, "jobs": out, "pipeline": pipe})
             if u.path == "/api/record":
                 job = q.get("job", "")
@@ -273,7 +279,7 @@ class H(SimpleHTTPRequestHandler):
                 return self._json(200, {"ok": True, "job": meta, "record": public(rec)})
             if u.path == "/api/queue":
                 out = []
-                for j in jobs:
+                for j in all_projects(jobs, pipe_all):
                     rec = recs.get(j["job"])
                     if not rec or not rec.get("hca", {}).get("submittedAt"):
                         continue
@@ -281,7 +287,7 @@ class H(SimpleHTTPRequestHandler):
                                     lanes={k: lane_state(rec, k) for k in LANES}))
                 return self._json(200, {"ok": True, "jobs": out})
             if u.path == "/api/ready":
-                out = [dict(j, readiness=readiness(recs[j["job"]])) for j in jobs
+                out = [dict(j, readiness=readiness(recs[j["job"]])) for j in all_projects(jobs, pipe_all)
                        if j["job"] in recs and derive_status(recs[j["job"]]) == "ready"]
                 return self._json(200, {"ok": True, "jobs": out})
             if u.path == "/api/admin":

@@ -49,6 +49,7 @@
   function load() { try { var d = JSON.parse(g.localStorage.getItem(KEY)); if (d && d.jobs && d.records) return d; } catch (e) { } var s = seed(); save(s); return s; }
   function save(db) { try { g.localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { } }
 
+  function clearDrafts() { try { Object.keys(g.localStorage).filter(function (k) { return k.indexOf("cmh_practice_req_") === 0; }).forEach(function (k) { g.localStorage.removeItem(k); }); } catch (e) { } }
   function findJob(db, job) {
     for (var i = 0; i < db.jobs.length; i++) if (db.jobs[i].job === job) return db.jobs[i];
     for (var k = 0; k < db.pipeline.length; k++) if (db.pipeline[k].job === job) {
@@ -117,26 +118,30 @@
       nextDue: dues[0] || "", overdue: oi.some(function (x) { return x.overdue; }), lastActivity: hist.length ? hist[hist.length - 1].at : "", reopen: rec.reopen || null });
   }
 
+  function allProjects(db) { var out = db.jobs.slice(); db.pipeline.forEach(function (p) { if (!out.some(function (j) { return j.job === p.job; })) out.push(findJob(db, p.job)); }); return out; }
+
   function get(path, q, db) {
     var jobs = db.jobs, recs = db.records;
     if (path === "/api/jobs") {
       var rep = String(q.rep || "").trim().toLowerCase(), out = [];
       jobs.forEach(function (j) { if (rep && j.hca.toLowerCase() !== rep) return; var rec = recs[j.job] || { hca: {} };
         out.push(Object.assign({}, j, { readiness: readiness(rec), status: deriveStatus(rec), parked: rec.parked || null })); });
-      return [200, { ok: true, jobs: out, pipeline: db.pipeline.filter(function (p) { return !rep || p.hca.toLowerCase() === rep; }) }];
+      var pipe = db.pipeline.filter(function (p) { return !rep || p.hca.toLowerCase() === rep; }).map(function (p) { var rec = recs[p.job] || { hca: {} };
+        return Object.assign({}, p, { readiness: readiness(rec), status: deriveStatus(rec), parked: rec.parked || null }); });
+      return [200, { ok: true, jobs: out, pipeline: pipe }];
     }
     if (path === "/api/record") {
       var meta = findJob(db, q.job || ""); if (!meta) return [404, { ok: false, error: "unknown job" }];
       return [200, { ok: true, job: meta, record: pub(recs[q.job] || { hca: {} }) }];
     }
     if (path === "/api/queue") {
-      var o2 = []; jobs.forEach(function (j) { var rec = recs[j.job]; if (!rec || !(rec.hca || {}).submittedAt) return;
+      var o2 = []; allProjects(db).forEach(function (j) { var rec = recs[j.job]; if (!rec || !(rec.hca || {}).submittedAt) return;
         var lanes = {}; Object.keys(LANES).forEach(function (k) { lanes[k] = laneState(rec, k); });
         o2.push(Object.assign({}, j, { status: deriveStatus(rec), readiness: readiness(rec), lanes: lanes })); });
       return [200, { ok: true, jobs: o2 }];
     }
     if (path === "/api/ready") {
-      return [200, { ok: true, jobs: jobs.filter(function (j) { return recs[j.job] && deriveStatus(recs[j.job]) === "ready"; }).map(function (j) { return Object.assign({}, j, { readiness: readiness(recs[j.job]) }); }) }];
+      return [200, { ok: true, jobs: allProjects(db).filter(function (j) { return recs[j.job] && deriveStatus(recs[j.job]) === "ready"; }).map(function (j) { return Object.assign({}, j, { readiness: readiness(recs[j.job]) }); }) }];
     }
     if (path === "/api/admin") {
       var rows = jobs.filter(function (j) { return !/DONE|COMPLETE/i.test(j.stage || ""); }).map(function (j) { return adminRow(j, recs[j.job], "sold"); });
@@ -150,7 +155,7 @@
   }
 
   function post(path, body, db) {
-    if (path === "/api/reset") { var s = seed(); db.jobs = s.jobs; db.pipeline = s.pipeline; db.records = {}; db.outbox = []; return [200, { ok: true }]; }
+    if (path === "/api/reset") { var s = seed(); db.jobs = s.jobs; db.pipeline = s.pipeline; db.records = {}; db.outbox = []; clearDrafts(); return [200, { ok: true }]; }
     var job = String(body.job == null ? "" : body.job), meta = findJob(db, job);
     if (["/api/hca", "/api/lane", "/api/install", "/api/reopen"].indexOf(path) < 0) return [404, { ok: false, error: "no such endpoint" }];
     if (!meta) return [404, { ok: false, error: "unknown job" }];

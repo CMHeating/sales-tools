@@ -67,6 +67,16 @@ c, r = call('/api/reopen', {'job': '900002', 'by': 'Amy', 'reason': 'Photos miss
 ok('send back clears manager sign-offs', not any(l.get('signoff') for l in (call('/api/record?job=900002')[1]['record'].get('lanes') or {}).values()))
 c, r = call('/api/reopen', {'job': '900002', 'by': 'Amy', 'reason': 'again'}); ok('cannot send back a project that is already back with the HCA', c == 409)
 hca('900002', submit=True); ok('resubmitting clears the sent-back note', 'reopen' not in call('/api/record?job=900002')[1]['record'])
+
+# ---------- Codex review (PR #45) regressions ----------
+call('/api/reset', {})
+hca('800001', **FULL); hca('800001', submit=True)
+ok('CODEX-2 a submitted backlog/pipeline project reaches the manager queue', any(j['job'] == '800001' for j in call('/api/queue')[1]['jobs']))
+for lane, v in call('/api/meta')[1]['lanes'].items(): call('/api/lane', {'job': '800001', 'by': v['who'], 'lane': lane, 'items': {k: {'result': 'verified'} for k in v['items']}, 'signoff': 'confirmed'})
+ok('CODEX-2 ...and, once verified, the Ready to book list', any(j['job'] == '800001' for j in call('/api/ready')[1]['jobs']))
+call('/api/reset', {}); hca('800003', pay=FULL['pay'], items={'stock': {'v': 'yes'}})
+pj = {j['job']: j for j in call('/api/jobs?rep=Samir%20Khoury')[1]['pipeline']}
+ok('CODEX-3 jobs list returns readiness/status for pipeline projects', pj['800003']['readiness']['done'] == 2 and pj['800003']['status'] == 'working' and pj['800002']['readiness']['done'] == 0)
 # ---------- shared module (node) ----------
 js = r'''
 const P = require(process.argv[1] + '/js/install-projects.js'); const who = {full: 'A B'}; let bad = [];
