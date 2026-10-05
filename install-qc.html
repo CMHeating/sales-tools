@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<script>if(/[#&?]practice=1/.test(location.hash+location.search)){document.write('<script src="js/practice-api.js"><\/script>');}</script>
+<script>if(/[#&?]practice=1/.test(location.hash+location.search)){document.write('<script src="js/practice-api.js"><\/script>');}else if(/[#&?]live=1/.test(location.hash+location.search)){document.write('<script src="js/live-core.js"><\/script><script src="js/live-api.js"><\/script>');}</script>
 <title>Install QC — CM Heating</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
@@ -50,6 +50,7 @@
   .acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
   .msg{font-size:13px;color:var(--mut)}.msg.err{color:#fecaca}.msg.ok{color:#bbf7d0}
   a{color:var(--blue)}
+  #envBar.demo{background:#78350f;color:#fde68a}
   #envBar{position:sticky;top:0;z-index:40;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px 10px;background:#7f1d1d;color:#fecaca}
   .back{color:var(--mut);text-decoration:none;font-size:13px;cursor:pointer;background:none;border:0;font-family:inherit;padding:8px 0}.back:hover{color:var(--text)}
   .empty{color:var(--mut);padding:18px 4px}
@@ -62,7 +63,7 @@
 <body>
 <div id="envBar">SANDBOX — fake data, nothing leaves this machine</div>
 <div class="wrap">
-  <div class="topbar"><span class="pill">CM HEATING</span>
+  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" id="homeBack" href="install-home.html">&larr; Install tools</a>
     <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Geoff</option><option>Lyle</option><option>Jon</option><option>Amy</option><option>Brittny</option></select></label></div>
   <div id="list">
     <h1>Install QC</h1><p class="sub">Verify what the HCA confirmed against ServiceTitan. Each lane checks its own items.</p><p class="sub" id="roleNote" style="color:var(--gold)"></p>
@@ -73,9 +74,12 @@
 </div>
 <script>
 var $=function(id){return document.getElementById(id)};
-var META=null,TAB='q',CUR=null;
+var META=null,TAB=/[#&?]view=ready/.test(location.hash+location.search)?'r':'q',CUR=null;
 var PRACTICE=/[#&?]practice=1/.test(location.hash+location.search);
+if(PRACTICE){var hb=document.getElementById('homeBack');hb.href='practice/index.html';hb.textContent='\u2190 Practice home';}
+var LIVE=!PRACTICE&&/[#&?]live=1/.test(location.hash+location.search);
 if(PRACTICE){document.getElementById('envBar').textContent='PRACTICE — fake projects, nothing is sent, nothing is real';}
+if(LIVE){var eb0=document.getElementById('envBar');eb0.textContent='LIVE — real projects. What you verify is saved to the office.';eb0.className='demo';var wh=document.querySelector('.who');if(wh)wh.style.display='none';}
 var AS=(function(){var m=(location.hash+location.search).match(/[#&?]as=([^&]*)/);return m?decodeURIComponent(m[1]):'';})();
 var PEOPLE=['Geoff','Lyle','Jon','Amy','Brittny'];
 var WHO_LANE={Geoff:'sales',Lyle:'install',Jon:'electrical'};
@@ -93,6 +97,7 @@ function showList(){CUR=null;$('detail').style.display='none';$('list').style.di
 function loadList(){
   $('tabQ').setAttribute('aria-selected',TAB==='q');$('tabR').setAttribute('aria-selected',TAB==='r');
   api(TAB==='q'?'/api/queue':'/api/ready').then(function(d){
+    if(!d.ok){$('rows').innerHTML='<div class="empty">'+esc(d.error||'Could not load.')+'</div>';return;}
     var jobs=(d.jobs||[]).filter(function(j){return TAB==='r'||j.status!=='ready';});
     if(!jobs.length){$('rows').innerHTML='<div class="empty">'+(TAB==='q'?'Nothing waiting for review.':'Nothing ready to book yet.')+'</div>';return;}
     $('rows').innerHTML=jobs.map(function(j){var ln=j.lanes?Object.keys(j.lanes).map(function(k){return laneChip(k,j.lanes[k]);}).join(''):'';
@@ -102,7 +107,7 @@ function loadList(){
 }
 function openJob(job){
   CUR=job;api('/api/record?job='+encodeURIComponent(job)).then(function(d){
-    if(!d.ok){return;}var r=d.record,j=d.job,h=r.hca||{},items=h.items||{},mylane=WHO_LANE[me()]||'';
+    if(!d.ok){return;}var r=d.record,j=d.job,h=r.hca||{},items=h.items||{},mylane=LIVE?(Object.keys((META.me||{}).lanes||{}).filter(function(k){return META.me.lanes[k];})[0]||''):(WHO_LANE[me()]||'');
     var rental=/rental/i.test(h.pay||'');
     function hcaSaid(ids){ids=ids.filter(function(i){return rental||i.indexOf('r-')!==0;});if(!ids.length)return 'No rental paperwork on this job';return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
       var txt=i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');
@@ -111,7 +116,7 @@ function openJob(job){
     var html='<button class="back" type="button" id="backBtn">&larr; All jobs</button><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
     if(h.notes)html+='<div class="card"><div class="said"><b>HCA notes:</b> '+esc(h.notes)+'</div></div>';
     Object.keys(META.lanes).forEach(function(lane){
-      var L=(r.lanes||{})[lane]||{items:{}},mine=(lane===mylane),sum=r.lanesSummary[lane];
+      var L=(r.lanes||{})[lane]||{items:{}},mine=LIVE?!!(((META.me||{}).lanes||{})[lane]):(lane===mylane),sum=r.lanesSummary[lane];
       html+='<details class="card" data-lane="'+lane+'"'+((mine||!mylane)?' open':'')+'><summary class="lanesum"><h2>'+LANE_NAME[lane]+' · '+META.lanes[lane].who+' '+laneChip(lane,sum)+'</h2></summary>';
       if(!mine)html+='<p class="sub" style="margin:0 0 6px">'+(mylane?'This lane belongs to '+META.lanes[lane].who+'.':'Sign in as Geoff, Lyle or Jon to verify a lane.')+'</p>';
       META.lanes[lane].items.forEach(function(k){var it=L.items[k]||{},ids=HCA_FOR[k]||[];
@@ -124,7 +129,7 @@ function openJob(job){
     $('backBtn').onclick=showList;wireLanes(job);
   });
 }
-function payState(p){if(!p)return '';if(p.indexOf('⏳')===0)return 'work';if(p==='N/A')return 'na';return p.indexOf('✔')===0?'yes':'no';}
+function payState(p){if(!p)return '';if(p.indexOf('⏳')===0)return 'work';if(p==='N/A')return '';return p.indexOf('✔')===0?'yes':'no';}
 function wireLanes(job){
   document.querySelectorAll('[data-lane]').forEach(function(card){var lane=card.dataset.lane;
     card.querySelectorAll('.seg button').forEach(function(b){b.onclick=function(){var row=b.closest('.row');
@@ -138,9 +143,9 @@ function wireLanes(job){
       api('/api/lane',body).then(function(d){if(d.ok){msg.className='msg ok';msg.textContent='Saved · status '+d.record.status.replace('_',' ');var sb=document.querySelector('#detail .st');if(sb){sb.className='st '+d.record.status;sb.textContent=d.record.status.replace('_',' ');}setTimeout(function(){openJob(job);},500);}else{msg.className='msg err';msg.textContent=d.error||'Error';}});};});
 }
 $('tabQ').onclick=function(){TAB='q';loadList();};$('tabR').onclick=function(){TAB='r';loadList();};
-function roleNote(){var n=me(),rn=$('roleNote');if(!rn)return;rn.textContent=(n==='Amy'||n==='Brittny')?'Scheduler view: you can see every project and every lane. Ready to book is your list. Verifying belongs to the lane owners.':'Manager view: verify the items in your own lane.';}
+function roleNote(){var n=me(),rn=$('roleNote');if(!rn)return;if(LIVE&&META&&META.me){var R=META.me.role;rn.textContent=R==='scheduler'?'Scheduler view: you can see every project and every lane. Ready to book is your list. Verifying belongs to the lane owners.':'Signed in as '+(META.me.name||'you')+': verify the items in your own lane'+(R==='admin'?'s.':'.');return;}rn.textContent=(n==='Amy'||n==='Brittny')?'Scheduler view: you can see every project and every lane. Ready to book is your list. Verifying belongs to the lane owners.':'Manager view: verify the items in your own lane.';}
 $('me').onchange=function(){roleNote();if(CUR)openJob(CUR);else loadList();};
-api('/api/meta').then(function(m){META=m;if(PEOPLE.indexOf(AS)>=0){$('me').value=AS;if(AS==='Amy'||AS==='Brittny')TAB='r';var rn=document.getElementById('roleNote');if(rn)roleNote();}loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
+api('/api/meta').then(function(m){META=m;if(LIVE)roleNote();if(PEOPLE.indexOf(AS)>=0){$('me').value=AS;if(AS==='Amy'||AS==='Brittny')TAB='r';var rn=document.getElementById('roleNote');if(rn)roleNote();}loadList();}).catch(function(){$('rows').innerHTML='<div class="empty">QC runs on the sandbox server for now (not connected to live yet).</div>';});
 </script>
 </body>
 </html>
