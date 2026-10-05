@@ -333,7 +333,7 @@ function trapPark(e){var m=$('parkModal');if(!m.classList.contains('on'))return;
   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
 var _parking=false;
-function parked(msg){_parking=false;$('parkSave').disabled=false;closePark();$('barTxt').innerHTML='<b>Parked.</b> '+esc(msg);}
+function parked(msg){_parking=false;$('parkSave').disabled=false;closePark();$('barTxt').innerHTML='<b>Parked.</b> '+esc(msg);setTimeout(function(){location.href=backHref();},1200);}   /* Save & exit really exits: back to the project list */
 function savePark(){if(_parking)return;var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
   if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}if(d<todayPT()){m.textContent='That date has passed. Pick today or later.';return;}
   S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();

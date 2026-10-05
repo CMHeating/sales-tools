@@ -48,6 +48,8 @@ with sync_playwright() as p:
     ok('F3 Save & exit closes the modal after success', not pg.locator('#parkModal.on').count())
     ok('F3 footer confirms parked, answers kept', 'Parked' in pg.inner_text('#barTxt') and pg.inner_text('#ringN').startswith('6'))
     c, r = api('GET', '/api/record?job=900001'); ok('F3 parked stored once on the record', r['record'].get('parked') is not None)
+    pg.wait_for_timeout(900); ok('F3 Save & exit goes back to the project list (not stuck on the form)', 'practice/index.html' in pg.url)
+    pg.goto(URL); pg.reload(); pg.wait_for_timeout(800)
     # F2: landscape modal inside the viewport
     pg.set_viewport_size({'width': 844, 'height': 390}); pg.click('#parkBtn'); pg.wait_for_timeout(300)
     box = pg.evaluate("(()=>{const h=document.getElementById('parkH').getBoundingClientRect(),s=document.getElementById('parkSave').getBoundingClientRect(),sh=document.querySelector('.sheet').getBoundingClientRect();return {h:h.top,s:s.bottom,sh:sh.height,vh:innerHeight}})()")
