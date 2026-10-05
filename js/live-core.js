@@ -14,6 +14,7 @@
   var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor", "e-labor"];
   /* Rebate: "rebate" is yes / na (= no rebate). When yes, a program is chosen and ALL of its questions must be Complete before the project can be Ready (the rebate gate). */
   var NA_OK = ["ahri", "e-disconnect", "e-outlet", "r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];   /* items that may be answered N/A ("rebate" uses na for "No rebate") */
+  var CLAIM_ITEMS = ["claim", "downpay", "rb-applied"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
   var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance", "rb-equip"], Other: ["rb-balance", "rb-ahri"] };
   function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (/^Other: \S/.test(p) ? "Other" : ""); }
@@ -61,7 +62,6 @@
     var need = REQUIRED_HCA.concat(["rebate"], RENTAL_ITEMS.filter(function (i) { return i in st; }), REBATE_ITEMS.slice(1).filter(function (i) { return i in st; }));
     need.forEach(function (i) { if (!st[i]) out.push(i); });
     if (st.rebate === "yes" && !rebateKey((rec.hca || {}).rebateProgram)) out.push("rebate program");
-    if (st.rebate === "yes" && !/\d/.test((rec.hca || {}).rebateAmount || "")) out.push("rebate amount");
     Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
     return out;
   }
@@ -190,6 +190,7 @@
         if (!me || !me.role) return fail(403, "Your account is not set up for the install tools.");
         if (path === "/api/meta") return [200, { ok: true, lanes: LANES, labels: LANE_LABELS, sandbox: false, practice: false, live: true, me: { role: me.role, name: me.name, lanes: me.lanes || {} } }];
         if (path === "/api/outbox") return [200, { ok: true, mail: [] }];
+        if (path === "/api/config") return store.get("cmh_install_roster/config/jurisdictionUrl").then(function (u) { return [200, { ok: true, jurisdictionUrl: typeof u === "string" ? u : "" }]; }, function () { return [200, { ok: true, jurisdictionUrl: "" }]; });
         if (path === "/api/record") {
           return findJob(me, q.job || "").then(function (j) {
             if (!j) return fail(404, "unknown job");
@@ -250,12 +251,11 @@
         if ("vendor" in body) { merged.hca.vendor = str(body.vendor, 60); put(up, hk, job, "hca/vendor", merged.hca.vendor); }
         if ("filterSize" in body) { merged.hca.filterSize = str(body.filterSize, 30); put(up, hk, job, "hca/filterSize", merged.hca.filterSize); }
         if ("scope" in body) { merged.hca.scope = str(body.scope, 60); put(up, hk, job, "hca/scope", merged.hca.scope); }
-        if ("rebateAmount" in body) { merged.hca.rebateAmount = str(body.rebateAmount, 40).replace(/[^0-9.,$ ]/g, "").slice(0, 20); put(up, hk, job, "hca/rebateAmount", merged.hca.rebateAmount); }
         var ks = Object.keys(itemsIn);
         for (var i = 0; i < ks.length; i++) {
           var k = ks[i], v = itemsIn[k];
-          if (BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS).indexOf(k) < 0) return fail(400, "unknown item " + k);
-          if (HCA_STATES.indexOf(v.v) < 0 || (k === "rebate" && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && NA_OK.indexOf(k) < 0)) return fail(400, "bad state for " + k);
+          if (BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS, CLAIM_ITEMS).indexOf(k) < 0) return fail(400, "unknown item " + k);
+          if (HCA_STATES.indexOf(v.v) < 0 || ((k === "rebate" || k === "claim" || k === "rb-applied") && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && k !== "claim" && k !== "rb-applied" && k !== "downpay" && NA_OK.indexOf(k) < 0)) return fail(400, "bad state for " + k);
           var old = ((merged.hca.items || {})[k] || {}).v, it = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
           merged.hca.items = merged.hca.items || {}; merged.hca.items[k] = it; put(up, hk, job, "hca/items/" + k, it);
           if (old !== v.v) addHist(up, hk, job, me, "hca." + k, old === undefined ? null : old, v.v);

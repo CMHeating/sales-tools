@@ -8,6 +8,7 @@
   var BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video", "i-labor", "e-disconnect", "e-outlet", "e-labor"];
   var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
   var NA_OK = ["ahri", "e-disconnect", "e-outlet", "r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];   /* items that may be answered N/A ("rebate" uses na for "No rebate") */
+  var CLAIM_ITEMS = ["claim", "downpay", "rb-applied"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
   var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance", "rb-equip"], Other: ["rb-balance", "rb-ahri"] };
   function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (/^Other: \S/.test(p) ? "Other" : ""); }
@@ -86,7 +87,6 @@
     var need = REQUIRED_HCA.concat(["rebate"], RENTAL_ITEMS.filter(function (i) { return i in st; }), REBATE_ITEMS.slice(1).filter(function (i) { return i in st; }));
     need.forEach(function (i) { if (!st[i]) out.push(i); });
     if (st.rebate === "yes" && !rebateKey(h2(rec).rebateProgram)) out.push("rebate program");
-    if (st.rebate === "yes" && !/\d/.test(h2(rec).rebateAmount || "")) out.push("rebate amount");
     Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
     return out;
   }
@@ -162,6 +162,7 @@
       db.pipeline.forEach(function (pj) { if (!have[pj.job]) rows.push(adminRow(findJob(db, pj.job), recs[pj.job], pj.source || "pipeline")); });
       return [200, { ok: true, jobs: rows }];
     }
+    if (path === "/api/config") return [200, { ok: true, jurisdictionUrl: "" }];
     if (path === "/api/outbox") return [200, { ok: true, mail: db.outbox }];
     if (path === "/api/meta") return [200, { ok: true, lanes: LANES, labels: LANE_LABELS, sandbox: true, practice: true }];
     return [404, { ok: false, error: "no such endpoint" }];
@@ -183,14 +184,13 @@
       if ("scope" in body) h.scope = str(body.scope, 60);
       if ("vendor" in body) h.vendor = str(body.vendor, 60);
       if ("filterSize" in body) h.filterSize = str(body.filterSize, 30);
-      if ("rebateAmount" in body) h.rebateAmount = str(body.rebateAmount, 40).replace(/[^0-9.,$ ]/g, "").slice(0, 20);
       var itemsIn = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
       if (!isObj(itemsIn) || !Object.keys(itemsIn).every(function (k) { return isObj(itemsIn[k]); })) return [400, { ok: false, error: "items must be an object of objects" }];
       var ks = Object.keys(itemsIn);
       for (var i = 0; i < ks.length; i++) {
         var k = ks[i], v = itemsIn[k];
-        if ((BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS)).indexOf(k) < 0) return [400, { ok: false, error: "unknown item " + k }];
-        if (HCA_STATES.indexOf(v.v) < 0 || (k === "rebate" && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && NA_OK.indexOf(k) < 0)) return [400, { ok: false, error: "bad state for " + k }];
+        if ((BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS, CLAIM_ITEMS)).indexOf(k) < 0) return [400, { ok: false, error: "unknown item " + k }];
+        if (HCA_STATES.indexOf(v.v) < 0 || ((k === "rebate" || k === "claim" || k === "rb-applied") && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && k !== "claim" && k !== "rb-applied" && k !== "downpay" && NA_OK.indexOf(k) < 0)) return [400, { ok: false, error: "bad state for " + k }];
         h.items = h.items || {}; var old = (h.items[k] || {}).v;
         h.items[k] = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
         if (old !== v.v) history(rec, who, "hca." + k, old === undefined ? null : old, v.v);
