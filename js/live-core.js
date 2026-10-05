@@ -61,6 +61,7 @@
     var need = REQUIRED_HCA.concat(["rebate"], RENTAL_ITEMS.filter(function (i) { return i in st; }), REBATE_ITEMS.slice(1).filter(function (i) { return i in st; }));
     need.forEach(function (i) { if (!st[i]) out.push(i); });
     if (st.rebate === "yes" && !rebateKey((rec.hca || {}).rebateProgram)) out.push("rebate program");
+    if (st.rebate === "yes" && !/\d/.test((rec.hca || {}).rebateAmount || "")) out.push("rebate amount");
     Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
     return out;
   }
@@ -245,6 +246,8 @@
         if ("pay" in body) { merged.hca.pay = str(body.pay, 80); put(up, hk, job, "hca/pay", merged.hca.pay); }
         if ("notes" in body) { merged.hca.notes = str(body.notes, 600); put(up, hk, job, "hca/notes", merged.hca.notes); }
         if ("rebateProgram" in body) { merged.hca.rebateProgram = str(body.rebateProgram, 60); put(up, hk, job, "hca/rebateProgram", merged.hca.rebateProgram); }
+        if ("system" in body) { merged.hca.system = str(body.system, 60); put(up, hk, job, "hca/system", merged.hca.system); }
+        if ("scope" in body) { merged.hca.scope = str(body.scope, 60); put(up, hk, job, "hca/scope", merged.hca.scope); }
         if ("rebateAmount" in body) { merged.hca.rebateAmount = str(body.rebateAmount, 40).replace(/[^0-9.,$ ]/g, "").slice(0, 20); put(up, hk, job, "hca/rebateAmount", merged.hca.rebateAmount); }
         var ks = Object.keys(itemsIn);
         for (var i = 0; i < ks.length; i++) {
