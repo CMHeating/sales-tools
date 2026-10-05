@@ -77,6 +77,7 @@
   .bar-in{max-width:720px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:10px}
   .bar-txt{flex:1;font-size:13px;color:var(--mut);line-height:1.3}
   .bar-txt b{color:var(--text)}
+  @media (max-width:420px){.bar-in{flex-wrap:wrap;gap:8px}.bar-txt{flex:1 0 100%;font-size:12px;max-height:2.7em;overflow:hidden}.bar .btn{flex:1 1 0;padding:0 10px}}
   .btn{min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;font-size:15px;cursor:pointer}
   .btn.go{background:var(--orange);border-color:var(--orange);color:#fff}
   .btn[disabled]{opacity:.5;cursor:not-allowed}
@@ -84,10 +85,10 @@
   /* modal */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0}
   .modal.on{display:flex}
-  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:720px;padding:18px 16px max(18px,env(safe-area-inset-bottom,0))}
+  .sheet{max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:720px;padding:18px 16px max(18px,env(safe-area-inset-bottom,0))}
   .sheet h2{font-family:"Playfair Display",serif;margin:0 0 6px}
   .sheet .f{margin:10px 0}
-  .sheet .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .sheet .acts{position:sticky;bottom:0;background:var(--panel);padding-top:8px;display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
   @media (min-width:640px){.modal{align-items:center}.sheet{border-radius:20px}}
   @media (prefers-reduced-motion:no-preference){.ring circle.v{transition:stroke-dashoffset .4s ease,stroke .4s ease}
     .ring.hot .flame{animation:flicker 1s ease-in-out infinite alternate}.ring.bump{animation:bump .35s ease}.ring.done .t{animation:pop .5s ease}
@@ -127,6 +128,7 @@
   </section>
 
   <section class="card" id="sec-rental" style="display:none"><h2><span class="n">4</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
+  <p class="hint" id="leaveHint" style="margin:4px 2px 90px">Closing this page does not save your work with the office. Your answers stay on this device only until you tap <b>Save &amp; exit</b> or <b>Submit</b>.</p>
 </div>
 
 <div class="bar"><div class="bar-in">
@@ -138,7 +140,7 @@
 <div class="modal" id="parkModal" role="dialog" aria-modal="true" aria-labelledby="parkH"><div class="sheet">
   <h2 id="parkH">Park this job</h2><p class="hint">Say what is holding it up and when you expect to wrap it up.</p>
   <div class="f"><label class="l" for="parkReason">Reason</label><select id="parkReason"></select></div>
-  <div class="f"><label class="l" for="parkDate">Expected wrap-up date</label><input type="date" id="parkDate"></div>
+  <div class="f"><label class="l" for="parkDate">Expected wrap-up date (Pacific time)</label><input type="date" id="parkDate"></div>
   <div class="f"><label class="l" for="parkNote">Note</label><textarea id="parkNote" placeholder="e.g. HOA board meets the 15th"></textarea></div>
   <div class="hint" id="parkMsg" style="min-height:18px"></div>
   <div class="acts"><button class="btn" id="parkBack" type="button">Back</button><button class="btn go" id="parkSave" type="button">Save &amp; exit</button></div>
@@ -159,12 +161,12 @@ var ITEMS=[
  ['mat','Materials list complete & ordered?','layout','✔ Yes — complete & ordered',false],
  ['photos','Layout photos taken?','layout','✔ Yes',false],
  ['video','Walkthrough video taken?','layout','✔ Yes',false],
- ['r-contract','Rental contract signed?','rental','✔ Yes',false],
- ['r-penny','Penny test done?','rental','✔ Yes',false],
- ['r-credit','Credit authorization?','rental','✔ Yes',false],
- ['r-payauth','Payment authorization?','rental','✔ Yes',false],
- ['r-dl','Driver’s license on file?','rental','✔ Yes',false],
- ['r-deed','Mortgage or deed on file?','rental','✔ Yes',false]];
+ ['r-contract','Rental contract signed?','rental','✔ Yes',true],
+ ['r-penny','Penny test done?','rental','✔ Yes',true],
+ ['r-credit','Credit authorization?','rental','✔ Yes',true],
+ ['r-payauth','Payment authorization?','rental','✔ Yes',true],
+ ['r-dl','Driver’s license on file?','rental','✔ Yes',true],
+ ['r-deed','Mortgage or deed on file?','rental','✔ Yes',true]];
 var REQUIRED=['pay','stock','permit','mat','photos','video'];   /* must be answered (Working counts) to submit */
 var WORKING='⏳ Working on it';
 var H={};   /* link params: cust, date, job, rep */
@@ -181,7 +183,7 @@ var KEY=(PRACTICE?'cmh_practice_req_':'cmh_install_req_')+(H.job||H.cust||'x'); 
 var submitted=false;
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-function isRental(){return /rental/i.test(S.pay);}
+function isRental(){return /rental/i.test(S.pay)||ITEMS.some(function(it){var st=it[2]==='rental'&&S.items[it[0]];return st&&st.v&&st.v!=='na';});}   /* once any rental paperwork is answered it stays on the list; mark it N/A to remove it */
 function payState(){var p=S.pay;if(!p||p==='Select…')return '';if(p===WORKING)return 'work';if(p==='N/A')return 'na';if(p.indexOf('✔')===0)return 'yes';return 'no';}
 function stateOf(id){if(id==='pay')return payState();var o=S.items[id];return o?o.v:'';}
 function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[2]==='rental'&&!isRental())return;ids.push(it[0]);});return ids.filter(function(id){return stateOf(id)!=='na';});}
@@ -208,16 +210,17 @@ function build(){
 function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;paintWhy(id);render();save();}
 function whyBox(id,o){
   return '<select data-k="why" aria-label="Why not done?"><option value="">Why not done?</option>'+WHYS.map(function(w){return '<option'+(o.why===w?' selected':'')+'>'+w+'</option>';}).join('')+'</select>'
-   +'<input type="date" data-k="when" aria-label="Resolve by" value="'+esc(o.when||'')+'">'
+   +'<input type="date" data-k="when" aria-label="Resolve by (Pacific time)" min="'+todayPT()+'" value="'+esc(o.when||'')+'">'
    +'<input type="text" data-k="note" placeholder="Note (optional)" value="'+esc(o.note||'')+'">';
 }
+function todayPT(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});}
 function curItem(id){return S.items[id]||(S.items[id]={});}
 function paintWhy(id){
   var box=$('why-'+id);if(!box)return;var st=stateOf(id);
   if(st==='no'){
     var o=curItem(id);
     if(!box.innerHTML||box.dataset.id!==id){box.innerHTML=whyBox(id,o);box.dataset.id=id;
-      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){curItem(id)[e.dataset.k]=e.value;render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
+      box.querySelectorAll('[data-k]').forEach(function(e){var f=function(){if(e.dataset.k==='when'&&e.value&&e.value<todayPT())e.value='';curItem(id)[e.dataset.k]=e.value;render();save();};e.addEventListener('change',f);e.addEventListener('input',f);});}
     else box.querySelectorAll('[data-k]').forEach(function(e){e.value=o[e.dataset.k]||'';});   /* state may have been replaced (draft vs server) */
     box.classList.add('on');}
   else box.classList.remove('on');
@@ -233,7 +236,7 @@ function openNeeds(){
 }
 function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push(label(id));});
   if(isRental())ITEMS.forEach(function(it){if(it[2]==='rental'&&!stateOf(it[0]))m.push(label(it[0]));});
-  active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');}});
+  active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');else if(o.when<todayPT())m.push(label(id)+' (date has passed)');}});
   return m;}
 function render(){
   var act=active(),done=act.filter(function(id){return stateOf(id)==='yes';}).length,total=act.length;
@@ -246,14 +249,17 @@ function render(){
   $('flame').textContent=heat==='done'?'✓':'🔥';
   $('ringSub').textContent=heat==='done'?'dialed in':heat==='hot'?'almost there':'complete';
   $('sec-rental').style.display=isRental()?'':'none';
-  var needs=openNeeds(),nb=$('needs');
-  if(!needs.length&&done===total&&total>0){nb.className='needs clear';nb.innerHTML='<b>All set.</b> Everything on your side is complete. Submit it to the managers.';}
-  else if(!needs.length){nb.className='needs';nb.innerHTML='<b>Needs you.</b> Start with Payment, then work down. Tap Working on it for anything you have started.';}
-  else{nb.className='needs';nb.innerHTML='<b>Needs you</b> ('+needs.length+')<ul>'+needs.map(function(n){return '<li><span class="dot '+n.c+'"></span><button type="button" class="linkbtn" data-go="'+n.id+'">'+esc(n.t)+'</button></li>';}).join('')+'</ul>';
+  var needs=openNeeds(),nb=$('needs'),miss=missing(),mgr=managerFindings().length;
+  if(locked()&&REMOTE.status!=='installed'){var who=REMOTE.lanes?Object.keys(REMOTE.lanes).reduce(function(a,l){var L=REMOTE.lanes[l]||{};a.push(L.by);Object.keys(L.items||{}).forEach(function(k){a.push(L.items[k].by);});return a;},[]).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;}):[];nb.className='needs clear';nb.innerHTML='<b>Under review.</b> '+(who.length?esc(who.join(' and '))+' '+(who.length>1?'are':'is')+' checking this project':'The managers are checking this project')+' against ServiceTitan, so editing is paused to keep your answers from colliding. If anything is missing it comes back to you here with what to fix.'+(mgr?'<ul>'+managerFindings().map(function(n){return '<li><span class="dot r"></span>'+esc(n.t)+'</li>';}).join('')+'</ul>':'');}
+  else if(locked()){nb.className='needs clear';nb.innerHTML='<b>Installed.</b> This project is closed.';}
+  else if(submitted&&!locked()&&!mgr&&!miss.length){nb.className='needs clear';nb.innerHTML='<b>Submitted.</b> '+done+' of '+total+' complete'+(done<total?'; the rest is optional and can still be updated.':'.');}
+  else if(!needs.length&&done===total&&total>0){nb.className='needs clear';nb.innerHTML='<b>All set.</b> Everything on your side is complete. Submit it to the managers.';}
+  else if(!needs.length&&!miss.length){nb.className='needs';nb.innerHTML='<b>Optional, still open.</b> '+(total-done)+' item'+(total-done===1?'':'s')+' not answered yet. You can submit now or answer them first.';}
+  else if(!needs.length){nb.className='needs';nb.innerHTML='<b>Needs you.</b> '+(S.pay?'Work down the list.':'Start with Payment, then work down.')+' Tap Working on it for anything you have started.';}
+  else{nb.className='needs';nb.innerHTML='<b>'+(miss.length||mgr?'Needs you':'Optional, still open')+'</b> ('+needs.length+')<ul>'+needs.map(function(n){return '<li><span class="dot '+n.c+'"></span><button type="button" class="linkbtn" data-go="'+n.id+'">'+esc(n.t)+'</button></li>';}).join('')+'</ul>';
     nb.querySelectorAll('[data-go]').forEach(function(a){a.onclick=function(){var r=$('row-'+a.dataset.go)||$('sec-pay');if(r.scrollIntoView)r.scrollIntoView({block:'center',behavior:'smooth'});};});}
   document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-checked',stateOf(b.dataset.id)===b.dataset.v?'true':'false');});
-  var miss=missing();
-  $('barTxt').innerHTML=miss.length?('<b>Still needed:</b> '+esc(miss.slice(0,3).join(', '))+(miss.length>3?' +'+(miss.length-3):'')):'<b>Ready to submit.</b> '+done+' of '+total+' complete';
+  $('barTxt').innerHTML=submitted&&!miss.length?'<b>Submitted.</b> '+done+' of '+total+' complete':miss.length?('<b>Still needed:</b> '+esc(miss.slice(0,3).join(', '))+(miss.length>3?' +'+(miss.length-3):'')):'<b>Ready to submit.</b> '+done+' of '+total+' complete'+(done<total?' ('+(total-done)+' optional open)':'');
   $('submitBtn').disabled=!!miss.length||submitted||locked();
   var lk=locked();document.querySelectorAll('.seg button,#pay,#notes,.why select,.why input').forEach(function(e){e.disabled=lk;});
   if(lk&&!submitted)submitted=true;
@@ -275,7 +281,7 @@ function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.
     REMOTE.status=r.status;REMOTE.lanes=r.lanes||null;REMOTE.reopen=r.reopen||null;
     if(h.items||h.pay!=null){S={items:h.items||{},pay:h.pay||'',notes:h.notes||'',parked:r.parked||undefined};applyState();}
     else{S={items:{},pay:'',notes:''};try{localStorage.removeItem(KEY);}catch(e){}applyState();}   /* nothing on the server (e.g. after a reset): a leftover local draft is stale */
-    if(r.status==='submitted'||r.status==='in_review'||r.status==='ready')submitted=true;
+    submitted=/^(submitted|in_review|ready|installed)$/.test(r.status);
     render();});}
 
 /* ---- submit: same endpoint and fields the manager page uses ---- */
@@ -297,7 +303,7 @@ function submit(){
   var ready=needs.length?'⚠ Ready with notes':'✔ Ready';
   var b=$('submitBtn');b.disabled=true;b.textContent='Sending…';
   if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),submit:true}).then(function(d){b.textContent='Submit';
-      if(d&&d.ok){submitted=true;REMOTE.reopen=null;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Sent to the managers.</b> (sandbox: logged to the outbox, not emailed)';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
+      if(d&&d.ok){submitted=true;REMOTE.reopen=null;REMOTE.status=d.record.status;$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. (sandbox: logged to the outbox, not emailed)';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
       else{b.disabled=false;$('barTxt').textContent='Couldn’t save: '+((d&&d.error)||'error');}}).catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Sandbox server not reachable.';});return;}
   if(!LIVE_SEND){setTimeout(function(){b.textContent='Submit';$('needs').className='needs clear';$('needs').innerHTML='<b>Demo: this would go to the managers now.</b> Nothing was sent.';$('barTxt').innerHTML='<b>Demo submit done.</b> Nothing was sent.';b.disabled=false;},500);return;}
   api({action:'installcheck',handoff:'1',customer:H.cust||'',idate:H.date||'',hca:H.rep||'',by:H.rep||'',ready:ready,city:'',critical:'',jflag:'',verdict:ready,
@@ -305,27 +311,38 @@ function submit(){
     delec:'',dinstall:'',dsales:'',mat:val('mat'),matnotes:(S.notes||'').slice(0,300),photos:val('photos'),video:val('video'),disconnect:'',outlet:'',belec:'',blabor:'',billnotes:'',
     heatload:val('heatload'),sizematch:'',equip:'',sizenotes:'',disc:'',rebate:'',ahri:val('ahri'),discnotes:'',jobtype:H.type||'',pay:val('pay'),
     gasline:'',venting:'',gaspermit:'',gasinspect:'',finish:'',soldcustomer:H.cust||'',soldby:H.rep||'',soldamount:'',soldon:'',soldest:'',soldjob:H.job||''})
-  .then(function(d){b.textContent='Submit';if(d&&d.ok){submitted=true;try{localStorage.removeItem(KEY);}catch(e){}$('needs').className='needs clear';$('needs').innerHTML='<b>Sent to the managers.</b> They will verify it against ServiceTitan.';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
+  .then(function(d){b.textContent='Submit';if(d&&d.ok){submitted=true;try{localStorage.removeItem(KEY);}catch(e){}$('needs').className='needs clear';$('needs').innerHTML='<b>Submitted.</b> Sent to the managers. They will verify it against ServiceTitan.';$('barTxt').innerHTML='<b>Submitted.</b>';b.disabled=true;}
     else{b.disabled=false;$('barTxt').textContent=(d&&d.error)?('Couldn’t send: '+d.error):'Send failed. Your answers are saved on this phone; try again.';}})
   .catch(function(){b.disabled=false;b.textContent='Submit';$('barTxt').textContent='Couldn’t reach the mailer. Your answers are saved on this phone; try again.';});
 }
+window.addEventListener('beforeunload',function(e){if(submitted||locked()||_parking)return;
+  var any=Object.keys(S.items||{}).some(function(k){return S.items[k]&&S.items[k].v;})||(S.pay&&S.pay!=='Select…');
+  if(any&&!(S.parked&&S.parked.at)){e.preventDefault();e.returnValue='';}});   /* browsers show their own wording; the on-page hint says what it means */
 /* ---- park ---- */
 var _lastFocus=null;
-function openPark(){_lastFocus=document.activeElement;$('parkMsg').textContent='';$('parkModal').classList.add('on');$('parkReason').focus();}
-function closePark(){$('parkModal').classList.remove('on');if(_lastFocus&&_lastFocus.focus)_lastFocus.focus();}
+function openPark(){$('parkDate').min=todayPT();_lastFocus=document.activeElement;$('parkMsg').textContent='';$('parkModal').classList.add('on');$('parkReason').focus();}
+function closePark(){if(_parking)return;$('parkModal').classList.remove('on');if(_lastFocus&&_lastFocus.focus)_lastFocus.focus();}
 function trapPark(e){var m=$('parkModal');if(!m.classList.contains('on'))return;
   if(e.key==='Escape'){closePark();return;}
   if(e.key!=='Tab')return;var f=m.querySelectorAll('select,input,textarea,button:not([disabled])');if(!f.length)return;
   var first=f[0],last=f[f.length-1];
   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
-function savePark(){var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
-  if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}
+var _parking=false;
+function parked(msg){_parking=false;$('parkSave').disabled=false;closePark();$('barTxt').innerHTML='<b>Parked.</b> '+esc(msg);}
+function savePark(){if(_parking)return;var r=$('parkReason').value,d=$('parkDate').value,m=$('parkMsg');
+  if(!r){m.textContent='Pick a reason.';return;}if(!d){m.textContent='Pick the date you expect to wrap up.';return;}if(d<todayPT()){m.textContent='That date has passed. Pick today or later.';return;}
   S.parked={reason:r,revisit:d,note:$('parkNote').value,at:new Date().toISOString()};save();
-  if(SANDBOX&&H.job){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){$('parkMsg').textContent=(x&&x.ok)?'Parked. Your team can see why and when.':'Couldn’t park: '+((x&&x.error)||'error');});return;}
+  if(SANDBOX&&H.job){_parking=true;$('parkSave').disabled=true;m.textContent='Saving…';
+    remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,items:cleanItems(),parked:{reason:r,revisit:d,note:$('parkNote').value}}).then(function(x){
+      if(x&&x.ok)parked('Your team can see why and when. Your answers are kept.');
+      else{_parking=false;$('parkSave').disabled=false;m.textContent='Couldn’t park: '+((x&&x.error)||'error')+'. Your answers are kept; try again.';}}).catch(function(){_parking=false;$('parkSave').disabled=false;m.textContent='Couldn’t reach the server. Your answers are kept; try again.';});return;}
   /* STUB: stored on this phone only. Server-side parked storage needs Geoff's approval (new node + rules). */
-  m.textContent='Saved on this device. Parking is not connected to the office yet (pilot build).';}
+  parked('Saved on this device. Parking is not connected to the office yet (pilot build).');}
 
+function incompleteNo(){return active().filter(function(id){if(stateOf(id)!=='no')return false;var o=S.items[id]||{};return !o.why||!o.when;});}
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('.topbar .back');if(!a)return;var bad=incompleteNo();
+  if(bad.length&&!confirm('You marked '+bad.map(label).join(', ')+' as Not done without a reason or date. Your managers will not see it until you add both. Leave anyway?'))e.preventDefault();});
 (function init(){
   $('custName').textContent=H.cust||'Choose a job from your CRM';
   $('chipDate').textContent=H.date?(function(){var p=H.date.split('-');return (+p[1])+'/'+(+p[2]);})():'TBD';
