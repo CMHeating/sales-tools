@@ -8,7 +8,7 @@ const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@fir
 let n = 0; const ok = async p => { n++; return assertSucceeds(p); }, no = async p => { n++; return assertFails(p); };
 const LANEKEYS = { sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] };
 const lanesFull = () => Object.fromEntries(Object.entries(LANEKEYS).map(([l, ks]) => [l, { signoff: 'confirmed', items: Object.fromEntries(ks.map(k => [k, { result: 'verified' }])) }]));
-const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: { ...Object.fromEntries(['stock', 'permit', 'mat', 'photos', 'video', 'i-labor'].map(k => [k, { v: 'yes' }])), rebate: { v: 'na' } } };
+const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: { ...Object.fromEntries(['stock', 'mat', 'photos', 'video', 'i-labor'].map(k => [k, { v: 'yes' }])), rebate: { v: 'na' } } };
 async function main() {
   const env = await initializeTestEnvironment({ projectId: 'demo-hca-rules', database: { rules: fs.readFileSync('database.rules.json', 'utf8') } });
   try {

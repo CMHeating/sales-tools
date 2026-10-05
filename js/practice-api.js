@@ -5,14 +5,14 @@
 (function (g) {
   "use strict";
   var KEY = "cmh_practice_db_v1", MAX_BODY = 64 * 1024;
-  var BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video", "i-labor"];
+  var BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-labor"];
   var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
   var NA_OK = ["ahri", "r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];   /* items that may be answered N/A ("rebate" uses na for "No rebate") */
   var CLAIM_ITEMS = ["claim", "downpay", "rb-applied", "permitdelay"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
   var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance"], Other: ["rb-balance", "rb-ahri"] };
   function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (/^Other: \S/.test(p) ? "Other" : ""); }
-  var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor"];
+  var REQUIRED_HCA = ["pay", "stock", "mat", "photos", "video", "i-labor"];
   var LANES = {
     sales: { who: "Geoff", items: ["disc", "rebate", "ahri-ok", "financing", "slip", "auths"] },
     install: { who: "Lyle", items: ["mat-ok", "stock-ok", "layout-ok", "labor", "sizing", "permit-ok"] },

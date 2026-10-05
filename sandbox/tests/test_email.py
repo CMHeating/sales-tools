@@ -28,7 +28,7 @@ def handler(route):
 
 import urllib.parse, datetime
 URL = ORIGIN + 'install-requirements.html#job=900001&cust=Sample+Alpha&date=%s&rep=Samir+Khoury&practice=1' % d(5)
-BASE7 = ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor']
+BASE7 = ['stock', 'mat', 'video', 'photos', 'i-labor']
 with sync_playwright() as p:
     b = p.chromium.launch(headless=True); ctx = b.new_context(viewport={'width': 390, 'height': 900}); ctx.route('**/*', handler)
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))

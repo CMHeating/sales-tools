@@ -36,7 +36,7 @@ async function main() {
     const hca1 = as('h1', 'hca-one@cmheating.com'), hca2 = as('h2', 'hca-two@cmheating.com'), mI = as('mi', 'mgr-install@cmheating.com'), mE = as('me', 'mgr-elec@cmheating.com');
     const adm = as('ad', 'admin-one@cmheating.com'), sch = as('sc', 'sched-one@cmheating.com'), nobody = as('no', 'nobody@cmheating.com');
     const pw = as('pw', 'hca-one@cmheating.com', 'password');
-    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, permit: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, 'i-labor': { v: 'yes' }, rebate: { v: 'na' } } };
+    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, 'i-labor': { v: 'yes' }, rebate: { v: 'na' } } };
     const allVerified = lane => Object.fromEntries({ sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] }[lane].map(k => [k, { result: 'verified' }]));
     let r;
 
@@ -51,7 +51,7 @@ async function main() {
 
     // --- HCA fills and submits ---
     r = await hca1.call('POST', '/api/hca', { job: 'j1', submit: true }); ok('empty submit refused with what is still needed', r.code === 400 && /still needed/.test(r.b.error));
-    r = await hca1.call('POST', '/api/hca', { job: 'j1', pay: full.pay, items: full.items }); ok('HCA saves answers (status working)', r.code === 200 && r.b.record.status === 'working' && r.b.record.readiness.done === 7);
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', pay: full.pay, items: full.items }); ok('HCA saves answers (status working)', r.code === 200 && r.b.record.status === 'working' && r.b.record.readiness.done === 6);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { bogus: { v: 'yes' } } }); ok('unknown item refused', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'no' } } }); ok('Not done is stored', r.code === 200);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', submit: true }); ok('submit blocked while a Not-done has no why/when', r.code === 400);
@@ -128,8 +128,8 @@ async function main() {
     r = await adm.call('GET', '/api/record?job=q2'); ok('Gensco with the balance point Complete => READY', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q2/status')) === 'ready');
     r = await hca1.call('POST', '/api/hca', { job: 'q3', system: 'Sample System', vendor: 'Sample Vendor', filterSize: '16x25x1' }); ok('email lines (what was sold, vendor, filter size) are stored on the record', r.code === 200 && r.b.record.hca.system === 'Sample System' && r.b.record.hca.vendor === 'Sample Vendor' && r.b.record.hca.filterSize === '16x25x1');
     r = await hca1.call('GET', '/api/config'); ok('the jurisdiction sheet link comes from the private config', r.code === 200 && r.b.jurisdictionUrl === 'https://example.test/jurisdiction-sheet');
-    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { claim: { v: 'yes' } } }); ok('claim your spot (Yes) is stored but never counted or required', r.code === 200 && r.b.record.hca.items.claim.v === 'yes' && r.b.record.readiness.total === 9);
-    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { downpay: { v: 'no' } } }); ok('down payment collected accepts No and is never counted', r.code === 200 && r.b.record.readiness.total === 9);
+    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { claim: { v: 'yes' } } }); ok('claim your spot (Yes) is stored but never counted or required', r.code === 200 && r.b.record.hca.items.claim.v === 'yes' && r.b.record.readiness.total === 8);
+    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { downpay: { v: 'no' } } }); ok('down payment collected accepts No and is never counted', r.code === 200 && r.b.record.readiness.total === 8);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { 'rb-applied': { v: 'work' } } }); ok('rebate applied only accepts Yes or No', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { claim: { v: 'work' } } }); ok('claim only accepts Yes or No', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { heatload: { v: 'na' } } }); ok('N/A is refused on Heat load (not offered)', r.code === 400);

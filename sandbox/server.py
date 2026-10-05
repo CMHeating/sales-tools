@@ -24,7 +24,7 @@ LOCK = threading.Lock()
 MAX_BODY = 64 * 1024   # bytes; larger request bodies are refused
 
 # ---- the item model (must match install-requirements.html) -------------------------------------------
-BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video", "i-labor"]
+BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-labor"]
 RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]
 # Rebate (2026-10-04): "rebate" is answered yes / na (= no rebate). When yes, a program is chosen and its questions must all be Complete
 # for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
@@ -172,7 +172,7 @@ def lane_state(rec, lane):
     }
 
 
-REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor"]
+REQUIRED_HCA = ["pay", "stock", "mat", "photos", "video", "i-labor"]
 
 
 def hca_missing(rec):

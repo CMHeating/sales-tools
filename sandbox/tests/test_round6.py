@@ -42,7 +42,7 @@ with sync_playwright() as p:
     pg.click('button[data-id="rebate"][data-v="yes"]'); pg.wait_for_timeout(200)
     ok('...then appears in the Payment section', pg.is_visible('#sec-pay #row-rb-applied'))
     pg.click('button[data-id="downpay"][data-v="no"]'); pg.wait_for_timeout(500)
-    ok('down payment No needs no reason or date (it is information, not a task)', not pg.is_visible('#why-downpay') and pg.inner_text('#ringN').replace('\n', ' ') == '0 of 9')
+    ok('down payment No needs no reason or date (it is information, not a task)', not pg.is_visible('#why-downpay') and pg.inner_text('#ringN').replace('\n', ' ') == '0 of 8')
     ok('the extra answers are saved on the record', rec()['items']['downpay']['v'] == 'no')
     # heat load Yes / No (mini split is an acceptable No); AHRI Yes / No / N/A
     lab = lambda i: pg.eval_on_selector_all(f'button[data-id="{i}"]', 'els => els.map(e => e.textContent.trim())')
@@ -51,10 +51,10 @@ with sync_playwright() as p:
     opts = pg.eval_on_selector_all('#why-heatload select option', 'els => els.map(e => e.textContent.trim())')
     ok('No on Heat load offers "Mini split" as the first reason', opts[1].startswith('Mini split'))
     pg.select_option('#why-heatload select', label=opts[1]); pg.wait_for_timeout(600)
-    ok('Mini split: no date needed (date box hidden) and Heat load drops out of the count (0 of 8)', not pg.is_visible('#why-heatload input[type="date"]') and pg.inner_text('#ringN').replace('\\n', ' ') == '0 of 8')
-    ok('the record carries the reason and readiness total is 11', rec()['items']['heatload']['why'].startswith('Mini split') and api('GET', '/api/record?job=900001')[1]['record']['readiness']['total'] == 8)
+    ok('Mini split: no date needed (date box hidden) and Heat load drops out of the count (0 of 7)', not pg.is_visible('#why-heatload input[type="date"]') and pg.inner_text('#ringN').replace('\\n', ' ') == '0 of 7')
+    ok('the record carries the reason and readiness total is 11', rec()['items']['heatload']['why'].startswith('Mini split') and api('GET', '/api/record?job=900001')[1]['record']['readiness']['total'] == 7)
     pg.select_option('#why-heatload select', 'Waiting on customer'); pg.wait_for_timeout(400)
-    ok('any other reason needs a by-when date again and counts as open (0 of 9)', pg.is_visible('#why-heatload input[type="date"]') and pg.inner_text('#ringN').replace('\\n', ' ') == '0 of 9')
+    ok('any other reason needs a by-when date again and counts as open (0 of 8)', pg.is_visible('#why-heatload input[type="date"]') and pg.inner_text('#ringN').replace('\\n', ' ') == '0 of 8')
     pg.click('button[data-id="heatload"][data-v="yes"]')
     # balance point is Yes / No
     pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'Gensco'); pg.wait_for_timeout(200)
@@ -70,7 +70,7 @@ with sync_playwright() as p:
     # potential permit delays
     ok('"Potential permit delays?" sits right after the Permit question with Yes / No', pg.is_visible('#sec-equip #row-permitdelay') and pg.eval_on_selector_all('button[data-id="permitdelay"]', 'els => els.map(e => e.textContent.trim())') == ['Yes', 'No'])
     pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.wait_for_timeout(500)
-    ok('saved, not counted, and needs no reason/date', rec()['items']['permitdelay']['v'] == 'yes' and pg.inner_text('#ringN').replace('\\n', ' ') == '2 of 9' and not pg.is_visible('#why-permitdelay'))
+    ok('saved, not counted, and needs no reason/date', rec()['items']['permitdelay']['v'] == 'yes' and pg.inner_text('#ringN').replace('\\n', ' ') == '2 of 8' and not pg.is_visible('#why-permitdelay'))
     c, r = api('POST', '/api/hca', {'job': '900001', 'items': {'permitdelay': {'v': 'work'}}}); ok('only Yes or No is accepted', c == 400)
     # electrical labor is Yes / No only
     labels = pg.eval_on_selector_all('button[data-id="i-labor"]', 'els => els.map(e => e.textContent.trim())')
@@ -88,7 +88,7 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape')
     # email: explicit down payment and rebate-applied
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
-    for i in ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
+    for i in ['stock', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('button[data-id="downpay"][data-v="yes"]'); pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PUD')
     for i in ['rb-balance', 'rb-ahri']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('#ahri-rb-ahri [data-ah="st"]'); pg.click('button[data-id="rb-applied"][data-v="na"]'); pg.wait_for_timeout(500)

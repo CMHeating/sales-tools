@@ -26,7 +26,7 @@ def handler(route):
 
 
 
-full = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'})}
+full = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'})}
 with sync_playwright() as p:
     b = p.chromium.launch(headless=True); ctx = b.new_context(viewport={'width': 1100, 'height': 800})
     ctx.route('**/*', handler); pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
