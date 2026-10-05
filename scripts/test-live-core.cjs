@@ -129,6 +129,8 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', { job: 'q3', system: 'Sample System', vendor: 'Sample Vendor', filterSize: '16x25x1' }); ok('email lines (what was sold, vendor, filter size) are stored on the record', r.code === 200 && r.b.record.hca.system === 'Sample System' && r.b.record.hca.vendor === 'Sample Vendor' && r.b.record.hca.filterSize === '16x25x1');
     r = await hca1.call('GET', '/api/config'); ok('the jurisdiction sheet link comes from the private config', r.code === 200 && r.b.jurisdictionUrl === 'https://example.test/jurisdiction-sheet');
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { claim: { v: 'yes' } } }); ok('claim your spot (Yes) is stored but never counted or required', r.code === 200 && r.b.record.hca.items.claim.v === 'yes' && r.b.record.readiness.total === 12);
+    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { downpay: { v: 'no' } } }); ok('down payment collected accepts No and is never counted', r.code === 200 && r.b.record.readiness.total === 12);
+    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { 'rb-applied': { v: 'work' } } }); ok('rebate applied only accepts Yes or No', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { claim: { v: 'work' } } }); ok('claim only accepts Yes or No', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { heatload: { v: 'na' } } }); ok('N/A is refused on Heat load (not offered)', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { ahri: { v: 'na' } } }); ok('N/A still accepted on AHRI', r.code === 200);

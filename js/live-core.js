@@ -14,7 +14,7 @@
   var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor", "e-labor"];
   /* Rebate: "rebate" is yes / na (= no rebate). When yes, a program is chosen and ALL of its questions must be Complete before the project can be Ready (the rebate gate). */
   var NA_OK = ["ahri", "e-disconnect", "e-outlet", "r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];   /* items that may be answered N/A ("rebate" uses na for "No rebate") */
-  var CLAIM_ITEMS = ["claim"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */
+  var CLAIM_ITEMS = ["claim", "downpay", "rb-applied"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
   var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance", "rb-equip"], Other: ["rb-balance", "rb-ahri"] };
   function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (/^Other: \S/.test(p) ? "Other" : ""); }
@@ -255,7 +255,7 @@
         for (var i = 0; i < ks.length; i++) {
           var k = ks[i], v = itemsIn[k];
           if (BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS, CLAIM_ITEMS).indexOf(k) < 0) return fail(400, "unknown item " + k);
-          if (HCA_STATES.indexOf(v.v) < 0 || ((k === "rebate" || k === "claim") && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && k !== "claim" && NA_OK.indexOf(k) < 0)) return fail(400, "bad state for " + k);
+          if (HCA_STATES.indexOf(v.v) < 0 || ((k === "rebate" || k === "claim" || k === "rb-applied") && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && k !== "claim" && k !== "rb-applied" && k !== "downpay" && NA_OK.indexOf(k) < 0)) return fail(400, "bad state for " + k);
           var old = ((merged.hca.items || {})[k] || {}).v, it = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
           merged.hca.items = merged.hca.items || {}; merged.hca.items[k] = it; put(up, hk, job, "hca/items/" + k, it);
           if (old !== v.v) addHist(up, hk, job, me, "hca." + k, old === undefined ? null : old, v.v);

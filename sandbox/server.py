@@ -30,7 +30,7 @@ RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-dee
 # for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
 NA_OK = ["ahri", "e-disconnect", "e-outlet"] + ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]   # items that may be answered N/A ("rebate" uses na for "No rebate")
 # "claim" = "ready to claim your spot on the install availability sheet?" (yes / na = no): stored, never counted or required
-CLAIM_ITEMS = ["claim"]
+CLAIM_ITEMS = ["claim", "downpay", "rb-applied"]   # extra answers: stored, never counted or required ("downpay" = down payment collected: yes / no / na; "rb-applied" = rebate applied to the estimate: yes / na)
 REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"]
 REBATE_PROGRAM_ITEMS = {"PSE": ["rb-balance", "rb-ahri", "rb-tc"], "PUD": ["rb-balance", "rb-ahri"], "Gensco": ["rb-balance", "rb-equip"], "Other": ["rb-balance", "rb-ahri"]}
 
@@ -396,7 +396,7 @@ class H(SimpleHTTPRequestHandler):
                     for k, v in items_in.items():
                         if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS + CLAIM_ITEMS:
                             return self._json(400, {"ok": False, "error": "unknown item " + k})
-                        if v.get("v") not in HCA_STATES or (k in ("rebate", "claim") and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k not in ("rebate", "claim") and k not in NA_OK):
+                        if v.get("v") not in HCA_STATES or (k in ("rebate", "claim", "rb-applied") and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k not in ("rebate", "claim", "rb-applied", "downpay") and k not in NA_OK):
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
                         old = h.setdefault("items", {}).get(k, {}).get("v")
                         h["items"][k] = {"v": v["v"], "why": str(v.get("why", ""))[:60], "when": str(v.get("when", ""))[:10], "note": str(v.get("note", ""))[:200]}
