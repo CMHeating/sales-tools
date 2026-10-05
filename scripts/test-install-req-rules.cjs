@@ -1,7 +1,7 @@
 // Run locally (needs Java for the emulator):
 //   npm install --no-save --package-lock=false @firebase/rules-unit-testing firebase
 //   PATH=/opt/homebrew/opt/openjdk/bin:$PATH firebase emulators:exec --project demo-hca-rules --only database 'node scripts/test-install-req-rules.cjs'
-// Expects database.rules.json = rules/database.rules.merged.PROPOSED.json (codex branch rules + install-req fragment + provider checks).
+// Expects database.rules.json = the ADDITIVE rules (live rules + rules/cmh_install_req.rules.fragment.json) built with rules/build-additive-rules.py.
 // Every exploit sequence reported by the 2026-10-04 code audit is replayed here and must FAIL.
 const fs = require('node:fs');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
@@ -14,7 +14,6 @@ async function main() {
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
       cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true } } },
       cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true } },
-      cmh_sold_tracker: { 'hca-one': { jobs: { a: { customer: 'Fixture' } } } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
         j2: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' } },
@@ -31,10 +30,6 @@ async function main() {
     for (const db of [hca1, mgrI, mgrE, admin]) await ok(db.ref(J('j1')).once('value'));
     for (const db of [hca1Pwd, hca1Pin, hca2, stranger, anon]) await no(db.ref(J('j1')).once('value'));
     await no(hca1.ref('cmh_install_req').once('value'));
-    // customer-data trackers: Google only (a verified PASSWORD session is refused: audit AUD-11)
-    await ok(hca1.ref('cmh_sold_tracker/hca-one').once('value'));
-    for (const db of [hca1Pwd, hca1Pin, hca2, stranger, anon]) await no(db.ref('cmh_sold_tracker/hca-one').once('value'));
-
     // HCA writes: own record while open, valid shape, indexed job only
     await ok(hca1.ref(J('j1/hca')).set({ pay: 'y' }));
     await ok(hca1.ref(J('j1/hca/items')).set({ photos: { v: 'no', why: 'Waiting on customer', when: '2026-10-06' } }));

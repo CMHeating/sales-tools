@@ -15,12 +15,12 @@ Tests: `sandbox/tests/test_e2e.py` (API + browser, exits non-zero on failure), `
 | AUD-07 | Med | Confirmed | Same revert. | same |
 | AUD-08 | Med | Confirmed | Same revert. | same |
 | AUD-09 | Med | Confirmed | Rules: history only by the job's owner HCA, a manager, or an admin; fields typed + bounded. | rules test |
-| AUD-10 | Med | Confirmed | Rules: schema validation (types, enums, lengths, allowed child names, per-lane item lists, found+when for missing), jobs must exist in `cmh_install_jobs` (trusted writer). | rules test |
-| AUD-11 | Med | Confirmed | CRM tier = active token's `signInProvider`, not linked providers. Merged proposal adds `sign_in_provider == 'google.com'` to the sold/follow-up rules. NOTE: this changes the other session's rules; their own test needs provider claims. | test_crm_tiers; rules test |
+| AUD-10 | Med | Confirmed | Rules (additive nodes): schema validation (types, enums, lengths, allowed child names, per-lane item lists, found+when for missing), jobs must exist in `cmh_install_jobs` (trusted writer). | rules test |
+| AUD-11 | Med | Confirmed | CRM tier = active token's `signInProvider`, not linked providers. Tightening the sold/follow-up rules to Google-only is NOT part of this deploy (it would break the anonymous sync); it stays a later cutover. | test_crm_tiers |
 | AUD-12 | Med | Confirmed | Reason/date handlers read the CURRENT item; values refresh when state is replaced. | test_e2e |
 | AUD-13 | Med | Confirmed | Sandbox resolves pipeline jobs. | test_e2e |
 | AUD-14 | Med | Confirmed | Server refuses incomplete submissions; `ready` also requires a complete HCA section; rental items mapped into Sales authorizations in QC. | test_e2e |
-| AUD-15 | Med | PARTLY — NOT FIXED | The merged proposal denies other nodes the CRM reads (`cmh_hca_activity`, `cmh_ar`, `cmh_clearance`). The repo rules copy may not match the live rules. NEEDS the live rules text (Firebase console > Realtime Database > Rules) to diff before anything is deployed. AR card has no Google UI gate. | none yet |
+| AUD-15 | Med | Confirmed, and worse | The live rules (supplied by Geoff) showed the other branch's rules would have CHANGED 8 live nodes and DELETED 3, including the Install Availability allowlists. Discarded. New approach: additive nodes only on top of the live rules, builder + verifier (`rules/build-additive-rules.py`), differential emulator test vs live (fails on the old proposal with 85 differences). | `scripts/test-live-rules-unchanged.cjs` |
 | AUD-16 | Med | Confirmed | De-duplicate by `projectId` as well as job number. Rows with neither remain ambiguous (documented). | test_e2e (node) |
 | AUD-17 | Med | Confirmed | Readiness values coerced to bounded integers. | test_e2e (node) |
 | AUD-18 | Low | Confirmed | Body size cap, type validation, handler wrapped; no crash. | test_e2e |

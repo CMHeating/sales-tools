@@ -1,5 +1,5 @@
 {
-  "_comment": "DRAFT. Tested in the Firebase emulator (see scripts/test-install-req-rules.cjs). Merge into the rules from branch codex/hca-crm-firebase-rules. NOT deployed. Requires cmh_install_jobs (job index written by the trusted sync writer) and cmh_install_roster (console-managed).",
+  "_comment": "DRAFT, ADDITIVE ONLY: new top-level nodes; never edits an existing node. Build the deployable file with rules/build-additive-rules.py from the LIVE rules. Tested in the Firebase emulator. NOT deployed. cmh_install_roster and cmh_install_writers are console-managed; cmh_install_jobs is written by a trusted writer (or the Admin SDK).",
   "rules": {
     "cmh_install_roster": {
       ".read": false,
@@ -13,7 +13,7 @@
     },
     "cmh_install_jobs": {
       ".read": false,
-      ".write": "auth != null && root.child('cmh_sold_writers/' + auth.uid).val() == true",
+      ".write": "auth != null && root.child('cmh_install_writers/' + auth.uid).val() == true",
       "$hcaKey": {
         ".read": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && auth.token.email.endsWith('@cmheating.com') && (root.child('cmh_followup_roster/hcas/' + auth.token.email.toLowerCase().replace('.', ',')).val() == $hcaKey || root.child('cmh_install_roster/managers/' + auth.token.email.toLowerCase().replace('.', ',')).exists() || root.child('cmh_followup_roster/admins/' + auth.token.email.toLowerCase().replace('.', ',')).val() == true)"
       }
@@ -240,6 +240,10 @@
           }
         }
       }
+    },
+    "cmh_install_writers": {
+      ".read": false,
+      ".write": false
     }
   }
 }
