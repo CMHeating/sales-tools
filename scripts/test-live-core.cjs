@@ -127,6 +127,7 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q2' }, withReb('Gensco', { 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } }))); r = await hca1.call('POST', '/api/hca', { job: 'q2', submit: true }); ok('Gensco (no AHRI, no T&Cs) submits', r.code === 200);
     for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q2', lane, items: allVerified(lane), signoff: 'confirmed' });
     r = await adm.call('GET', '/api/record?job=q2'); ok('Gensco with balance point + equipment check Complete => READY', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q2/status')) === 'ready');
+    r = await hca1.call('POST', '/api/hca', { job: 'q3', system: 'Sample System', scope: 'Sample scope' }); ok('email lines (system, install time/electrical) are stored on the record', r.code === 200 && r.b.record.hca.system === 'Sample System' && r.b.record.hca.scope === 'Sample scope');
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { heatload: { v: 'na' } } }); ok('N/A is refused on Heat load (not offered)', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { ahri: { v: 'na' } } }); ok('N/A still accepted on AHRI', r.code === 200);
     r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { rebate: { v: 'work' } } }); ok('the rebate row only accepts Yes or No', r.code === 400);

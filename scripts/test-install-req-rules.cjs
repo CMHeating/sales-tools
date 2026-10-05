@@ -98,6 +98,9 @@ async function main() {
     await no(adm2.ref(J('r10/status')).set('ready'));                                               // rebate yes, program + questions Complete, but no amount
     await no(adm2.ref(J('r9/status')).set('ready'));                                                // rebate never answered
     await no(hca1.ref(J('j5/hca/items/rebate')).set({ v: 'work' }));
+    await ok(hca1.ref(J('j5/hca/system')).set('Mitsubishi Single Zone Ductless'));                  // the email lines (2026-10-05)
+    await no(hca1.ref(J('j5/hca/scope')).set('x'.repeat(61)));
+    await no(mgrI.ref(J('j5/hca/system')).set('manager cannot edit the HCA lines'));
     await no(hca1.ref(J('j5/hca/items/heatload')).set({ v: 'na' }));                                // N/A only where it is offered (2026-10-05)
     await no(hca1.ref(J('j5/hca/items/permit')).set({ v: 'na' }));
     await no(hca1.ref(J('j5/hca/items/i-labor')).set({ v: 'na' }));

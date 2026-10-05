@@ -74,6 +74,12 @@
       },
       "rebateAmount": {
        ".validate": "newData.isString() && newData.val().length <= 20"
+      },
+      "system": {
+       ".validate": "newData.isString() && newData.val().length <= 60"
+      },
+      "scope": {
+       ".validate": "newData.isString() && newData.val().length <= 60"
       }
      },
      "parked": {

@@ -380,6 +380,10 @@ class H(SimpleHTTPRequestHandler):
                         h["notes"] = str(body["notes"])[:600]
                     if "rebateProgram" in body:
                         h["rebateProgram"] = str(body["rebateProgram"] or "")[:60]
+                    if "system" in body:
+                        h["system"] = str(body["system"] or "")[:60]
+                    if "scope" in body:
+                        h["scope"] = str(body["scope"] or "")[:60]
                     if "rebateAmount" in body:
                         h["rebateAmount"] = re.sub(r"[^0-9.,$ ]", "", str(body["rebateAmount"] or ""))[:20]
                     items_in = body.get("items") or {}
