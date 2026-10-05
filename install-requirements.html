@@ -371,7 +371,7 @@ function buildInstallEmail(){
   var rows=[['CUSTOMER NAME',H.cust||''],['INSTALL DATE',dayLabel(H.date)||'TBD'],['PAYMENT',pay||'See ServiceTitan'],['DOWN PAYMENT COLLECTED',downPayment(S.pay)],
     ['VENDOR AND AVAILABILITY',((S.vendor||'').trim()||'vendor not entered')+' - '+avail],['FILTER SIZE',(S.filter||'').trim()||'not entered'],['ANY CONCERNS FOR INSTALL',concerns.length?concerns.join('; '):'None']];
   var subject=(H.cust||'Sold job')+((S.system||'').trim()?'-'+S.system.trim():'');
-  var body=rows.map(function(r){return r[0]+': '+r[1];}).join('\n\n')+'\n\n'+shortName(H.rep);
+  var body=rows.map(function(r){return r[0]+': '+r[1];}).join('\n\n');   /* the template ends at ANY CONCERNS FOR INSTALL; it is sent from the HCA's own email */
   return {subject:subject,body:body};
 }
 function showSent(){var m=buildInstallEmail();$('emailPrev').textContent='Subject: '+m.subject+'\n\n'+m.body;
