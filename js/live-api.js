@@ -30,7 +30,7 @@
     try { u = new URL(url, g.location.href); } catch (e) { return realFetch(input, init); }
     if (u.pathname.indexOf("/api/") < 0 || u.origin !== g.location.origin) return realFetch(input, init);
     var method = ((init && init.method) || (input && input.method) || "GET").toUpperCase(), body = init && init.body ? String(init.body) : "";
-    return ensure().then(function (c) { return c.handle(method, u.href, body); }, function () { return [401, { ok: false, error: "Sign in with Google on the Install tools page first." }]; })
+    return ensure().then(function (c) { return c.handle(method, u.href, body); }, function () { return [401, { ok: false, error: "Sign in with your Google account first.", signin: true }]; })
       .then(function (r) { return new Response(JSON.stringify(r[1]), { status: r[0], headers: { "Content-Type": "application/json" } }); });
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -15,7 +15,9 @@ async function main() {
     const jobs = { 'hca-one': {
       j1: { job: 'j1', customer: 'Sample One', hca: 'HCA One', installDate: d(3), department: 'HVAC', stage: 'SOLD_ACTIVE' },
       j2: { job: 'j2', customer: 'Sample Two', hca: 'HCA One', installDate: d(5), department: 'HVAC', stage: 'SOLD_ACTIVE' },
-      p1: { job: 'p1', customer: 'Sample Pipeline', hca: 'HCA One', source: 'pipeline', comboDate: '', comboTab: '' } },
+      p1: { job: 'p1', customer: 'Sample Pipeline', hca: 'HCA One', source: 'pipeline', comboDate: '', comboTab: '' },
+      q1: { job: 'q1', customer: 'Sample Rebate PSE', hca: 'HCA One', installDate: d(6), department: 'HVAC', stage: 'SOLD_ACTIVE' },
+      q2: { job: 'q2', customer: 'Sample Rebate Gensco', hca: 'HCA One', installDate: d(7), department: 'HVAC', stage: 'SOLD_ACTIVE' } },
       'hca-two': { k1: { job: 'k1', customer: 'Sample Other', hca: 'HCA Two', installDate: d(4), department: 'HVAC', stage: 'SOLD_ACTIVE' } } };
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' } },
@@ -33,12 +35,12 @@ async function main() {
     const hca1 = as('h1', 'hca-one@cmheating.com'), hca2 = as('h2', 'hca-two@cmheating.com'), mI = as('mi', 'mgr-install@cmheating.com'), mE = as('me', 'mgr-elec@cmheating.com');
     const adm = as('ad', 'admin-one@cmheating.com'), sch = as('sc', 'sched-one@cmheating.com'), nobody = as('no', 'nobody@cmheating.com');
     const pw = as('pw', 'hca-one@cmheating.com', 'password');
-    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, permit: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' } } };
+    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, permit: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, rebate: { v: 'na' } } };
     const allVerified = lane => Object.fromEntries({ sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] }[lane].map(k => [k, { result: 'verified' }]));
     let r;
 
     // --- who sees what ---
-    r = await hca1.call('GET', '/api/jobs'); ok('HCA lists only their own projects (2 sold + 1 pipeline)', r.code === 200 && r.b.jobs.length === 2 && r.b.pipeline.length === 1);
+    r = await hca1.call('GET', '/api/jobs'); ok('HCA lists only their own projects (4 sold + 1 pipeline)', r.code === 200 && r.b.jobs.length === 4 && r.b.pipeline.length === 1);
     r = await hca1.call('GET', '/api/record?job=k1'); ok("HCA cannot open another HCA's project (same 404 as a job that does not exist)", r.code === 404);
     r = await hca1.call('GET', '/api/record?job=zzz'); ok('unknown job is the same 404', r.code === 404);
     r = await hca1.call('GET', '/api/admin'); ok('HCA cannot use the admin list', r.code === 403);
@@ -106,8 +108,26 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', { job: 'p1', items: { stock: { v: 'yes' } } }); r = await hca1.call('POST', '/api/hca', { job: 'p1', submit: true }); ok('HCA completes it and resubmits', r.code === 200 && r.b.record.status === 'submitted');
     await adm.call('POST', '/api/reopen', { job: 'p1', reason: 'Recheck photos' }); r = await hca1.call('GET', '/api/record?job=p1'); ok('send-back note shown while with the HCA', r.b.record.reopen && r.b.record.reopen.reason === 'Recheck photos');
     r = await hca1.call('POST', '/api/hca', { job: 'p1', submit: true }); r = await hca1.call('GET', '/api/record?job=p1'); ok('resubmitted: the old note is gone (no clock comparison)', !r.b.record.reopen);
+
+    // --- rebate gate (2026-10-04): through the real code AND the real rules ---
+    const withReb = (prog, subs) => Object.assign({}, full, { rebateProgram: prog, items: Object.assign({}, full.items, { rebate: { v: 'yes' } }, subs) });
+    r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q1' }, withReb('PSE', { 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' }, 'rb-tc': { v: 'work' } }))); ok('PSE with T&Cs still Working on it saves', r.code === 200);
+    r = await hca1.call('POST', '/api/hca', { job: 'q1', submit: true }); ok('...and can still be submitted (gate blocks booking, not submitting)', r.code === 200 && r.b.record.status === 'submitted');
+    for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q1', lane, items: allVerified(lane), signoff: 'confirmed' });
+    r = await adm.call('GET', '/api/record?job=q1'); ok('all lanes confirmed but the rebate gate is not passed => NOT ready', r.b.record.status === 'in_review' && (await raw('cmh_install_req/hca-one/q1/status')) === 'in_review');
+    r = await adm.call('GET', '/api/admin'); ok('admin sees "rebate not secured"', r.b.jobs.find(j => j.job === 'q1').openItems.some(o => o.item === 'rebate' && o.state === 'not secured'));
+    r = await sch.call('GET', '/api/ready'); ok('not on Ready to book', !r.b.jobs.some(j => j.job === 'q1'));
+    r = await adm.call('POST', '/api/install', { job: 'q1' }); ok('cannot be marked installed', r.code === 409);
+    await adm.call('POST', '/api/reopen', { job: 'q1', reason: 'Finish the rebate T and Cs' });
+    r = await hca1.call('POST', '/api/hca', { job: 'q1', items: { 'rb-tc': { v: 'yes' } } }); r = await hca1.call('POST', '/api/hca', { job: 'q1', submit: true }); ok('HCA completes the T&Cs and resubmits', r.code === 200);
+    for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q1', lane, items: allVerified(lane), signoff: 'confirmed' });
+    r = await adm.call('GET', '/api/record?job=q1'); ok('rebate gate passed => READY (stored and shown)', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q1/status')) === 'ready');
+    r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q2' }, withReb('Gensco', { 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } }))); r = await hca1.call('POST', '/api/hca', { job: 'q2', submit: true }); ok('Gensco (no AHRI, no T&Cs) submits', r.code === 200);
+    for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q2', lane, items: allVerified(lane), signoff: 'confirmed' });
+    r = await adm.call('GET', '/api/record?job=q2'); ok('Gensco with balance point + equipment check Complete => READY', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q2/status')) === 'ready');
+    r = await hca1.call('POST', '/api/hca', { job: 'q2', rebateProgram: 'x'.repeat(100) }); ok('over-long program text refused', r.code !== 200);
     // --- admin view and history ---
-    r = await adm.call('GET', '/api/admin'); ok('admin list covers every HCA, sold + pipeline', r.code === 200 && r.b.jobs.length === 4 && r.b.jobs.some(j => j.job === 'k1') && r.b.jobs.some(j => j.job === 'p1' && j.source === 'pipeline'));
+    r = await adm.call('GET', '/api/admin'); ok('admin list covers every HCA, sold + pipeline', r.code === 200 && r.b.jobs.length === 6 && r.b.jobs.some(j => j.job === 'k1') && r.b.jobs.some(j => j.job === 'p1' && j.source === 'pipeline'));
     r = await adm.call('GET', '/api/record?job=j1'); ok('history is complete and signed with the person', r.b.record.history.length > 10 && r.b.record.history.every(h => /@cmheating\.com$/.test(h.by)));
     r = await mI.call('GET', '/api/admin'); ok('manager cannot use the admin list', r.code === 403);
     r = await adm.call('POST', '/api/reset', {}); ok('no reset endpoint in live mode', r.code === 404);

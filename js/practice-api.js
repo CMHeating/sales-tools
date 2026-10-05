@@ -5,8 +5,11 @@
 (function (g) {
   "use strict";
   var KEY = "cmh_practice_db_v1", MAX_BODY = 64 * 1024;
-  var BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video"];
+  var BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video", "i-labor", "e-disconnect", "e-outlet", "e-labor"];
   var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
+  var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
+  var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance", "rb-equip"], Other: ["rb-balance", "rb-ahri"] };
+  function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (p.indexOf("Other") === 0 ? "Other" : ""); }
   var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video"];
   var LANES = {
     sales: { who: "Geoff", items: ["disc", "rebate", "ahri-ok", "financing", "slip", "auths"] },
@@ -17,7 +20,7 @@
     financing: "Financing arranged and approved", slip: "Sales slip signed", auths: "Authorizations done",
     "mat-ok": "Materials list complete", "stock-ok": "Equipment in stock", "layout-ok": "Layout photos and video",
     labor: "Install labor billed correctly", sizing: "Equipment matches the load", "permit-ok": "Permit ready",
-    panel: "Panel / breaker scope", disconnect: "Disconnect", outlet: "Service outlet", elabor: "Electrical labor billed correctly" };
+    panel: "Panel / breaker scope", disconnect: "Disconnect over 24\"?", outlet: "Service outlet within 25'?", elabor: "Electrical labor billed correctly" };
   var RESULTS = ["verified", "missing", "mismatch"], SIGNOFFS = ["confirmed", "attention", "notready"], HCA_STATES = ["yes", "work", "no", "na"];
 
   function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
@@ -60,12 +63,13 @@
   function payState(p) { if (!p || p === "Select…") return ""; if (p.indexOf("⏳") === 0) return "work"; if (p === "N/A") return ""; return p.indexOf("✔") === 0 ? "yes" : "no"; }
   function hcaItems(rec) {
     var h = rec.hca || {}, items = h.items || {}, pay = h.pay || "";
-    var ids = BASE_ITEMS.concat(/rental/i.test(pay) ? RENTAL_ITEMS : []), out = {};
+    var ids = BASE_ITEMS.concat(/rental/i.test(pay) ? RENTAL_ITEMS : [], ["rebate"]), out = {};
+    if ((items.rebate || {}).v === "yes") ids = ids.concat(REBATE_PROGRAM_ITEMS[rebateKey(h.rebateProgram)] || []);
     ids.forEach(function (i) { out[i] = i === "pay" ? payState(pay) : ((items[i] || {}).v || ""); });
     return out;
   }
   function readiness(rec) {
-    var st = hcaItems(rec), keys = Object.keys(st).filter(function (k) { return st[k] !== "na"; });
+    var st = hcaItems(rec), keys = Object.keys(st).filter(function (k) { return st[k] !== "na" && k !== "rebate"; });
     var done = 0, work = 0, no = [];
     keys.forEach(function (k) { if (st[k] === "yes") done++; else if (st[k] === "work") work++; else if (st[k] === "no") no.push(k); });
     var today = iso(new Date()), overdue = no.some(function (k) { var w = (((rec.hca || {}).items || {})[k] || {}).when; return w && w < today; });
@@ -78,16 +82,22 @@
   }
   function hcaMissing(rec) {
     var items = (rec.hca || {}).items || {}, st = hcaItems(rec), out = [];
-    var need = REQUIRED_HCA.concat(RENTAL_ITEMS.filter(function (i) { return i in st; }));
+    var need = REQUIRED_HCA.concat(["rebate"], RENTAL_ITEMS.filter(function (i) { return i in st; }), REBATE_ITEMS.slice(1).filter(function (i) { return i in st; }));
     need.forEach(function (i) { if (!st[i]) out.push(i); });
+    if (st.rebate === "yes" && !rebateKey(h2(rec).rebateProgram)) out.push("rebate program");
     Object.keys(st).forEach(function (k) { if (st[k] === "no") { var it = items[k] || {}; if (!(it.why && it.when)) out.push(k + " (why and by when)"); } });
     return out;
+  }
+  function h2(rec) { return rec.hca || {}; }
+  function rebateGate(rec) {
+    var st = hcaItems(rec); if (st.rebate !== "yes") return true;
+    var key = rebateKey(h2(rec).rebateProgram); return !!key && REBATE_PROGRAM_ITEMS[key].every(function (i) { return st[i] === "yes"; });
   }
   function deriveStatus(rec) {
     if (rec.installed) return "installed";
     if (!(rec.hca || {}).submittedAt) return "working";
     var ls = Object.keys(LANES).map(function (k) { return laneState(rec, k); });
-    if (!hcaMissing(rec).length && ls.every(function (x) { return x.signoff === "confirmed" && x.missing === 0 && x.checked === x.total; })) return "ready";
+    if (!hcaMissing(rec).length && rebateGate(rec) && ls.every(function (x) { return x.signoff === "confirmed" && x.missing === 0 && x.checked === x.total; })) return "ready";
     if (ls.some(function (x) { return x.checked || x.signoff; })) return "in_review";
     return "submitted";
   }
@@ -104,6 +114,7 @@
       if (st[k] === "no") out.push({ who: "HCA", item: k, state: "not done", why: it.why || "", when: it.when || "", overdue: !!(it.when && it.when < today) });
       else if (st[k] === "work") out.push({ who: "HCA", item: k, state: "working", why: "", when: "", overdue: false });
     });
+    if (st.rebate === "yes" && !rebateGate(rec)) out.push({ who: "HCA", item: "rebate", state: "not secured", why: "", when: "", overdue: false });
     Object.keys(rec.lanes || {}).forEach(function (lane) {
       var items = (rec.lanes[lane] || {}).items || {};
       Object.keys(items).forEach(function (k) { var it = items[k];
@@ -165,12 +176,13 @@
       var h = rec.hca = rec.hca || {};
       if ("pay" in body) h.pay = str(body.pay, 80);
       if ("notes" in body) h.notes = str(body.notes, 600);
+      if ("rebateProgram" in body) h.rebateProgram = str(body.rebateProgram, 60);
       var itemsIn = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
       if (!isObj(itemsIn) || !Object.keys(itemsIn).every(function (k) { return isObj(itemsIn[k]); })) return [400, { ok: false, error: "items must be an object of objects" }];
       var ks = Object.keys(itemsIn);
       for (var i = 0; i < ks.length; i++) {
         var k = ks[i], v = itemsIn[k];
-        if ((BASE_ITEMS.concat(RENTAL_ITEMS)).indexOf(k) < 0) return [400, { ok: false, error: "unknown item " + k }];
+        if ((BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS)).indexOf(k) < 0) return [400, { ok: false, error: "unknown item " + k }];
         if (HCA_STATES.indexOf(v.v) < 0) return [400, { ok: false, error: "bad state for " + k }];
         h.items = h.items || {}; var old = (h.items[k] || {}).v;
         h.items[k] = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };

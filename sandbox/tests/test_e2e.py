@@ -22,7 +22,7 @@ def call(path, body=None, raw=None, headers=None):
         try: return e.code, json.load(e)
         except Exception: return e.code, {}
 
-FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': {k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video']}}
+FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video']}, rebate={'v': 'na'})}
 def hca(job, **kw): return call('/api/hca', dict({'job': job, 'by': 'Test HCA'}, **kw))
 def lanes_all(job, result='verified'):
     from_meta = call('/api/meta')[1]['lanes']
@@ -131,11 +131,11 @@ with sync_playwright() as p:
     call('/api/reset', {}); pg.evaluate("localStorage.clear()"); pg.goto(url('900001', 'Sample+Alpha', 2)); pg.reload(); pg.wait_for_timeout(600)
     ok('ring starts cold, no flame', heat()[0] == 'cold' and heat()[1] == 'none')
     pg.select_option('#pay', index=1)
-    for i in ['stock', 'permit', 'mat']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
+    for i in ['stock', 'permit', 'mat', 'photos']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     ok('ring warms up around halfway', heat()[0] == 'warm')
-    for i in ['heatload', 'ahri', 'photos']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    h = heat(); ok('at 7/8 the ring is hot with a flame and "almost there"', h[0] == 'hot' and h[1] != 'none' and h[2] == '🔥' and 'almost' in h[3])
-    pg.click('button[data-id="video"][data-v="yes"]'); h = heat(); ok('at 8/8 the flame becomes a check and the ring is "dialed in"', h[0] == 'done' and h[2] == '✓' and 'dialed' in h[3])
+    for i in ['heatload', 'ahri', 'i-labor', 'e-disconnect', 'e-outlet']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
+    h = heat(); ok('at 10/12 the ring is hot with a flame and "almost there"', h[0] == 'hot' and h[1] != 'none' and h[2] == '🔥' and 'almost' in h[3])
+    pg.click('button[data-id="video"][data-v="yes"]'); pg.click('button[data-id="e-labor"][data-v="yes"]'); h = heat(); ok('at 12/12 the flame becomes a check and the ring is "dialed in"', h[0] == 'done' and h[2] == '✓' and 'dialed' in h[3])
     pg.evaluate("localStorage.clear()")
     # empty state
     pg.goto(B + '/install-requirements.html'); pg.reload(); pg.wait_for_timeout(500)
@@ -145,6 +145,7 @@ with sync_playwright() as p:
     pg.goto(url('900001', 'Sample+Alpha', 2)); pg.reload(); pg.wait_for_timeout(700)
     pg.select_option('#pay', index=1)
     for i, v in [('stock', 'yes'), ('permit', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('photos', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
+    pg.click('button[data-id="rebate"][data-v="na"]')
     ok('submit blocked: Not done needs why + by-when', pg.is_disabled('#submitBtn'))
     pg.select_option('#why-photos select', 'Waiting on customer'); pg.fill('#why-photos input[type=date]', d(1)); pg.wait_for_timeout(600)
     rec = call('/api/record?job=900001')[1]['record']

@@ -24,8 +24,17 @@ LOCK = threading.Lock()
 MAX_BODY = 64 * 1024   # bytes; larger request bodies are refused
 
 # ---- the item model (must match install-requirements.html) -------------------------------------------
-BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video"]
+BASE_ITEMS = ["pay", "stock", "permit", "heatload", "ahri", "mat", "photos", "video", "i-labor", "e-disconnect", "e-outlet", "e-labor"]
 RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]
+# Rebate (2026-10-04): "rebate" is answered yes / na (= no rebate). When yes, a program is chosen and its questions must all be Complete
+# for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
+REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"]
+REBATE_PROGRAM_ITEMS = {"PSE": ["rb-balance", "rb-ahri", "rb-tc"], "PUD": ["rb-balance", "rb-ahri"], "Gensco": ["rb-balance", "rb-equip"], "Other": ["rb-balance", "rb-ahri"]}
+
+
+def rebate_key(prog):
+    prog = str(prog or "")
+    return prog if prog in ("PSE", "PUD", "Gensco") else ("Other" if prog.startswith("Other") else "")
 LANES = {
     "sales":      {"who": "Geoff",  "items": ["disc", "rebate", "ahri-ok", "financing", "slip", "auths"]},
     "install":    {"who": "Lyle",   "items": ["mat-ok", "stock-ok", "layout-ok", "labor", "sizing", "permit-ok"]},
@@ -36,7 +45,7 @@ LANE_LABELS = {
     "financing": "Financing arranged and approved", "slip": "Sales slip signed", "auths": "Authorizations done",
     "mat-ok": "Materials list complete", "stock-ok": "Equipment in stock", "layout-ok": "Layout photos and video",
     "labor": "Install labor billed correctly", "sizing": "Equipment matches the load", "permit-ok": "Permit ready",
-    "panel": "Panel / breaker scope", "disconnect": "Disconnect", "outlet": "Service outlet",
+    "panel": "Panel / breaker scope", "disconnect": "Disconnect over 24\"?", "outlet": "Service outlet within 25'?",
     "elabor": "Electrical labor billed correctly"}
 RESULTS = ("verified", "missing", "mismatch")
 SIGNOFFS = ("confirmed", "attention", "notready")
@@ -120,7 +129,9 @@ def hca_items(rec):
     h = rec.get("hca", {})
     items = h.get("items", {})
     pay = h.get("pay", "")
-    ids = list(BASE_ITEMS) + (RENTAL_ITEMS if re.search("rental", pay or "", re.I) else [])
+    ids = list(BASE_ITEMS) + (RENTAL_ITEMS if re.search("rental", pay or "", re.I) else []) + ["rebate"]
+    if items.get("rebate", {}).get("v") == "yes":
+        ids += REBATE_PROGRAM_ITEMS.get(rebate_key(h.get("rebateProgram")), [])
     out = {}
     for i in ids:
         out[i] = pay_state(pay) if i == "pay" else (items.get(i, {}).get("v") or "")
@@ -129,7 +140,7 @@ def hca_items(rec):
 
 def readiness(rec):
     states = hca_items(rec)
-    act = {k: v for k, v in states.items() if v != "na"}
+    act = {k: v for k, v in states.items() if v != "na" and k != "rebate"}   # the rebate Yes/No is a gate question, not a task: only its program questions count
     done = sum(1 for v in act.values() if v == "yes")
     work = sum(1 for v in act.values() if v == "work")
     no = [k for k, v in act.items() if v == "no"]
@@ -163,14 +174,25 @@ def hca_missing(rec):
     h = rec.get("hca", {})
     items = h.get("items", {})
     states = hca_items(rec)
-    need = list(REQUIRED_HCA) + [i for i in RENTAL_ITEMS if i in states]
+    need = list(REQUIRED_HCA) + ["rebate"] + [i for i in RENTAL_ITEMS if i in states] + [i for i in REBATE_ITEMS[1:] if i in states]
     out = [i for i in need if not states.get(i)]
+    if states.get("rebate") == "yes" and not rebate_key(h.get("rebateProgram")):
+        out.append("rebate program")
     for k, v in states.items():
         if v == "no":
             it = items.get(k, {})
             if not (it.get("why") and it.get("when")):
                 out.append(k + " (why and by when)")
     return out
+
+
+def rebate_gate(rec):
+    """True when no rebate is claimed, or the program is chosen and every one of its questions is Complete."""
+    states = hca_items(rec)
+    if states.get("rebate") != "yes":
+        return True
+    key = rebate_key(rec.get("hca", {}).get("rebateProgram"))
+    return bool(key) and all(states.get(i) == "yes" for i in REBATE_PROGRAM_ITEMS[key])
 
 
 def derive_status(rec):
@@ -180,7 +202,7 @@ def derive_status(rec):
     if not h.get("submittedAt"):
         return "working"
     ls = [lane_state(rec, k) for k in LANES]
-    if not hca_missing(rec) and all(x["signoff"] == "confirmed" and x["missing"] == 0 and x["checked"] == x["total"] for x in ls):
+    if not hca_missing(rec) and rebate_gate(rec) and all(x["signoff"] == "confirmed" and x["missing"] == 0 and x["checked"] == x["total"] for x in ls):
         return "ready"
     if any(x["checked"] or x["signoff"] for x in ls):
         return "in_review"
@@ -210,6 +232,8 @@ def open_items(rec):
             out.append({"who": "HCA", "item": k, "state": "not done", "why": it.get("why", ""), "when": w, "overdue": bool(w and w < today)})
         elif v == "work":
             out.append({"who": "HCA", "item": k, "state": "working", "why": "", "when": "", "overdue": False})
+    if hca_items(rec).get("rebate") == "yes" and not rebate_gate(rec):
+        out.append({"who": "HCA", "item": "rebate", "state": "not secured", "why": "", "when": "", "overdue": False})
     for lane, l in (rec.get("lanes") or {}).items():
         for k, it in (l.get("items") or {}).items():
             if it.get("result") in ("missing", "mismatch"):
@@ -350,11 +374,13 @@ class H(SimpleHTTPRequestHandler):
                         h["pay"] = str(body["pay"])[:80]
                     if "notes" in body:
                         h["notes"] = str(body["notes"])[:600]
+                    if "rebateProgram" in body:
+                        h["rebateProgram"] = str(body["rebateProgram"] or "")[:60]
                     items_in = body.get("items") or {}
                     if not isinstance(items_in, dict) or not all(isinstance(v, dict) for v in items_in.values()):
                         return self._json(400, {"ok": False, "error": "items must be an object of objects"})
                     for k, v in items_in.items():
-                        if k not in BASE_ITEMS + RENTAL_ITEMS:
+                        if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS:
                             return self._json(400, {"ok": False, "error": "unknown item " + k})
                         if v.get("v") not in HCA_STATES:
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
