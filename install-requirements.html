@@ -144,12 +144,8 @@
     <div class="row"><label class="l" for="notes">Notes</label><textarea id="notes" placeholder="Special orders, back-ordered items, access, where equipment lands."></textarea></div>
   </section>
 
-  <section class="card" id="sec-elec"><h2><span class="n">6</span>Electrical</h2><p class="hint">Same checks as the Next Day Install Check. Jon verifies them against ServiceTitan.</p><div id="g-elec"></div></section>
+  <section class="card" id="sec-rental" style="display:none"><h2><span class="n">6</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
 
-  <section class="card" id="sec-rental" style="display:none"><h2><span class="n">7</span>Rental paperwork</h2><p class="hint">Needed for every rental.</p><div id="g-rental"></div></section>
-
-  <section class="card" id="sec-email"><h2><span class="n">8</span>Filter size</h2><p class="hint">Goes into the sold-job email to Install after you submit. Optional.</p>
-    <div class="row"><label class="l" for="filterTxt">Filter size (for the email)</label><input type="text" id="filterTxt" maxlength="30" autocomplete="off" placeholder="Filter size"></div></section>
   <p class="hint" id="leaveHint" style="margin:4px 2px 90px">Closing this page does not save your work with the office. Your answers stay on this device only until you tap <b>Save &amp; exit</b> or <b>Submit</b>.</p>
 </div>
 
@@ -195,22 +191,18 @@ var ITEMS=[
  ['rb-balance','Balance point works for the program?','rebsub','✔ Yes',false],
  ['rb-ahri','AHRI certificate on file?','rebsub','✔ Yes',false],
  ['rb-tc','Terms & conditions done?','rebsub','✔ Yes',false],
- ['rb-equip','Correct equipment? Double-check model #s','rebsub','✔ Yes',false],
  ['mat','Materials list complete & ordered?','layout','✔ Yes — complete & ordered',false],
  ['photos','Layout photos taken?','layout','✔ Yes',false],
  ['video','Walkthrough video taken?','layout','✔ Yes',false],
  ['i-labor','Install labor billed correctly?','layout','✔ Yes — billed correctly',false],
- ['e-disconnect','Disconnect over 24" checked?','elec','✔ Yes',true],
- ['e-outlet','Service outlet within 25\' checked?','elec','✔ Yes',true],
- ['e-labor','Electrical labor billed correctly?','elec','✔ Yes — billed correctly',false],
  ['r-contract','Rental contract signed?','rental','✔ Yes',true],
  ['r-penny','Penny test done?','rental','✔ Yes',true],
  ['r-credit','Credit authorization?','rental','✔ Yes',true],
  ['r-payauth','Payment authorization?','rental','✔ Yes',true],
  ['r-dl','Driver’s license on file?','rental','✔ Yes',true],
  ['r-deed','Mortgage or deed on file?','rental','✔ Yes',true]];
-var REQUIRED=['pay','stock','permit','mat','photos','video','rebate','i-labor','e-labor'];   /* rebate: answer Yes or No on every job */
-var REBATE_SHOWN={PSE:['rb-balance','rb-ahri','rb-tc'],PUD:['rb-balance','rb-ahri'],Gensco:['rb-balance','rb-equip'],Other:['rb-balance','rb-ahri']};   /* which questions each program asks; the rebate gate = all of them Complete */
+var REQUIRED=['pay','stock','permit','mat','photos','video','rebate','i-labor'];   /* rebate: answer Yes or No on every job */
+var REBATE_SHOWN={PSE:['rb-balance','rb-ahri','rb-tc'],PUD:['rb-balance','rb-ahri'],Gensco:['rb-balance'],Other:['rb-balance','rb-ahri']};   /* which questions each program asks; the rebate gate = all of them Complete */
 function rebateKey(p){p=String(p||'');return p==='PSE'||p==='PUD'||p==='Gensco'?p:(/^Other: \S/.test(p)?'Other':'');}
 function rebateSel(p){p=String(p||'');return rebateKey(p)||(p.indexOf('Other')===0?'Other':'');}   /* what the picker shows, even before the name is typed */
 function rebateYes(){return stateOf('rebate')==='yes';}
@@ -240,11 +232,11 @@ function active(){var ids=['pay'];ITEMS.forEach(function(it){if(it[0]==='rebate'
 function label(id){if(id==='pay')return 'Payment status';for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][1].replace(/\?$/,'');return id;}
 
 function build(){
-  ['claim','pay2','equip','rebate','rebsub','layout','elec','rental'].forEach(function(g){
+  ['claim','pay2','equip','rebate','rebsub','layout','rental'].forEach(function(g){
     var box=$('g-'+g);box.innerHTML='';
     ITEMS.filter(function(it){return it[2]===g;}).forEach(function(it){
       var id=it[0],row=document.createElement('div');row.className='row';row.id='row-'+id;
-      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:id==='heatload'?[['yes','Yes'],['no','No']]:id==='e-labor'?[['yes','Yes'],['no','No']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
+      var btns=(id==='rebate'||id==='claim'||id==='rb-applied'||id==='permitdelay')?[['yes','Yes'],['na','No']]:(id==='downpay'||id==='ahri')?[['yes','Yes'],['no','No'],['na','N/A']]:(id==='heatload'||id==='rb-balance')?[['yes','Yes'],['no','No']]:(id==='i-labor')?[['yes','Yes'],['no','No']]:(id==='mat'||id==='photos'||id==='video')?[['yes','Yes'],['work','Working on it']]:[['yes','Complete'],['work','Working on it'],['no','Not done']].concat(it[4]?[['na','N/A']]:[]);
       row.innerHTML='<div class="q" id="q-'+id+'">'+esc(it[1])+'</div><div class="seg" role="radiogroup" aria-labelledby="q-'+id+'">'
         +btns.map(function(b){return '<button type="button" role="radio" aria-checked="false" class="'+b[0]+'" data-id="'+id+'" data-v="'+b[0]+'">'+b[1]+'</button>';}).join('')
         +'</div><div class="why" id="why-'+id+'"></div>';
@@ -254,7 +246,7 @@ function build(){
   ['ahri','rb-ahri'].forEach(function(id){var row=$('row-'+id);if(!row)return;var d=document.createElement('div');d.className='ahri';d.id='ahri-'+id;d.style.display='none';
     d.innerHTML='<div class="ahq"><div class="q2">Is it in ServiceTitan, or are you able to provide it?</div><textarea class="aht" rows="2" maxlength="120" placeholder="Optional: where it is, or who will send it"></textarea><div class="ahb"><button type="button" class="btn" data-ah="st">It is in ServiceTitan</button><button type="button" class="btn go" data-ah="prov">I can provide it</button></div></div><div class="ahdone" style="display:none"><b>AHRI:</b> <span></span> <button type="button" class="linkbtn ahedit">change</button></div>';
     row.appendChild(d);bindAhri(id);});
-  var sr=$('row-stock');if(sr){var vr=document.createElement('div');vr.className='vendor';vr.style.cssText='margin-top:10px';vr.innerHTML='<label class="l" for="vendorTxt">Vendor</label><input type="text" id="vendorTxt" maxlength="60" autocomplete="off" placeholder="Where the equipment is coming from">';sr.appendChild(vr);}
+  var sr=$('row-stock');if(sr){var vr=document.createElement('div');vr.className='vendor';vr.style.cssText='margin-top:10px';vr.innerHTML='<label class="l" for="vendorTxt">Vendor</label><input type="text" id="vendorTxt" maxlength="60" autocomplete="off" placeholder="Where the equipment is coming from">';sr.appendChild(vr);var fr=document.createElement('div');fr.className='vendor';fr.style.cssText='margin-top:10px';fr.innerHTML='<label class="l" for="filterTxt">Filter size</label><input type="text" id="filterTxt" maxlength="30" autocomplete="off" placeholder="Filter size">';sr.appendChild(fr);}
   var pr=$('row-permit');if(pr){var jl=document.createElement('a');jl.id='jurLink';jl.className='linkbtn';jl.target='_blank';jl.rel='noopener';jl.href=JURISDICTION_URL;jl.style.cssText='display:inline-block;margin-top:8px';jl.textContent='Check the jurisdiction timing sheet ↗';pr.appendChild(jl);}
   $('pay').innerHTML=PAY.map(function(p,i){return '<option value="'+(i?esc(p):'')+'">'+esc(p)+'</option>';}).join('');
   $('parkReason').innerHTML='<option value="">Select…</option>'+PARK.map(function(r){return '<option>'+r+'</option>';}).join('');
@@ -478,7 +470,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
   $('parkBtn').onclick=openPark;$('parkBack').onclick=closePark;$('parkSave').onclick=savePark;$('submitBtn').onclick=submit;
   document.addEventListener('keydown',trapPark);
   if(!H.cust&&!H.job){
-    ['sec-pay','sec-equip','sec-rebate','sec-layout','sec-elec','sec-rental','sec-email','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
+    ['sec-pay','sec-equip','sec-rebate','sec-layout','sec-rental','needs'].forEach(function(id){var e=$(id);if(e)e.style.display='none';});
     $('custName').textContent='No project selected';
     var hero=document.querySelector('.hero');var note=document.createElement('div');note.className='needs';note.style.gridColumn='1/-1';
     note.innerHTML='<b>Pick a project first.</b> Go back to your CRM, choose a sold, backlog or pipeline project in Daily Activities, then tap Project completion.<div style="margin-top:10px"><a class="btn go" href="'+(PRACTICE?'practice/index.html':'crm.html')+'" style="display:inline-flex;align-items:center;text-decoration:none">'+(PRACTICE?'Back to practice home':'Back to my CRM')+'</a></div>';
