@@ -34,7 +34,7 @@ REBATE_PROGRAM_ITEMS = {"PSE": ["rb-balance", "rb-ahri", "rb-tc"], "PUD": ["rb-b
 
 def rebate_key(prog):
     prog = str(prog or "")
-    return prog if prog in ("PSE", "PUD", "Gensco") else ("Other" if prog.startswith("Other") else "")
+    return prog if prog in ("PSE", "PUD", "Gensco") else ("Other" if re.match(r"^Other: \S", prog) else "")   # a bare "Other" (no name) is not a valid program
 LANES = {
     "sales":      {"who": "Geoff",  "items": ["disc", "rebate", "ahri-ok", "financing", "slip", "auths"]},
     "install":    {"who": "Lyle",   "items": ["mat-ok", "stock-ok", "layout-ok", "labor", "sizing", "permit-ok"]},
@@ -166,7 +166,7 @@ def lane_state(rec, lane):
     }
 
 
-REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video"]
+REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor", "e-labor"]
 
 
 def hca_missing(rec):
@@ -382,7 +382,7 @@ class H(SimpleHTTPRequestHandler):
                     for k, v in items_in.items():
                         if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS:
                             return self._json(400, {"ok": False, "error": "unknown item " + k})
-                        if v.get("v") not in HCA_STATES:
+                        if v.get("v") not in HCA_STATES or (k == "rebate" and v.get("v") not in ("yes", "na")):
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
                         old = h.setdefault("items", {}).get(k, {}).get("v")
                         h["items"][k] = {"v": v["v"], "why": str(v.get("why", ""))[:60], "when": str(v.get("when", ""))[:10], "note": str(v.get("note", ""))[:200]}

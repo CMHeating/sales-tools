@@ -9,8 +9,8 @@
   var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
   var REBATE_PROGRAM_ITEMS = { PSE: ["rb-balance", "rb-ahri", "rb-tc"], PUD: ["rb-balance", "rb-ahri"], Gensco: ["rb-balance", "rb-equip"], Other: ["rb-balance", "rb-ahri"] };
-  function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (p.indexOf("Other") === 0 ? "Other" : ""); }
-  var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video"];
+  function rebateKey(p) { p = String(p || ""); return p === "PSE" || p === "PUD" || p === "Gensco" ? p : (/^Other: \S/.test(p) ? "Other" : ""); }
+  var REQUIRED_HCA = ["pay", "stock", "permit", "mat", "photos", "video", "i-labor", "e-labor"];
   var LANES = {
     sales: { who: "Geoff", items: ["disc", "rebate", "ahri-ok", "financing", "slip", "auths"] },
     install: { who: "Lyle", items: ["mat-ok", "stock-ok", "layout-ok", "labor", "sizing", "permit-ok"] },
@@ -183,7 +183,7 @@
       for (var i = 0; i < ks.length; i++) {
         var k = ks[i], v = itemsIn[k];
         if ((BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS)).indexOf(k) < 0) return [400, { ok: false, error: "unknown item " + k }];
-        if (HCA_STATES.indexOf(v.v) < 0) return [400, { ok: false, error: "bad state for " + k }];
+        if (HCA_STATES.indexOf(v.v) < 0 || (k === "rebate" && v.v !== "yes" && v.v !== "na")) return [400, { ok: false, error: "bad state for " + k }];
         h.items = h.items || {}; var old = (h.items[k] || {}).v;
         h.items[k] = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
         if (old !== v.v) history(rec, who, "hca." + k, old === undefined ? null : old, v.v);

@@ -17,6 +17,7 @@ async function main() {
       j2: { job: 'j2', customer: 'Sample Two', hca: 'HCA One', installDate: d(5), department: 'HVAC', stage: 'SOLD_ACTIVE' },
       p1: { job: 'p1', customer: 'Sample Pipeline', hca: 'HCA One', source: 'pipeline', comboDate: '', comboTab: '' },
       q1: { job: 'q1', customer: 'Sample Rebate PSE', hca: 'HCA One', installDate: d(6), department: 'HVAC', stage: 'SOLD_ACTIVE' },
+      q3: { job: 'q3', customer: 'Sample Open', hca: 'HCA One', installDate: d(8), department: 'HVAC', stage: 'SOLD_ACTIVE' },
       q2: { job: 'q2', customer: 'Sample Rebate Gensco', hca: 'HCA One', installDate: d(7), department: 'HVAC', stage: 'SOLD_ACTIVE' } },
       'hca-two': { k1: { job: 'k1', customer: 'Sample Other', hca: 'HCA Two', installDate: d(4), department: 'HVAC', stage: 'SOLD_ACTIVE' } } };
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
@@ -35,12 +36,12 @@ async function main() {
     const hca1 = as('h1', 'hca-one@cmheating.com'), hca2 = as('h2', 'hca-two@cmheating.com'), mI = as('mi', 'mgr-install@cmheating.com'), mE = as('me', 'mgr-elec@cmheating.com');
     const adm = as('ad', 'admin-one@cmheating.com'), sch = as('sc', 'sched-one@cmheating.com'), nobody = as('no', 'nobody@cmheating.com');
     const pw = as('pw', 'hca-one@cmheating.com', 'password');
-    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, permit: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, rebate: { v: 'na' } } };
+    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, permit: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, 'i-labor': { v: 'yes' }, 'e-labor': { v: 'yes' }, rebate: { v: 'na' } } };
     const allVerified = lane => Object.fromEntries({ sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] }[lane].map(k => [k, { result: 'verified' }]));
     let r;
 
     // --- who sees what ---
-    r = await hca1.call('GET', '/api/jobs'); ok('HCA lists only their own projects (4 sold + 1 pipeline)', r.code === 200 && r.b.jobs.length === 4 && r.b.pipeline.length === 1);
+    r = await hca1.call('GET', '/api/jobs'); ok('HCA lists only their own projects (5 sold + 1 pipeline)', r.code === 200 && r.b.jobs.length === 5 && r.b.pipeline.length === 1);
     r = await hca1.call('GET', '/api/record?job=k1'); ok("HCA cannot open another HCA's project (same 404 as a job that does not exist)", r.code === 404);
     r = await hca1.call('GET', '/api/record?job=zzz'); ok('unknown job is the same 404', r.code === 404);
     r = await hca1.call('GET', '/api/admin'); ok('HCA cannot use the admin list', r.code === 403);
@@ -50,7 +51,7 @@ async function main() {
 
     // --- HCA fills and submits ---
     r = await hca1.call('POST', '/api/hca', { job: 'j1', submit: true }); ok('empty submit refused with what is still needed', r.code === 400 && /still needed/.test(r.b.error));
-    r = await hca1.call('POST', '/api/hca', { job: 'j1', pay: full.pay, items: full.items }); ok('HCA saves answers (status working)', r.code === 200 && r.b.record.status === 'working' && r.b.record.readiness.done === 6);
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', pay: full.pay, items: full.items }); ok('HCA saves answers (status working)', r.code === 200 && r.b.record.status === 'working' && r.b.record.readiness.done === 8);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { bogus: { v: 'yes' } } }); ok('unknown item refused', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'no' } } }); ok('Not done is stored', r.code === 200);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', submit: true }); ok('submit blocked while a Not-done has no why/when', r.code === 400);
@@ -125,9 +126,11 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', Object.assign({ job: 'q2' }, withReb('Gensco', { 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } }))); r = await hca1.call('POST', '/api/hca', { job: 'q2', submit: true }); ok('Gensco (no AHRI, no T&Cs) submits', r.code === 200);
     for (const [who, lane] of [[mI, 'install'], [mE, 'electrical'], [adm, 'sales']]) await who.call('POST', '/api/lane', { job: 'q2', lane, items: allVerified(lane), signoff: 'confirmed' });
     r = await adm.call('GET', '/api/record?job=q2'); ok('Gensco with balance point + equipment check Complete => READY', r.b.record.status === 'ready' && (await raw('cmh_install_req/hca-one/q2/status')) === 'ready');
+    r = await hca1.call('POST', '/api/hca', { job: 'q3', items: { rebate: { v: 'work' } } }); ok('the rebate row only accepts Yes or No', r.code === 400);
+    r = await hca1.call('GET', '/api/jobs'); 
     r = await hca1.call('POST', '/api/hca', { job: 'q2', rebateProgram: 'x'.repeat(100) }); ok('over-long program text refused', r.code !== 200);
     // --- admin view and history ---
-    r = await adm.call('GET', '/api/admin'); ok('admin list covers every HCA, sold + pipeline', r.code === 200 && r.b.jobs.length === 6 && r.b.jobs.some(j => j.job === 'k1') && r.b.jobs.some(j => j.job === 'p1' && j.source === 'pipeline'));
+    r = await adm.call('GET', '/api/admin'); ok('admin list covers every HCA, sold + pipeline', r.code === 200 && r.b.jobs.length === 7 && r.b.jobs.some(j => j.job === 'k1') && r.b.jobs.some(j => j.job === 'p1' && j.source === 'pipeline'));
     r = await adm.call('GET', '/api/record?job=j1'); ok('history is complete and signed with the person', r.b.record.history.length > 10 && r.b.record.history.every(h => /@cmheating\.com$/.test(h.by)));
     r = await mI.call('GET', '/api/admin'); ok('manager cannot use the admin list', r.code === 403);
     r = await adm.call('POST', '/api/reset', {}); ok('no reset endpoint in live mode', r.code === 404);

@@ -27,7 +27,7 @@ def handler(route):
 
 
 URL = ORIGIN + 'install-requirements.html#job=900001&cust=Sample+Alpha&date=%s&rep=Samir+Khoury&practice=1' % d(5)
-BASE6 = ['stock', 'permit', 'mat', 'video', 'photos']
+BASE6 = ['stock', 'permit', 'mat', 'video', 'photos', 'i-labor', 'e-labor']
 def lanes_all(api, job):
     for lane, ks in {'sales': ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], 'install': ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], 'electrical': ['panel', 'disconnect', 'outlet', 'elabor']}.items():
         api('POST', '/api/lane', {'job': job, 'by': 'X', 'lane': lane, 'items': {k: {'result': 'verified'} for k in ks}, 'signoff': 'confirmed'})
@@ -78,7 +78,7 @@ with sync_playwright() as p:
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
     for i in BASE6: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('button[data-id="rebate"][data-v="na"]'); pg.wait_for_timeout(200)
-    ok('No rebate: nothing else required, Submit works, ring is 6 of 12', not pg.is_disabled('#submitBtn') and not pg.is_visible('#rebProgBox') and pg.inner_text('#ringN').replace('\n', ' ') == '6 of 12')
+    ok('No rebate: nothing else required, Submit works, ring is 8 of 12', not pg.is_disabled('#submitBtn') and not pg.is_visible('#rebProgBox') and pg.inner_text('#ringN').replace('\n', ' ') == '8 of 12')
     # manager page shows what the HCA said about the rebate
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
     for i in BASE6: pg.click(f'button[data-id="{i}"][data-v="yes"]')

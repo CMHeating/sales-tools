@@ -177,18 +177,19 @@ var ITEMS=[
  ['i-labor','Install labor billed correctly?','layout','✔ Yes — billed correctly',false],
  ['e-disconnect','Disconnect over 24" checked?','elec','✔ Yes',true],
  ['e-outlet','Service outlet within 25\' checked?','elec','✔ Yes',true],
- ['e-labor','Electrical labor billed correctly?','elec','✔ Yes — billed correctly',true],
+ ['e-labor','Electrical labor billed correctly?','elec','✔ Yes — billed correctly',false],
  ['r-contract','Rental contract signed?','rental','✔ Yes',true],
  ['r-penny','Penny test done?','rental','✔ Yes',true],
  ['r-credit','Credit authorization?','rental','✔ Yes',true],
  ['r-payauth','Payment authorization?','rental','✔ Yes',true],
  ['r-dl','Driver’s license on file?','rental','✔ Yes',true],
  ['r-deed','Mortgage or deed on file?','rental','✔ Yes',true]];
-var REQUIRED=['pay','stock','permit','mat','photos','video','rebate'];   /* rebate: answer Yes or No on every job */
+var REQUIRED=['pay','stock','permit','mat','photos','video','rebate','i-labor','e-labor'];   /* rebate: answer Yes or No on every job */
 var REBATE_SHOWN={PSE:['rb-balance','rb-ahri','rb-tc'],PUD:['rb-balance','rb-ahri'],Gensco:['rb-balance','rb-equip'],Other:['rb-balance','rb-ahri']};   /* which questions each program asks; the rebate gate = all of them Complete */
-function rebateKey(p){p=String(p||'');return p==='PSE'||p==='PUD'||p==='Gensco'?p:(p.indexOf('Other')===0?'Other':'');}
+function rebateKey(p){p=String(p||'');return p==='PSE'||p==='PUD'||p==='Gensco'?p:(/^Other: \S/.test(p)?'Other':'');}
+function rebateSel(p){p=String(p||'');return rebateKey(p)||(p.indexOf('Other')===0?'Other':'');}   /* what the picker shows, even before the name is typed */
 function rebateYes(){return stateOf('rebate')==='yes';}
-function shownRebate(){return rebateYes()?(REBATE_SHOWN[rebateKey(S.rebateProg)]||[]):[];}
+function shownRebate(){return rebateYes()?(REBATE_SHOWN[rebateSel(S.rebateProg)]||[]):[];}
 function rebateGateOk(){return !rebateYes()||(!!rebateKey(S.rebateProg)&&shownRebate().every(function(i){return stateOf(i)==='yes';}));}   /* must be answered (Working counts) to submit */
 var WORKING='⏳ Working on it';
 var H={};   /* link params: cust, date, job, rep */
@@ -257,12 +258,12 @@ function openNeeds(){
   var out=[];active().forEach(function(id){var st=stateOf(id),o=S.items[id]||{};
     if(st==='no')out.push({id:id,c:'r',t:label(id)+' — '+(o.why||'add a reason')+(o.when?' · by '+o.when:' · add a date')});
     else if(st==='work')out.push({id:id,c:'y',t:label(id)+' — working on it'});});
-  if(rebateYes()&&!rebateGateOk()&&!rebateKey(S.rebateProg))out.push({id:'rebate',c:'y',t:'Rebate — choose the program'});
+  if(rebateYes()&&!rebateGateOk()&&!rebateKey(S.rebateProg))out.push({id:'rebate',c:'y',t:(rebateSel(S.rebateProg)==='Other'?'Rebate — type the program name':'Rebate — choose the program')});
   return out.concat(managerFindings());
 }
 function missing(){var m=[];REQUIRED.forEach(function(id){if(!stateOf(id))m.push(label(id));});
   if(isRental())ITEMS.forEach(function(it){if(it[2]==='rental'&&!stateOf(it[0]))m.push(label(it[0]));});
-  if(rebateYes()){if(!rebateKey(S.rebateProg))m.push('Rebate program');else if(rebateKey(S.rebateProg)==='Other'&&!String(S.rebateProg).replace(/^Other:?\s*/,'').trim())m.push('Rebate program name');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
+  if(rebateYes()){if(!rebateSel(S.rebateProg))m.push('Rebate program');else if(!rebateKey(S.rebateProg))m.push('Rebate program name');shownRebate().forEach(function(i){if(!stateOf(i))m.push(label(i));});}
   active().forEach(function(id){if(stateOf(id)==='no'){var o=S.items[id]||{};if(!o.why||!o.when)m.push(label(id)+' (why and by when)');else if(o.when<todayPT())m.push(label(id)+' (date has passed)');}});
   return m;}
 function render(){
@@ -276,7 +277,7 @@ function render(){
   $('flame').textContent=heat==='done'?'✓':'🔥';
   $('ringSub').textContent=heat==='done'?'dialed in':heat==='hot'?'almost there':'complete';
   $('sec-rental').style.display=isRental()?'':'none';
-  $('rebProgBox').style.display=rebateYes()?'':'none';$('rebOther').style.display=rebateKey(S.rebateProg)==='Other'?'':'none';
+  $('rebProgBox').style.display=rebateYes()?'':'none';$('rebOther').style.display=rebateSel(S.rebateProg)==='Other'?'':'none';
   var shownR=shownRebate();ITEMS.forEach(function(it){if(it[2]==='rebsub'){var rw=$('row-'+it[0]);if(rw)rw.style.display=shownR.indexOf(it[0])>=0?'':'none';}});
   var rn=$('rebNote');if(rebateYes()&&!rebateGateOk()){rn.style.display='';rn.style.color='#fde68a';rn.textContent='Rebate not secured yet. The project can be submitted, but it cannot be booked until every rebate question above is Complete (or Rebate eligible is set to No).';}else if(rebateYes()){rn.style.display='';rn.style.color='#bbf7d0';rn.textContent='Rebate requirements met.';}else rn.style.display='none';
   var needs=openNeeds(),nb=$('needs'),miss=missing(),mgr=managerFindings().length;
@@ -304,7 +305,7 @@ var _rt=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
   if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
-function applyState(){$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateKey(rpv)||'';$('rebOther').value=rebateKey(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
+function applyState(){$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.items){S=d;}}catch(e){}
   applyState();
   if(!SANDBOX||!H.job)return Promise.resolve();

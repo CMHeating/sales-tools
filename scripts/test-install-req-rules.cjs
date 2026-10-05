@@ -8,7 +8,7 @@ const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@fir
 let n = 0; const ok = async p => { n++; return assertSucceeds(p); }, no = async p => { n++; return assertFails(p); };
 const LANEKEYS = { sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] };
 const lanesFull = () => Object.fromEntries(Object.entries(LANEKEYS).map(([l, ks]) => [l, { signoff: 'confirmed', items: Object.fromEntries(ks.map(k => [k, { result: 'verified' }])) }]));
-const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: { ...Object.fromEntries(['stock', 'permit', 'mat', 'photos', 'video'].map(k => [k, { v: 'yes' }])), rebate: { v: 'na' } } };
+const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: { ...Object.fromEntries(['stock', 'permit', 'mat', 'photos', 'video', 'i-labor', 'e-labor'].map(k => [k, { v: 'yes' }])), rebate: { v: 'na' } } };
 async function main() {
   const env = await initializeTestEnvironment({ projectId: 'demo-hca-rules', database: { rules: fs.readFileSync('database.rules.json', 'utf8') } });
   try {
@@ -16,7 +16,7 @@ async function main() {
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
       cmh_install_roster: { managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
-      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true, j4: true, j5: true, r1: true, r2: true, r3: true, r4: true, r5: true } },
+      cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true, j4: true, j5: true, r1: true, r2: true, r3: true, r4: true, r5: true, r6: true, r7: true, r8: true, r9: true } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
         j2: { status: 'in_review', hca: { pay: 'x', submittedAt: 't' } },
@@ -28,6 +28,10 @@ async function main() {
         r2: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'PSE', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' }, 'rb-tc': { v: 'yes' } } }, lanes: lanesFull() },
         r3: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Gensco', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'yes' } } }, lanes: lanesFull() },
         r4: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Gensco', items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-equip': { v: 'no' } } }, lanes: lanesFull() },
+        r6: { status: 'in_review', hca: { ...HCAFULL, items: { ...HCAFULL.items, rebate: { v: 'work' } } }, lanes: lanesFull() },
+        r7: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Other', items: { ...HCAFULL.items, rebate: { v: 'yes' },'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() },
+        r8: { status: 'in_review', hca: { ...HCAFULL, rebateProgram: 'Other: Some Co-op', items: { ...HCAFULL.items, rebate: { v: 'yes' },'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() },
+        r9: { status: 'in_review', hca: { ...HCAFULL, items: Object.fromEntries(Object.entries(HCAFULL.items).filter(([k]) => k !== 'rebate')) }, lanes: lanesFull() },
         r5: { status: 'in_review', hca: { ...HCAFULL, items: { ...HCAFULL.items, rebate: { v: 'yes' }, 'rb-balance': { v: 'yes' }, 'rb-ahri': { v: 'yes' } } }, lanes: lanesFull() } } }
     }));
     const g = (uid, email, provider = 'google.com', verified = true) => env.authenticatedContext(uid, { email, email_verified: verified, firebase: { sign_in_provider: provider } }).database();
@@ -86,7 +90,13 @@ async function main() {
     await ok(adm2.ref(J('r2/status')).set('ready'));                                                // PSE, all Complete
     await ok(adm2.ref(J('r3/status')).set('ready'));                                                // Gensco needs only balance point + equipment/model check (no AHRI, no T&Cs)
     await no(adm2.ref(J('r4/status')).set('ready'));                                                // Gensco equipment check Not done
-    await no(adm2.ref(J('r5/status')).set('ready'));                                                // rebate yes but no program chosen
+    await no(adm2.ref(J('r5/status')).set('ready'));
+    await no(adm2.ref(J('r6/status')).set('ready'));                                                // rebate answered "Working": only Yes / No count
+    await no(adm2.ref(J('r7/status')).set('ready'));                                                // "Other" with no program name
+    await ok(adm2.ref(J('r8/status')).set('ready'));                                                // "Other: <name>" with balance + AHRI Complete
+    await no(adm2.ref(J('r9/status')).set('ready'));                                                // rebate never answered
+    await no(hca1.ref(J('j5/hca/items/rebate')).set({ v: 'work' }));                                // the rebate row is Yes / No only
+    await no(hca1.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/rebateProgram': 'garbage', 'hca/items': { ...HCAFULL.items, rebate: { v: 'yes' } } }));                                                // rebate yes but no program chosen
     await no(adm2.ref(J('j4/status')).set('ready'));                                                // a lane item is still Missing: cannot be ready, even for an admin writing directly
     await no(mgrI.ref(J('j4/status')).set('ready'));
     await no(mgrI.ref(J('j3/status')).remove());

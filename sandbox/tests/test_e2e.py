@@ -22,7 +22,7 @@ def call(path, body=None, raw=None, headers=None):
         try: return e.code, json.load(e)
         except Exception: return e.code, {}
 
-FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video']}, rebate={'v': 'na'})}
+FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'permit', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor', 'e-labor']}, rebate={'v': 'na'})}
 def hca(job, **kw): return call('/api/hca', dict({'job': job, 'by': 'Test HCA'}, **kw))
 def lanes_all(job, result='verified'):
     from_meta = call('/api/meta')[1]['lanes']
@@ -144,12 +144,12 @@ with sync_playwright() as p:
     call('/api/reset', {})
     pg.goto(url('900001', 'Sample+Alpha', 2)); pg.reload(); pg.wait_for_timeout(700)
     pg.select_option('#pay', index=1)
-    for i, v in [('stock', 'yes'), ('permit', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('photos', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
+    for i, v in [('stock', 'yes'), ('permit', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('i-labor', 'yes'), ('e-labor', 'yes'), ('photos', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
     pg.click('button[data-id="rebate"][data-v="na"]')
     ok('submit blocked: Not done needs why + by-when', pg.is_disabled('#submitBtn'))
     pg.select_option('#why-photos select', 'Waiting on customer'); pg.fill('#why-photos input[type=date]', d(1)); pg.wait_for_timeout(600)
     rec = call('/api/record?job=900001')[1]['record']
-    ok('answers saved while typing', rec['hca']['items']['photos']['v'] == 'no' and rec['readiness']['done'] == 7)
+    ok('answers saved while typing', rec['hca']['items']['photos']['v'] == 'no' and rec['readiness']['done'] == 9)
     pg.click('#submitBtn'); pg.wait_for_timeout(700)
     ok('submit -> submitted + one outbox entry, nothing emailed', call('/api/record?job=900001')[1]['record']['status'] == 'submitted' and len(call('/api/outbox')[1]['mail']) == 1)
     q = ctx.new_page(); q.on('pageerror', lambda e: errs.append(str(e))); q.goto(B + '/install-qc.html'); q.wait_for_timeout(600)
