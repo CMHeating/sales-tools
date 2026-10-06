@@ -372,7 +372,7 @@ function api(params){return new Promise(function(resolve,reject){
 function val(id){if(id==='pay')return S.pay&&S.pay!=='Select…'?S.pay:'';var st=stateOf(id);if(!st)return '';
   if(st==='yes'){for(var i=0;i<ITEMS.length;i++)if(ITEMS[i][0]===id)return ITEMS[i][3];}
   return st==='work'?WORKING:st==='no'?'✖ No':'N/A';}
-var INSTALL_TO='';   /* recipient: leave blank in the public page; the HCA addresses the draft (a shared mailbox address can be added here if the owner approves) */
+var INSTALL_TO='install@cmheating.com';   /* the shared Install mailbox; the owner approved putting it in the page (2026-10-05). The HCA still reviews and sends the draft from their own Gmail. */
 function dayLabel(iso){var m=/^(\d{4})-(\d\d)-(\d\d)/.exec(String(iso||''));if(!m)return '';var d=new Date(+m[1],+m[2]-1,+m[3],12);return d.toLocaleDateString('en-US',{weekday:'long'})+' '+(+m[2])+'/'+(+m[3]);}
 function shortName(n){var p=String(n||'').trim().split(/\s+/);return p.length>1?p[0]+' '+p[p.length-1][0]:p[0]||'';}
 function downPayment(p){p=String(p||'');
