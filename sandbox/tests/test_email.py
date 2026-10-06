@@ -48,7 +48,7 @@ with sync_playwright() as p:
         ok('template line %s: %s' % (lab, val), ('\n' + lab + ': ' + val) in ('\n' + prev.split('\n\n', 1)[1]))
     ok('payment line has no tick mark; the email ends at ANY CONCERNS FOR INSTALL (no extra signature)', '\u2714' not in prev and prev.rstrip().endswith('ANY CONCERNS FOR INSTALL: None'))
     href = pg.get_attribute('#mailLink', 'href'); q = urllib.parse.parse_qs(href.split('?', 1)[1])
-    ok('the button opens a Gmail compose window (not the default mail app) with subject and body filled in', href.startswith('https://mail.google.com/mail/?view=cm&fs=1') and q['su'][0] == 'Sample Alpha' and q['body'][0].startswith('CUSTOMER NAME: Sample Alpha') and pg.get_attribute('#mailLink', 'target') == '_blank' and 'Gmail' in pg.inner_text('#mailLink'))
+    ok('the button opens a Gmail compose window (not the default mail app) addressed to the Install mailbox, with subject and body filled in', href.startswith('https://mail.google.com/mail/?view=cm&fs=1') and q['to'][0] == 'install@cmheating.com' and q['su'][0] == 'Sample Alpha' and q['body'][0].startswith('CUSTOMER NAME: Sample Alpha') and pg.get_attribute('#mailLink', 'target') == '_blank' and 'Gmail' in pg.inner_text('#mailLink'))
     pg.click('#copyEmail'); pg.wait_for_timeout(300); ok('Copy email gives feedback', len(pg.inner_text('#sentMsg')) > 5)
     pg.wait_for_timeout(2800); ok('no auto-redirect: the HCA decides when to leave', 'install-requirements' in pg.url)
     pg.click('#sentBack'); pg.wait_for_timeout(800); ok('Back to my projects returns to the list', 'practice/index.html' in pg.url)
