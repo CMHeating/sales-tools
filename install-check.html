@@ -332,6 +332,7 @@ function computeVerdict(){
 }
 function renderVerdict(){
   applyJobType();
+  if(AUTOSAVE)asCheckKey();
   var r=computeVerdict();
   var jb=el('jbanner');
   if(r.juris){jb.style.display='block';jb.className='banner '+(r.juris.lvl==='no'?'red':'amber');
@@ -384,7 +385,8 @@ function copyIt(){
 }
 function save(){try{var o={};FIELDS.forEach(function(f){o[f]=v(f)});localStorage.setItem('cmh_installcheck',JSON.stringify(o));}catch(e){}}
 function load(){try{var o=JSON.parse(localStorage.getItem('cmh_installcheck')||'null');if(!o)return;FIELDS.forEach(function(f){if(el(f)&&o[f]!=null)el(f).value=o[f];});}catch(e){}}
-function clearForm_(){manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};COMBO_REP='';var mi=el('matchInfo');if(mi)mi.textContent='';var hc=el('hcaCheck');if(hc){hc.textContent='';hc.style.color='';}var ci=el('city');if(ci)ci.dataset.auto='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();}
+function clearForm_(){if(AUTOSAVE&&AS.job){var _oj=AS.job;AS.job=null;asFlush(_oj);}  /* autosave: the old job's request is built from the DOM before it is wiped */
+  manualStatus=null;FIELDS.forEach(function(f){var e=el(f);if(e)e.value='';});SOLD={};COMBO_REP='';var mi=el('matchInfo');if(mi)mi.textContent='';var hc=el('hcaCheck');if(hc){hc.textContent='';hc.style.color='';}var ci=el('city');if(ci)ci.dataset.auto='';try{localStorage.removeItem('cmh_installcheck');}catch(e){}renderVerdict();}
 function resetForm(){clearForm_();try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}}
 /* ===== Morning review queue — jobs handed off in the link's #q= payload ===== */
 function qesc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -435,6 +437,7 @@ function applyCheckPayload(obj,note){
      sign-offs so they only touch their own part (locked fields still submit). */
   if(obj.role&&obj.role.field){
     var rf=obj.role.field,who=obj.role.who||'',dep=obj.role.dep||'';
+    if(AUTOSAVE&&ROLE_OF_FIELD[rf])URL_ROLE=ROLE_OF_FIELD[rf];
     if(rb){rb.style.display='block';rb.className='banner amber';rb.innerHTML='🔧 <b>You’re finishing the '+dep+' spot-check'+(who?(' — '+who):'')+'.</b> Set your sign-off below and hit <b>Send to HCA</b>. The other sign-offs are locked so you only complete your part.';}
     ['d-elec','d-install','d-sales'].forEach(function(id){var e=el(id);if(e&&id!==rf){e.disabled=true;e.style.opacity='0.55';}});
     var tgt=el(rf);if(tgt){tgt.style.outline='2px solid var(--orange)';tgt.style.outlineOffset='2px';try{setTimeout(function(){tgt.scrollIntoView({block:'center',behavior:'smooth'});},250);}catch(e){}}
@@ -633,7 +636,7 @@ Array.prototype.forEach.call(document.querySelectorAll('.card label'),function(l
 });
 /* Live guardrail: recompute the verdict whenever any field changes.
    #ready is handled separately so the checker can RAISE the status (never lower it). */
-function wrapHandler(e){if(e&&e.target&&e.target.id==='ready')return;renderVerdict();}
+function wrapHandler(e){if(e&&e.target&&e.target.id==='ready')return;if(AUTOSAVE)asTouch(e);renderVerdict();}
 var _wrap=document.querySelector('.wrap');
 if(_wrap){_wrap.addEventListener('input',wrapHandler);_wrap.addEventListener('change',wrapHandler);}
 el('ready').addEventListener('change',function(){
@@ -643,6 +646,129 @@ el('ready').addEventListener('change',function(){
   manualStatus=(chosen==='')?null:chosen;
   renderVerdict();
 });
+/* ===== Autosave (?autosave=1) — field-level drafts to icdraft, polling icget. The buttons are unchanged. =====
+   One "job" = customer + install date (the server's key). Only fields the person actually edits are sent
+   (with the value they last saw as `base`), so nobody's work overwrites anybody else's. Nothing is emailed. */
+var AUTOSAVE=/[?&]autosave=1(&|$)/.test(location.search);
+var AS={job:null,flushT:null,pollT:null,keyT:null,lastInput:Date.now()};
+var DRAFT_IDS=FIELDS.filter(function(f){return ['customer','idate','ready'].indexOf(f)===-1;});
+var ROLE_BY={'jonathan jansen':'jon','lyle jones':'lyle','geoff simons':'geoff'};
+var ROLE_FIELD={jon:'d-elec',lyle:'d-install',geoff:'d-sales'};
+var ROLE_OF_FIELD={'d-elec':'jon','d-install':'lyle','d-sales':'geoff'};
+var ROLE_NAME={jon:'Jon',lyle:'Lyle',geoff:'Geoff',hca:'HCA'};
+var URL_ROLE='';
+function asRole(){return URL_ROLE||ROLE_BY[custKey(v('by'))]||'hca';}
+function asChip(t,warn){var c=el('asChip');if(!c)return;c.textContent=t;c.style.color=warn?'#e9960f':'var(--mut)';}
+function asTime(iso){try{return new Date(iso||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}catch(e){return '';}}
+function asNewJob(){var c=v('customer'),d=v('idate');if(!c||!d)return null;return {key:pendKey(c,d),cust:c,idate:d,base:{},dirty:{},conflicts:{},v:0,busy:false};}
+function asSaveLocal(J){try{var o={};Object.keys(J.dirty).forEach(function(id){o[id]=v(id);});var k='cmh_ic_draft:'+J.key;if(Object.keys(o).length)localStorage.setItem(k,JSON.stringify(o));else localStorage.removeItem(k);}catch(e){}}
+function asTouch(e){
+  if(!AS.job||!e||!e.target)return;var id=e.target.id;if(DRAFT_IDS.indexOf(id)===-1)return;
+  var J=AS.job;AS.lastInput=Date.now();J.dirty[id]=1;delete J.conflicts[id];asClearConflict(id);asSaveLocal(J);
+  asChip('Unsaved changes…');clearTimeout(AS.flushT);AS.flushT=setTimeout(function(){asFlush(J);},2000);
+}
+function asFlush(J){
+  clearTimeout(AS.flushT);if(!J)return Promise.resolve();
+  if(J.busy){if(J===AS.job)AS.flushT=setTimeout(function(){asFlush(J);},800);return Promise.resolve();}
+  var ids=Object.keys(J.dirty).filter(function(id){return !J.conflicts[id];});
+  if(!ids.length)return Promise.resolve();
+  var used=0,pick=[];   /* keep the JSONP URL short: send what fits, the rest follows right after */
+  ids.forEach(function(id){var n=v(id).length*2+String(J.base[id]||'').length+40;if(!pick.length||used+n<1800){pick.push(id);used+=n;}});
+  var fields={},base={};pick.forEach(function(id){fields[id]=v(id);base[id]=J.base[id]==null?'':String(J.base[id]);});
+  J.busy=true;asChip('Saving…');
+  return api({action:'icdraft',customer:J.cust,idate:J.idate,hca:v('hca'),role:asRole(),by:v('by')||ROLE_NAME[asRole()],fields:JSON.stringify(fields),base:JSON.stringify(base)}).then(function(d){
+    J.busy=false;
+    if(!d||d.retry){if(J===AS.job)AS.flushT=setTimeout(function(){asFlush(J);},3000);return;}
+    if(!d.ok){asChip('Save error — kept on this device',1);return;}
+    (d.applied||[]).forEach(function(id){J.base[id]=fields[id];if(J.dirty[id]&&(J!==AS.job||v(id)===fields[id]))delete J.dirty[id];});
+    (d.denied||[]).forEach(function(id){delete J.dirty[id];});
+    (d.conflicts||[]).forEach(function(c){J.conflicts[c.f]=c;if(J===AS.job)asShowConflict(c.f);});
+    J.v=d.v;
+    if(!Object.keys(J.dirty).length){try{localStorage.removeItem('cmh_ic_draft:'+J.key);}catch(e){}}
+    var nc=Object.keys(J.conflicts).length,nd=(d.denied||[]).length;
+    asChip(nc?('Conflict on '+nc+' field'+(nc>1?'s':'')+' — see the highlighted note'):(nd?'Not saved — only that manager can sign off':'Saved '+asTime()),nc||nd);
+    if(J===AS.job&&Object.keys(J.dirty).some(function(id){return !J.conflicts[id];}))AS.flushT=setTimeout(function(){asFlush(J);},500);
+  }).catch(function(){J.busy=false;asChip('Offline — saved on this device',1);if(J===AS.job)AS.flushT=setTimeout(function(){asFlush(J);},8000);});
+}
+function asClearConflict(id){var d=el('ascon-'+id);if(d&&d.parentNode)d.parentNode.removeChild(d);}
+function asShowConflict(id){
+  var J=AS.job,c=J&&J.conflicts[id],e=el(id);if(!c||!e)return;asClearConflict(id);
+  var d=document.createElement('div');d.id='ascon-'+id;
+  d.style.cssText='font-size:12px;margin-top:6px;padding:8px 10px;border:1px solid #e9960f;border-radius:8px;color:#fde68a;background:rgba(245,158,11,.12);line-height:1.5';
+  d.innerHTML=qesc(c.by||'Someone')+' changed this'+(c.at?(' at '+qesc(asTime(c.at))):'')+' — theirs: <b>'+qesc(c.theirs)+'</b> / yours: <b>'+qesc(v(id))+'</b><br>';
+  function btn(t,fn){var b=document.createElement('button');b.type='button';b.className='ghost';b.textContent=t;b.style.cssText='padding:4px 10px;min-height:0;font-size:12px;margin:4px 6px 0 0';b.onclick=fn;d.appendChild(b);}
+  btn('Keep mine',function(){J.base[id]=String(c.theirs);delete J.conflicts[id];asClearConflict(id);asFlush(J);});
+  btn('Take theirs',function(){e.value=c.theirs;J.base[id]=String(c.theirs);delete J.dirty[id];delete J.conflicts[id];asClearConflict(id);asSaveLocal(J);renderVerdict();});
+  e.parentNode.appendChild(d);
+}
+/* Merge the server's state into the form: server wins for any field the person is not editing. */
+function asAdopt(J,d){
+  if(!d||!d.ok||J!==AS.job)return;
+  var f=(d.payload&&d.payload.f)||{},changed=[];J.v=d.v||0;
+  DRAFT_IDS.forEach(function(id){
+    if(!f.hasOwnProperty(id)||J.dirty[id])return;
+    var sv=String(f[id]==null?'':f[id]),e=el(id);
+    if(!e||document.activeElement===e||J.base[id]===sv)return;
+    if(String(e.value||'')!==sv){e.value=sv;changed.push(id);}
+    J.base[id]=sv;
+  });
+  var s=(d.payload&&d.payload.sold)||{};
+  Object.keys(s).forEach(function(k){if(!SOLD[k])SOLD[k]=s[k];});
+  if(changed.length){
+    var m=(d.meta||{})[changed[0]]||{};asChip('Updated'+(m.by?(' by '+m.by):'')+' · '+changed.length+' field'+(changed.length>1?'s':''));
+    changed.forEach(function(id){var e=el(id);if(e&&!e.style.outline){e.style.outline='2px solid var(--blue)';e.dataset.asflash='1';setTimeout(function(){if(e.dataset.asflash){e.style.outline='';e.dataset.asflash='';}},4000);}});
+    renderVerdict();
+  }
+}
+/* A tab closed mid-typing keeps its edits per job on this device; replay them once the server state is in. */
+function asReplay(J){try{
+  var o=JSON.parse(localStorage.getItem('cmh_ic_draft:'+J.key)||'null');if(!o||J!==AS.job)return;var any=false;
+  Object.keys(o).forEach(function(id){var e=el(id);if(!e||DRAFT_IDS.indexOf(id)===-1||J.base[id]===String(o[id]))return;e.value=o[id];J.dirty[id]=1;any=true;});
+  if(any){renderVerdict();asChip('Restored unsaved changes…');AS.flushT=setTimeout(function(){asFlush(J);},500);}
+}catch(e){}}
+function asPoll(J){if(J!==AS.job)return Promise.resolve();return api({action:'icget',customer:J.cust,idate:J.idate}).then(function(d){asAdopt(J,d);}).catch(function(){});}
+function asSchedulePoll(){
+  clearTimeout(AS.pollT);if(!AS.job||document.hidden)return;
+  var idle=Date.now()-AS.lastInput>300000;   /* 20 s while active, 60 s after 5 min without typing */
+  AS.pollT=setTimeout(function(){asPoll(AS.job).then(asSchedulePoll);},idle?60000:20000);
+}
+/* The job changes when customer or install date change (typed, or filled from the queue / a link). */
+function asCheckKey(){
+  clearTimeout(AS.keyT);
+  AS.keyT=setTimeout(function(){
+    var nj=asNewJob(),k=nj?nj.key:'',ck=AS.job?AS.job.key:'';
+    if(k===ck)return;
+    if(AS.job)asFlush(AS.job);   /* ponytail: renaming a customer mid-edit starts a new job; unsent edits flush to the old key first */
+    AS.job=nj;clearTimeout(AS.pollT);
+    if(!nj){asChip('Autosave on');return;}
+    api({action:'icget',customer:nj.cust,idate:nj.idate}).then(function(d){asAdopt(nj,d);asReplay(nj);asSchedulePoll();})
+      .catch(function(){asReplay(nj);asChip('Offline — saved on this device',1);asSchedulePoll();});
+  },600);
+}
+/* Link by key (no frozen copy): #key=<customer>|<yyyy-mm-dd>&role=lyle. Old #check= links still work and
+   are overwritten with the server's current state as soon as the job is recognised. */
+function parseKeyLink(){try{
+  var h=String(location.hash||''),m=h.match(/[#&]key=([^&]*)/);if(!m)return false;
+  var r=h.match(/[#&]role=([^&]*)/),role=r?decodeURIComponent(r[1]).toLowerCase():'';
+  var p=decodeURIComponent(m[1]).split('|');if(ROLE_FIELD[role]||role==='hca')URL_ROLE=role;
+  clearForm_();el('customer').value=p[0]||'';el('idate').value=p[1]||'';renderVerdict();
+  api({action:'icget',customer:p[0]||'',idate:p[1]||''}).then(function(d){
+    if(d&&d.ok&&d.exists)applyCheckPayload({f:d.payload.f,sold:d.payload.sold,role:ROLE_FIELD[role]?{field:ROLE_FIELD[role],who:ROLE_NAME[role],dep:{jon:'Electrical',lyle:'Install',geoff:'Sales'}[role]}:null},'Opened from the saved check.');
+  }).catch(function(){});
+  return true;
+}catch(e){return false;}}
+if(AUTOSAVE){
+  var _bi=document.querySelector('.bar-in'),_ac=document.createElement('span');
+  _ac.id='asChip';_ac.style.cssText='font-size:12px;color:var(--mut);white-space:nowrap';_bi.insertBefore(_ac,_bi.firstChild);asChip('Autosave on');
+  /* The buttons first flush any pending draft, and refuse to send over an unresolved conflict on a visible field. */
+  var _sendToHca=sendToHca;
+  sendToHca=function(handoff){asFlush(AS.job).then(function(){
+    var J=AS.job,bad=J&&Object.keys(J.conflicts).filter(fieldActive);
+    if(bad&&bad.length){el('bartxt').textContent='Resolve the highlighted conflict'+(bad.length>1?'s':'')+' first (Keep mine / Take theirs).';return;}
+    _sendToHca(handoff);});};
+  document.addEventListener('visibilitychange',function(){if(document.hidden){asFlush(AS.job);clearTimeout(AS.pollT);}else if(AS.job){asPoll(AS.job).then(asSchedulePoll);}});
+  window.addEventListener('pagehide',function(){asFlush(AS.job);});
+}
 renderVerdict();
 /* Precedence: a resume link (one check) wins over a queue link, which wins over
    the auto-loaded schedule. */
@@ -690,7 +816,7 @@ function loadUpcoming(){
     else{var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t load the upcoming schedule'+(d&&d.error?(': '+qesc(d.error)):'')+'.</p>';var c=el('bucketsCard');if(c)c.style.display='block';}
   }).catch(function(){var l=el('upcomingList');if(l)l.innerHTML='<p class="sub" style="margin:6px 2px">Couldn&rsquo;t reach the schedule for the upcoming bucket.</p>';var c=el('bucketsCard');if(c)c.style.display='block';});
 }
-var _resumed=parseResume();
+var _resumed=parseResume()||parseKeyLink();
 if(!_resumed){
   parseQueue();
   if(!QUEUE.length){var _qd=el('queueDay');autoLoadQueue(_qd?_qd.value:'next');}
