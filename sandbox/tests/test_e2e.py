@@ -22,7 +22,7 @@ def call(path, body=None, raw=None, headers=None):
         try: return e.code, json.load(e)
         except Exception: return e.code, {}
 
-FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'})}
+FULL = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'}, cc={'v': 'na'})}
 def hca(job, **kw): return call('/api/hca', dict({'job': job, 'by': 'Test HCA'}, **kw))
 def lanes_all(job, result='verified'):
     from_meta = call('/api/meta')[1]['lanes']

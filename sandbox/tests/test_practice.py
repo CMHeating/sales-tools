@@ -77,7 +77,7 @@ with sync_playwright() as p:
     ok('reset puts the practice data back', api('GET', '/api/record?job=900001')[1]['record']['status'] == 'working')
     # --- Codex review (PR #45) regressions, through the in-browser API ---
     api('POST', '/api/reset', {})
-    api('POST', '/api/hca', dict({'job': '800001', 'by': 'T'}, pay='✔ Paid in full', items=dict({k: {'v': 'yes'} for k in ['stock', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'})))
+    api('POST', '/api/hca', dict({'job': '800001', 'by': 'T'}, pay='✔ Paid in full', items=dict({k: {'v': 'yes'} for k in ['stock', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'}, cc={'v': 'na'})))
     api('POST', '/api/hca', {'job': '800001', 'by': 'T', 'submit': True})
     ok('CODEX-2 a submitted backlog/pipeline project reaches the manager queue', any(j['job'] == '800001' for j in api('GET', '/api/queue')[1]['jobs']))
     for lane, v in api('GET', '/api/meta')[1]['lanes'].items(): api('POST', '/api/lane', {'job': '800001', 'by': v['who'], 'lane': lane, 'items': {k: {'result': 'verified'} for k in v['items']}, 'signoff': 'confirmed'})
@@ -92,7 +92,7 @@ with sync_playwright() as p:
     ok('CODEX-1 reset also clears the per-project drafts (a fresh project is really fresh)', pg.inner_text('#ringN').replace('\n', ' ') == '0 of 8' and pg.evaluate("Object.keys(localStorage).filter(k=>k.indexOf('cmh_practice_req_')===0&&localStorage[k].indexOf('yes')>=0).length") == 0)
     # --- ADMIN page ---
     api('POST', '/api/reset', {})
-    full = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'})}
+    full = {'pay': '✔ Financed — approved & sales slip signed', 'items': dict({k: {'v': 'yes'} for k in ['stock', 'heatload', 'ahri', 'mat', 'photos', 'video', 'i-labor']}, rebate={'v': 'na'}, cc={'v': 'na'})}
     for job in ('900002', '900001'):
         api('POST', '/api/hca', dict({'job': job, 'by': 'Samir Khoury'}, **full)); api('POST', '/api/hca', {'job': job, 'by': 'Samir Khoury', 'submit': True})
     api('POST', '/api/lane', {'job': '900002', 'by': 'Lyle', 'lane': 'install', 'items': {'layout-ok': {'result': 'missing', 'found': 'No photos on the job', 'when': d(-1)}}, 'signoff': 'attention'})

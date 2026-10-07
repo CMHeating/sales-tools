@@ -36,7 +36,7 @@ async function main() {
     const hca1 = as('h1', 'hca-one@cmheating.com'), hca2 = as('h2', 'hca-two@cmheating.com'), mI = as('mi', 'mgr-install@cmheating.com'), mE = as('me', 'mgr-elec@cmheating.com');
     const adm = as('ad', 'admin-one@cmheating.com'), sch = as('sc', 'sched-one@cmheating.com'), nobody = as('no', 'nobody@cmheating.com');
     const pw = as('pw', 'hca-one@cmheating.com', 'password');
-    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, 'i-labor': { v: 'yes' }, rebate: { v: 'na' } } };
+    const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, 'i-labor': { v: 'yes' }, rebate: { v: 'na' }, cc: { v: 'na' } } };
     const allVerified = lane => Object.fromEntries({ sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] }[lane].map(k => [k, { result: 'verified' }]));
     let r;
 

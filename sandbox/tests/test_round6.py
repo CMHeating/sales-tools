@@ -72,7 +72,7 @@ with sync_playwright() as p:
     pg.select_option('#pay', label=[o for o in pg.eval_on_selector_all('#pay option', 'els => els.map(e => e.textContent)') if 'rental' in o.lower()][0]); pg.wait_for_timeout(200)
     ok('a rental payment alone does NOT bring up the rental questions', not pg.is_visible('#sec-rental'))
     pg.click('button[data-id="cc"][data-v="yes"]'); pg.wait_for_timeout(200)
-    ok('answering Comfort Club Yes brings up the six rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 6)
+    ok('answering Comfort Club Yes brings up the eight rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 8)
     pg.click('button[data-id="cc"][data-v="na"]'); pg.select_option('#pay', index=0); pg.wait_for_timeout(200)
     ok('and they go away again when Comfort Club is No', not pg.is_visible('#sec-rental'))
     # potential permit delays
@@ -99,7 +99,7 @@ with sync_playwright() as p:
     for i in ['stock', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('button[data-id="downpay"][data-v="yes"]'); pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PUD')
     for i in ['rb-balance', 'rb-ahri']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    pg.click('#ahri-rb-ahri [data-ah="st"]'); pg.click('button[data-id="rb-applied"][data-v="na"]'); pg.wait_for_timeout(500)
+    pg.click('#ahri-rb-ahri [data-ah="st"]'); pg.click('button[data-id="rb-applied"][data-v="na"]'); pg.click('button[data-id="cc"][data-v="na"]'); pg.wait_for_timeout(500)
     pg.click('#submitBtn'); pg.wait_for_timeout(900); prev = pg.inner_text('#emailPrev')
     ok('email: DOWN PAYMENT COLLECTED uses the HCA answer (Yes), not a guess from the payment type', 'DOWN PAYMENT COLLECTED: Yes' in prev)
     ok('email concerns carry Potential permit delays when the HCA said Yes', 'Potential permit delays' in prev)

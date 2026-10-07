@@ -25,10 +25,10 @@ MAX_BODY = 64 * 1024   # bytes; larger request bodies are refused
 
 # ---- the item model (must match install-requirements.html) -------------------------------------------
 BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-labor"]
-RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]
+RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed", "r-equifax", "r-match"]
 # Rebate (2026-10-04): "rebate" is answered yes / na (= no rebate). When yes, a program is chosen and its questions must all be Complete
 # for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
-# "cc" = "Is this a Comfort Club project?" (yes / na = no): yes = rental, so the six rental paperwork items are required (no N/A on them); asked on every job
+# "cc" = "Is this a Comfort Club project?" (yes / na = no): yes = rental, so the eight rental paperwork items are required (no N/A on them); asked on every job
 NA_OK = ["ahri"]   # items that may be answered N/A ("rebate" and "cc" use na for "No")
 # "claim" = "ready to claim your spot on the install availability sheet?" (yes / na = no): stored, never counted or required
 CLAIM_ITEMS = ["claim", "downpay", "rb-applied", "permitdelay"]   # extra answers: stored, never counted or required ("downpay" = down payment collected: yes / no / na; "rb-applied" = rebate applied to the estimate: yes / na)

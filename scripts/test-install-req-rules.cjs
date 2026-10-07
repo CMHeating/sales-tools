@@ -8,7 +8,7 @@ const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@fir
 let n = 0; const ok = async p => { n++; return assertSucceeds(p); }, no = async p => { n++; return assertFails(p); };
 const LANEKEYS = { sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] };
 const lanesFull = () => Object.fromEntries(Object.entries(LANEKEYS).map(([l, ks]) => [l, { signoff: 'confirmed', items: Object.fromEntries(ks.map(k => [k, { result: 'verified' }])) }]));
-const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: { ...Object.fromEntries(['stock', 'mat', 'photos', 'video', 'i-labor'].map(k => [k, { v: 'yes' }])), rebate: { v: 'na' } } };
+const HCAFULL = { pay: '\u2714 Paid in full', submittedAt: 't', items: { ...Object.fromEntries(['stock', 'mat', 'photos', 'video', 'i-labor'].map(k => [k, { v: 'yes' }])), rebate: { v: 'na' }, cc: { v: 'na' } } };
 async function main() {
   const env = await initializeTestEnvironment({ projectId: 'demo-hca-rules', database: { rules: fs.readFileSync('database.rules.json', 'utf8') } });
   try {
@@ -124,7 +124,10 @@ async function main() {
     await no(hca1.ref(J('j5/hca/items/i-labor')).set({ v: 'na' }));
     await ok(hca1.ref(J('j5/hca/items/ahri')).set({ v: 'na' }));
     await ok(hca1.ref(J('j5/hca/items/e-outlet')).set({ v: 'na' }));
-    await ok(hca1.ref(J('j5/hca/items/r-dl')).set({ v: 'na' }));                                // the rebate row is Yes / No only
+    await no(hca1.ref(J('j5/hca/items/r-dl')).set({ v: 'na' }));                                // rental rows have no N/A
+    await ok(hca1.ref(J('j5/hca/items/r-equifax')).set({ v: 'yes' }));                          // new rental rows are accepted
+    await ok(hca1.ref(J('j5/hca/items/r-match')).set({ v: 'yes' }));
+    await no(hca1.ref(J('j5/hca/items/r-bogus')).set({ v: 'yes' }));                            // unknown rental rows still refused
     await no(hca1.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/rebateProgram': 'garbage', 'hca/items': { ...HCAFULL.items, rebate: { v: 'yes' } } }));                                                // rebate yes but no program chosen
     await no(adm2.ref(J('j4/status')).set('ready'));                                                // a lane item is still Missing: cannot be ready, even for an admin writing directly
     await no(mgrI.ref(J('j4/status')).set('ready'));

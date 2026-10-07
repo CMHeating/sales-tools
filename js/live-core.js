@@ -10,7 +10,7 @@
   "use strict";
   var MAX_BODY = 64 * 1024;
   var BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-labor"];
-  var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"];
+  var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed", "r-equifax", "r-match"];
   var REQUIRED_HCA = ["pay", "stock", "mat", "photos", "video", "i-labor"];
   /* Rebate: "rebate" is yes / na (= no rebate). When yes, a program is chosen and ALL of its questions must be Complete before the project can be Ready (the rebate gate). */
   var NA_OK = ["ahri"];   /* items that may be answered N/A ("rebate" and "cc" use na for "No"; "cc" = Is this a Comfort Club project? yes = rental, so the rental paperwork is required, no N/A) */

@@ -50,7 +50,7 @@ with sync_playwright() as p:
     for i in ['stock', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="na"]')
     pg.wait_for_timeout(900)
-    ok('answers saved to the database as the HCA types (status working)', pg.evaluate("window.__DB.cmh_install_req['hca-one'].j1.status") == 'working' and pg.evaluate("Object.keys(window.__DB.cmh_install_req['hca-one'].j1.hca.items).length") == 6)
+    ok('answers saved to the database as the HCA types (status working)', pg.evaluate("window.__DB.cmh_install_req['hca-one'].j1.status") == 'working' and pg.evaluate("Object.keys(window.__DB.cmh_install_req['hca-one'].j1.hca.items).length") == 7)
     pg.click('#submitBtn'); pg.wait_for_timeout(900)
     ok('submit stores status submitted + submittedAt and sends nothing', pg.evaluate("window.__DB.cmh_install_req['hca-one'].j1.status") == 'submitted' and 'Submitted' in pg.inner_text('#barTxt') and not ext)
     ok('history entries are signed with the person', pg.evaluate("Object.values(window.__DB.cmh_install_req['hca-one'].j1.history).every(h=>h.by==='hca-one@cmheating.com')"))
