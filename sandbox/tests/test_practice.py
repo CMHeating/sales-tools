@@ -51,7 +51,7 @@ with sync_playwright() as p:
     ok('Back link returns to the practice home', pg.get_attribute('.topbar .back', 'href') == 'practice/index.html')
     pg.select_option('#pay', index=1)
     for i, v in [('stock', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('i-labor', 'yes'), ('photos', 'yes'), ('stock', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
-    pg.click('button[data-id="rebate"][data-v="na"]')
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="na"]')
     ok('submit blocked until the Not-done item has why + by-when', pg.is_disabled('#submitBtn'))
     pg.select_option('#why-stock select', 'Waiting on customer'); pg.fill('#why-stock input[type=date]', d(1)); pg.wait_for_timeout(500)
     pg.reload(); pg.wait_for_timeout(800); ok('answers survive a reload (saved in this browser)', pg.inner_text('#ringN').replace('\n', ' ') == '7 of 8')

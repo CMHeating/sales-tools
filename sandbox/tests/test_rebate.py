@@ -42,7 +42,7 @@ with sync_playwright() as p:
     pg.select_option('#pay', index=1)
     for i in BASE6: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     ok('rebate unanswered blocks Submit (one tap per job)', pg.is_disabled('#submitBtn') and 'Rebate' in pg.inner_text('#barTxt'))
-    pg.click('button[data-id="rebate"][data-v="yes"]'); pg.wait_for_timeout(200)
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.wait_for_timeout(200)
     ok('Yes opens the program picker in place (no pop-up); Submit still blocked until a program is chosen', pg.is_visible('#rebProgBox') and not vis('rb-balance') and pg.is_disabled('#submitBtn'))
     shown = lambda: [i for i in ['rb-balance', 'rb-ahri', 'rb-tc'] if vis(i)]
     pg.select_option('#rebProg', 'PSE'); pg.wait_for_timeout(150); ok('PSE asks balance point, AHRI certificate and T&Cs', shown() == ['rb-balance', 'rb-ahri', 'rb-tc'])
@@ -70,7 +70,7 @@ with sync_playwright() as p:
     api('POST', '/api/reset', {})
     pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
     for i in BASE6: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'Gensco')
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'Gensco')
     pg.click('button[data-id="rb-balance"][data-v="yes"]')
     pg.wait_for_timeout(300); ok('Gensco all Complete: gate passed', 'requirements met' in pg.inner_text('#rebNote').lower())
     pg.click('#submitBtn'); pg.wait_for_timeout(800); lanes_all(api, '900001')
@@ -78,12 +78,12 @@ with sync_playwright() as p:
     # No rebate => nothing extra
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
     for i in BASE6: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    pg.click('button[data-id="rebate"][data-v="na"]'); pg.wait_for_timeout(200)
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="na"]'); pg.wait_for_timeout(200)
     ok('No rebate: nothing else required, Submit works, ring is 6 of 8', not pg.is_disabled('#submitBtn') and not pg.is_visible('#rebProgBox') and pg.inner_text('#ringN').replace('\n', ' ') == '6 of 8')
     # manager page shows what the HCA said about the rebate
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
     for i in BASE6: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PUD')
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PUD')
     for i in ['rb-balance', 'rb-ahri']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
     pg.click('#submitBtn'); pg.wait_for_timeout(800)
     q = ctx.new_page(); q.goto(ORIGIN + 'install-qc.html#practice=1&as=Geoff'); q.reload(); q.wait_for_timeout(900); q.click('.job[data-job="900001"]'); q.wait_for_timeout(800)

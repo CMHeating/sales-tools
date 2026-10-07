@@ -39,7 +39,7 @@ with sync_playwright() as p:
     # payment section
     ok('Payment section asks "Down payment collected?" with Yes / No / N/A', pg.is_visible('#sec-pay #row-downpay') and [pg.get_attribute(f'button[data-id="downpay"]:nth-of-type({n})', 'data-v') for n in (1, 2, 3)] == ['yes', 'no', 'na'])
     ok('"Rebate applied to the estimate?" stays hidden until Rebate eligible = Yes', not pg.is_visible('#row-rb-applied'))
-    pg.click('button[data-id="rebate"][data-v="yes"]'); pg.wait_for_timeout(200)
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.wait_for_timeout(200)
     ok('...then appears in the Payment section', pg.is_visible('#sec-pay #row-rb-applied'))
     pg.click('button[data-id="downpay"][data-v="no"]'); pg.wait_for_timeout(500)
     ok('down payment No needs no reason or date (it is information, not a task)', not pg.is_visible('#why-downpay') and pg.inner_text('#ringN').replace('\n', ' ') == '0 of 8')
@@ -57,7 +57,7 @@ with sync_playwright() as p:
     ok('any other reason needs a by-when date again and counts as open (0 of 8)', pg.is_visible('#why-heatload input[type="date"]') and pg.inner_text('#ringN').replace('\\n', ' ') == '0 of 8')
     pg.click('button[data-id="heatload"][data-v="yes"]')
     # balance point is Yes / No
-    pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'Gensco'); pg.wait_for_timeout(200)
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'Gensco'); pg.wait_for_timeout(200)
     ok('Balance point works for the program? is Yes / No (still asked for Gensco)', lab('rb-balance') == ['Yes', 'No'] and pg.is_visible('#row-rb-balance'))
     pg.click('button[data-id="rb-balance"][data-v="no"]'); pg.wait_for_timeout(300)
     ok('No on the balance point asks why and by when (rebate gate fails)', pg.is_visible('#why-rb-balance') and 'not secured' in pg.inner_text('#rebNote').lower())
@@ -68,11 +68,13 @@ with sync_playwright() as p:
     ok('No asks why and by when', pg.is_visible('#why-stock'))
     pg.click('button[data-id="stock"][data-v="yes"]'); pg.wait_for_timeout(200)
     # rental paperwork only for rentals
-    ok('rental paperwork stays hidden unless a rental payment is chosen, with a hint saying how to get it', not pg.is_visible('#sec-rental') and 'rental payment' in pg.inner_text('#rentalHint').lower())
+    ok('rental paperwork stays hidden unless Comfort Club is Yes, with a hint saying how to get it', not pg.is_visible('#sec-rental') and 'comfort club' in pg.inner_text('#rentalHint').lower())
     pg.select_option('#pay', label=[o for o in pg.eval_on_selector_all('#pay option', 'els => els.map(e => e.textContent)') if 'rental' in o.lower()][0]); pg.wait_for_timeout(200)
-    ok('choosing a rental payment brings up the six rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 6)
-    pg.select_option('#pay', index=0); pg.wait_for_timeout(200)
-    ok('and they go away again when the payment is not a rental (nothing answered)', not pg.is_visible('#sec-rental'))
+    ok('a rental payment alone does NOT bring up the rental questions', not pg.is_visible('#sec-rental'))
+    pg.click('button[data-id="cc"][data-v="yes"]'); pg.wait_for_timeout(200)
+    ok('answering Comfort Club Yes brings up the six rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 6)
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.select_option('#pay', index=0); pg.wait_for_timeout(200)
+    ok('and they go away again when Comfort Club is No', not pg.is_visible('#sec-rental'))
     # potential permit delays
     ok('"Potential permit delays?" sits right after the Permit question with Yes / No', pg.is_visible('#sec-equip #row-permitdelay') and pg.eval_on_selector_all('button[data-id="permitdelay"]', 'els => els.map(e => e.textContent.trim())') == ['Yes', 'No'])
     pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.wait_for_timeout(500)

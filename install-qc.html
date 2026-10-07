@@ -115,7 +115,7 @@ function loadList(){
 function openJob(job){
   CUR=job;api('/api/record?job='+encodeURIComponent(job)).then(function(d){
     if(!d.ok){return;}var r=d.record,j=d.job,h=r.hca||{},items=h.items||{},mylane=LIVE?(Object.keys((META.me||{}).lanes||{}).filter(function(k){return META.me.lanes[k];})[0]||''):(WHO_LANE[me()]||'');
-    var rental=/rental/i.test(h.pay||'');
+    var rental=(items.cc||{}).v==='yes';
     var rebYes=(items.rebate||{}).v==='yes',rebShown=rebYes?(REBATE_SHOWN[rebKey(h.rebateProgram)]||[]):[];
     function hcaSaid(ids){ids=ids.filter(function(i){return (rental||i.indexOf('r-')!==0)&&(i.indexOf('rb-')!==0||rebShown.indexOf(i)>=0);});if(!ids.length)return 'No rental paperwork on this job';return ids.map(function(i){var st=i==='pay'?payState(h.pay):(items[i]||{}).v;var it=items[i]||{};
       var txt=i==='rebate'?(st==='yes'?('Yes — '+(h.rebateProgram||'program not chosen')):st==='na'?'No rebate':'not answered'):i==='pay'?(h.pay||'not answered'):(STATE[st]||'not answered')+((st==='yes'&&it.note&&(i==='ahri'||i==='rb-ahri'))?(' — '+it.note):'')+(st==='no'&&it.why?(' — '+it.why+(it.when?' by '+it.when:'')):'');

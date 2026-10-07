@@ -145,7 +145,7 @@ with sync_playwright() as p:
     pg.goto(url('900001', 'Sample+Alpha', 2)); pg.reload(); pg.wait_for_timeout(700)
     pg.select_option('#pay', index=1)
     for i, v in [('stock', 'yes'), ('heatload', 'yes'), ('ahri', 'yes'), ('mat', 'yes'), ('video', 'yes'), ('i-labor', 'yes'), ('photos', 'yes'), ('stock', 'no')]: pg.click(f'button[data-id="{i}"][data-v="{v}"]')
-    pg.click('button[data-id="rebate"][data-v="na"]')
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="na"]')
     ok('submit blocked: Not done needs why + by-when', pg.is_disabled('#submitBtn'))
     pg.select_option('#why-stock select', 'Waiting on customer'); pg.fill('#why-stock input[type=date]', d(1)); pg.wait_for_timeout(600)
     rec = call('/api/record?job=900001')[1]['record']

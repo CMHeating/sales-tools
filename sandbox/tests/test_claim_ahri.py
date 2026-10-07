@@ -59,13 +59,13 @@ with sync_playwright() as p:
     pg.click('button[data-id="ahri"][data-v="na"]'); pg.wait_for_timeout(700)
     ok('changing AHRI away from Complete clears the answer and hides the box', not pg.is_visible('#ahri-ahri') and (rec()['items']['ahri'].get('note') or '') == '')
     # rebate AHRI certificate asks the same thing
-    pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PSE'); pg.click('button[data-id="rb-ahri"][data-v="yes"]'); pg.wait_for_timeout(250)
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="yes"]'); pg.select_option('#rebProg', 'PSE'); pg.click('button[data-id="rb-ahri"][data-v="yes"]'); pg.wait_for_timeout(250)
     ok('the rebate AHRI certificate asks too', pg.is_visible('#ahri-rb-ahri .ahq'))
     pg.click('#ahri-rb-ahri [data-ah="st"]'); pg.wait_for_timeout(600)
     # full flow: claim = No, AHRI "I can provide it" -> email concerns + manager sees the note
     api('POST', '/api/reset', {}); pg.goto(URL); pg.reload(); pg.wait_for_timeout(800); pg.select_option('#pay', index=1)
     for i in ['stock', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    pg.click('button[data-id="rebate"][data-v="na"]'); pg.click('button[data-id="claim"][data-v="na"]')
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="na"]'); pg.click('button[data-id="claim"][data-v="na"]')
     pg.click('button[data-id="ahri"][data-v="yes"]'); pg.fill('#ahri-ahri .aht', 'Joe sends it Friday'); pg.click('#ahri-ahri [data-ah="prov"]'); pg.wait_for_timeout(600)
     pg.click('#submitBtn'); pg.wait_for_timeout(900)
     prev = pg.inner_text('#emailPrev')

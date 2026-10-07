@@ -28,7 +28,8 @@ BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-l
 RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]
 # Rebate (2026-10-04): "rebate" is answered yes / na (= no rebate). When yes, a program is chosen and its questions must all be Complete
 # for the project to reach Ready (the "rebate gate"); an HCA may still submit while a question is Working on it / Not done.
-NA_OK = ["ahri"] + ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed"]   # items that may be answered N/A ("rebate" uses na for "No rebate")
+# "cc" = "Is this a Comfort Club project?" (yes / na = no): yes = rental, so the six rental paperwork items are required (no N/A on them); asked on every job
+NA_OK = ["ahri"]   # items that may be answered N/A ("rebate" and "cc" use na for "No")
 # "claim" = "ready to claim your spot on the install availability sheet?" (yes / na = no): stored, never counted or required
 CLAIM_ITEMS = ["claim", "downpay", "rb-applied", "permitdelay"]   # extra answers: stored, never counted or required ("downpay" = down payment collected: yes / no / na; "rb-applied" = rebate applied to the estimate: yes / na)
 REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"]
@@ -132,13 +133,13 @@ def hca_items(rec):
     h = rec.get("hca", {})
     items = h.get("items", {})
     pay = h.get("pay", "")
-    ids = list(BASE_ITEMS) + (RENTAL_ITEMS if re.search("rental", pay or "", re.I) else []) + ["rebate"]
+    ids = list(BASE_ITEMS) + (RENTAL_ITEMS if items.get("cc", {}).get("v") == "yes" else []) + ["rebate", "cc"]
     if items.get("rebate", {}).get("v") == "yes":
         ids += REBATE_PROGRAM_ITEMS.get(rebate_key(h.get("rebateProgram")), [])
     out = {}
     for i in ids:
         v = pay_state(pay) if i == "pay" else (items.get(i, {}).get("v") or "")
-        out[i] = "" if v == "na" and i != "pay" and i != "rebate" and i not in NA_OK else v   # a stale N/A on an item that no longer offers it is unanswered
+        out[i] = "" if v == "na" and i != "pay" and i != "rebate" and i != "cc" and i not in NA_OK else v   # a stale N/A on an item that no longer offers it is unanswered
         if i == "heatload" and (items.get("heatload", {}).get("v") == "no") and re.match(r"^Mini split", items.get("heatload", {}).get("why", "") or ""):
             out[i] = "na"   # Heat load "No" because it is a mini split is acceptable: not applicable, no date needed
     return out
@@ -146,7 +147,7 @@ def hca_items(rec):
 
 def readiness(rec):
     states = hca_items(rec)
-    act = {k: v for k, v in states.items() if v != "na" and k != "rebate"}   # the rebate Yes/No is a gate question, not a task: only its program questions count
+    act = {k: v for k, v in states.items() if v != "na" and k not in ("rebate", "cc")}   # the rebate Yes/No is a gate question, not a task: only its program questions count
     done = sum(1 for v in act.values() if v == "yes")
     work = sum(1 for v in act.values() if v == "work")
     no = [k for k, v in act.items() if v == "no"]
@@ -180,7 +181,7 @@ def hca_missing(rec):
     h = rec.get("hca", {})
     items = h.get("items", {})
     states = hca_items(rec)
-    need = list(REQUIRED_HCA) + ["rebate"] + [i for i in RENTAL_ITEMS if i in states] + [i for i in REBATE_ITEMS[1:] if i in states]
+    need = list(REQUIRED_HCA) + ["rebate", "cc"] + [i for i in RENTAL_ITEMS if i in states] + [i for i in REBATE_ITEMS[1:] if i in states]
     out = [i for i in need if not states.get(i)]
     if states.get("rebate") == "yes" and not rebate_key(h.get("rebateProgram")):
         out.append("rebate program")
@@ -396,9 +397,9 @@ class H(SimpleHTTPRequestHandler):
                     if not isinstance(items_in, dict) or not all(isinstance(v, dict) for v in items_in.values()):
                         return self._json(400, {"ok": False, "error": "items must be an object of objects"})
                     for k, v in items_in.items():
-                        if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS + CLAIM_ITEMS:
+                        if k not in BASE_ITEMS + RENTAL_ITEMS + REBATE_ITEMS + CLAIM_ITEMS + ["cc"]:
                             return self._json(400, {"ok": False, "error": "unknown item " + k})
-                        if v.get("v") not in HCA_STATES or (k in ("rebate", "claim", "rb-applied", "permitdelay") and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k not in ("rebate", "claim", "rb-applied", "downpay", "permitdelay") and k not in NA_OK):
+                        if v.get("v") not in HCA_STATES or (k in ("rebate", "claim", "rb-applied", "permitdelay", "cc") and v.get("v") not in ("yes", "na")) or (v.get("v") == "na" and k not in ("rebate", "claim", "rb-applied", "downpay", "permitdelay", "cc") and k not in NA_OK):
                             return self._json(400, {"ok": False, "error": "bad state for " + k})
                         old = h.setdefault("items", {}).get(k, {}).get("v")
                         h["items"][k] = {"v": v["v"], "why": str(v.get("why", ""))[:60], "when": str(v.get("when", ""))[:10], "note": str(v.get("note", ""))[:200]}

@@ -48,7 +48,7 @@ with sync_playwright() as p:
     ok('live mode: no tab-close warning text (answers are saved as you go)', 'saved to the office as you go' in pg.inner_text('#leaveHint'))
     pg.select_option('#pay', index=1)
     for i in ['stock', 'mat', 'video', 'photos', 'i-labor']: pg.click(f'button[data-id="{i}"][data-v="yes"]')
-    pg.click('button[data-id="rebate"][data-v="na"]')
+    pg.click('button[data-id="cc"][data-v="na"]'); pg.click('button[data-id="rebate"][data-v="na"]')
     pg.wait_for_timeout(900)
     ok('answers saved to the database as the HCA types (status working)', pg.evaluate("window.__DB.cmh_install_req['hca-one'].j1.status") == 'working' and pg.evaluate("Object.keys(window.__DB.cmh_install_req['hca-one'].j1.hca.items).length") == 6)
     pg.click('#submitBtn'); pg.wait_for_timeout(900)
