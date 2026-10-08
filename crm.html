@@ -419,7 +419,7 @@ function unlock(){
   $("content").classList.add("show");
   $("btnLogin").classList.add("hidden");
   $("btnLogout").classList.remove("hidden");
-  badge(`● ${currentUser.role}: ${currentUser.short} · ${isGoogle() ? "Google" : "PIN — customer info locked"}`, isGoogle() ? "ok" : "");
+  badge(`● ${currentUser.role}: ${currentUser.short} · ${isGoogle() ? "Google" : (pilotOn(currentUser) ? "PIN — customer info locked" : "PIN")}`, isGoogle() ? "ok" : "");
 
   const isAdmin = currentUser.role === "ADMIN";
   if(isAdmin){
@@ -529,7 +529,7 @@ let followupData = null;
 let followupKey = null;
 function loadFollowupCard(who){
   $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
-  if(!isGoogle()){ setBody("followupBody", lockedCardHtml("your follow-ups")); $("followupNote").textContent = ""; return; }
+  if(pilotOn(who) && !isGoogle()){ setBody("followupBody", lockedCardHtml("your follow-ups")); $("followupNote").textContent = ""; return; }
   const want = (currentUser && currentUser.role === "HCA" && ownHcaKey ? ownHcaKey : hcaSlug(who.full));
   if(followupData && followupKey === want){ renderFollowup(who); return; }
   readTracker(DB_FOLLOWUP, who, (data, path) => {
@@ -550,7 +550,7 @@ function renderFollowup(who){
 let soldData = null;
 let soldKey = null;
 function loadSoldCard(who){
-  if(!isGoogle()){ setBody("soldBody", lockedCardHtml("your sold jobs")); $("soldNote").textContent = ""; renderProjects(who); return; }
+  if(pilotOn(who) && !isGoogle()){ setBody("soldBody", lockedCardHtml("your sold jobs")); $("soldNote").textContent = ""; renderProjects(who); return; }
   const want = (currentUser && currentUser.role === "HCA" && ownHcaKey ? ownHcaKey : hcaSlug(who.full));
   if(soldData && soldKey === want){ renderSold(who); return; }
   readTracker(DB_SOLD, who, (data, path) => {

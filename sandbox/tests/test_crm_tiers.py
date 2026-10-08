@@ -80,4 +80,7 @@ with sync_playwright() as p:
     b, pg, errs = run(p, 'chester.granard@cmheating.com', 'google.com', PARTITIONED)
     ok('non-pilot HCA: list, dropdown and link hidden', not pg.is_visible('#projList') and not pg.is_visible('#projPick') and not pg.is_visible('#actCompleteLink'))
     ok('non-pilot HCA: own sold card works as before', pg.inner_text('#soldBody').replace('\n', ' ').startswith('1')); b.close()
+    # non-pilot HCA on a PIN session, today's whole-node layout: nothing is locked (the tier lock is pilot-only until go-live)
+    b, pg, errs = run(p, 'chester.granard@cmheating.com', 'password', LEGACY)
+    ok('non-pilot HCA on a PIN session: sold card not locked, badge not "locked"', 'sign in with google' not in pg.inner_text('#soldBody').lower() and 'locked' not in pg.inner_text('#statusBadge').lower()); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
