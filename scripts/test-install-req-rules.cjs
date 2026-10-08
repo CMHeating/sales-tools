@@ -125,7 +125,6 @@ async function main() {
     await ok(hca1.ref(J('j5/hca/items/ahri')).set({ v: 'na' }));
     await ok(hca1.ref(J('j5/hca/items/e-outlet')).set({ v: 'na' }));
     await no(hca1.ref(J('j5/hca/items/r-dl')).set({ v: 'na' }));                                // rental rows have no N/A
-    await ok(hca1.ref(J('j5/hca/items/r-equifax')).set({ v: 'yes' }));                          // new rental rows are accepted
     await ok(hca1.ref(J('j5/hca/items/r-match')).set({ v: 'yes' }));
     await no(hca1.ref(J('j5/hca/items/r-bogus')).set({ v: 'yes' }));                            // unknown rental rows still refused
     await no(hca1.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/rebateProgram': 'garbage', 'hca/items': { ...HCAFULL.items, rebate: { v: 'yes' } } }));                                                // rebate yes but no program chosen

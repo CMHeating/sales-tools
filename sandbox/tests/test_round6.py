@@ -72,7 +72,7 @@ with sync_playwright() as p:
     pg.select_option('#pay', label=[o for o in pg.eval_on_selector_all('#pay option', 'els => els.map(e => e.textContent)') if 'rental' in o.lower()][0]); pg.wait_for_timeout(200)
     ok('a rental payment alone does NOT bring up the rental questions', not pg.is_visible('#sec-rental'))
     pg.click('button[data-id="cc"][data-v="yes"]'); pg.wait_for_timeout(200)
-    ok('answering Comfort Club Yes brings up the eight rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 8)
+    ok('answering Comfort Club Yes brings up the seven rental questions', pg.is_visible('#sec-rental') and pg.locator('#sec-rental .row').count() == 7)
     pg.click('button[data-id="cc"][data-v="na"]'); pg.select_option('#pay', index=0); pg.wait_for_timeout(200)
     ok('and they go away again when Comfort Club is No', not pg.is_visible('#sec-rental'))
     # potential permit delays

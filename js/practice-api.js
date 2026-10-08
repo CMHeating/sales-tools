@@ -6,7 +6,7 @@
   "use strict";
   var KEY = "cmh_practice_db_v1", MAX_BODY = 64 * 1024;
   var BASE_ITEMS = ["pay", "stock", "heatload", "ahri", "mat", "photos", "video", "i-labor"];
-  var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed", "r-equifax", "r-match"];
+  var RENTAL_ITEMS = ["r-contract", "r-penny", "r-credit", "r-payauth", "r-dl", "r-deed", "r-match"];
   var NA_OK = ["ahri"];   /* items that may be answered N/A ("rebate" and "cc" use na for "No"; "cc" = Is this a Comfort Club project? yes = rental, so the rental paperwork is required, no N/A) */
   var CLAIM_ITEMS = ["claim", "downpay", "rb-applied", "permitdelay"];   /* "ready to claim your spot on the install availability sheet?" yes / na (= no): stored, never counted or required */
   var REBATE_ITEMS = ["rebate", "rb-balance", "rb-ahri", "rb-tc", "rb-equip"];
