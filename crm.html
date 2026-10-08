@@ -543,6 +543,12 @@ const SCHED_MTG_DATES = {
   "2026-10-14": { all:true, at:8, label:"TRAINING 8:00–9:00" },
   "2026-10-15": { none:true }
 };
+/* Whole-team events that replace the normal day plan. Thu 10/15/26: town hall 7:30–11:00 (already blocked in ServiceTitan).
+   Riders join their tech at 11:00; oo moves 1:1s; end caps a shift so nobody works an extra-long day. */
+const SCHED_DAY_EVENTS = {
+  "2026-10-15": { at:7.5, to:11, label:"TOWN HALL 7:30–11:00", text:"Town hall 7:30–11:00", ride:{ day:[11,14], eve:[11,16] },
+                  oo:{ "Trevor Bohm":11, "Samir Khoury":12 }, end:{ "Amber Maddalena":16 } }
+};
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
   "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],
@@ -568,9 +574,40 @@ function schedIso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart
 function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:w; return x+m; }
 function schedWeek(d){ const days=Math.round((d-SCHED_ANCHOR)/86400000); return ((Math.floor(days/7)%4)+4)%4; }
 
+/* HCA name for a schedule row (eff copies keep the same oo array). */
+function schedName(p){ return Object.keys(HCA_SCHEDULE).find(k => HCA_SCHEDULE[k].oo === p.oo) || ""; }
+/* Day plan for a whole-team event day (SCHED_DAY_EVENTS). */
+function schedEventPlan(p, d, ev){
+  const dow = d.getDay(), wk = schedWeek(d), name = schedName(p), blocks = [[ev.at, ev.to, "blk", ev.label]], lines = [ev.text + " — whole team."];
+  let sh, book = 0;
+  if(dow === p.ride){
+    const tech = p.rot[wk], r = p.crew === "day" ? ev.ride.day : ev.ride.eve;
+    blocks.push([r[0], r[1], "ride", "TECH RIDE · " + tech]);
+    lines.push("Then meet <b>" + esc(tech) + "</b> at " + schedClock(r[0]) + " for the ride-along until " + schedClock(r[1]) + ".");
+    if(p.crew === "day"){ sh = [ev.at, r[1]]; lines.push("No appointment after the ride today."); }
+    else { sh = [ev.at, 18]; blocks.push([16, 18, "after", "Open · after ride"]); lines.push("4:00–6:00 appointment: revisit or tech flip."); book = 1; }
+  } else {
+    const end = (ev.end || {})[name] || p.sh[1], oo = p.oo[0] === dow ? ((ev.oo || {})[name] || p.oo[1]) : null;
+    sh = [ev.at, end];
+    if(oo) lines.push("1:1 with Geoff at " + oo + ":00.");
+    if(end < p.sh[1]) lines.push("Your day ends at " + schedClock(end) + ".");
+    let t = ev.to, open = 0;
+    while(t < end){
+      const nx = oo && oo >= t ? oo : Infinity;
+      if(oo === t){ blocks.push([t, t + 1, "blk", "1:1 WITH GEOFF " + oo + ":00"]); t += 1; continue; }
+      if(t + 2 <= nx && t + 2 <= end){ blocks.push([t, t + 2, "open", "Open"]); open++; t += 2; continue; }
+      if(nx < end && nx > t){ t = nx; continue; }
+      break;
+    }
+    book = Math.min(open, p.cap);
+  }
+  if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
+  if(sh[1] < 19) blocks.unshift([sh[1], 19, "os", ""]);
+  return { blocks, book, lines, sh };
+}
 /* Meeting for this HCA on this day, or null. p.mtg is a day number or an array of day numbers. */
 function schedMtg(p, d){
-  const o = SCHED_MTG_DATES[schedIso(d)], dow = d.getDay(), name = Object.keys(HCA_SCHEDULE).find(k => HCA_SCHEDULE[k].oo === p.oo) /* eff copies keep the same oo array */ || "";
+  const o = SCHED_MTG_DATES[schedIso(d)], dow = d.getDay(), name = schedName(p);
   if(o && o.none) return null;
   if(o && o.all) return { at:o.at, label:o.label, training:true, text:"Training "+schedClock(o.at)+"–9:00", end:(o.end||{})[name] };
   const days = Array.isArray(p.mtg) ? p.mtg : [p.mtg];
@@ -581,6 +618,7 @@ function schedPlan(p, d){
   if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
   if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
   if((p.off||[]).indexOf(schedIso(d)) >= 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
+  if(SCHED_DAY_EVENTS[schedIso(d)]) return schedEventPlan(p, d, SCHED_DAY_EVENTS[schedIso(d)]);
   const blocks=[], lines=[]; let sh, book;
   const mt = schedMtg(p, d), isM = !!mt, endCap = mt && mt.end;
   if(dow === p.ride){
@@ -649,6 +687,7 @@ function schedPacketCell(p, d){
     else if(/ \+ 1:1 9:00$/.test(t)) parts.push(t.indexOf("TRAINING") === 0 ? "TRN 8:00" : "MTG 8:00", "1:1 9:00");
     else if(t === "SALES MEETING 8:00") parts.push("MTG 8:00");
     else if(t.indexOf("TRAINING ") === 0) parts.push("TRN " + t.slice(9, t.indexOf("–")));
+    else if(t.indexOf("TOWN HALL ") === 0) parts.push("TOWN HALL");
     else if(t.indexOf("1:1 WITH GEOFF ") === 0) parts.push("1:1 " + t.replace("1:1 WITH GEOFF ",""));
   });
   const early = pl.sh[0] === 8 && pl.sh[1] === 16 && schedFor(p, d).crew === "eve";
