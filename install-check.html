@@ -515,7 +515,13 @@ function renderOpenChecks(){
 function loadOpenChecks(){
   api({action:'openchecks'}).then(function(d){
     var all=(d&&d.ok&&d.checks)?d.checks:[];
-    SAVED_BY_KEY={};SAVED_BY_CUST={};all.forEach(function(c){if(c.key)SAVED_BY_KEY[c.key]=c;
+    SAVED_BY_KEY={};SAVED_BY_CUST={};all.forEach(function(c){
+      /* an autosave draft stores only the fields that were edited — never the customer / date, which are the key —
+         so fill them in from the row, or reopening it would leave those two boxes blank */
+      c.payload=c.payload||{};c.payload.f=c.payload.f||{};
+      if(!c.payload.f.customer&&c.customer)c.payload.f.customer=c.customer;
+      if(!c.payload.f.idate&&c.idate)c.payload.f.idate=c.idate;
+      if(c.key)SAVED_BY_KEY[c.key]=c;
       var ck=custKey(c.customer||String(c.key||'').split('|')[0]);
       if(ck){(SAVED_BY_CUST[ck]=SAVED_BY_CUST[ck]||[]).push(c);}});
     OPEN_CHECKS=all.filter(function(c){return String(c.status||'').toLowerCase()==='open';});
@@ -753,7 +759,7 @@ function parseKeyLink(){try{
   var p=decodeURIComponent(m[1]).split('|');if(ROLE_FIELD[role]||role==='hca')URL_ROLE=role;
   clearForm_();el('customer').value=p[0]||'';el('idate').value=p[1]||'';renderVerdict();
   api({action:'icget',customer:p[0]||'',idate:p[1]||''}).then(function(d){
-    if(d&&d.ok&&d.exists)applyCheckPayload({f:d.payload.f,sold:d.payload.sold,role:ROLE_FIELD[role]?{field:ROLE_FIELD[role],who:ROLE_NAME[role],dep:{jon:'Electrical',lyle:'Install',geoff:'Sales'}[role]}:null},'Opened from the saved check.');
+    if(d&&d.ok&&d.exists)applyCheckPayload({f:Object.assign({customer:p[0]||'',idate:p[1]||''},d.payload.f),sold:d.payload.sold,role:ROLE_FIELD[role]?{field:ROLE_FIELD[role],who:ROLE_NAME[role],dep:{jon:'Electrical',lyle:'Install',geoff:'Sales'}[role]}:null},'Opened from the saved check.');
   }).catch(function(){});
   return true;
 }catch(e){return false;}}
