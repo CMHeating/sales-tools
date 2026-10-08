@@ -128,6 +128,8 @@ async function main() {
     await ok(hca1.ref(J('j5/hca/items/r-match')).set({ v: 'yes' }));
     await no(hca1.ref(J('j5/hca/items/r-bogus')).set({ v: 'yes' }));                            // unknown rental rows still refused
     await no(hca1.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/rebateProgram': 'garbage', 'hca/items': { ...HCAFULL.items, rebate: { v: 'yes' } } }));                                                // rebate yes but no program chosen
+    const RENT6 = Object.fromEntries(['r-contract', 'r-penny', 'r-credit', 'r-payauth', 'r-dl', 'r-deed'].map(k => [k, { v: 'yes' }]));
+    await no(hca1.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/items': { ...HCAFULL.items, ...RENT6, cc: { v: 'yes' } } }));   // Comfort Club with the license-match question unanswered cannot be submitted
     await no(adm2.ref(J('j4/status')).set('ready'));                                                // a lane item is still Missing: cannot be ready, even for an admin writing directly
     await no(mgrI.ref(J('j4/status')).set('ready'));
     await no(mgrI.ref(J('j3/status')).remove());
