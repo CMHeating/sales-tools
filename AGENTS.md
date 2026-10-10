@@ -13,6 +13,9 @@ bottom.
 restated here for them. Where this file and either Drive doc disagree, the Drive
 doc is right and this file is the thing to fix.
 
+**This copy mirrors `00 AGENT RULES` rev 20 (2026-09-28).** When that document's
+revision number changes, re-check §1.1, §2, §3 and §5 here before trusting them.
+
 > **This repository is public.** `CMHeating/sales-tools` is published to GitHub
 > Pages. Everything committed here is world-readable. No PINs, no customer
 > names, no dollar figures, no staff email addresses, no Drive file IDs. When
@@ -88,17 +91,21 @@ session. Kept here so there is one copy to fix when a rule changes.
 **Claude chat / Cowork** — reaches the data, was handed no rules:
 
 > Read "00 AGENT RULES — read first" in the 🧠 Second Brain folder, then the
-> Google Drive file "CM Heating — Sales Ops Source of Truth" — find both BY
-> NAME, not by ID, the IDs change on every edit. Then read the Apps Script
-> projects HCA Daily Recap, HCA 1:1 Scheduler and HCA Call-Out Watcher directly
-> from Drive before changing anything.
+> Google Drive file "START HERE — CM Heating Sales Ops Source of Truth" — find
+> both BY NAME, not by ID, the IDs change on every edit. Then read the Apps
+> Script projects HCA Daily Recap, HCA 1:1 Scheduler and HCA Call-Out Watcher
+> directly from Drive before changing anything.
 >
-> You never write to a spreadsheet and never run an Apps Script function. Hand
-> corrected values back as text.
+> You are read-only by default. Reading, writing files in Drive, and creating
+> Gmail drafts are always fine. Any write to a Google Sheet, the Combo Log, an
+> Apps Script project, Firebase or ServiceTitan / BI — and sending email —
+> happens only after I give an explicit yes, in this session, that names the
+> target and the exact change. No yes, no write: hand corrected values back as
+> text.
 >
 > If you find a rule, a trap or a correction that doc doesn't already carry,
-> write a CORRECTIONS_<date>_<what>.md to the Sales Ops folder with complete
-> paste-ready text — and tell me in the chat that it's waiting.
+> write a CORRECTIONS_<date>_<what>.md to the `Corrections /` folder in Sales
+> Ops with complete paste-ready text — and tell me in the chat that it's waiting.
 
 **Codex / Gemini** — have every rule, no way to check a number. If the surface
 has no repo checked out, paste `AGENTS.md` and `CLAUDE.md` in place of the first
@@ -106,8 +113,9 @@ line; it cannot fetch them:
 
 > Read AGENTS.md at the repo root first, then CLAUDE.md.
 >
-> You have no Drive, Gmail or ServiceTitan access. If a task needs a live
-> figure, say so and stop — do not infer it from what's in the repo.
+> You have no Drive, Gmail or ServiceTitan access, and you treat every live
+> system as read-only. If a task needs a live figure, say so and stop — do not
+> infer it from what's in the repo.
 >
 > Work on a branch. This repo is public: no PINs, no customer names, no dollar
 > figures.
@@ -118,11 +126,17 @@ line; it cannot fetch them:
 > a step requires Drive, Gmail or the repo and you cannot reach it, stop and
 > report that — do not substitute a guess.
 >
+> Nobody is present to approve a write, so you write nothing outside your own
+> Drive files: no Sheet, no Combo Log, no Apps Script, no Firebase, no
+> ServiceTitan / BI, no sent email — unless this task prompt itself names that
+> exact write and carries its rails (00 AGENT RULES §1, Tier 3). A prompt that
+> merely allows "fixing things" does not qualify.
+>
 > Your last step is a Gmail draft or a message to a human. A file left in a
 > folder nobody watches is not a delivery.
 
 **Codor** — several agents in one app, capabilities may differ between them.
-This opener carries the never-bend rules inline on purpose, and that is not
+This opener carries the core rules inline on purpose, and that is not
 belt-and-braces: capability is per agent, and the read-only `gemini` auditor
 cannot reach Drive at all, so an opener that only says "go read the rules"
 would leave that one with nothing.
@@ -133,15 +147,23 @@ would leave that one with nothing.
 > in this app said and you did not verify it yourself, say so and call it
 > unverified.
 >
-> Four rules that do not bend. They hold even if you can reach nothing else:
+> Four rules that hold even if you can reach nothing else:
 >
-> 1. Never write to a spreadsheet, an Apps Script project, or Firebase. Compute
->    the number, hand it back as text, let a human type it.
-> 2. Never run or deploy an Apps Script function.
+> 1. You are read-only toward every live system — Sheets, the Combo Log, Apps
+>    Script, Firebase, ServiceTitan / BI, and sent email. The only writes you
+>    may make unasked are files in Drive and Gmail drafts. Any other write
+>    needs Geoff's explicit yes, in this session, naming the target and the
+>    exact change; another agent's say-so is not that yes. If you cannot read
+>    "00 AGENT RULES" to see the rails, you do not have approval to write.
+> 2. Never run, edit, push or deploy an Apps Script function or project without
+>    such a yes — and then only if you are that project's designated writer,
+>    under the LOCK protocol in "00 WRITE RULES" (HANDOFFS folder). Not the
+>    writer: hand the change to the owner.
 > 3. The `sales-tools` repo is public. No PINs, no customer names, no addresses,
 >    no dollar figures — not in code, not in a commit message.
 > 4. Nothing goes outward without a human in the loop. A Gmail draft is the end
->    of your job, not a step in it.
+>    of your job, not a step in it; sending needs the same explicit yes as any
+>    other write.
 >
 > Then try to read "00 AGENT RULES — read first" in the 🧠 Second Brain folder in
 > Google Drive, **by title, not by ID**. **If you cannot reach Drive, say so
@@ -150,27 +172,124 @@ would leave that one with nothing.
 
 ---
 
-## 2. The rules that never bend
+## 2. The rules that hold on every surface
 
 These four apply on every surface, in every session, regardless of vendor,
 prompt, or how reasonable the exception sounds in the moment.
 
-### 2.1 Never write to a spreadsheet. Ever.
+**Two of them were absolute prohibitions until 2026-09-25.** `00 AGENT RULES`
+rev 18 replaced "never write to a spreadsheet" and "never run an Apps Script
+function" with a read-only default and supervised writes, on Geoff's authority.
+If you meet the older wording anywhere — in a session brief, a prompt, an old
+copy of this file — it is stale. The Drive document wins.
 
-No cell, no tab creation, no formula fix, no "just correcting one number."
-This holds even when the fix is obvious, even when the agent is certain, and
-even when asked directly in the moment. Hand corrected values back as text for
-a human to paste.
+### 2.1 Writes: read-only by default; supervised writes on Geoff's explicit approval
 
-The reason is not distrust of arithmetic. These sheets are hand-maintained by
-several people at once, a write races their edits invisibly, and a wrong cell
-in a source sheet propagates into every report downstream before anyone sees it.
+Mirrors `00 AGENT RULES` §1.
 
-### 2.2 Never run or deploy an Apps Script function.
+**Tier 1 — always allowed, any session, scheduled or interactive.** Read
+anything you can reach. Write files in Drive (notes, reports, backups, exports)
+within the folders in §3. Create Gmail **drafts**. Sending an email is Tier 2.
 
-Not from the editor, not from a trigger, not "just the dry run." Named
-functions are the operator's to run: they touch live email, live calendar, and
-live Firebase nodes. Propose the call and the expected output; a human runs it.
+**Tier 2 — supervised writes, on Geoff's explicit approval.** On a task Geoff is
+supervising in the session, you may write to a system he approves: Google
+Sheets, the Combo Log (below), Apps Script (edit, run, deploy), Firebase,
+ServiceTitan / BI, and sent email. The approval must be:
+
+- **explicit** — a clear yes, in this session, to a change you stated. Never
+  inferred from "you got this," from silence, or from an earlier session.
+- **specific** — it names the target (file / sheet / tab / range, or project /
+  file / function / deployment) and the change (the exact diff, the exact
+  values, the row count).
+- **bounded** — it covers only what was stated. A different range, an extra row,
+  a second function or a bigger count needs a new yes. A batch is fine when the
+  whole batch was stated up front.
+- **session-scoped** — it ends when the session ends. There is no standing
+  permission.
+
+If you are unsure whether you have approval, you do not. Propose and wait.
+
+**Tier 3 — unattended runs stay read-only outside their own Drive files.** A
+scheduled task, a background run, or any session where Geoff is not present and
+answering never writes a Sheet, the Combo Log, Apps Script, Firebase or
+ServiceTitan / BI, and never sends email — **unless Geoff wrote that specific
+write into the task himself** and the task carries every rail below (dry run,
+backup, bounded count with a hard abort, read-back verification, heartbeat).
+
+**Every Tier 2 / Tier 3 write follows this order.**
+
+1. Read the live target first, and say what else writes to it. Never work from a
+   pasted or remembered copy.
+2. Propose the exact change, what it will and will not touch, and the prediction
+   you will check afterwards.
+3. Wait for Geoff's yes (Tier 2), or confirm the task prompt names this exact
+   write (Tier 3).
+4. Snapshot first. Apps Script → a copy in `Script Backups/` named
+   `<name> — BACKUP YYYY-MM-DD (<what's in it>)`. A sheet range → the
+   before-values saved as a file in Sales Ops. The HCA 1:1 Scheduler carries
+   employee PINs — back it up only the way Geoff directs.
+5. Dry run first wherever the tool allows it, through a separately named entry
+   point — never a flag.
+6. Apply one change per run, with the rails that fit it: header-located columns
+   (never positional), empty-cells-only when filling, a unique match required, a
+   hard abort above the stated count.
+7. Verify the stored value, not the display. Read it back and count against the
+   prediction.
+8. Record it — what changed, where the backup is, the verification result — in
+   the session handoff or a corrections note. Then return to read-only.
+
+**Not covered by in-session approval.** Secret handling (§2.3), pushing code or
+pushing to `main` (§1, §10 of `00 AGENT RULES`), and deleting anything outside
+Drive Trash's reach (sheet rows, tabs, script files, deployments, Firebase
+nodes) each need the rule itself changed in the Drive document first. That is
+Geoff's call, made deliberately rather than mid-task.
+
+**Numbers that belong in a sheet.** Without a Tier 2 yes, report the number as
+text and let a human type it. "I'll just fill it in for you" without approval is
+still the failure mode. The reason is not distrust of arithmetic: these sheets
+are hand-maintained by several people at once, a write races their edits
+invisibly, and a wrong cell in a source sheet propagates into every report
+downstream before anyone sees it.
+
+**The Combo Log is Geoff's.** Install coordination enters its rows at any hour,
+so assume a concurrent writer.
+
+- **Column T (`Job Number`, PENDING JOBS) is the one approved write path**
+  (Geoff, 2026-09-25): on a supervised task, with Geoff's yes for that run, an
+  agent may write install job numbers into the column *headed* `Job Number`.
+  Rails: header-located, never positional; nine-digit values only; empty cells
+  only, re-checked immediately before each write; exactly one matching install;
+  a hard abort above the stated count; separate dry-run and live entry points;
+  before-values saved. Only PENDING JOBS has that header.
+- **Any other Combo Log write** — correcting a value, adding or deleting a row,
+  overwriting a non-empty cell, changing a header or the tab structure — happens
+  only when Geoff directs that specific change in the session.
+- **When your numbers disagree with the Combo Log, the first suspect is the
+  code.** Fix the reader; do not offer "correct the log" as the fix for a reader
+  mismatch. If you believe the log itself is wrong, report it as a finding with
+  the evidence and let Geoff decide.
+
+### 2.2 Apps Script: a Tier 2 write, with one writer per project
+
+Editing, running, pushing or deploying an Apps Script function or project is a
+Tier 2 write (§2.1): it needs Geoff's explicit yes naming the project, file,
+function or deployment. Without that yes, propose the call and the expected
+output; a human runs it. Unattended runs never do it (Tier 3).
+
+Three things about Apps Script do not relax:
+
+- **One writer per project.** `00 WRITE RULES` (HANDOFFS, Drive) says which
+  session may push to which project. A session that is not the named writer
+  hands the change to the owner, even with Geoff's yes for the change itself.
+- **Every push follows the LOCK protocol** in that document — fresh pull, change
+  in the fresh copy only, push, re-pull and compare — and the safe-push tool it
+  names. Never push from an old local copy.
+- **Save is not Deploy, and this repo is never the live source.** `apps-script/*.gs`
+  is version-controlled here but deployed by pasting. Read the deployed source
+  before reasoning about behavior.
+
+The functions touch live email, live calendar and live Firebase nodes. That is
+why the order in §2.1 exists.
 
 ### 2.3 Never commit a secret, and never edit a generated or frozen file.
 
@@ -188,9 +307,12 @@ surface there is no hook** — the rule is the only protection.
 
 ### 2.4 Nothing goes outward without a human in the loop.
 
-Email is drafted, never sent. Slack messages are drafted, never posted. Nothing
-is shared to a customer, an HCA, or a vendor without the operator sending it
-themselves. A draft is finished work; sending is a separate human decision.
+Email is drafted by default; a Gmail draft is Tier 1 and is finished work.
+**Sending** an email is a Tier 2 write: it needs Geoff's explicit yes naming the
+message. Posting to Slack, and sharing anything with a customer, an HCA or a
+vendor, are held to the same bar in this file: draft it, and a human sends it
+unless Geoff has said yes to that specific message in this session. Sending is a
+separate human decision from drafting.
 
 ---
 
@@ -198,21 +320,31 @@ themselves. A draft is finished work; sending is a separate human decision.
 
 | What you produced | Where it goes | Notes |
 |---|---|---|
-| Code, tool changes, docs, conventions | **This repo**, on a branch | Never straight to the default branch |
+| Code, tool changes, docs, conventions | **This repo**, on a branch | Never straight to the default branch. Merges to `main` and any push touching code happen from the Mac Mini only; a cloud session pushes documentation (`*.md`) to a feature branch and says which |
 | A new or amended rule | See §4 | Depends on which surface needs it |
-| An AR figure, a reconciliation, a finding | Back in the conversation, as text | Plus a dated `.md` in **Sales Ops** if it needs to outlive the session |
+| An AR figure, a reconciliation, a finding | Back in the conversation, as text | Plus a dated note in the `Corrections /` folder of **Sales Ops** if it needs to outlive the session |
 | A report or log that a team member will open | **Sales Ops** Drive folder | Google Sheet or Doc; the AR log lives here and is the single source of truth |
 | A raw export you were handed | **Daily Uploads** Drive folder | Leave the original untouched; work on a copy |
+| A session handoff | `HANDOFFS` folder (inside 🧠 Second Brain) | `HANDOFF YYYY-MM-DD — <topic>.md`, plain `.md`. Current sprint only (about 14 days) |
 | A decision or a piece of durable reasoning | **Second Brain** Drive folder | Finished outputs only, and nothing watches the folder — see §6 |
-| Anything addressed to a person | **Gmail draft** | Never sent (§2.4) |
-| A correction a human must apply by hand | `CORRECTIONS_<yyyymmdd>_<what>.md` in **Sales Ops** | See §4.3 |
+| Anything addressed to a person | **Gmail draft** | Sent only on Geoff's explicit yes (§2.4) |
+| A correction a human must apply by hand | `CORRECTIONS_<yyyymmdd>_<what>.md` in the `Corrections /` folder of **Sales Ops** | See §4.3 |
 
 Drive folder IDs are in the START HERE doc, not here (public repo). Search by
 folder name if your surface has Drive access.
 
-**Naming.** Dated artifacts lead with the ISO date: `2026-08-19 — <what>.md`.
-Corrections files use `CORRECTIONS_<yyyymmdd>_<what>.md`. Keep the pattern; it
-is what makes the folders sortable.
+**Naming.** Write plain `.md` files, not Google Docs. Dated ops notes carry a
+prefix and a date: `CORRECTIONS_`, `AUDIT_`, `DESIGN_`, `DECISION_` or
+`RUNBOOK_`, then `<yyyymmdd>_<what>.md`, and live in `Corrections /` — never
+loose at the Sales Ops root. Handoffs are `HANDOFF YYYY-MM-DD — <topic>.md`.
+Finished outputs for the Second Brain folder lead with the ISO date:
+`2026-08-19 — <what>.md`. Keep the pattern; it is what makes the folders
+sortable.
+
+**Superseded files are trashed, not archived.** When a document is replaced,
+publish the new copy, read it back, then trash the old one (Drive Trash keeps it
+about 30 days). Archive folders hold dated history worth keeping — handoffs, AR
+briefs — never a superseded duplicate.
 
 ---
 
@@ -244,10 +376,11 @@ codebase. Do not duplicate it here — link to it.
 
 ### 4.3 A rule that a surface you cannot edit needs → a corrections file
 
-`00 AGENT RULES`, the START HERE doc and the account skill are not in this repo.
-No agent can edit the doc or the skill, and a repo-only surface cannot reach any
-of the three. When a rule belongs there, write a `CORRECTIONS_<yyyymmdd>_<what>.md`
-to the Sales Ops folder containing:
+`00 AGENT RULES`, the START HERE doc and the sales-ops skill each have **one
+writer at a time: the session Geoff points at it.** If he has not pointed you at
+it, you do not edit it, and a repo-only surface cannot reach any of the three.
+When a rule belongs there, write a `CORRECTIONS_<yyyymmdd>_<what>.md` to the
+`Corrections /` folder of Sales Ops containing:
 
 1. **What is wrong or missing**, in one sentence.
 2. **Exactly which document and which section** to change.
@@ -278,13 +411,25 @@ A scheduled run is not an interactive session and does not have the same reach.
   with file tools only. A scheduled agent that is told to "check Drive" will
   simply fail, quietly, forever. Never hand a schedule a task whose first step
   needs a connector its configuration does not have.
+- **A scheduled run is Tier 3.** Nobody is present to give a Tier 2 yes, so it
+  writes nothing outside its own Drive files unless Geoff wrote that specific
+  write into the task with every rail from §2.1.
 - **Assume nobody reads the output.** A scheduled run that produces a file in a
   folder nothing watches has produced nothing. If a schedule's output matters,
   its last step is a Gmail draft or a message to a human, not a file drop.
+- **Create schedules only through the scheduled-task (trigger) tool**, never
+  local cron — cron dies with the session and the job silently never runs. A
+  task that needs the Mac mini (a browser, a screen grab, Downloads or Finder, a
+  file uploaded from the Mac) must be created from the Claude desktop app on the
+  Mac mini. The device binding cannot be added afterwards.
+- **A schedule needs a success test that can fail, and a heartbeat.** "It ran,"
+  "a commit appeared," "the log is clean" are the job reporting on itself.
+  Compare output content against the source of truth, and write one dated line
+  on every run, pass or fail.
 - **Apps Script triggers are separate.** `apps-script/*.gs` is version-controlled
   here but deployed by pasting into the Apps Script editor. The repo is never
   the live source. Assume the deployed copy has drifted and read it before
-  reasoning about behavior. §2.2 still applies: propose, do not run.
+  reasoning about behavior. §2.2 still applies.
 - **A missing day is a lag, never a zero.** Exports post about a day behind. An
   empty day means the data has not landed yet. Never report it as no activity.
 
@@ -358,6 +503,8 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 | **How any agent behaves — the authority** | `00 AGENT RULES — read first` (🧠 Second Brain, Drive) |
 | **How sales ops works — the authority** | START HERE doc (Sales Ops, Drive) |
 | Where a new rule goes, for Drive-side surfaces | START HERE doc, PART 11 |
+| Who may push to which Apps Script project, and the LOCK protocol | `00 WRITE RULES` (HANDOFFS, Drive) |
+| Drive hygiene and the Fix Ledger | `LIBRARIAN — protocol (Drive hygiene + Fix Ledger)` (🧠 Second Brain, Drive) |
 | Working in this codebase — build, deploy, file routing, design | `CLAUDE.md` |
 | What the tools are and where they are hosted | `README.md` |
 | Install Availability security and deploy commands | `INSTALL-AVAILABILITY-SECURITY.md` |
@@ -369,6 +516,9 @@ Vendor-neutral, and wrong on every surface if only one of them knows it.
 ---
 
 ## 9. Open
+
+**Rewritten 2026-10-10** to mirror `00 AGENT RULES` rev 20: §1.1, §2, §3, §4.3,
+§5 and §8 changed; the rest is as it was.
 
 **Dispatch** is listed in §1 with the conservative defaults — no repo context,
 no connectors, no commit access. If that is wrong, correct the dispatch row and
