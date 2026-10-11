@@ -578,3 +578,11 @@ agent is indistinguishable from a blocked one until you check**: the first codex
 agent tried returned nothing, which looked like an outage and was in fact a
 stale registration reporting `no such member`. Check agent status before
 concluding anything from silence.
+
+## BI release and unattended alerts (added 2026-10-10)
+
+- BI is official on the Reliance release email, not the 05:40 recompute and not the report's date stamp.
+  Never schedule against the recompute time; never export on the date stamp alone.
+- Unattended delay alerts may post only to the designated alerts channel (and a receipts channel), times and
+  status only, under the standing exception recorded in 00 AGENT RULES. Anything else needs a human.
+- A wide-range export never goes in a dated Uploads folder.
