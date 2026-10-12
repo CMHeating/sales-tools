@@ -12,7 +12,6 @@ module.exports = [
   { role: "HCA", name: "Chester", email: "chester.granard@cmheating.com" },
   { role: "HCA", name: "Davis",   email: "davis.diosdado@cmheating.com" },
   { role: "HCA", name: "Jay",     email: "javierre.milo@cmheating.com" },
-  { role: "HCA", name: "Joe",     email: "jchounramany@cmheating.com" },
   { role: "HCA", name: "Joseph",  email: "joseph.ruble@cmheating.com" },
   { role: "HCA", name: "Kyle",    email: "kmcalister@cmheating.com" },
   { role: "HCA", name: "Samir",   email: "samir.khoury@cmheating.com" },
