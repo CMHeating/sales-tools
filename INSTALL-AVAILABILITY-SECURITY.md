@@ -67,7 +67,7 @@ EXIT - ADMIN: Geoff
 HCA:
 EXIT - HCA: Kyle
 
-Joe and Joseph should type their full first name because partial names like Jo are ambiguous.
+Use full first names where a partial name like Jo would be ambiguous.
 
 ## Approved Admins
 
@@ -90,7 +90,6 @@ Joe and Joseph should type their full first name because partial names like Jo a
 | Chester | chester.granard@cmheating.com |
 | Davis | davis.diosdado@cmheating.com |
 | Jay | javierre.milo@cmheating.com |
-| Joe | jchounramany@cmheating.com |
 | Joseph | joseph.ruble@cmheating.com |
 | Kyle | kmcalister@cmheating.com |
 | Samir | samir.khoury@cmheating.com |

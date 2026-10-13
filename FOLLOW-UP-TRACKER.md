@@ -44,7 +44,6 @@ The ten `hcaKey` values this page expects, one per HCA on the roster:
 | Chester Granard | `chester-granard` |
 | Davis Diosdado | `davis-diosdado` |
 | Javierre Milo | `javierre-milo` |
-| Joe Chounramany | `joe-chounramany` |
 | Joseph Ruble | `joseph-ruble` |
 | Kyle McAlister | `kyle-mcalister` |
 | Samir Khoury | `samir-khoury` |
@@ -52,8 +51,8 @@ The ten `hcaKey` values this page expects, one per HCA on the roster:
 
 Note the two names that differ between systems. The roster follows this page's
 own HCA list: it is **Javierre Milo** (`javierre-milo`), not "Jay Milo", and
-**Joseph Ruble** (`joseph-ruble`), not "Joe Ruble". `joe-chounramany` is a
-different person.
+**Joseph Ruble** (`joseph-ruble`), not "Joe Ruble". `joe-chounramany` (Joe
+Chounramany, no longer an HCA) is a different person.
 
 What each outcome does:
 
