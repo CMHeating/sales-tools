@@ -76,7 +76,7 @@ Which rules apply to a file, by path. These are the repo's existing conventions 
 | `install-availability.html` | Build input. After editing, run the build (below) from the repo root — the secure tracker is now stale. |
 | `scripts/install-availability-users.spark.js` | Roster. Edit here to add/remove users, then rebuild **and** redeploy the database rules. |
 | `install-availability-secure.html` | **Generated — never edit.** Hand-edits are overwritten by the next build. |
-| `database.install-availability.spark.rules.json` | **Generated — never edit.** Same build script. |
+| `database.install-availability.spark.rules.json` | **Generated — never edit, never deploy on its own.** Same build script. It lacks the other tools' live rules; deploy only the output of `scripts/merge-install-availability-rules.py` (live backup + these nodes). See `INSTALL-AVAILABILITY-SECURITY.md` › Deploy Database Rules. |
 | `*.before-*.html` | **Frozen recovery snapshots.** Never edit or delete. Creating a new one before a risky change is encouraged. |
 | `*.private.*`, `firebase-hosting-install/`, `firebase.*-only.json` | Secrets and local deploy scaffolding — gitignored, never commit. |
 | Any committed file | No PIN literals. Everything outside the ignore list is published to GitHub Pages. |

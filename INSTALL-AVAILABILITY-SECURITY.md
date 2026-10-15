@@ -299,33 +299,43 @@ Only deploy rules after Admin and HCA login have been verified.
 Check the current live rules in the Firebase console before deploying, and confirm the change
 you are about to make is the change you intend. A rules deploy replaces the whole ruleset.
 
-**The generated rules file is not the whole live ruleset.** As of 2026-10-14 the live database
-also carries rules for other tools (follow-up tracker, sold tracker, AR, clearance, financing,
-install checks, HCA activity) that this build does not produce. Deploying
-`database.install-availability.spark.rules.json` as it stands deletes those rules and cuts those
-tools off from their data. Compare the generated file with the live backup (below) and stop if
-the live rules have top-level paths the file lacks.
+**Never deploy `database.install-availability.spark.rules.json` on its own.** It is not the whole
+live ruleset: the live database also carries rules for other tools (follow-up tracker, sold
+tracker, AR, clearance, financing, install checks, HCA activity) that this build does not produce,
+and a deploy of the generated file alone deletes them. Always deploy **live + this build's nodes**,
+made by `scripts/merge-install-availability-rules.py`.
 
-Back up the live rules first, every time, to a dated file **outside this repo** (it holds staff
-emails and this repo is public):
+1. Back up the live rules, every time, to a dated file **outside this repo** (it holds staff
+   emails and this repo is public). Check it is non-empty.
 
-    mkdir -p ~/review/$(date +%F)
-    firebase --project install-availability-tracker database:get /.settings/rules \
-      -o ~/review/$(date +%F)/install-availability-live-rules.json
+        mkdir -p ~/review/$(date +%F)
+        firebase --project install-availability-tracker database:get /.settings/rules \
+          -o ~/review/$(date +%F)/install-availability-live-rules.json
 
-Check the backup is non-empty before going on.
+2. Build the deployable rules: the live backup with only `cmh_schedule`, `cmh_availability`,
+   `cmh_edit_locks` and `cmh_audit_logs` swapped for the generated ones. The script refuses if
+   any other live node would change or disappear, and prints which nodes change.
 
-    cd ~/code/sales-tools
+        cd ~/code/sales-tools
+        python3 scripts/merge-install-availability-rules.py \
+          ~/review/$(date +%F)/install-availability-live-rules.json \
+          database.install-availability.merged.private.json
 
-    cat > firebase.database-spark-only.json <<'JSON'
-    {
-      "database": {
-        "rules": "database.install-availability.spark.rules.json"
-      }
-    }
-    JSON
+   If it says "none (deploy would be a no-op)", stop: there is nothing to deploy.
 
-    firebase --project install-availability-tracker --config firebase.database-spark-only.json deploy --only database
+3. Deploy the merged file (both `*.private.json` files are gitignored; never commit them):
+
+        cat > firebase.database-merged.private.json <<'JSON'
+        {
+          "database": {
+            "rules": "database.install-availability.merged.private.json"
+          }
+        }
+        JSON
+
+        firebase --project install-availability-tracker --config firebase.database-merged.private.json deploy --only database
+
+4. Read the live rules back with `database:get` and confirm they equal the merged file.
 
 Immediately after deploying, have one Admin and one HCA load the page and confirm schedule
 data appears. Signing in successfully is not sufficient — a rules problem lets a user
