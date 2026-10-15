@@ -299,6 +299,22 @@ Only deploy rules after Admin and HCA login have been verified.
 Check the current live rules in the Firebase console before deploying, and confirm the change
 you are about to make is the change you intend. A rules deploy replaces the whole ruleset.
 
+**The generated rules file is not the whole live ruleset.** As of 2026-10-14 the live database
+also carries rules for other tools (follow-up tracker, sold tracker, AR, clearance, financing,
+install checks, HCA activity) that this build does not produce. Deploying
+`database.install-availability.spark.rules.json` as it stands deletes those rules and cuts those
+tools off from their data. Compare the generated file with the live backup (below) and stop if
+the live rules have top-level paths the file lacks.
+
+Back up the live rules first, every time, to a dated file **outside this repo** (it holds staff
+emails and this repo is public):
+
+    mkdir -p ~/review/$(date +%F)
+    firebase --project install-availability-tracker database:get /.settings/rules \
+      -o ~/review/$(date +%F)/install-availability-live-rules.json
+
+Check the backup is non-empty before going on.
+
     cd ~/code/sales-tools
 
     cat > firebase.database-spark-only.json <<'JSON'
@@ -319,33 +335,28 @@ Have the Emergency Rollback block below open before you start.
 
 ## Emergency Rollback
 
-Only use this if valid Admin/HCA login fails and the tracker cannot load data.
+Use this if valid Admin/HCA login fails or any tool stops loading data after a rules deploy.
 
-This temporarily reopens the database and should only be used for emergency recovery.
+Rollback = redeploy the live-rules backup you took before the deploy. Never reopen the
+database (`.read`/`.write` true) to recover; that exposes every node to anyone.
 
     cd ~/code/sales-tools
 
-    cat > database.install-availability.rollback-open.rules.json <<'JSON'
-    {
-      "rules": {
-        ".read": true,
-        ".write": true
-      }
-    }
-    JSON
+    cp ~/review/YYYY-MM-DD/install-availability-live-rules.json database.install-availability.rollback.private.json
 
-    cat > firebase.database-rollback-open.json <<'JSON'
+    cat > firebase.database-rollback.private.json <<'JSON'
     {
       "database": {
-        "rules": "database.install-availability.rollback-open.rules.json"
+        "rules": "database.install-availability.rollback.private.json"
       }
     }
     JSON
 
-    firebase --project install-availability-tracker --config firebase.database-rollback-open.json deploy --only database
+    firebase --project install-availability-tracker --config firebase.database-rollback.private.json deploy --only database
 
-After rollback, fix the login issue and redeploy the Spark rules. Do not leave the open rules
-in place any longer than the repair takes.
+Replace `YYYY-MM-DD` with the backup's date. Both `*.private.json` files are gitignored; never
+commit them (the backup holds staff emails). Then read the live rules back with `database:get`
+and confirm they match the backup.
 
 ## Security Notes
 
