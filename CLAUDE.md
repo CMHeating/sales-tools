@@ -225,7 +225,7 @@ The repo holds ~50 non-backup HTML files; these are the ones in active use.
 
 ## HCA Roster
 
-Ten HCAs. Adam Weberg, Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Javierre Milo), Joe Chounramany, Joseph Ruble, Kyle McAlister, Samir Khoury, Trevor Bohm.
+Nine HCAs. Adam Weberg, Amber Maddalena, Chester Granard, Davis Diosdado, Jay (Javierre Milo), Joseph Ruble, Kyle McAlister, Samir Khoury, Trevor Bohm.
 
 Note the two names that differ between systems: the scheduler says **Jay Milo**, ServiceTitan and the recap roster say **Javierre Milo**; the COMBO LOG says **JOE RUBLE** where the roster says **Joseph Ruble**. Match on email where possible.
 
@@ -245,10 +245,9 @@ their sales-meeting day. Every HCA has one tech ride-along day a week.
 | Amber Maddalena | Sun Mon Tue Wed Thu | Evening 10–6 |
 | Javierre (Jay) Milo | Sun Mon Tue Wed Thu | Evening 10–6 |
 | Samir Khoury | Tue Wed Thu Fri Sat | Evening 10–6 |
-| Joe Chounramany | Tue Wed Thu Fri Sat | Evening 10–6 |
-| Chester Granard | Mon Tue Wed Thu Sat | Day 8–4 |
+| Chester Granard | Sun Mon Tue Wed Thu | Day 8–4 |
 | Davis Diosdado | Mon Tue Wed Thu Fri | Day 8–4 |
-| Joseph Ruble | Mon Tue Wed Thu Fri | Day 8–4 |
+| Joseph Ruble | Tue Wed Thu Fri Sat (from 2026-10-04) | Day 8–4 |
 | Kyle McAlister | Mon Tue Wed Thu Fri | Day 8–4 |
 | Adam Weberg | Tue Wed Thu Fri Sat | Day 8–4 |
 | Trevor Bohm | Mon Wed Thu Sat | Day 8–4 (back from leave 2026-09-21) |
