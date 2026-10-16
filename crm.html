@@ -551,7 +551,7 @@ const SCHED_DAY_EVENTS = {
 };
 /* Vacations / PTO. from = first day (fromHour = leaves at that hour that day), to = last day off, back = return date shown to the HCA. */
 const SCHED_TIME_OFF = {
-  "Adam Weberg": [ { from:"2026-10-22", fromHour:14, to:"2026-10-29", back:"Fri 10/30" } ]
+  "Adam Weberg": [ { from:"2026-10-22", fromHour:14, rideEnd:12, holdFrom:12, to:"2026-10-29", back:"Fri 10/30" } ]
 };
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
@@ -626,10 +626,14 @@ function schedPlan(p, d){
   const base = schedPlanCore(p, d), cut = v.fromHour;
   if(!base.sh || base.sh[0] >= cut) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
   const sh = [base.sh[0], Math.min(base.sh[1], cut)];
-  const blocks = base.blocks.filter(b => b[2] !== "os" && b[0] < cut).map(b => [b[0], Math.min(b[1], cut), b[2], b[3]]).filter(b => b[1] - b[0] >= (b[2] === "open" || b[2] === "after" ? 2 : 0.25));
+  const stop = v.holdFrom || cut;   /* nothing bookable after holdFrom; ride ends at rideEnd */
+  let blocks = base.blocks.filter(b => b[2] !== "os" && b[0] < stop).map(b => [b[0], Math.min(b[1], b[2] === "ride" && v.rideEnd ? v.rideEnd : stop), b[2], b[3]]).filter(b => b[1] - b[0] >= (b[2] === "open" || b[2] === "after" ? 2 : 0.25));
+  if(v.holdFrom) blocks.push([v.holdFrom, cut, "blk", "NO BOOKING · " + schedClock(v.holdFrom) + "–" + schedClock(cut)]);
   const opens = blocks.filter(b => b[2] === "open").length, after = blocks.filter(b => b[2] === "after").length;
   const book = after ? 1 : Math.min(opens, p.cap);
-  const lines = base.lines.filter(l => !/appointment/.test(l) || after);
+  let lines = base.lines.filter(l => !/appointment/.test(l) || after);
+  if(v.rideEnd) lines = lines.map(l => l.replace(/ride until [0-9:]+/, "ride until " + schedClock(v.rideEnd)));
+  if(v.holdFrom) lines.push("No booking " + schedClock(v.holdFrom) + "–" + schedClock(cut) + ".");
   lines.push("Vacation starts at " + schedClock(cut) + " — back " + v.back + ".");
   blocks.push([cut, 19, "off", "VACATION"]);
   if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
