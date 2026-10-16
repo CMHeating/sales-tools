@@ -549,6 +549,10 @@ const SCHED_DAY_EVENTS = {
   "2026-10-15": { at:7.5, to:11, label:"TOWN HALL 7:30–11:00", text:"Town hall 7:30–11:00", ride:{ day:[11,14], eve:[11,16] },
                   oo:{ "Trevor Bohm":11, "Samir Khoury":12 }, end:{ "Amber Maddalena":16 } }
 };
+/* Vacations / PTO. from = first day (fromHour = leaves at that hour that day), to = last day off, back = return date shown to the HCA. */
+const SCHED_TIME_OFF = {
+  "Adam Weberg": [ { from:"2026-10-22", fromHour:14, to:"2026-10-29", back:"Fri 10/30" } ]
+};
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
   "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],
@@ -613,7 +617,25 @@ function schedMtg(p, d){
   const days = Array.isArray(p.mtg) ? p.mtg : [p.mtg];
   return days.indexOf(dow) >= 0 ? { at:8, label:"SALES MEETING 8:00", text:"Sales meeting 8:00–9:00" } : null;
 }
+/* Plan for a day, with vacations applied on top of the normal schedule. */
 function schedPlan(p, d){
+  const iso = schedIso(d), v = (SCHED_TIME_OFF[schedName(p)] || []).find(x => x.from <= iso && iso <= x.to);
+  if(!v) return schedPlanCore(p, d);
+  if(p.days.indexOf(d.getDay()) < 0 && !SCHED_HOLIDAYS[iso]) return schedPlanCore(p, d);
+  if(iso !== v.from || !v.fromHour) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
+  const base = schedPlanCore(p, d), cut = v.fromHour;
+  if(!base.sh || base.sh[0] >= cut) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
+  const sh = [base.sh[0], Math.min(base.sh[1], cut)];
+  const blocks = base.blocks.filter(b => b[2] !== "os" && b[0] < cut).map(b => [b[0], Math.min(b[1], cut), b[2], b[3]]).filter(b => b[1] - b[0] >= (b[2] === "open" || b[2] === "after" ? 2 : 0.25));
+  const opens = blocks.filter(b => b[2] === "open").length, after = blocks.filter(b => b[2] === "after").length;
+  const book = after ? 1 : Math.min(opens, p.cap);
+  const lines = base.lines.filter(l => !/appointment/.test(l) || after);
+  lines.push("Vacation starts at " + schedClock(cut) + " — back " + v.back + ".");
+  blocks.push([cut, 19, "off", "VACATION"]);
+  if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
+  return { blocks, book, lines, sh };
+}
+function schedPlanCore(p, d){
   const dow = d.getDay(), wk = schedWeek(d);
   if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
   if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
