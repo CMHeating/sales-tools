@@ -122,7 +122,7 @@
     var k = emailKey(email), me = { email: email, role: "", name: "", lanes: {}, hcaKey: "" };
     function rd(p) { return get(p).catch(function () { return null; }); }
     return rd("cmh_install_roster/managers/" + k).then(function (m) {
-      if (m) { me.role = m.admin === true ? "admin" : "manager"; me.name = m.name || ""; me.lanes = { sales: m.sales === true, install: m.install === true, electrical: m.electrical === true }; return me; }
+      if (m) { me.role = m.admin === true ? "admin" : "manager"; me.name = m.name || ""; me.editHca = m.admin === true || m.editHca === true; me.lanes = { sales: m.sales === true, install: m.install === true, electrical: m.electrical === true }; return me; }
       return rd("cmh_install_roster/schedulers/" + k).then(function (sc) {
         if (sc) { me.role = "scheduler"; return me; }
         return rd("cmh_followup_roster/hcas/" + k).then(function (h) { if (h) { me.role = "hca"; me.hcaKey = String(h); } return me; });
@@ -239,7 +239,8 @@
     function apply(me, path, body, j, job, rec) {
       var hk = j.hk, up = {}, status = deriveStatus(rec), stored = rec.status || "";
       if (path === "/api/hca") {
-        if (me.role !== "hca" || me.hcaKey !== hk) return fail(403, "Only the HCA who sold this project can change their answers.");
+        /* The selling HCA, any admin, or a manager with editHca: true in the roster may fill in HCA answers (Geoff 2026-10-17). */
+        if (!((me.role === "hca" && me.hcaKey === hk) || me.editHca === true)) return fail(403, "Only the HCA who sold this project, an admin, or a manager allowed to edit HCA answers can change them.");
         if (["in_review", "ready", "installed"].indexOf(status) >= 0) return fail(409, "locked: job is in review");
         var itemsIn = body.items == null || (isObj(body.items) && !Object.keys(body.items).length) ? {} : body.items;
         if (!isObj(itemsIn) || !Object.keys(itemsIn).every(function (k) { return isObj(itemsIn[k]); })) return fail(400, "items must be an object of objects");

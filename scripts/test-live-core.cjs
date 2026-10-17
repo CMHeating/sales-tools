@@ -23,7 +23,7 @@ async function main() {
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' } },
       cmh_install_roster: {
-        managers: { 'mgr-install@cmheating,com': { name: 'Mgr Install', install: true }, 'mgr-elec@cmheating,com': { name: 'Mgr Elec', electrical: true },
+        managers: { 'mgr-install@cmheating,com': { name: 'Mgr Install', install: true }, 'mgr-elec@cmheating,com': { name: 'Mgr Elec', electrical: true }, 'mgr-edit@cmheating,com': { name: 'Mgr Edit', install: true, editHca: true },
           'admin-one@cmheating,com': { name: 'Admin One', sales: true, install: true, electrical: true, admin: true } },
         config: { jurisdictionUrl: 'https://example.test/jurisdiction-sheet' }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One', 'hca-two': 'HCA Two' } },
       cmh_install_jobs: jobs }));
@@ -35,7 +35,7 @@ async function main() {
     };
     const hca1 = as('h1', 'hca-one@cmheating.com'), hca2 = as('h2', 'hca-two@cmheating.com'), mI = as('mi', 'mgr-install@cmheating.com'), mE = as('me', 'mgr-elec@cmheating.com');
     const adm = as('ad', 'admin-one@cmheating.com'), sch = as('sc', 'sched-one@cmheating.com'), nobody = as('no', 'nobody@cmheating.com');
-    const pw = as('pw', 'hca-one@cmheating.com', 'password');
+    const pw = as('pw', 'hca-one@cmheating.com', 'password'); const mX = as('mx', 'mgr-edit@cmheating.com');
     const full = { pay: '✔ Paid in full', items: { stock: { v: 'yes' }, mat: { v: 'yes' }, photos: { v: 'yes' }, video: { v: 'yes' }, 'i-labor': { v: 'yes' }, rebate: { v: 'na' }, cc: { v: 'na' } } };
     const allVerified = lane => Object.fromEntries({ sales: ['disc', 'rebate', 'ahri-ok', 'financing', 'slip', 'auths'], install: ['mat-ok', 'stock-ok', 'layout-ok', 'labor', 'sizing', 'permit-ok'], electrical: ['panel', 'disconnect', 'outlet', 'elabor'] }[lane].map(k => [k, { result: 'verified' }]));
     let r;
@@ -60,6 +60,9 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', { job: 'k1', pay: 'x' }); ok("HCA cannot write another HCA's project (404)", r.code === 404);
     r = await hca2.call('POST', '/api/hca', { job: 'j1', pay: 'x' }); ok("second HCA cannot write the first one's project (404)", r.code === 404);
     r = await mI.call('POST', '/api/hca', { job: 'j1', pay: 'x' }); ok('a manager cannot edit the HCA answers', r.code === 403);
+    r = await adm.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'yes' } } }); ok('an admin can fill in HCA answers (2026-10-17)', r.code === 200);
+    r = await mX.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'yes' } } }); ok('a manager flagged editHca can fill in HCA answers', r.code === 200);
+    r = await sch.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'yes' } } }); ok('a scheduler still cannot', r.code === 403);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', submit: true }); ok('submit works', r.code === 200 && r.b.record.status === 'submitted' && !r.b.record.parked);
 
     // --- managers verify; ready needs all three lanes ---

@@ -15,7 +15,7 @@ async function main() {
     await env.clearDatabase();
     await env.withSecurityRulesDisabled(ctx => ctx.database().ref('/').set({
       cmh_followup_roster: { hcas: { 'hca-one@cmheating,com': 'hca-one', 'hca-two@cmheating,com': 'hca-two' }, admins: { 'admin-one@cmheating,com': true } },
-      cmh_install_roster: { config: { jurisdictionUrl: 'https://example.test/jurisdiction-sheet' }, managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
+      cmh_install_roster: { config: { jurisdictionUrl: 'https://example.test/jurisdiction-sheet' }, managers: { 'mgr-install@cmheating,com': { install: true }, 'mgr-edit@cmheating,com': { install: true, editHca: true }, 'mgr-elec@cmheating,com': { electrical: true }, 'mgr-sales@cmheating,com': { sales: true }, 'adm-two@cmheating,com': { sales: true, install: true, electrical: true, admin: true } }, schedulers: { 'sched-one@cmheating,com': true }, hcas: { 'hca-one': 'HCA One' } },
       cmh_install_jobs: { 'hca-one': { j1: true, j2: true, j3: true, j3b: true, j4: true, j5: true, r1: true, r2: true, r3: true, r4: true, r5: true, r6: true, r7: true, r8: true, r9: true } },
       cmh_install_req: { 'hca-one': {
         j1: { status: 'working', hca: { pay: 'x' } },
@@ -41,6 +41,7 @@ async function main() {
     const adm2 = g('a2', 'adm-two@cmheating.com'), sched = g('sc', 'sched-one@cmheating.com'), schedPwd = g('sp', 'sched-one@cmheating.com', 'password', true);
     const admin = g('ad', 'admin-one@cmheating.com'), stranger = g('st', 'someone-else@cmheating.com'), anon = env.unauthenticatedContext().database();
     const J = j => 'cmh_install_req/hca-one/' + j;
+    const mgrEd = g('mx', 'mgr-edit@cmheating.com');
 
     // reads: owner, managers, admin only; never PIN/password sessions (even verified), another HCA, a stranger, anon
     for (const db of [hca1, mgrI, mgrE, admin]) await ok(db.ref(J('j1')).once('value'));
@@ -155,6 +156,18 @@ async function main() {
     await no(hca1.ref(J('j9x/history/h1')).set({ at: 't', by: 'hca-one@cmheating.com', field: 'installed' }));  // history only on real projects
     await ok(hca1.ref(J('j1/history/h1')).set({ at: 't', by: 'hca-one@cmheating.com', field: 'hca.stock' }));
     await no(admin.ref(J('j2/status')).set('working'));   // a followup-roster admin is NOT an install admin until given the flag in cmh_install_roster
+
+    // 2026-10-17 (Geoff): admins, and managers flagged editHca, may fill in HCA answers; still locked once in review
+    await ok(adm2.ref(J('j1/hca/items/stock')).set({ v: 'yes' }));
+    await ok(adm2.ref(J('j1/parked')).set({ reason: 'Financing pending', revisit: '2026-10-21' }));
+    await no(adm2.ref(J('j4/hca/items/stock')).set({ v: 'yes' }));                                  // in review: locked for admins too
+    await ok(mgrEd.ref(J('j1/hca/items/mat')).set({ v: 'work' }));
+    await no(mgrI.ref(J('j1/hca/items/mat')).set({ v: 'work' }));                                    // manager without the flag
+    await no(admin.ref(J('j1/hca/items/mat')).set({ v: 'work' }));                                   // follow-up-roster admin only: not an install admin
+    await no(hca2.ref(J('j1/hca/items/mat')).set({ v: 'work' }));                                    // another HCA, still no
+    await no(adm2.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': 'Select\u2026' }));     // admin submit still needs the answers
+    await ok(adm2.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/items': HCAFULL.items }));
+    await no(mgrI.ref(J('j1/status')).set('working'));
 
     // history: append-only, signed, and only by the job's owner / managers / admin (AUD-09)
     const e = { at: '2026-01-01', by: 'mgr-install@cmheating.com', field: 'lane.install.signoff' };
