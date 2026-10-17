@@ -168,6 +168,9 @@ async function main() {
     await no(adm2.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': 'Select\u2026' }));     // admin submit still needs the answers
     await ok(adm2.ref(J('j5')).update({ 'hca/submittedAt': 't', status: 'submitted', 'hca/pay': '\u2714 Paid in full', 'hca/items': HCAFULL.items }));
     await no(mgrI.ref(J('j1/status')).set('working'));
+    await no(mgrEd.ref(J('ghost/status')).set('working'));                                          // verifier 2026-10-17: no status on a job that is not in cmh_install_jobs
+    await no(adm2.ref('cmh_install_req/nobody/ghost/status').set('working'));
+    await no(hca1.ref(J('ghost2/status')).set('working'));
 
     // history: append-only, signed, and only by the job's owner / managers / admin (AUD-09)
     const e = { at: '2026-01-01', by: 'mgr-install@cmheating.com', field: 'lane.install.signoff' };
