@@ -229,7 +229,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
           </div>
           <div class="card-foot act-foot">
             <span class="card-note" id="actLastUpdated">No submissions today</span>
-            <span class="act-links"><a class="btn" id="actRecapLink" href="https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><select id="projPick" aria-label="Choose a project" style="display:none"><option value="">Choose a project…</option></select><a class="btn" id="actCompleteLink" href="#" aria-disabled="true" tabindex="-1" style="display:none">Project completion</a></span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><select id="projPick" aria-label="Choose a project" style="display:none"><option value="">Choose a project…</option></select><a class="btn" id="actCompleteLink" href="#" aria-disabled="true" tabindex="-1" style="display:none">Project completion</a></span>
           </div>
         </div>
 
@@ -419,7 +419,7 @@ function unlock(){
   $("content").classList.add("show");
   $("btnLogin").classList.add("hidden");
   $("btnLogout").classList.remove("hidden");
-  badge(`● ${currentUser.role}: ${currentUser.short} · ${isGoogle() ? "Google" : (pilotOn(currentUser) ? "PIN — customer info locked" : "PIN")}`, isGoogle() ? "ok" : "");
+  badge(`● ${currentUser.role}: ${currentUser.short} · ${isGoogle() ? "Google" : (pilotOn(currentUser) ? "PIN — customer info locked" : "PIN")}`, "ok");
 
   const isAdmin = currentUser.role === "ADMIN";
   if(isAdmin){
@@ -473,7 +473,7 @@ function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>$
    2. Follow-Up Tracker "Log it" → cmh_followup_log/<hca-key>/<id> = { at, status, customer, ... }
    Follow-ups shown = recap "Follow-up Unsold" + tracker entries that Pacific day.
    A day with no activity record may still have a recap (consults only), so the strip never says "missed". */
-const RECAP_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf_A1lXHWCk8tABXIx0r0tDmCHpR7DJay-pLR-jmjtgpJCbyg/viewform";
+const RECAP_FORM_URL = "https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec";
 const ACT_IDS = ["cntRideAlong","cntSelfGen","cntInstallVisit","cntReferrals","cntNetworking","cntUnsold"];
 function pacIso(d){ return d.toLocaleDateString("en-CA", { timeZone:"America/Los_Angeles" }); }
 function actHcaKey(name){ return String(name == null ? "" : name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }

@@ -82,5 +82,7 @@ with sync_playwright() as p:
     ok('non-pilot HCA: own sold card works as before', pg.inner_text('#soldBody').replace('\n', ' ').startswith('1')); b.close()
     # non-pilot HCA on a PIN session, today's whole-node layout: nothing is locked (the tier lock is pilot-only until go-live)
     b, pg, errs = run(p, 'chester.granard@cmheating.com', 'password', LEGACY)
-    ok('non-pilot HCA on a PIN session: sold card not locked, badge not "locked"', 'sign in with google' not in pg.inner_text('#soldBody').lower() and 'locked' not in pg.inner_text('#statusBadge').lower()); b.close()
+    ok('non-pilot HCA on a PIN session: sold card not locked, badge not "locked"', 'sign in with google' not in pg.inner_text('#soldBody').lower() and 'locked' not in pg.inner_text('#statusBadge').lower())
+    ok('PIN session badge stays green (ok class)', 'ok' in (pg.get_attribute('#statusBadge', 'class') or '').split())
+    ok('File today\'s recap opens the recap page, not the old Form', 'script.google.com' in (pg.get_attribute('#actRecapLink', 'href') or '') and 'docs.google.com/forms' not in (pg.get_attribute('#actRecapLink', 'href') or '')); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
