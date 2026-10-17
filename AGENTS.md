@@ -13,8 +13,10 @@ bottom.
 restated here for them. Where this file and either Drive doc disagree, the Drive
 doc is right and this file is the thing to fix.
 
-**This copy mirrors `00 AGENT RULES` rev 20 (2026-09-28).** When that document's
-revision number changes, re-check §1.1, §2, §3 and §5 here before trusting them.
+**This copy mirrors `00 AGENT RULES` rev 21 (2026-10-11) plus its §12 (added
+2026-10-17).** Rev 21's §1b and §1c are mirrored in §2.2 below; §12 is §2.2a. When
+that document's revision number changes, re-check §1.1, §2, §3 and §5 here before
+trusting them.
 
 > **This repository is public.** `CMHeating/sales-tools` is published to GitHub
 > Pages. Everything committed here is world-readable. No PINs, no customer
@@ -290,6 +292,30 @@ Three things about Apps Script do not relax:
 
 The functions touch live email, live calendar and live Firebase nodes. That is
 why the order in §2.1 exists.
+
+**Approve by save (`00 AGENT RULES` §1b, 2026-10-11).** The default for any change
+to code or a document of record: the agent puts the complete change in place and
+leaves it unsaved; Geoff's Save is the approval.
+
+1. Back up first (Apps Script: a copy in Script Backups, checked byte for byte).
+2. Stage the WHOLE file, never a diff — pasted into the Apps Script editor, or a
+   `PROPOSED …` file next to a doc of record.
+3. Stop there: never press Save, Deploy or Run in this flow, never install a trigger.
+4. Geoff reviews and saves; "unsaved changes" means no approval yet. Geoff runs any
+   function himself.
+5. After the save, re-pull into a fresh folder, confirm the change is present and
+   every other file is byte-identical, and record it in the handoff.
+
+Fallback when the editor can't be reached: the project's named writer pushes
+through `safe-push.sh` with Geoff's explicit yes. Raw `clasp push` is allowed only
+for a new, non-production project — never a live one.
+
+**What the guards enforce, and where they don't run (`00 AGENT RULES` §1c).** The
+Mac mini's `~/mods` (clasp-guard, combo-guard, lock-band, blast-radius and others)
+load only in Claude Code sessions on the Mini. Cloud and Cowork sessions, Codex,
+Gemini, and anything reaching the Mini through Desktop Commander or another MCP
+shell are **not covered**: for them these rules apply by hand, and nothing blocks
+a mistake.
 
 ### 2.2a The HCA recap system has one owner — recommend, don't build (added 2026-10-17)
 
