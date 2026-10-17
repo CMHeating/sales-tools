@@ -307,11 +307,13 @@ then I approve."
 - **Every other surface is read-only on this system and must not build a
   parallel version.** Two copies of one feature put duplicate emails or drafts
   in front of HCAs. Found a bug or have an upgrade? Recommend it.
-- **How to recommend:** one message per item in the Slack channel
-  `#cmh-daily-recap`, starting `REQUEST for claude-16:` — what you saw, where and
-  when you read it, and what you propose. If you cannot post to Slack (Codex,
-  Gemini, most scheduled runs), write a `REQUEST …` file in the HANDOFFS folder
-  (Drive), or hand the text to Geoff. No PINs, secrets or keys in either place.
+- **How to recommend:** one item per request, starting `REQUEST for claude-16:` —
+  what you saw, where and when you read it, and what you propose. The default is a
+  `REQUEST …` file in the HANDOFFS folder (Drive) — a Tier 1 write, no approval
+  needed — or the text handed to Geoff. The Slack channel `#cmh-daily-recap` is the
+  shared inbox, but posting there follows §2.4: draft the message, and it goes up
+  only when Geoff posts it or says yes to that specific message in your session.
+  Having Slack access is not approval. No PINs, secrets or keys in any of these.
 - **How it is decided:** claude-16 proposes the exact change to Geoff and ships
   it only on his explicit yes (§2.1 Tier 2, §2.2 LOCK protocol). The outcome is
   recorded as a `REPLY …` file in HANDOFFS.
