@@ -295,7 +295,9 @@ why the order in §2.1 exists.
 
 **Approve by save (`00 AGENT RULES` §1b, 2026-10-11).** The default for any change
 to code or a document of record: the agent puts the complete change in place and
-leaves it unsaved; Geoff's Save is the approval.
+leaves it unsaved; Geoff's Save is the approval. Staging an unsaved change this way
+is how the agent proposes it, so it needs no prior yes; the Save (or, in the
+fallback below, the push) is the Tier 2 write that the rule above gates.
 
 1. Back up first (Apps Script: a copy in Script Backups, checked byte for byte).
 2. Stage the WHOLE file, never a diff — pasted into the Apps Script editor, or a
