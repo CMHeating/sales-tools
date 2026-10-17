@@ -22,6 +22,12 @@ exclude:
   - install-availability.archive-before-test-promotion.html
   - install-availability.pre-new-look-backup.html
 
+  # --- Install-completion dev material (design + security notes, Firebase rule drafts, local test rig) ---
+  # Not for the public site. The public practice site lives in practice/.
+  - docs/
+  - rules/
+  - sandbox/
+
   # --- Build tooling ---
   # Not needed by any browser-facing tool.
   - scripts/

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Install Requirements — test page</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a1628;--panel:#111a2e;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--orange:#c97d10;--green:#22c55e;--red:#ef4444;--gold:#f59e0b}
+  *{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0,transparent 60%),var(--bg);color:var(--text);font-family:Outfit,system-ui,sans-serif;font-size:16px;padding-bottom:40px}
+  #env{background:#7f1d1d;color:#fecaca;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;padding:6px}
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px}
+  h1{font-family:"Playfair Display",serif;font-size:28px;margin:18px 0 4px}h2{font-family:"Playfair Display",serif;font-size:18px;margin:0 0 8px}
+  p{color:var(--mut);font-size:14px;line-height:1.45;margin:0 0 12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  a.btn,button.btn{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:10px 16px;border-radius:14px;border:1px solid var(--line);background:#0d1526;color:var(--text);font:inherit;font-weight:700;text-decoration:none;margin-top:8px;cursor:pointer;width:100%}
+  a.btn small{color:var(--mut);font-weight:500;font-size:12px}
+  a.btn.go,button.go{background:var(--orange);border-color:var(--orange);color:#fff}
+  ol,ul{margin:0;padding-left:20px;color:var(--text);font-size:14px;line-height:1.6}li{margin-bottom:4px}
+  .msg{font-size:13px;color:var(--mut);min-height:18px;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="env">TEST SYSTEM — fake customers, nothing is sent, nothing is real</div>
+<div class="wrap">
+  <h1>Install Requirements — test</h1>
+  <p>Thanks for trying this. Everything here is practice data. Your job: <b>try to break it</b> and tell Geoff what felt slow, confusing or wrong.</p>
+
+  <div class="card">
+    <h2>Your practice projects</h2>
+    <p>Tap one to open its completion checklist. Answers save as you tap.</p>
+    <div id="jobs"><p>Loading…</p></div>
+  </div>
+
+  <div class="card">
+    <h2>The other screens</h2>
+    <a class="btn" href="/sandbox/hca-home.html">Your home cards <small>Daily Activities + My Schedule</small></a>
+    <a class="btn" href="/install-qc.html">Manager review screen <small>what Lyle, Jon and Geoff see</small></a>
+  </div>
+
+  <div class="card">
+    <h2>Try these</h2>
+    <ol>
+      <li>Open a project. Tap through the checklist. Is anything unclear?</li>
+      <li>Mark something <b>Not done</b>. Can you leave without saying why and when?</li>
+      <li>Tap <b>Save &amp; exit</b>, close the tab, come back. Is everything still there?</li>
+      <li>Use the rental project: do the extra rental items appear?</li>
+      <li>Try to <b>Submit</b> with things missing. What does it tell you?</li>
+      <li>Submit a complete one, then open the manager screen and see what they'd see.</li>
+      <li>Rotate your phone or tablet. Zoom in and out. Anything cut off?</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Start over</h2>
+    <p>Puts all the practice data back to how it started.</p>
+    <button class="btn go" id="reset" type="button">Reset practice data</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+<script>
+var REP = new URLSearchParams(location.search).get('rep') || 'Samir Khoury';
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function load(){
+  fetch('/api/jobs?rep=' + encodeURIComponent(REP)).then(function(r){return r.json();}).then(function(d){
+    var rows = (d.jobs || []).filter(function(j){return !/DONE|COMPLETE/i.test(j.stage||'');}).map(function(j){return {j:j,tag:'Sold'};})
+      .concat((d.pipeline || []).map(function(j){return {j:j,tag:j.source==='pipeline'?'Pipeline':'Backlog'};}));
+    $ = document.getElementById('jobs');
+    $.innerHTML = rows.map(function(x){var j=x.j,date=j.installDate||j.comboDate||'';
+      var href='/install-requirements.html#job='+encodeURIComponent(j.job)+'&cust='+encodeURIComponent(j.customer)+'&date='+encodeURIComponent(date)+'&rep='+encodeURIComponent(REP);
+      var r=j.readiness?(j.readiness.done+' of '+j.readiness.total):'';
+      return '<a class="btn" href="'+esc(href)+'"><span>'+esc(j.customer)+'<br><small>'+x.tag+' · '+(date||'no date')+'</small></span><small>'+esc(r)+'</small></a>';}).join('') || '<p>No practice projects. Tap Reset.</p>';
+  });
+}
+document.getElementById('reset').onclick=function(){fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(){document.getElementById('msg').textContent='Reset. Fresh practice data loaded.';load();});};
+load();
+</script>
+</body>
+</html>
