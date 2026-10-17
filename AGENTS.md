@@ -291,6 +291,31 @@ Three things about Apps Script do not relax:
 The functions touch live email, live calendar and live Firebase nodes. That is
 why the order in §2.1 exists.
 
+### 2.2a The HCA recap system has one owner — recommend, don't build (added 2026-10-17)
+
+Mirrors `00 AGENT RULES` §12 (added 2026-10-17, approver Geoff Simons). Geoff:
+"any session can recommend upgrades and fixes that you decide on with me and
+then I approve."
+
+- **Owner and arbiter: `claude-16`, under Geoff's direction.** It covers the HCA
+  Daily Recap Apps Script project end to end: the 6 AM recap email and the
+  evening nudge, the email-reply reader and its confirmations, time-off
+  handling, the 06:00 sales brief and nightly digest, and the morning reply
+  drafts — plus how the HCA Recap App page and time-block Form feed it. The
+  Recap App project keeps its own named writer (`00 WRITE RULES`); claude-16
+  coordinates changes there through that owner.
+- **Every other surface is read-only on this system and must not build a
+  parallel version.** Two copies of one feature put duplicate emails or drafts
+  in front of HCAs. Found a bug or have an upgrade? Recommend it.
+- **How to recommend:** one message per item in the Slack channel
+  `#cmh-daily-recap`, starting `REQUEST for claude-16:` — what you saw, where and
+  when you read it, and what you propose. If you cannot post to Slack (Codex,
+  Gemini, most scheduled runs), write a `REQUEST …` file in the HANDOFFS folder
+  (Drive), or hand the text to Geoff. No PINs, secrets or keys in either place.
+- **How it is decided:** claude-16 proposes the exact change to Geoff and ships
+  it only on his explicit yes (§2.1 Tier 2, §2.2 LOCK protocol). The outcome is
+  recorded as a `REPLY …` file in HANDOFFS.
+
 ### 2.3 Never commit a secret, and never edit a generated or frozen file.
 
 - Secrets: anything matching `*.private.*`, the Firebase deploy scaffolding,
