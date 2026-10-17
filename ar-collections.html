@@ -691,10 +691,12 @@ function showConfigNeeded() {
    Handles: ALL-CAPS variants, short-name aliases, nicknames. */
 var REP_ALIASES = {
   'samir': 'Samir Khoury',
-  'kyle m': 'Kyle McAlister'
+  'kyle m': 'Kyle McAlister',
+  'kyle mcalister': 'Kyle McAlister'
 };
-/* Reps to hide from the dropdown (not HCAs) */
-var REP_EXCLUDE = ['scott olson'];
+/* Reps to hide from the dropdown (not HCAs).
+   'samir dodic' is a plumber, not HCA Samir Khoury (Geoff, 2026-10-16). */
+var REP_EXCLUDE = ['scott olson', 'samir dodic'];
  
 function toTitleCase(s) {
   return s.replace(/\w\S*/g, function(t) {

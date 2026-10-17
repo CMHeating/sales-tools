@@ -7,7 +7,7 @@
 # file nobody remembers to open. Both were being carried across by hand, by
 # paste, at 3am. This removes the hand.
 #
-# It prints the never-bend rules and a pointer to the current handoff. It does
+# It prints the standing rules and a pointer to the current handoff. It does
 # NOT print the handoff body — 30KB at the top of every session is a context
 # tax; a line with a date and a size gets read.
 #
@@ -24,20 +24,30 @@ cat <<'BRIEF'
 CM HEATING SALES OPS — STANDING BRIEF
 ──────────────────────────────────────────────────────────────────────────
 
-Rules that never bend. These hold even when you are certain, even for one
-cell, even if asked directly in the moment:
+Rules that hold on every surface (00 AGENT RULES rev 20, 2026-09-28). They
+hold even when you are certain, even for one cell, even if asked directly in
+the moment:
 
-  1. Never write to a spreadsheet. The whole write surface is a Gmail draft
-     (never sent) plus files in Drive. Hand corrected values back as text.
-  2. Never run or deploy an Apps Script function. Propose the call; a human
-     runs it from the editor.
-  3. Never edit the Combo Log — and never recommend editing it. Laura owns
-     it. Recommending the write is the violation.
+  1. Read-only by default. Always allowed: read anything, write files in Drive,
+     create Gmail drafts. A write to a Sheet, Apps Script, Firebase,
+     ServiceTitan / BI, or a sent email needs Geoff's explicit yes, in this
+     session, naming the target and the exact change. It covers only what was
+     stated and ends with the session. An unattended run writes nothing outside
+     its own Drive files. No yes, no write: hand values back as text.
+  2. Apps Script is one of those writes, with one writer per project. Read
+     "00 WRITE RULES" (HANDOFFS) and follow its LOCK protocol on every push.
+     Not the named writer: hand the change to the owner. Save is not Deploy.
+  3. The Combo Log is Geoff's. The one approved write is install job numbers
+     into the column headed "Job Number" on PENDING JOBS, on a supervised run
+     with his yes. Any other change only when he directs that specific change.
+     When your numbers disagree with the log, fix the reader, not the data.
   4. This repo is PUBLIC. No PINs, customer names, dollar figures, staff
      emails, or Drive file IDs in anything committed.
-  5. Nothing goes outward without a human sending it. Draft, never send.
-  6. One writer per document. Hand back paste-ready text for START HERE and
-     the account skill; do not edit them yourself.
+  5. Nothing goes outward without a human. A Gmail draft is the end of your
+     job; sending needs Geoff's explicit yes naming the message.
+  6. One writer per canonical document. Hand back paste-ready text for START
+     HERE and the account skill; do not edit them unless Geoff pointed you at
+     them.
 
 Read before working:
   • AGENTS.md, then CLAUDE.md — repo root, you have them.

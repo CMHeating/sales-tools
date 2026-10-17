@@ -118,7 +118,7 @@ Live office screen display. Auto-cycles every 15 seconds between Rankings and De
 
 Individual tracker pages for each HCA, pulling from the shared Google Sheet.
 
-**HCA Tabs:** Amber · Chester · Davis · Jay · Joe · Joseph · Kyle · Samir · Trevor
+**HCA Tabs:** Amber · Chester · Davis · Jay · Joseph · Kyle · Samir · Trevor
 
 Google Sheet: https://docs.google.com/spreadsheets/d/1cnPXu58HkWNV4EFJOeH48dxhGZsRFXLDzOJOty2uJTY/edit
 
@@ -250,7 +250,6 @@ Escalate to **Geoff or Amy** if:
 | Chester Granard | chester.granard@cmheating.com |
 | Davis Diosdado | davis.diosdado@cmheating.com |
 | Javierre Milo (Jay) | javierre.milo@cmheating.com |
-| Joe Chounramany | jchounramany@cmheating.com |
 | Joseph Ruble | joseph.ruble@cmheating.com |
 | Kyle McAlister | kmcalister@cmheating.com |
 | Samir Khoury | samir.khoury@cmheating.com |

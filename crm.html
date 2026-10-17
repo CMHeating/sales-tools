@@ -600,24 +600,41 @@ function renderAr(who){
 }
 
 /* MY SCHEDULE: planned day from the weekly HCA schedule (effective week of Sun 9/27/26).
-   Blockers only — tech ride-along, sales meeting, 1:1, meeting-day flex, off shift — plus the
+   Blockers only — tech ride-along, sales meeting, One on One, meeting-day flex, off shift — plus the
    open 2-hour consult windows. Booked consults are NOT shown here; they live on the ServiceTitan board.
    To change someone's schedule, edit their row in HCA_SCHEDULE (keyed by USERS.full).
    Days: 0=Sun … 6=Sat. Hours are 24h. rot = ride-along tech for rotation weeks 1–4. */
 const SCHED_ANCHOR = new Date(2026, 8, 27);   // Sun 9/27/26 = rotation week 1
+/* Date-specific meeting overrides. all = every HCA working that day attends; none = no meeting that day.
+   at = start hour (meetings end by 9:00). A 7:00 start makes the day 7:00–4:00; end:{name:hour} ends a day early. */
+const SCHED_MTG_DATES = {
+  "2026-10-13": { all:true, at:7, label:"TRAINING 7:00–9:00", end:{ "Amber Maddalena":15.5 } },
+  "2026-10-14": { all:true, at:8, label:"TRAINING 8:00–9:00" },
+  "2026-10-15": { none:true }
+};
+/* Whole-team events that replace the normal day plan. Thu 10/15/26: town hall 7:30–11:00 (already blocked in ServiceTitan).
+   Riders join their tech at 11:00; oo moves 1:1s; end caps a shift so nobody works an extra-long day. */
+const SCHED_DAY_EVENTS = {
+  "2026-10-15": { at:7.5, to:11, label:"TOWN HALL 7:30–11:00", text:"Town hall 7:30–11:00", ride:{ day:[11,14], eve:[11,16] },
+                  oo:{ "Trevor Bohm":11, "Samir Khoury":12 }, end:{ "Amber Maddalena":16 } }
+};
+/* Vacations / PTO. from = first day (fromHour = leaves at that hour that day), to = last day off, back = return date shown to the HCA. */
+const SCHED_TIME_OFF = {
+  "Adam Weberg": [ { from:"2026-10-22", fromHour:14, rideEnd:12, holdFrom:12, to:"2026-10-29", back:"Fri 10/30" } ]
+};
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
   "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],
                      /* effective Sun 10/4/26: Tue–Sat, ride Fri, sales meeting Wed, 1:1 stays Tue 9:00; one primary tech, same ride every week; secondary = backup HCA for another tech */
-                     eff:[{ from:"2026-10-04", days:[2,3,4,5,6], ride:5, mtg:3, rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Hagen",0]] }],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
-  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8],  eff:[{ from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
-  "Kyle McAlister":  { sh:[8,16],  days:[1,2,3,4,5], ride:3, crew:"day", mtg:2, oo:[2,10], eff:[{ from:"2026-10-04", rot:["Hagen","Hagen","Hagen","Hagen"], techs:[["Hagen",1],["Doug",0]] }], cap:3, flex:false, rot:["Alex","Charles","Younis","Peter"],         techs:[["Alex",1],["Charles",1],["Peter",1],["Younis",0]] },
-  "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9],  eff:[{ from:"2026-10-04", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Younis",0],["Conrad",0]] }], cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
-  "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], eff:[{ from:"2026-10-04", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Alex",0]] }], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
-  "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  eff:[{ from:"2026-10-04", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan K",0]] }], cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
-  "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  eff:[{ from:"2026-10-04", rot:["Younis","Younis","Younis","Younis"], techs:[["Younis",1],["Carter",0]] }], cap:3, flex:false, rot:["Dan D","Dewaynne","Nicco","Dan D"],  techs:[["Dan D",1],["Dewaynne",0],["Nicco",0]] },
-  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], eff:[{ from:"2026-10-04", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Emmanuel",0]] }], cap:3, flex:true,  rot:["Emmanuel","Dan K","Nicco","Emmanuel"],     techs:[["Emmanuel",1],["Dan K",1],["Nicco",1]] },
-  "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], off:["2026-09-27"] /* starts Sundays 10/4 */, ride:4, crew:"eve", mtg:2, oo:[3,10], eff:[{ from:"2026-10-04", rot:["Charles","Nicco","Charles","Nicco"] /* Thu ride alternates: Nicco wk of 10/4, Charles 10/11, ... */, techs:[["Emmanuel",1],["Dan D",0]] }], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
+                     eff:[{ from:"2026-10-04", days:[2,3,4,5,6], ride:5, mtg:3, rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Hagen",0]] }, { from:"2026-10-11", mtg:[2,3] }],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
+  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8],  eff:[{ from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
+  "Kyle McAlister":  { sh:[8,16],  days:[1,2,3,4,5], ride:3, crew:"day", mtg:2, oo:[2,10], eff:[{ from:"2026-10-04", rot:["Hagen","Hagen","Hagen","Hagen"], techs:[["Hagen",1],["Doug",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Younis","Peter"],         techs:[["Alex",1],["Charles",1],["Peter",1],["Younis",0]] },
+  "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9],  eff:[{ from:"2026-10-04", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Younis",0],["Conrad",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
+  "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], eff:[{ from:"2026-10-04", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Alex",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
+  "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  eff:[{ from:"2026-10-04", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan K",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
+  "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  eff:[{ from:"2026-10-04", rot:["Younis","Younis","Younis","Younis"], techs:[["Younis",1],["Carter",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Dewaynne","Nicco","Dan D"],  techs:[["Dan D",1],["Dewaynne",0],["Nicco",0]] },
+  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], eff:[{ from:"2026-10-04", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Emmanuel",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:true,  rot:["Emmanuel","Dan K","Nicco","Emmanuel"],     techs:[["Emmanuel",1],["Dan K",1],["Nicco",1]] },
+  "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], off:["2026-09-27"] /* starts Sundays 10/4 */, ride:4, crew:"eve", mtg:2, oo:[3,10], eff:[{ from:"2026-10-04", rot:["Charles","Nicco","Charles","Nicco"] /* Thu ride alternates: Nicco wk of 10/4, Charles 10/11, ... */, techs:[["Emmanuel",1],["Dan D",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
 };
 const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
   return { Hagen:MF, Doug:MF, Caleb:MF, "Dan K":MF, Conrad:MF, Younis:MF, Charles:MF, Nicco:MF,
@@ -630,34 +647,117 @@ function schedIso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart
 function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:w; return x+m; }
 function schedWeek(d){ const days=Math.round((d-SCHED_ANCHOR)/86400000); return ((Math.floor(days/7)%4)+4)%4; }
 
+/* HCA name for a schedule row (eff copies keep the same oo array). */
+function schedName(p){ return Object.keys(HCA_SCHEDULE).find(k => HCA_SCHEDULE[k].oo === p.oo) || ""; }
+/* Day plan for a whole-team event day (SCHED_DAY_EVENTS). */
+function schedEventPlan(p, d, ev){
+  const dow = d.getDay(), wk = schedWeek(d), name = schedName(p), blocks = [[ev.at, ev.to, "blk", ev.label]], lines = [ev.text + " — whole team."];
+  let sh, book = 0;
+  if(dow === p.ride){
+    const tech = p.rot[wk], r = p.crew === "day" ? ev.ride.day : ev.ride.eve;
+    blocks.push([r[0], r[1], "ride", "TECH RIDE · " + tech]);
+    lines.push("Then meet <b>" + esc(tech) + "</b> at " + schedClock(r[0]) + " for the ride-along until " + schedClock(r[1]) + ".");
+    if(p.crew === "day"){ sh = [ev.at, r[1]]; lines.push("No appointment after the ride today."); }
+    else { sh = [ev.at, 18]; blocks.push([16, 18, "after", "Open · after ride"]); lines.push("4:00–6:00 appointment: revisit or tech flip."); book = 1; }
+  } else {
+    const end = (ev.end || {})[name] || p.sh[1], oo = p.oo[0] === dow ? ((ev.oo || {})[name] || p.oo[1]) : null;
+    sh = [ev.at, end];
+    if(oo) lines.push("One on One with Geoff at " + oo + ":00.");
+    if(end < p.sh[1]) lines.push("Your day ends at " + schedClock(end) + ".");
+    let t = ev.to, open = 0;
+    while(t < end){
+      const nx = oo && oo >= t ? oo : Infinity;
+      if(oo === t){ blocks.push([t, t + 1, "blk", "ONE ON ONE WITH GEOFF " + oo + ":00"]); t += 1; continue; }
+      if(t + 2 <= nx && t + 2 <= end){ blocks.push([t, t + 2, "open", "Open"]); open++; t += 2; continue; }
+      if(nx < end && nx > t){ t = nx; continue; }
+      break;
+    }
+    book = Math.min(open, p.cap);
+  }
+  if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
+  if(sh[1] < 19) blocks.unshift([sh[1], 19, "os", ""]);
+  return { blocks, book, lines, sh };
+}
+/* Meeting for this HCA on this day, or null. p.mtg is a day number or an array of day numbers. */
+function schedMtg(p, d){
+  const o = SCHED_MTG_DATES[schedIso(d)], dow = d.getDay(), name = schedName(p);
+  if(o && o.none) return null;
+  if(o && o.all) return { at:o.at, label:o.label, training:true, text:"Training "+schedClock(o.at)+"–9:00", end:(o.end||{})[name] };
+  const days = Array.isArray(p.mtg) ? p.mtg : [p.mtg];
+  return days.indexOf(dow) >= 0 ? { at:8, label:"SALES MEETING 8:00", text:"Sales meeting 8:00–9:00" } : null;
+}
+/* Plan for a day, with vacations applied on top of the normal schedule. */
 function schedPlan(p, d){
+  const iso = schedIso(d), v = (SCHED_TIME_OFF[schedName(p)] || []).find(x => x.from <= iso && iso <= x.to);
+  if(!v) return schedPlanCore(p, d);
+  if(p.days.indexOf(d.getDay()) < 0 && !SCHED_HOLIDAYS[iso]) return schedPlanCore(p, d);
+  if(iso !== v.from || !v.fromHour) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
+  const base = schedPlanCore(p, d), cut = v.fromHour;
+  if(!base.sh || base.sh[0] >= cut) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
+  const sh = [base.sh[0], Math.min(base.sh[1], cut)];
+  const stop = v.holdFrom || cut;   /* nothing bookable after holdFrom; ride ends at rideEnd */
+  let blocks = base.blocks.filter(b => b[2] !== "os" && b[0] < stop).map(b => [b[0], Math.min(b[1], b[2] === "ride" && v.rideEnd ? v.rideEnd : stop), b[2], b[3]]).filter(b => b[1] - b[0] >= (b[2] === "open" || b[2] === "after" ? 2 : 0.25));
+  if(v.holdFrom) blocks.push([v.holdFrom, cut, "blk", "NO BOOKING · " + schedClock(v.holdFrom) + "–" + schedClock(cut)]);
+  const opens = blocks.filter(b => b[2] === "open").length, after = blocks.filter(b => b[2] === "after").length;
+  const book = after ? 1 : Math.min(opens, p.cap);
+  let lines = base.lines.filter(l => !/appointment/.test(l) || after);
+  if(v.rideEnd) lines = lines.map(l => l.replace(/ride until [0-9:]+/, "ride until " + schedClock(v.rideEnd)));
+  if(v.holdFrom) lines.push("No booking " + schedClock(v.holdFrom) + "–" + schedClock(cut) + ".");
+  lines.push("Vacation starts at " + schedClock(cut) + " — back " + v.back + ".");
+  blocks.push([cut, 19, "off", "VACATION"]);
+  if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
+  return { blocks, book, lines, sh };
+}
+function schedPlanCore(p, d){
   const dow = d.getDay(), wk = schedWeek(d);
   if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
   if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
   if((p.off||[]).indexOf(schedIso(d)) >= 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
+  if(SCHED_DAY_EVENTS[schedIso(d)]) return schedEventPlan(p, d, SCHED_DAY_EVENTS[schedIso(d)]);
   const blocks=[], lines=[]; let sh, book;
+  const mt = schedMtg(p, d), isM = !!mt, endCap = mt && mt.end;
   if(dow === p.ride){
     const tech = p.rot[wk];
+    if(isM) blocks.push([mt.at,9,"blk",mt.label]);
     if(p.crew === "day"){
-      sh=[7,16]; blocks.push([7,13.5,"ride","TECH RIDE · "+tech]); blocks.push([14,16,"after","Open · after ride"]);
-      lines.push("Tech ride-along with <b>"+esc(tech)+"</b> — meet at 7:00, ride until 1:30.", "2:00–4:00 appointment: revisit or tech flip.");
+      sh=[isM ? mt.at : 7,16]; blocks.push([isM ? 9 : 7,13.5,"ride","TECH RIDE · "+tech]); blocks.push([14,16,"after","Open · after ride"]);
+      lines.push(isM ? mt.text+", then meet <b>"+esc(tech)+"</b> for the ride-along until 1:30." : "Tech ride-along with <b>"+esc(tech)+"</b> — meet at 7:00, ride until 1:30.", "2:00–4:00 appointment: revisit or tech flip.");
+      book = 1;
     } else {
-      sh=[10,18]; blocks.push([10,15.5,"ride","TECH RIDE · "+tech]); blocks.push([16,18,"after","Open · after ride"]);
-      lines.push("Tech ride-along with <b>"+esc(tech)+"</b> — meet at 10:00, ride until 3:30.", "4:00–6:00 appointment: revisit or tech flip.");
+      const fin = endCap || 18;
+      sh=[isM ? mt.at : 10, fin]; blocks.push([10,15.5,"ride","TECH RIDE · "+tech]);
+      if(isM) lines.push(mt.text+".");
+      lines.push("Tech ride-along with <b>"+esc(tech)+"</b> — meet at 10:00, ride until 3:30.");
+      if(fin > 16){ blocks.push([16,18,"after","Open · after ride"]); lines.push("4:00–6:00 appointment: revisit or tech flip."); book = 1; }
+      else { lines.push("Your day ends at "+schedClock(fin)+" — no appointment after the ride."); book = 0; }
     }
-    book = 1;
   } else {
-    const isM = dow === p.mtg, ooHere = p.oo[0] === dow;
+    const ooHere = p.oo[0] === dow;
+    if(isM && mt.at === 7){
+      /* 7:00 training: day runs 7:00–4:00 for everyone */
+      sh=[7, endCap || 16]; blocks.push([7,9,"blk",mt.label]); lines.push(mt.text+". Your day runs 7:00–"+schedClock(sh[1])+".");
+      if(ooHere && p.oo[1]===9){ blocks.push([9,10,"blk","ONE ON ONE WITH GEOFF 9:00"]); }
+      if(ooHere) lines.push("One on One with Geoff at "+p.oo[1]+":00.");
+      let open = 0;
+      for(let s=10; s<sh[1]; s+=2){
+        if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
+        blocks.push([s,Math.min(s+2,sh[1]),"open","Open"]); open++;
+      }
+      book = Math.min(open, p.cap);
+      if(sh[0] > 7) blocks.unshift([7,sh[0],"os",""]);
+      if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
+      return { blocks, book, lines, sh };
+    }
     sh = (isM && p.flex) ? [8,16] : p.sh;
-    if(isM && p.flex) lines.push("Early shift today: 8–4 for the sales meeting.");
-    if(isM) lines.push("Sales meeting at 8:00.");
-    if(ooHere) lines.push("1:1 with Geoff at "+p.oo[1]+":00.");
+    if(isM && p.flex) lines.push("Early shift today: 8–4 for the "+(mt.training ? "training" : "sales meeting")+".");
+    if(isM) lines.push(mt.text+".");
+    if(ooHere) lines.push("One on One with Geoff at "+p.oo[1]+":00.");
     let open = 0;
     for(let s=sh[0]; s<sh[1]; s+=2){
-      if(s===8 && isM){ blocks.push([8,10,"blk",(ooHere && p.oo[1]===9) ? "SALES MEETING + 1:1 9:00" : "SALES MEETING 8:00"]); continue; }
-      if(ooHere && s===8 && (p.oo[1]===8 || p.oo[1]===9)){ blocks.push([8,10,"blk","1:1 WITH GEOFF "+p.oo[1]+":00"]); continue; }
-      if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","1:1 WITH GEOFF 10:00"]); continue; }
-      if(ooHere && p.oo[1]===10 && s===8){ blocks.push([8,10,"blk","No booking · 1:1 at 10"]); continue; }
+      if(s===8 && isM){ blocks.push([8,10,"blk",(ooHere && p.oo[1]===9) ? mt.label+" + ONE ON ONE 9:00" : mt.label]); continue; }
+      if(ooHere && s===8 && (p.oo[1]===8 || p.oo[1]===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+p.oo[1]+":00"]); continue; }
+      if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
+      if(ooHere && p.oo[1]===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); continue; }
       blocks.push([s,s+2,"open","Open"]); open++;
     }
     book = Math.min(open, p.cap);
@@ -672,16 +772,18 @@ function schedPlan(p, d){
 function schedFor(p, d){ const iso = schedIso(d); let out = p;
   (p.eff || []).filter(e => e.from <= iso).sort((a,b) => a.from < b.from ? -1 : 1).forEach(e => { out = Object.assign({}, out, e); });
   return out; }
-/* Week cell text in master-packet terms: ● selling, R tech ride, MTG / 1:1, – off. */
+/* Week cell text in master-packet terms: ● selling, R tech ride, MTG / One on One, – off. */
 function schedPacketCell(p, d){
   const pl = schedPlan(schedFor(p, d), d);
   if(!pl.sh) return { kind:"off", text:"–", sub: pl.blocks[0] && pl.blocks[0][3] !== "DAY OFF" ? pl.blocks[0][3] : "", book:0 };
   const parts = [];
   pl.blocks.forEach(b => { const t = b[3];
     if(b[2] === "ride") parts.push("R " + t.replace("TECH RIDE · ",""));
-    else if(t === "SALES MEETING + 1:1 9:00") parts.push("MTG 8:00", "1:1 9:00");
+    else if(/ \+ ONE ON ONE 9:00$/.test(t)) parts.push(t.indexOf("TRAINING") === 0 ? "TRN 8:00" : "MTG 8:00", "One on One 9:00");
     else if(t === "SALES MEETING 8:00") parts.push("MTG 8:00");
-    else if(t.indexOf("1:1 WITH GEOFF ") === 0) parts.push("1:1 " + t.replace("1:1 WITH GEOFF ",""));
+    else if(t.indexOf("TRAINING ") === 0) parts.push("TRN " + t.slice(9, t.indexOf("–")));
+    else if(t.indexOf("TOWN HALL ") === 0) parts.push("TOWN HALL");
+    else if(t.indexOf("ONE ON ONE WITH GEOFF ") === 0) parts.push("One on One " + t.replace("ONE ON ONE WITH GEOFF ",""));
   });
   const early = pl.sh[0] === 8 && pl.sh[1] === 16 && schedFor(p, d).crew === "eve";
   const kind = parts.some(x => x[0] === "R") ? "ride" : parts.length ? "meet" : "sell";
@@ -701,7 +803,7 @@ function schedRenderJump(){
 function schedBars(pl){
   const pct = h => ((h-7)/12*100).toFixed(3) + "%";
   const bl = [];
-  pl.blocks.forEach(b => { if(b[3] === "SALES MEETING + 1:1 9:00"){ bl.push([b[0],9,b[2],"MTG 8:00"], [9,b[1],b[2],"1:1 9:00"]); } else bl.push(b); });
+  pl.blocks.forEach(b => { if(/ \+ ONE ON ONE 9:00$/.test(b[3])){ bl.push([b[0],9,b[2],b[3].indexOf("TRAINING") === 0 ? "TRAINING 8:00" : "MTG 8:00"], [9,b[1],b[2],"ONE ON ONE 9:00"]); } else bl.push(b); });
   return bl.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
 }
 function schedAxis(){
@@ -726,7 +828,7 @@ function renderScheduleWeek(p){
   const techs = pe.techs.length ? pe.techs.map(t => t[1] ? `<b>${esc(t[0])}</b>` : esc(t[0])).join(", ") : "Overflow and unpaired leads";
   setBody("schedBody",
     `<table class="sched-wkt"><thead><tr>${head}</tr></thead><tbody><tr>${row}</tr></tbody></table>
-     <div class="sched-legend"><span><i style="border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)"></i>● Selling</span><span><i style="border-color:rgba(59,130,246,.75);background:rgba(59,130,246,.3)"></i>R = tech ride</span><span><i style="border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.25)"></i>MTG / 1:1</span><span>– Off · tap a day to open it</span></div>
+     <div class="sched-legend"><span><i style="border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)"></i>● Selling</span><span><i style="border-color:rgba(59,130,246,.75);background:rgba(59,130,246,.3)"></i>R = tech ride</span><span><i style="border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.25)"></i>Meeting / One on One</span><span>– Off · tap a day to open it</span></div>
      <div class="sched-plan"><div class="metric" style="min-width:110px"><strong>${total}</strong><span>Consults bookable this week</span></div>
        <div class="sched-techs">Shift ${schedClock(pe.sh[0])}–${schedClock(pe.sh[1])} · Rotation week ${schedWeek(schedAdd(s,3))+1}<br>Paired techs (bold = primary): ${techs}</div></div>${schedOverlay(schedIso(s), schedIso(schedAdd(s,6)))}`);
   const body = $("schedBody");
