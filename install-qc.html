@@ -61,12 +61,13 @@
   .lanesum:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:8px}
   @media (min-width:720px){.row{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;align-items:start}.row .q,.row .found{grid-column:1/-1}.row .said{margin:0;align-self:center}}
   .hist{font-size:12px;color:var(--mut);line-height:1.6}
+  #homeBack{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:700;color:var(--text);background:var(--panel2)}
 </style>
 </head>
 <body>
 <div id="envBar">SANDBOX — fake data, nothing leaves this machine</div>
 <div class="wrap">
-  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" id="homeBack" href="crm.html">&larr; My CRM</a>
+  <div class="topbar"><span class="pill">CM HEATING</span><a class="back" id="homeBack" href="install-home.html">&larr; Install tools</a>
     <label class="who">Signed in as <select id="me" aria-label="Signed in as"><option>Geoff</option><option>Lyle</option><option>Jon</option><option>Amy</option><option>Brittny</option></select></label></div>
   <div id="list">
     <h1>Install QC</h1><p class="sub">Verify what the HCA confirmed against ServiceTitan. Each lane checks its own items.</p><p class="sub" id="roleNote" style="color:var(--gold)"></p>
