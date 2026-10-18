@@ -57,6 +57,11 @@ async function main() {
     r = await hca1.call('POST', '/api/hca', { job: 'j1', submit: true }); ok('submit blocked while a Not-done has no why/when', r.code === 400);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'yes' } } }); ok('fixed again', r.code === 200);
     r = await hca1.call('POST', '/api/hca', { job: 'j1', parked: { reason: 'HOA approval', revisit: d(4) } }); ok('park saved', r.code === 200 && r.b.record.parked && r.b.record.parked.reason === 'HOA approval');
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', parked: { reason: 'HOA approval', revisit: d(-3) } }); ok('park with a past wrap-up date refused (2026-10-17)', r.code === 400 && /past/.test(r.b.error));
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', parked: { reason: 'HOA approval, still', revisit: d(4) } }); ok('same future wrap-up date re-saves', r.code === 200);
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'no', why: 'Backordered', when: d(-2) } } }); ok('Not done with a past by-when date refused', r.code === 400 && /past/.test(r.b.error));
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'no', why: 'Backordered', when: d(2) } } }); ok('Not done with a future date saves', r.code === 200);
+    r = await hca1.call('POST', '/api/hca', { job: 'j1', items: { stock: { v: 'yes' } } }); ok('back to Yes', r.code === 200);
     r = await hca1.call('POST', '/api/hca', { job: 'k1', pay: 'x' }); ok("HCA cannot write another HCA's project (404)", r.code === 404);
     r = await hca2.call('POST', '/api/hca', { job: 'j1', pay: 'x' }); ok("second HCA cannot write the first one's project (404)", r.code === 404);
     r = await mI.call('POST', '/api/hca', { job: 'j1', pay: 'x' }); ok('a manager cannot edit the HCA answers', r.code === 403);
