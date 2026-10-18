@@ -45,6 +45,11 @@ with sync_playwright() as p:
     ok('Yes opens the install availability sheet in a new tab', pop.value.url.startswith(TRACKER))
     ok('a note tells them to claim there and come back; the form stays usable', pg.is_visible('#claimNote') and 'claim your spot' in pg.inner_text('#claimNote').lower() and pg.locator('#claimLink').get_attribute('href') == TRACKER)
     pop.value.close()
+    # 2026-10-17: stepping out to the availability sheet keeps your answers and your place, even if the browser reloads the page
+    pg.click('button[data-id="permitdelay"][data-v="yes"]'); pg.evaluate("window.scrollTo(0, 900)"); pg.wait_for_timeout(300); y0 = pg.evaluate("window.scrollY")
+    pg.reload(); pg.wait_for_timeout(1900); y1 = pg.evaluate("window.scrollY")
+    ok('after a reload you are back where you were (%s -> %s)' % (y0, y1), y0 > 300 and abs(y1 - y0) < 60)
+    ok('after a reload your answers are still there (claim Yes, permit delays Yes)', all(pg.get_attribute('button[data-id="%s"][data-v="yes"]' % i, 'aria-checked') == 'true' for i in ('claim', 'permitdelay')))
     pg.click('button[data-id="claim"][data-v="na"]'); pg.wait_for_timeout(300)
     ok('No: nothing opens, the note hides, the rest of the process continues', not pg.is_visible('#claimNote') and pg.is_enabled('button[data-id="stock"][data-v="yes"]'))
     ok('the answer is saved but never blocks or counts (ring unchanged at 0 of 8)', pg.inner_text('#ringN').replace('\n', ' ') == '0 of 8')
