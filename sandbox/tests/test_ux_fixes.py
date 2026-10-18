@@ -150,7 +150,7 @@ with sync_playwright() as p:
     pg.click('button[data-id="i-labor"][data-v="yes"]'); pg.wait_for_timeout(200); ok('install labor answered => Submit enabled', not pg.is_disabled('#submitBtn'))
     pg.click('button[data-id="mat"][data-v="work"]'); pg.wait_for_timeout(200); ok('Working on it still counts as answered (Submit stays enabled)', not pg.is_disabled('#submitBtn'))
     # Codex review (PR #51): an N/A saved before the button was removed must not count as an answer
-    api('POST', '/api/reset', {}); pg.goto(URL)
+    api('POST', '/api/reset', {}); pg.goto(URL); pg.wait_for_timeout(700)   # let the page's own first save land before seeding (it is flushed on leave since 2026-10-17)
     pg.evaluate("() => { const d = JSON.parse(localStorage.getItem('cmh_practice_db_v1')); d.records['900001'] = {hca: {pay: '\\u2714 Paid in full', items: {heatload: {v: 'na'}, permit: {v: 'na'}, stock: {v: 'yes'}}}}; localStorage.setItem('cmh_practice_db_v1', JSON.stringify(d)); }")
     pg.reload(); pg.wait_for_timeout(800)
     ok('stale N/A on Heat load / Permit is unanswered after load (rows show no selection, both still count in the total)', pg.locator('button[data-id="heatload"][aria-checked="true"]').count() == 0 and pg.locator('button[data-id="permit"][aria-checked="true"]').count() == 0 and pg.inner_text('#ringN').replace('\n', ' ') == '2 of 8')

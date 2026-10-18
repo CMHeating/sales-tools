@@ -263,8 +263,8 @@ var TRACKER_URL='https://install-availability-tracker.web.app/';
 var JURISDICTION_URL='https://docs.google.com/spreadsheets/d/1tLdBQ_G8PVbf20w88QGQV-evTgj9Xx1Fg2x-KyMyAnI/edit?gid=0#gid=0';   /* same link the Next Day Install Check page already publishes; the private config can override it */
 function setItem(id,v){var o=S.items[id]||(S.items[id]={});o.v=v;
   if((id==='ahri'||id==='rb-ahri')&&v!=='yes')o.note='';   /* the ServiceTitan / provide-it answer only belongs to Complete */
-  paintWhy(id);render();save();
-  if(id==='claim'&&v==='yes'){try{window.open(TRACKER_URL,'_blank','noopener');}catch(e){}}}
+  paintWhy(id);render();save(id==='claim'&&v==='yes');
+  if(id==='claim'&&v==='yes'){rememberSpot();try{window.open(TRACKER_URL,'_blank','noopener');}catch(e){}}}
 function ahriSummary(id){var n=((S.items[id]||{}).note)||'';return n;}
 function paintAhri(id){var box=$('ahri-'+id);if(!box)return;var yes=stateOf(id)==='yes',o=S.items[id]||{};
   if(!yes){box.style.display='none';return;}
@@ -347,8 +347,10 @@ function render(){
 /* ---- draft: this phone only, per job, until job records are stored server-side ---- */
 function cleanItems(){var o={};Object.keys(S.items||{}).forEach(function(k){var it=S.items[k]||{},v=k==='pay'?payState():it.v;if(v)o[k]={v:v,why:it.why||'',when:it.when||'',note:it.note||''};});return o;}
 var _rt=null;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
-  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(function(){remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',vendor:S.vendor||'',filterSize:S.filter||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});},350);}}
+function save(now){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  if(SANDBOX&&H.job&&!locked()){clearTimeout(_rt);_rt=setTimeout(pushRemote,now?0:350);}}
+function pushRemote(){_rt=null;remote('/api/hca',{job:H.job,by:H.rep,pay:S.pay,notes:S.notes,rebateProgram:S.rebateProg||'',vendor:S.vendor||'',filterSize:S.filter||'',items:cleanItems()}).then(function(d){if(d&&d.ok){REMOTE.status=d.record.status;}else if(d&&d.error&&LIVEDATA){$('barTxt').textContent='Not saved: '+d.error;}});}
+function flushSave(){if(_rt){clearTimeout(_rt);pushRemote();}}   /* leaving the page: send the waiting save now instead of losing it */
 function locked(){return /^(in_review|ready|installed)$/.test(REMOTE.status);}
 function normalizeNA(){ITEMS.forEach(function(it){var o=S.items&&S.items[it[0]];if(o&&o.v==='na'&&!it[4]&&it[0]!=='rebate'&&it[0]!=='cc'&&it[0]!=='claim'&&it[0]!=='rb-applied'&&it[0]!=='permitdelay')o.v='';});}   /* an N/A saved before the button was removed no longer counts as an answer */
 function applyState(){normalizeNA();$('vendorTxt').value=S.vendor||'';$('filterTxt').value=S.filter||'';$('pay').value=S.pay||'';$('notes').value=S.notes||'';var rpv=String(S.rebateProg||'');$('rebProg').value=rebateSel(rpv)||'';$('rebOther').value=rebateSel(rpv)==='Other'?rpv.replace(/^Other:?\s*/,''):'';Object.keys(S.items).forEach(function(id){paintWhy(id);});}
@@ -486,6 +488,17 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 var a=document.createElement('a');a.className='signin-link';a.textContent='Sign in';a.style.cssText='color:#f59e0b;font-weight:800;margin-left:6px';
 a.href='install-home.html?return='+encodeURIComponent(location.pathname.split('/').pop()+location.search+location.hash);el.appendChild(document.createTextNode(' '));el.appendChild(a);}
 ['barTxt','parkMsg'].forEach(function(id){var el=document.getElementById(id);if(!el)return;fix(el);new MutationObserver(function(){fix(el);}).observe(el,{childList:true,characterData:true,subtree:true});});})();
+</script>
+<script>
+/* Keep your place when you step out (install availability sheet, another app): if the browser reloads this page, scroll back to where you were. */
+var SPOT_KEY='cmh_spot_'+location.pathname+location.hash;
+function rememberSpot(){try{sessionStorage.setItem(SPOT_KEY,String(Math.round(window.scrollY)));}catch(e){}}
+window.addEventListener('pagehide',function(){rememberSpot();flushSave();});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){rememberSpot();flushSave();}});
+window.addEventListener('load',function(){var y=null;try{y=sessionStorage.getItem(SPOT_KEY);}catch(e){}
+  if(y==null)return;y=+y;if(!(y>0))return;
+  var moved=false;['wheel','touchmove','keydown'].forEach(function(ev){window.addEventListener(ev,function(){moved=true;},{once:true,passive:true});});
+  [150,700,1500].forEach(function(t){setTimeout(function(){if(!moved&&Math.abs(window.scrollY-y)>40)window.scrollTo(0,y);},t);});});   /* never fight a reader who has started scrolling */
 </script>
 </body>
 </html>
