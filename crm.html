@@ -262,6 +262,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 </div>
 
 <script src="js/install-projects.js"></script>
+<script>CMHProjects.config.hashExtra = "&live=1";   /* pilot HCAs only: the project list and link are pilot-gated in renderProjects() */</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";

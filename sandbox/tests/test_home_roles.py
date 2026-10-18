@@ -39,7 +39,7 @@ def ok(label, cond):
 ROSTER = {'cmh_install_roster': {'managers': {'mgr-one@cmheating,com': {'install': True, 'name': 'Mgr'}, 'admin-one@cmheating,com': {'sales': True, 'install': True, 'electrical': True, 'admin': True, 'name': 'Boss'}},
                                  'schedulers': {'sched-one@cmheating,com': True}},
           'cmh_followup_roster': {'hcas': {'rep@cmheating,com': 'rep-one'}}}
-def visit(pw, email, provider='google.com'):
+def visit(pw, email, provider='google.com', q=''):
     b = pw.chromium.launch(headless=True); ctx = b.new_context(viewport={'width': 430, 'height': 900})
     ctx.route('**/firebase-app.js', lambda r: r.fulfill(body=APP, content_type='text/javascript'))
     ctx.route('**/firebase-database.js', lambda r: r.fulfill(body=DBM, content_type='text/javascript'))
@@ -48,7 +48,7 @@ def visit(pw, email, provider='google.com'):
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.add_init_script(f"window.__DB={json.dumps(ROSTER)};window.__ADMIN=false;"
         f"window.__USER={{email:{json.dumps(email)},emailVerified:{json.dumps(provider=='google.com')},providerData:[],getIdTokenResult:async()=>({{signInProvider:{json.dumps(provider)}}})}};")
-    pg.goto(B + '/install-home.html'); pg.wait_for_timeout(900)
+    pg.goto(B + '/install-home.html' + q); pg.wait_for_timeout(900)
     return b, pg, errs, [a.inner_text() for a in pg.locator('#btns a b').all()], pg.inner_text('#roleLine') if pg.is_visible('#tools') else ''
 
 with sync_playwright() as p:
@@ -66,4 +66,8 @@ with sync_playwright() as p:
     ok('PIN/password session is refused (Google only)', not btns and not pg.is_visible('#tools')); b.close()
     b, pg, errs, btns, role = visit(p, 'mgr-one@gmail.com')
     ok('non-company Google account is refused', not btns and not pg.is_visible('#tools')); b.close()
+    b, pg, errs, btns, role = visit(p, 'admin-one@cmheating.com', q='?return=' + 'install-requirements.html%23job%3Dj1%26live%3D1')
+    ok('after sign-in, return= sends you back to the job page (live)', pg.url.endswith('/install-requirements.html#job=j1&live=1')); b.close()
+    b, pg, errs, btns, role = visit(p, 'admin-one@cmheating.com', q='?return=' + 'https%3A%2F%2Fevil.example%2F')
+    ok('return= to another site is ignored (stays on install home)', '/install-home.html' in pg.url and btns); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)

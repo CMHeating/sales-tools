@@ -480,5 +480,12 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
     $('submitBtn').disabled=true;$('parkBtn').disabled=true;$('barTxt').textContent='Choose a project in your CRM.';}
 })();
 </script>
+<script>
+/* Live mode: a "Sign in with your Google account first" error gets a Sign in link that returns to this job after sign-in (install-home.html?return=...). */
+(function(){function fix(el){if(!el||el.querySelector('a.signin-link')||!/Sign in with your Google account/.test(el.textContent))return;
+var a=document.createElement('a');a.className='signin-link';a.textContent='Sign in';a.style.cssText='color:#f59e0b;font-weight:800;margin-left:6px';
+a.href='install-home.html?return='+encodeURIComponent(location.pathname.split('/').pop()+location.search+location.hash);el.appendChild(document.createTextNode(' '));el.appendChild(a);}
+['barTxt','parkMsg'].forEach(function(id){var el=document.getElementById(id);if(!el)return;fix(el);new MutationObserver(function(){fix(el);}).observe(el,{childList:true,characterData:true,subtree:true});});})();
+</script>
 </body>
 </html>
