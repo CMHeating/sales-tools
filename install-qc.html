@@ -123,6 +123,14 @@ function openJob(job){
       return '<b>'+esc(HCA_NAME[i]||i)+':</b> '+esc(txt);}).join(' · ');}
     var stLink=/^9000/.test(j.job)?'':' · <a href="https://go.servicetitan.com/#/Job/Index/'+esc(j.job)+'" target="_blank" rel="noopener">Open in ServiceTitan</a>';
     var html='<button class="back" type="button" id="backBtn">&larr; All jobs</button><h1>'+esc(j.customer)+'</h1><p class="sub">'+esc(j.hca)+' · install '+dateLabel(j.installDate)+' · job '+esc(j.job)+' · <span class="st '+esc(r.status)+'">'+esc(r.status.replace('_',' '))+'</span>'+stLink+'</p>';
+    /* What still stands between this job and Ready to book (2026-10-17: managers got stuck not knowing). Counts Verified only. */
+    if(!/^(ready|installed)$/.test(r.status||'')){var left=[];
+      if(!r.status||r.status==='working')left.push('The HCA has not submitted it yet.');
+      Object.keys(META.lanes).forEach(function(lane){var s=r.lanesSummary[lane]||{checked:0,missing:0,total:0,signoff:''},ver=s.checked-s.missing,bits=[];
+        if(ver<s.total)bits.push(ver+' of '+s.total+' verified');if(s.signoff!=='confirmed')bits.push('sign-off not set to ✔ Confirmed');
+        if(bits.length)left.push('<b>'+esc(LANE_NAME[lane])+'</b> ('+esc(META.lanes[lane].who)+'): '+bits.join(', '));});
+      if(rebYes&&(!h.rebateProgram||rebShown.some(function(i){return (items[i]||{}).v!=='yes';})))left.push('<b>Rebate</b> (HCA): not secured yet');
+      if(left.length)html+='<div class="card" id="leftCard"><h2>Before Ready to book</h2><div class="said">'+left.join('<br>')+'</div><p class="sub" style="margin:8px 0 0">Each lane: mark every item Verified, set Sign-off to ✔ Confirmed, then Save.</p></div>';}
     if(h.system||h.vendor||h.filterSize||h.scope||h.notes)html+='<div class="card"><div class="said">'+(h.system?'<b>Sold:</b> '+esc(h.system)+'<br>':'')+(h.vendor?'<b>Vendor:</b> '+esc(h.vendor)+'<br>':'')+(h.filterSize?'<b>Filter size:</b> '+esc(h.filterSize)+'<br>':'')+(h.scope?'<b>Install time / electrical:</b> '+esc(h.scope)+'<br>':'')+(h.notes?'<b>HCA notes:</b> '+esc(h.notes):'')+'</div></div>';
     Object.keys(META.lanes).forEach(function(lane){
       var L=(r.lanes||{})[lane]||{items:{}},mine=LIVE?!!(((META.me||{}).lanes||{})[lane]):(lane===mylane),sum=r.lanesSummary[lane];

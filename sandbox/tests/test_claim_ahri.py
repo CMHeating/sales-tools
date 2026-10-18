@@ -76,6 +76,7 @@ with sync_playwright() as p:
     prev = pg.inner_text('#emailPrev')
     ok('email concerns: not on the availability sheet yet + the AHRI the HCA will provide', 'Not on the install availability sheet yet' in prev and 'AHRI match: I can provide it (Joe sends it Friday)' in prev)
     q = ctx.new_page(); q.goto(ORIGIN + 'install-qc.html#practice=1&as=Geoff'); q.reload(); q.wait_for_timeout(700); q.click('.job[data-job="900001"]'); q.wait_for_timeout(700)
+    ok('manager sees what is left before Ready to book (lanes not verified / not confirmed)', q.is_visible('#leftCard') and 'Before Ready to book' in q.inner_text('#leftCard') and 'verified' in q.inner_text('#leftCard') and 'Confirmed' in q.inner_text('#leftCard'))
     ok('the sales lane shows the AHRI note the HCA gave', 'Can provide: Joe sends it Friday' in q.inner_text('[data-lane="sales"] .row[data-k="ahri-ok"] .said'))
     ok('no page errors', not errs); print(errs[:3]); b.close()
 print('\n%d check(s) failed' % len(FAILS) if FAILS else '\nALL CHECKS PASSED'); sys.exit(1 if FAILS else 0)
