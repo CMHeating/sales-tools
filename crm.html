@@ -222,6 +222,9 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
               <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
               <div class="metric yellow"><strong id="cntNetworking">0</strong><span>Networking</span></div>
               <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
+              <div class="metric yellow"><strong id="cntTechCheckIn">0</strong><span>Tech Check-ins</span></div>
+              <div class="metric yellow"><strong id="cntMeeting">0</strong><span>Meetings / Training</span></div>
+              <div class="metric yellow"><strong id="cntProjMgmt">0</strong><span>Project Mgmt</span></div>
             </div>
             <div class="act-fu" id="actFuNote"></div>
             <div class="act-week" id="actWeek"></div>
@@ -472,10 +475,12 @@ function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>$
    1. Recap Form → "Activity Log" sheet → HCA Sold Tracker Sync (activityFirebase.js, every 15 min)
       → cmh_hca_activity/<Full Name>/<yyyy-MM-dd> = { counts:{...}, updated }  (keys are plain names, not URL-encoded)
    2. Follow-Up Tracker "Log it" → cmh_followup_log/<hca-key>/<id> = { at, status, customer, ... }
-   Follow-ups shown = recap "Follow-up Unsold" + tracker entries that Pacific day.
+   Follow-ups shown = recap follow-ups (counts.followUpUnsold: old Form "Follow-up Unsold" and new-page
+   "Follow-up" rows, since 2026-10-17) + tracker entries that Pacific day.
+   Since 2026-10-17 the feed also carries techCheckIn, meeting and projectManagement (own tiles).
    A day with no activity record may still have a recap (consults only), so the strip never says "missed". */
 const RECAP_FORM_URL = "https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec";
-const ACT_IDS = ["cntRideAlong","cntSelfGen","cntInstallVisit","cntReferrals","cntNetworking","cntUnsold"];
+const ACT_IDS = ["cntRideAlong","cntSelfGen","cntInstallVisit","cntReferrals","cntNetworking","cntUnsold","cntTechCheckIn","cntMeeting","cntProjMgmt"];
 function pacIso(d){ return d.toLocaleDateString("en-CA", { timeZone:"America/Los_Angeles" }); }
 function actHcaKey(name){ return String(name == null ? "" : name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
 function actTotal(c){ return c ? Object.values(c).reduce((a,v) => a + (Number(v) || 0), 0) : 0; }
@@ -500,6 +505,9 @@ function loadActivitiesCard(who){
     $("cntReferrals").textContent    = c.referrals || 0;
     $("cntNetworking").textContent   = (c.realtorNetworking || 0) + (c.socialNetworking || 0);
     $("cntUnsold").textContent       = (c.followUpUnsold || 0) + fuT;
+    $("cntTechCheckIn").textContent  = c.techCheckIn || 0;
+    $("cntMeeting").textContent      = c.meeting || 0;
+    $("cntProjMgmt").textContent     = c.projectManagement || 0;
     $("actFuNote").textContent = `Follow-ups today: ${c.followUpUnsold || 0} from the recap · ` +
       (fuErr ? "tracker log not readable with this sign-in" : `${fuT} logged in the Follow-Up Tracker`);
     $("actLastUpdated").textContent = rec && rec.updated
