@@ -34,6 +34,8 @@
   function isObj(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
   function str(x, n) { return String(x == null ? "" : x).slice(0, n); }
   function nowIso() { return new Date().toISOString(); }
+  /* Pacific-time today as YYYY-MM-DD: wrap-up dates may not be in the past (Geoff 2026-10-17; the page checks too). */
+  function todayPT() { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
   function rid() { return "h" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   /* ---- record logic (same rules as practice-api.js; status comes from the stored value) ---- */
@@ -258,6 +260,7 @@
           if (BASE_ITEMS.concat(RENTAL_ITEMS, REBATE_ITEMS, CLAIM_ITEMS, ["cc"]).indexOf(k) < 0) return fail(400, "unknown item " + k);
           if (HCA_STATES.indexOf(v.v) < 0 || ((k === "rebate" || k === "claim" || k === "rb-applied" || k === "permitdelay" || k === "cc") && v.v !== "yes" && v.v !== "na") || (v.v === "na" && k !== "rebate" && k !== "claim" && k !== "rb-applied" && k !== "downpay" && k !== "permitdelay" && k !== "cc" && NA_OK.indexOf(k) < 0)) return fail(400, "bad state for " + k);
           var old = ((merged.hca.items || {})[k] || {}).v, it = { v: v.v, why: str(v.why, 60), when: str(v.when, 10), note: str(v.note, 200) };
+          if (it.when && it.when !== (((merged.hca.items || {})[k] || {}).when || "") && it.when < todayPT()) return fail(400, "the date for " + k + " is in the past");   /* only a changed date is checked, so old answers still re-save */
           merged.hca.items = merged.hca.items || {}; merged.hca.items[k] = it; put(up, hk, job, "hca/items/" + k, it);
           if (old !== v.v) addHist(up, hk, job, me, "hca." + k, old === undefined ? null : old, v.v);
         }
@@ -265,6 +268,7 @@
           if (body.parked !== null && !isObj(body.parked)) return fail(400, "parked must be an object");
           var pk = body.parked && Object.keys(body.parked).length ? { reason: str(body.parked.reason, 200), revisit: str(body.parked.revisit, 10), note: str(body.parked.note, 200) } : null;
           if (pk && !(pk.reason && pk.revisit)) return fail(400, "parking needs a reason and a date");
+          if (pk && pk.revisit !== ((rec.parked || {}).revisit || "") && pk.revisit < todayPT()) return fail(400, "the wrap-up date is in the past");
           put(up, hk, job, "parked", pk); addHist(up, hk, job, me, "parked", null, pk ? pk.reason : null);
         }
         if (body.submit) {
