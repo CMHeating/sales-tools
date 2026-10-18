@@ -77,6 +77,8 @@ onAuthStateChanged(auth, async user => {
   if (!google || !/@cmheating\.com$/i.test(user.email || "")) { await signOut(auth); $("msg").textContent = "Please sign in with your @cmheating.com Google account."; $("signin").classList.remove("hidden"); return; }
   const r = await roleOf(user); $("who").textContent = user.email;
   if (!r.role) { $("msg").textContent = "Your account isn't set up for the install tools yet. Ask Geoff."; return; }
+  const ret = new URLSearchParams(location.search).get("return") || "";
+  if (/^install-(requirements|qc|admin)\.html([?#][^\s]*)?$/.test(ret)) { location.replace(ret); return; }   /* only back to an install page on this site */
   $("roleLine").innerHTML = '<span class="role">' + esc(LABEL[r.role]) + "</span>";
   $("btns").innerHTML = buttonsFor(r.role, r.name).map(x => '<a class="tool' + (x[2] ? " go" : "") + '" href="' + esc(x[1]) + '"><span class="ti" aria-hidden="true">' + x[4] + '</span><span><b>' + esc(x[0]) + '</b><small>' + esc(x[3]) + '</small></span><span class="ch" aria-hidden="true">&rsaquo;</span></a>').join("");
   $("tools").classList.remove("hidden");

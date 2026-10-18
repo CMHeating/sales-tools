@@ -72,6 +72,10 @@ with sync_playwright() as p:
     b, pg, errs, ext = page(p, None, 'live=1', 'install-qc.html')
     print('   not-signed-in rows text:', repr(pg.inner_text('#rows'))[:160])
     ok('not signed in: clear message, no data', 'sign in' in pg.inner_text('#rows').lower() or 'sign in' in pg.inner_text('body').lower()); b.close()
+    b, pg, errs, ext = page(p, None, 'job=j1&cust=Sample+One&date=2026-12-01&rep=HCA+One&live=1', 'install-requirements.html')
+    pg.click('button[data-id="stock"][data-v="yes"]'); pg.wait_for_timeout(1200)
+    lk = pg.locator('#barTxt a.signin-link')
+    ok('signed out on the job page: a Sign in link that returns to this job', lk.count() == 1 and lk.get_attribute('href').startswith('install-home.html?return=install-requirements.html') and 'live%3D1' in lk.get_attribute('href')); b.close()
     b, pg, errs, ext = page(p, 'mgr-install@cmheating.com', 'live=1', 'install-qc.html', provider='password')
     ok('PIN/password session is refused', 'Sample One' not in pg.inner_text('body')); b.close()
     # without live=1 nothing changes

@@ -62,6 +62,7 @@ with sync_playwright() as p:
     ok('status dots carry text alternatives', pg.evaluate("document.querySelectorAll('#projList .proj-dot[aria-label]').length") >= 2)
     ok('button greyed until a project is chosen, then carries the job', pg.get_attribute('#actCompleteLink', 'aria-disabled') == 'true')
     pg.select_option('#projPick', index=1); ok('choosing a sold project enables it with that job', pg.get_attribute('#actCompleteLink', 'aria-disabled') is None and 'job=900001' in pg.get_attribute('#actCompleteLink', 'href'))
+    ok('pilot project link opens the live page (live=1)', pg.get_attribute('#actCompleteLink', 'href').endswith('&live=1'))
     pg.select_option('#projPick', index=2); ok('pipeline project carries its job number', 'job=800003' in pg.get_attribute('#actCompleteLink', 'href'))
     pg.click('#schedWeekBtn'); pg.wait_for_timeout(300)
     ok('schedule overlay present', 'your installs' in t('#schedBody') or 'backlog' in t('#schedBody'))
