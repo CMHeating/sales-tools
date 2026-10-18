@@ -530,7 +530,7 @@ window.openOnCallEdit = async (e, key, def) => {
   const locked = await acquireSlotLock(key);
   if (!locked) return;
   const currentValue = (availabilityData.overrides && availabilityData.overrides[key]) || def || "";
-  const newValue     = prompt("Enter On Call name(s):", currentValue === "—" ? "" : currentValue);
+  const newValue     = prompt("For Comfort Club only", currentValue === "—" ? "" : currentValue);
   if (newValue === null) { await releaseSlotLock(key); return; }
   const cleanValue = newValue.trim() || "—";
   if (!isSaving) await writeStatus(key, cleanValue, def, "fullDay", {});
