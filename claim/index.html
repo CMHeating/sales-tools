@@ -12,7 +12,8 @@
     HCAS      -> list of Home Comfort Advisors in the dropdown
     TOTAL     -> 2 Comfort Club coupons for the whole week, shared by ALL HCAs. When they are claimed, that's it.
     CLAIMED   -> coupons claimed so far (0 of 2 to start). Only change it when a real coupon is claimed.
-    DEADLINE  -> offer end (Sunday Oct 25, 2026 11:59 PM Pacific)
+    OFFER_START -> THE ONE DATE TO CHANGE EACH WEEK: the Monday the offer starts. The end date, deadline, signing dates,
+                   header, countdown and fine print all follow from it (Sunday 11:59 PM Pacific is the deadline).
     FORM_ENDPOINT -> your CRM / form-tool URL that receives the claim. Blank = confirmation only, nothing is sent.
   CLAIMS_ENDPOINT -> optional, later: when the CRM claims site exists, the page reads the REAL claim count from it instead of CLAIMED.
 -->
@@ -104,12 +105,12 @@
 <div class="wrap">
   <header>
     <img class="logo" id="logoSlot" alt="CM Heating, Cooling, Plumbing, Electrical" src="data:image/png;base64,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">
-    <div class="week">This Week Only<br><strong>Oct 19 &ndash; Oct 25</strong></div>
+    <div class="week">This Week Only<br><strong id="weekLabel">Oct 19 &ndash; Oct 25</strong></div>
   </header>
 
   <div class="coupon" id="coupon"></div>
 
-  <div class="clock" id="clockRow"><span>Offer ends Sunday 11:59 PM</span><output id="clock" aria-live="off"></output></div>
+  <div class="clock" id="clockRow"><span id="endsLabel">Offer ends Sunday 11:59 PM</span><output id="clock" aria-live="off"></output></div>
 
   <form id="claimForm" novalidate>
     <div class="field">
@@ -141,7 +142,7 @@
     <div class="check" aria-hidden="true">&#10003;</div>
     <h2>Your coupon is saved</h2>
     <p id="doneMsg"></p>
-    <p>Your coupon is only good if your contract is signed by <strong>Sunday, October 25, 2026</strong>.</p>
+    <p>Your coupon is only good if your contract is signed by <strong id="endDateLong">Sunday, October 25, 2026</strong>.</p>
   </div>
 
   <div class="legal" id="legal"></div>
@@ -169,26 +170,44 @@ var CONFIG = {
   TOTAL: 2,               // Comfort Club coupons for the WHOLE week, shared by every HCA (the sheet's capacity overrides this)
   ORIGINAL_TOTAL: 2,      // the number announced in Monday's email. If capacity grows past it, this is shown struck through.
   CLAIMED: 0,             // coupons claimed so far. Stays 0 until a real claim happens; then update it (or use CLAIMS_ENDPOINT).
-  OFFER_START: '2026-10-19',   // first day contracts can be signed (Monday)
-  OFFER_END: '2026-10-25',     // last day (Sunday)
-  DEADLINE: '2026-10-25T23:59:59-07:00',
+  OFFER_START: '2026-10-19',   // <-- change this Monday each week. Everything else is calculated from it.
   FORM_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec',      // your CRM / form URL (POST). Leave blank to test.
   CLAIMS_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec'     // CRM URL (GET) that returns {"claimed": N} = real Comfort Club coupons claimed this week.
                           // When set, the page uses this real count (CLAIMED is ignored). If it can't be reached, the page only states the limit.
 };
+/* Dates: derived from OFFER_START (Monday). End = Sunday, deadline = Sunday 11:59 PM Pacific. */
+function isoAdd(iso, n){ var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function pacificEndOfDay(iso){
+  var p = iso.split('-');
+  for (var off = 7; off <= 8; off++) {   // PDT is UTC-7, PST is UTC-8
+    var t = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 23 + off, 59, 59));
+    var s = t.toLocaleString('en-CA', { timeZone: 'America/Los_Angeles', hour12: false });
+    if (s.indexOf(iso) === 0 && s.indexOf('23:59') > -1) return t;
+  }
+  return new Date(iso + 'T23:59:59-08:00');
+}
+CONFIG.OFFER_END = isoAdd(CONFIG.OFFER_START, 6);
+CONFIG.DEADLINE = pacificEndOfDay(CONFIG.OFFER_END);
 var OFFERS = {
   'comfort-club': {
     cls: '', scarcity: true, estimate: { months: 6, standard: 3 }, tag: 'Comfort Club', big: '6 MONTHS', sub: 'BEFORE YOUR FIRST PAYMENT',
     text: 'No payment for 6 months from the day you sign your Comfort Club agreement. Our usual offer is 3 months.',
     button: 'Lock In My 6 Months',
     done: 'Your Advisor will call you to set up your Comfort Club agreement.',
-    legal: 'Comfort Club 6-month deferred first payment valid on new Comfort Club agreements signed Monday, October 19 through Sunday, October 25, 2026; standard offer is 3 months. The deferral period begins on the contract signing date, and the first monthly payment is due 6 months after signing. Subject to program terms and approval.'
+    legal: 'Comfort Club 6-month deferred first payment valid on new Comfort Club agreements signed {RANGE}; standard offer is 3 months. The deferral period begins on the contract signing date, and the first monthly payment is due 6 months after signing. Subject to program terms and approval.'
   }
 };   // Only Comfort Club is claimed here. The 18-month financing needs no claim (it is quoted at the kitchen table / by phone).
 /* ========================================== */
 var $ = function(id){return document.getElementById(id)};
 var offerKey = 'comfort-club', offer = OFFERS[offerKey];
 
+function dayFmt(iso, o){ return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', Object.assign({ timeZone: 'UTC' }, o)); }
+function rangeLong(){ return dayFmt(CONFIG.OFFER_START, { weekday: 'long', month: 'long', day: 'numeric' }) + ' through ' + dayFmt(CONFIG.OFFER_END, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }); }
+function renderDates(){
+  $('weekLabel').textContent = dayFmt(CONFIG.OFFER_START, { month: 'short', day: 'numeric' }) + ' \u2013 ' + dayFmt(CONFIG.OFFER_END, { month: 'short', day: 'numeric' });
+  $('endsLabel').textContent = 'Offer ends ' + dayFmt(CONFIG.OFFER_END, { weekday: 'long' }) + ' 11:59 PM';
+  $('endDateLong').textContent = dayFmt(CONFIG.OFFER_END, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
 /* Draws the coupon, legal text and button. Any ?offer= value (including old "cod" links) shows the Comfort Club claim. */
 function applyOffer(k, push){
   offerKey = OFFERS[k] ? k : 'comfort-club'; offer = OFFERS[offerKey];
@@ -201,7 +220,8 @@ function applyOffer(k, push){
     cnt.innerHTML = '<div class="pips" id="pips" aria-hidden="true"></div><div><b id="left"></b><small id="leftSub"></small></div>';
     c.appendChild(cnt);
   }
-  $('legal').textContent = offer.legal;
+  $('legal').textContent = offer.legal.replace('{RANGE}', rangeLong());
+  renderDates();
   $('go').textContent = offer.button; $('go').disabled = false; $('err').textContent = '';
   $('signField').hidden = !offer.estimate;
   if (offer.scarcity) { loadClaims(); renderScarcity(); }
@@ -313,7 +333,7 @@ $('claimForm').addEventListener('submit', function(e){
   if (!f.name.value.trim()) { err.textContent = 'Please enter your name.'; f.name.focus(); return; }
   if (f.phone.value.replace(/\D/g,'').length < 10) { err.textContent = 'Please enter a 10-digit phone number.'; f.phone.focus(); return; }
   if (offer.estimate && !f.signDate.value) { err.textContent = 'Please choose the date you expect to sign.'; f.signDate.focus(); return; }
-  var payload = { offer: offerKey, hca: f.hca.value, name: f.name.value.trim(), phone: f.phone.value.trim(), claimedAt: new Date().toISOString() };
+  var payload = { deadline: $('endDateLong').textContent, offer: offerKey, hca: f.hca.value, name: f.name.value.trim(), phone: f.phone.value.trim(), claimedAt: new Date().toISOString() };
   if (offer.estimate) { payload.signDate = f.signDate.value; payload.firstPaymentWeekOf = fmt(mondayOf(addMonths(utc(f.signDate.value), offer.estimate.months)), { year: 'numeric', month: '2-digit', day: '2-digit' }); }
   var btn = $('go'); btn.disabled = true;
   function finish(){
@@ -338,6 +358,13 @@ $('claimForm').addEventListener('submit', function(e){
         LIVE.claimed = typeof j.claimed === 'number' ? j.claimed : CONFIG.TOTAL;
         renderScarcity(); btn.disabled = true;
         err.textContent = 'Sorry, the last Comfort Club coupon was just claimed. Call ' + phoneNow() + ' about our standard 3-month offer.';
+        return;
+      }
+      if (j && j.ok === false && (j.error === 'duplicate' || j.error === 'bad_hca' || j.error === 'bad_phone')) {
+        btn.disabled = false;
+        err.textContent = j.error === 'duplicate' ? 'This phone number already has a coupon claimed. Please call ' + phoneNow() + ' if you need help.'
+                        : j.error === 'bad_phone' ? 'Please enter a valid 10-digit phone number.'
+                        : 'Please choose your Home Comfort Advisor from the list.';
         return;
       }
       if (!j || j.ok !== true) throw 0;
