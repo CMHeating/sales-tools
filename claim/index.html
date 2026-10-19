@@ -341,6 +341,9 @@ $('claimForm').addEventListener('submit', function(e){
         return;
       }
       if (!j || j.ok !== true) throw 0;
+      // show the new count on the coupon right away (the claim is already saved in the sheet)
+      if (typeof j.capacity === 'number') CONFIG.TOTAL = j.capacity;
+      if (typeof j.claimed === 'number') { LIVE.claimed = j.claimed; renderScarcity(); }
       finish();
     })
     .catch(function(){ btn.disabled = false; err.textContent = 'Something went wrong. Please call ' + phoneNow() + ' and mention this email.'; });
