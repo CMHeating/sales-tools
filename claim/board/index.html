@@ -53,7 +53,7 @@
 <div class="wrap">
   <header>
     <img src="https://cmheating.github.io/sales-tools/cm-logo-email.png" alt="CM Heating, Cooling, Plumbing, Electrical">
-    <div class="week">Team Claims Board<br><strong>Oct 19 &ndash; Oct 25</strong></div>
+    <div class="week">Team Claims Board<br><strong id="weekLabel">Oct 19 &ndash; Oct 25</strong></div>
   </header>
 
   <div class="hero">
@@ -84,9 +84,14 @@
 <script>
 /* The same Google Apps Script web app link the claim page uses. */
 var ENDPOINT = 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec';
+var OFFER_START = '2026-10-19';   // <-- change this Monday each week (same date as the claim page)
 var ORIGINAL_TOTAL = 2;   // the number announced in Monday's email; if capacity grows past it, it is shown struck through
 
 var $ = function(id){ return document.getElementById(id); };
+(function(){
+  var a = new Date(OFFER_START + 'T00:00:00Z'), b = new Date(a.getTime() + 6 * 864e5), o = { timeZone: 'UTC', month: 'short', day: 'numeric' };
+  $('weekLabel').textContent = a.toLocaleDateString('en-US', o) + ' \u2013 ' + b.toLocaleDateString('en-US', o);
+})();
 function fmtTime(iso){
   var d = new Date(iso); if (isNaN(d)) return iso;
   return d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
