@@ -172,8 +172,8 @@ var CONFIG = {
   OFFER_START: '2026-10-19',   // first day contracts can be signed (Monday)
   OFFER_END: '2026-10-25',     // last day (Sunday)
   DEADLINE: '2026-10-25T23:59:59-07:00',
-  FORM_ENDPOINT: '',      // your CRM / form URL (POST). Leave blank to test.
-  CLAIMS_ENDPOINT: ''     // CRM URL (GET) that returns {"claimed": N} = real Comfort Club coupons claimed this week.
+  FORM_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec',      // your CRM / form URL (POST). Leave blank to test.
+  CLAIMS_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec'     // CRM URL (GET) that returns {"claimed": N} = real Comfort Club coupons claimed this week.
                           // When set, the page uses this real count (CLAIMED is ignored). If it can't be reached, the page only states the limit.
 };
 var OFFERS = {
