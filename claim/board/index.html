@@ -97,8 +97,16 @@ function fmtTime(iso){
   return d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 function fmtDay(s){
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s || '';
-  return new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
+  var d = new Date(s);   // e.g. "Tue Oct 20 2026 00:00:00 GMT-0700 (Pacific Daylight Time)" from an older script version
+  return isNaN(d) ? s : d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric' });
+}
+function fmtWeek(s){
+  if (!s) return '';
+  var d = /^\d{2}\/\d{2}\/\d{4}$/.test(s) ? new Date(s.slice(6) + '-' + s.slice(0,2) + '-' + s.slice(3,5) + 'T00:00:00Z') : new Date(s);
+  if (isNaN(d)) return 'Week of ' + s;
+  return 'Week of ' + d.toLocaleDateString('en-US', { timeZone: /^\d{2}\//.test(s) ? 'UTC' : 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric' });
 }
 function cell(tr, text, cls){ var td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; tr.appendChild(td); return td; }
 
@@ -115,7 +123,7 @@ function render(j){
   var rows = (j.claims || []), body = $('rows'), by = {}; body.innerHTML = '';
   rows.forEach(function(r){
     var tr = document.createElement('tr');
-    cell(tr, fmtTime(r.claimedAt)); cell(tr, r.hca); cell(tr, fmtDay(r.signDate)); cell(tr, r.firstPaymentWeekOf ? 'Week of ' + r.firstPaymentWeekOf : '');
+    cell(tr, fmtTime(r.claimedAt)); cell(tr, r.hca); cell(tr, fmtDay(r.signDate)); cell(tr, fmtWeek(r.firstPaymentWeekOf));
     var st = document.createElement('td'), pill = document.createElement('span');
     pill.className = 'pill ' + (r.status === 'Claimed' ? 'claimed' : 'cancelled'); pill.textContent = r.status; st.appendChild(pill); tr.appendChild(st);
     body.appendChild(tr);
