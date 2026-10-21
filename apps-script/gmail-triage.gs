@@ -41,7 +41,8 @@ var LABELS = {
   Promotions: 'Triage/Newsletters & Promotions'
 };
 var WINDOW_QUERY = 'in:inbox newer_than:26h';
-var MAX_PER_RUN = 150;              // stays well inside the 6-minute limit
+var MAX_PER_RUN = 60;               // per hourly run; stays well inside Gmail's per-minute quota
+var PAUSE_MS = 400;                 // spacing between message fetches
 var PROMO_DOMAINS = ['nextdoor.com', 'tripadvisor.com', 'ground-news.com', 'bloomberg.com',
   'news.weather.com', 'jackery.com', 'redditmail.com'];
 
@@ -59,32 +60,56 @@ function triageRun() {
     var triageIds = Object.keys(ids).map(function (k) { return ids[k]; });
     var cfg = { account: account, mgmtFrom: (props.getProperty('TRIAGE_MGMT_FROM') || '').toLowerCase() };
 
+    // Work out what still needs a label from cheap ID lists (one list call per label),
+    // so already-triaged mail never costs a per-message fetch.
+    var inbox = listIds_(WINDOW_QUERY);
+    var labeled = {};
+    triageIds.forEach(function (lid) {
+      listIds_(WINDOW_QUERY, lid).forEach(function (id) { labeled[id] = true; });
+    });
+    // Newest first (Gmail's list order). Mail a rule was unsure about is remembered for
+    // 6 hours so it isn't re-fetched every hour and can't crowd out new mail.
+    var cache = CacheService.getScriptCache();
+    var pending = inbox.filter(function (id) { return !labeled[id]; });
+    var seen = pending.length ? cache.getAll(pending.map(function (id) { return 'u:' + id; })) : {};
+    pending = pending.filter(function (id) { return !seen['u:' + id]; });
+
     var counts = { Action: 0, FYI: 0, Automated: 0, Promotions: 0, unsure: 0, skipped: 0 };
     var actionSubjects = [];
-    var done = 0;
-    listIds_(WINDOW_QUERY).forEach(function (id) {
-      if (done >= MAX_PER_RUN) return;
-      var msg = Gmail.Users.Messages.get('me', id, {
-        format: 'metadata', metadataHeaders: ['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe']
-      });
+    var done = 0, stoppedForQuota = false;
+    for (var i = 0; i < pending.length && done < MAX_PER_RUN; i++) {
+      var id = pending[i];
+      var msg;
+      try {
+        msg = Gmail.Users.Messages.get('me', id, {
+          format: 'metadata', metadataHeaders: ['From', 'To', 'Cc', 'Subject', 'List-Unsubscribe']
+        });
+      } catch (e) {
+        if (/quota|rate limit|429/i.test(String(e))) { stoppedForQuota = true; break; }
+        throw e;
+      }
+      Utilities.sleep(PAUSE_MS);
       var before = msg.labelIds || [];
       var already = before.filter(function (l) { return triageIds.indexOf(l) >= 0; });
       if (before.indexOf('INBOX') < 0 || already.length) {
         if (already.length > 1) console.warn('Message ' + id + ' has ' + already.length + ' triage labels; left alone.');
         counts.skipped++;
-        return;
+        continue;
       }
       done++;
       var cat = classify_(msg, cfg);
-      if (!cat) { counts.unsure++; return; }
+      if (!cat) { counts.unsure++; if (apply) cache.put('u:' + id, '1', 21600); continue; }
       counts[cat]++;
       if (cat === 'Action') actionSubjects.push(clean_(header_(msg, 'subject')));
       if (apply) addTriageLabel_(id, ids[cat], before, triageIds);
-    });
+    }
 
-    console.log((apply ? 'APPLIED' : 'DRY RUN') + ' — Action ' + counts.Action + ', FYI ' + counts.FYI +
+    console.log((apply ? 'APPLIED' : 'DRY RUN') + ' — inbox in window ' + inbox.length +
+      ', already triaged ' + (inbox.length - pending.length) + ', checked ' + done +
+      ' — Action ' + counts.Action + ', FYI ' + counts.FYI +
       ', Automated ' + counts.Automated + ', Promotions ' + counts.Promotions +
-      ', left unlabeled (unsure) ' + counts.unsure + ', already triaged ' + counts.skipped +
+      ', left unlabeled (unsure) ' + counts.unsure +
+      (stoppedForQuota ? ' — STOPPED EARLY on Gmail quota; the next run picks up the rest.' : '') +
       (done >= MAX_PER_RUN ? ' — hit the per-run cap; the next run continues.' : ''));
     if (actionSubjects.length) console.log('Action Needed:\n- ' + actionSubjects.join('\n- '));
   } finally {
@@ -173,10 +198,12 @@ function resolveLabelIds_() {
   return ids;
 }
 
-function listIds_(q) {
+function listIds_(q, labelId) {
   var out = [], token = null;
   do {
-    var res = Gmail.Users.Messages.list('me', { q: q, maxResults: 500, pageToken: token });
+    var opts = { q: q, maxResults: 500, pageToken: token };
+    if (labelId) opts.labelIds = [labelId];
+    var res = Gmail.Users.Messages.list('me', opts);
     (res.messages || []).forEach(function (m) { out.push(m.id); });
     token = res.nextPageToken;
   } while (token);
