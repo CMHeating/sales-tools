@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Competitor Offers – Management View</title>
+<!--
+  COMPETITOR OFFERS: MANAGEMENT VIEW. Lives at /sales-tools/competitors/manage/ .
+  Everything the team has uploaded, with previews of the photos / estimates, filters, summary and a CSV export.
+  Locked with the manager passcode set in competitors/Code.gs (MANAGER_CODE). The passcode is asked once per browser tab.
+  Photos load through the Apps Script link (not publicly), so nothing is visible without the passcode.
+-->
+<style>
+  :root{--blue:#105CAB;--orange:#F5821F;--ink:#10233a;--muted:#5b6b7c;--line:#dde4ec;--bg:#eef2f6;--card:#fff;--red:#c0392b;--green:#1e7a46}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;padding:20px 16px}
+  .wrap{max-width:1100px;margin:0 auto;background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(16,35,58,.10)}
+  .nav{display:flex;flex-wrap:wrap;gap:8px 18px;padding:11px 22px;background:#f4f8fc;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+  .nav a{color:var(--blue);text-decoration:none;white-space:nowrap}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 22px;border-bottom:5px solid var(--orange)}
+  header img{display:block;height:52px;width:auto;max-width:45%}
+  .ttl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);text-align:right;line-height:1.4}
+  .ttl strong{display:block;color:var(--ink);font-size:16px;letter-spacing:.5px}
+  input,select,button{font:inherit}
+  input,select{padding:9px 11px;border:2px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:14px}
+  input:focus,select:focus,button:focus-visible{outline:3px solid var(--orange);outline-offset:1px}
+  .btn{border:0;border-radius:9px;background:var(--orange);color:#fff;font-weight:800;padding:10px 18px;cursor:pointer}
+  .btn.alt{background:#fff;color:var(--blue);border:2px solid var(--blue)}
+  .gate{padding:46px 22px;text-align:center}
+  .gate h2{margin:0 0 6px}
+  .gate p{color:var(--muted);margin:0 0 16px}
+  .gate form{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .gate input{width:240px}
+  .err{color:var(--red);font-weight:700;font-size:13px;margin-top:10px;min-height:18px}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px 22px 0}
+  @media(max-width:720px){.tiles{grid-template-columns:1fr 1fr}}
+  .tile{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#f9fbfd}
+  .tile b{display:block;font-size:26px;line-height:1.1;color:var(--blue)}
+  .tile span{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+  .panels{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:12px;padding:14px 22px 0}
+  @media(max-width:860px){.panels{grid-template-columns:1fr}}
+  .panel{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .panel h3{margin:0 0 8px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue)}
+  .bar{display:flex;align-items:center;gap:8px;font-size:13px;margin:5px 0;cursor:pointer}
+  .bar:hover .nm{text-decoration:underline}
+  .bar .nm{flex:0 0 42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar .tr{flex:1;background:#eef2f6;border-radius:6px;height:10px;overflow:hidden}
+  .bar .fl{display:block;height:100%;background:var(--blue)}
+  .bar .n{flex:0 0 26px;text-align:right;font-weight:800}
+  .ideas{margin:0;padding-left:18px;font-size:13px}
+  .ideas li{margin:5px 0;overflow-wrap:anywhere}
+  .ideas small{color:var(--muted)}
+
+  .tools{display:flex;flex-wrap:wrap;gap:8px;padding:16px 22px 0;align-items:center}
+  .tools input[type=search]{flex:1;min-width:180px}
+  .tools label{font-size:13px;display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:700}
+  .seg{display:inline-flex;border:2px solid var(--blue);border-radius:9px;overflow:hidden}
+  .seg button{border:0;background:#fff;color:var(--blue);font-weight:800;padding:8px 14px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+  .count{padding:10px 22px 0;color:var(--muted);font-size:13px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;padding:12px 22px 22px}
+  .offer{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff;break-inside:avoid}
+  .offer h3{margin:0 0 2px;font-size:18px}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .tagc{display:inline-block;background:#eef5fc;color:var(--blue);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;margin-right:6px}
+  .offer p{margin:6px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .kv{font-size:13px;margin:3px 0;overflow-wrap:anywhere}
+  .kv span{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:1px;margin-right:6px}
+  .help{margin-top:8px;padding:8px 12px;border-left:4px solid var(--orange);background:#fff7ef;font-size:14px;border-radius:0 8px 8px 0;overflow-wrap:anywhere}
+  .files{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .file{display:block;width:104px;border:1px solid var(--line);border-radius:8px;overflow:hidden;text-decoration:none;color:var(--ink);background:#f4f8fc}
+  .file img{display:block;width:104px;height:80px;object-fit:cover;background:#fff}
+  .file .ph{display:flex;align-items:center;justify-content:center;width:104px;height:80px;font-weight:800;color:var(--red);font-size:18px}
+  .file small{display:block;padding:3px 6px;font-size:11px;color:var(--blue);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .tablewrap{overflow-x:auto;padding:12px 22px 22px}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+  th{text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+  td a{color:var(--blue);font-weight:700;margin-right:6px}
+  .empty{padding:34px 22px;text-align:center;color:var(--muted)}
+  footer{background:var(--blue);color:#dbe8f6;text-align:center;font-size:12px;padding:14px}
+  @media print{body{background:#fff;padding:0}.nav,.tools,.gate,.btn,.seg{display:none!important}.wrap{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" aria-label="Site links">
+    <a href="../../">&larr; HCA Tools</a>
+    <a href="../">Add an offer</a>
+  </nav>
+  <header>
+    <img src="../../cm-logo-email.png" alt="CM Heating, Cooling, Plumbing, Electrical">
+    <div class="ttl">Management view<strong>Competitor Offers</strong></div>
+  </header>
+
+  <section class="gate" id="gate">
+    <h2>Management passcode</h2>
+    <p>This page shows everything the team has uploaded, including photos and estimates.</p>
+    <form id="gateForm"><input id="code" type="password" autocomplete="current-password" placeholder="Passcode" aria-label="Passcode"><button class="btn" type="submit">Open</button></form>
+    <div class="err" id="gateErr" role="alert"></div>
+  </section>
+
+  <main id="main" hidden>
+    <div class="tiles">
+      <div class="tile"><b id="tTotal">0</b><span>Offers logged</span></div>
+      <div class="tile"><b id="tWeek">0</b><span>Last 7 days</span></div>
+      <div class="tile"><b id="tComp">0</b><span>Competitors</span></div>
+      <div class="tile"><b id="tFiles">0</b><span>Offers with files</span></div>
+    </div>
+    <div class="panels">
+      <div class="panel"><h3>Top competitors</h3><div id="pComp"></div></div>
+      <div class="panel"><h3>Types of offer</h3><div id="pCat"></div></div>
+      <div class="panel"><h3>What would help us compete</h3><ul class="ideas" id="pIdeas"></ul></div>
+    </div>
+
+    <div class="tools">
+      <input type="search" id="q" placeholder="Search offers, prices, notes..." aria-label="Search">
+      <select id="fComp" aria-label="Competitor"><option value="">All competitors</option></select>
+      <select id="fCat" aria-label="Type"><option value="">All types</option></select>
+      <select id="fHca" aria-label="Advisor"><option value="">All advisors</option></select>
+      <select id="fDays" aria-label="Period"><option value="0">All time</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select>
+      <label><input type="checkbox" id="fFiles"> Has files</label>
+      <span class="seg" role="group" aria-label="View"><button type="button" id="vCards" aria-pressed="true">Cards</button><button type="button" id="vTable" aria-pressed="false">Table</button></span>
+      <button class="btn alt" type="button" id="csv">Export CSV</button>
+      <button class="btn alt" type="button" id="print">Print</button>
+      <button class="btn alt" type="button" id="refresh">Refresh</button>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="cards" id="cards"></div>
+    <div class="tablewrap" id="tablewrap" hidden>
+      <table><thead><tr><th>Date</th><th>Competitor</th><th>Type</th><th>Offer</th><th>Price / payment</th><th>System</th><th>Ends</th><th>Customer</th><th>Advisor</th><th>To compete</th><th>Files</th></tr></thead><tbody id="rows"></tbody></table>
+    </div>
+    <div class="empty" id="empty" hidden>No offers match.</div>
+    <div class="empty" id="loading">Loading&hellip; (photos can take a few seconds the first time)</div>
+    <div class="empty" id="loadErr" hidden></div>
+    <div class="empty" id="moreRow" hidden><button class="btn alt" type="button" id="more">Load older offers</button></div>
+  </main>
+  <footer>CM Heating &bull; Internal. Do not share outside the company.</footer>
+</div>
+
+<script>
+var ENDPOINT = 'https://script.google.com/macros/s/AKfycbyiaSUQeaoDFj8uMCRBddr7N-seL-M4DmQUj9nykqQv1JZdlbo6qsPHxz5j4IXTcQtT/exec';
+var $ = function(id){ return document.getElementById(id); };
+var all = [], code = '', limit = 60, view = 'cards';
+
+function store(k, v){ try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} }
+function norm(s){ return String(s || '').trim().toLowerCase(); }
+function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function safeUrl(u){ return /^https:\/\/(drive|docs)\.google\.com\//.test(u || '') ? u : '#'; }
+function safeImg(u){ return /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(u || '') ? u : ''; }
+function fmtDate(iso){ var d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric' }); }
+function fmtDay(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s || '') ? new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : (s || ''); }
+function files(o){ return o.files && o.files.length ? o.files : (o.photos || []).map(function(u){ return { url: u, name: '', type: '', thumb: '' }; }); }
+
+/* ---------- load ---------- */
+function load(){
+  $('loading').hidden = false; $('loadErr').hidden = true;
+  fetch(ENDPOINT + '?action=manage&limit=' + limit + '&code=' + encodeURIComponent(code), { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){
+      $('loading').hidden = true;
+      if (!j || j.ok === false) {
+        if (j && (j.error === 'bad_code' || j.error === 'code_not_set')) { lock(j.error === 'bad_code' ? 'That passcode is not right.' : 'The management view is not set up yet. Set MANAGER_CODE in the script first.'); return; }
+        throw 0;
+      }
+      store('cmMgrCode', code); $('gate').hidden = true; $('main').hidden = false;
+      all = j.offers || []; $('moreRow').hidden = all.length < limit || limit >= 150; build();
+    })
+    .catch(function(){ $('loading').hidden = true; if ($('main').hidden) { lock('Could not load. Check your connection and try again.'); } else { $('loadErr').hidden = false; $('loadErr').textContent = 'Couldn’t load the offers. Refresh in a minute.'; } });
+}
+function lock(msg){ store('cmMgrCode', null); $('main').hidden = true; $('gate').hidden = false; $('gateErr').textContent = msg || ''; }
+$('gateForm').addEventListener('submit', function(e){ e.preventDefault(); code = $('code').value.trim(); if (!code) return; $('gateErr').textContent = ''; load(); });
+$('refresh').onclick = load;
+$('more').onclick = function(){ limit = Math.min(150, limit + 45); load(); };
+
+/* ---------- summary + filters ---------- */
+function counts(list, key){ var c = {}, nm = {}; list.forEach(function(o){ var k = norm(o[key]); if (!k) return; c[k] = (c[k] || 0) + 1; if (!nm[k]) nm[k] = o[key]; }); return Object.keys(c).sort(function(a, b){ return c[b] - c[a] || (nm[a] < nm[b] ? -1 : 1); }).map(function(k){ return { k: k, name: nm[k], n: c[k] }; }); }
+function bars(box, rows, onPick){
+  box.innerHTML = ''; var max = rows.length ? rows[0].n : 1;
+  if (!rows.length) box.appendChild(el('div', '', 'Nothing yet')).style.color = '#5b6b7c';
+  rows.slice(0, 7).forEach(function(r){
+    var b = el('div', 'bar'); b.appendChild(el('span', 'nm', r.name));
+    var tr = el('span', 'tr'), fl = el('span', 'fl'); fl.style.width = Math.max(6, Math.round(r.n / max * 100)) + '%'; tr.appendChild(fl); b.appendChild(tr); b.appendChild(el('span', 'n', r.n));
+    b.onclick = function(){ onPick(r.name); }; box.appendChild(b);
+  });
+}
+function fillSelect(sel, rows, first){
+  var cur = sel.value; sel.innerHTML = ''; var o = el('option', '', first); o.value = ''; sel.appendChild(o);
+  rows.forEach(function(r){ var x = el('option', '', r.name); x.value = r.name; sel.appendChild(x); });
+  if (rows.some(function(r){ return r.name === cur; })) sel.value = cur;
+}
+function build(){
+  var week = Date.now() - 7 * 864e5;
+  $('tTotal').textContent = all.length;
+  $('tWeek').textContent = all.filter(function(o){ return new Date(o.at).getTime() >= week; }).length;
+  var comps = counts(all, 'competitor'), cats = counts(all, 'category'), hcas = counts(all, 'hca');
+  $('tComp').textContent = comps.length;
+  $('tFiles').textContent = all.filter(function(o){ return files(o).length; }).length;
+  bars($('pComp'), comps, function(n){ $('fComp').value = n; render(); });
+  bars($('pCat'), cats, function(n){ $('fCat').value = n; render(); });
+  var ul = $('pIdeas'); ul.innerHTML = '';
+  var ideas = all.filter(function(o){ return o.help; }).slice(0, 8);
+  if (!ideas.length) ul.appendChild(el('li', '', 'No ideas logged yet'));
+  ideas.forEach(function(o){ var li = el('li', '', o.help + ' '); li.appendChild(el('small', '', '(' + o.competitor + ', ' + o.hca + ')')); ul.appendChild(li); });
+  fillSelect($('fComp'), comps, 'All competitors'); fillSelect($('fCat'), cats, 'All types'); fillSelect($('fHca'), hcas, 'All advisors');
+  render();
+}
+function filtered(){
+  var q = norm($('q').value), comp = $('fComp').value, cat = $('fCat').value, hca = $('fHca').value, days = parseInt($('fDays').value, 10) || 0, needF = $('fFiles').checked;
+  var since = days ? Date.now() - days * 864e5 : 0;
+  return all.filter(function(o){
+    if (comp && o.competitor !== comp) return false;
+    if (cat && o.category !== cat) return false;
+    if (hca && o.hca !== hca) return false;
+    if (since && new Date(o.at).getTime() < since) return false;
+    if (needF && !files(o).length) return false;
+    if (q && norm([o.competitor, o.offer, o.price, o.job, o.category, o.source, o.outcome, o.help, o.hca].join(' ')).indexOf(q) < 0) return false;
+    return true;
+  });
+}
+
+/* ---------- render ---------- */
+function fileTile(f, i){
+  var a = el('a', 'file'); a.href = safeUrl(f.url); a.target = '_blank'; a.rel = 'noopener'; a.title = f.name || 'Open file';
+  var img = safeImg(f.thumb);
+  if (img) { var im = el('img'); im.src = img; im.alt = f.name || ('File ' + (i + 1)); im.loading = 'lazy'; a.appendChild(im); }
+  else a.appendChild(el('div', 'ph', /pdf/.test(f.type) || /\.pdf$/i.test(f.name) ? 'PDF' : 'File'));
+  a.appendChild(el('small', '', 'Open ' + (i + 1) + ' ↗')); return a;
+}
+function kv(parent, k, v){ if (!v) return; var d = el('div', 'kv'); d.appendChild(el('span', '', k)); d.appendChild(document.createTextNode(v)); parent.appendChild(d); }
+function render(){
+  var rows = filtered();
+  $('count').textContent = 'Showing ' + rows.length + ' of ' + all.length + ' offers';
+  $('empty').hidden = rows.length !== 0; $('cards').hidden = view !== 'cards'; $('tablewrap').hidden = view !== 'table';
+  var cards = $('cards'); cards.innerHTML = ''; var body = $('rows'); body.innerHTML = '';
+  rows.forEach(function(o){
+    var fs = files(o);
+    if (view === 'cards') {
+      var c = el('article', 'offer'); c.appendChild(el('h3', '', o.competitor));
+      var m = el('div', 'meta'); m.appendChild(el('span', 'tagc', o.category)); m.appendChild(document.createTextNode(fmtDate(o.at) + ' • ' + o.hca + (o.source ? ' • ' + o.source : ''))); c.appendChild(m);
+      c.appendChild(el('p', '', o.offer));
+      kv(c, 'Price / payment', o.price); kv(c, 'System', o.job); kv(c, 'Ends', fmtDay(o.expires)); kv(c, 'Customer', o.outcome);
+      if (o.help) { var h = el('div', 'help'); h.appendChild(el('b', '', 'To compete: ')); h.appendChild(document.createTextNode(o.help)); c.appendChild(h); }
+      if (fs.length) { var fw = el('div', 'files'); fs.forEach(function(f, i){ fw.appendChild(fileTile(f, i)); }); c.appendChild(fw); }
+      cards.appendChild(c);
+    } else {
+      var tr = el('tr');
+      [fmtDate(o.at), o.competitor, o.category, o.offer, o.price, o.job, fmtDay(o.expires), o.outcome, o.hca, o.help].forEach(function(t){ tr.appendChild(el('td', '', t)); });
+      var td = el('td'); fs.forEach(function(f, i){ var a = el('a', '', 'Open ' + (i + 1)); a.href = safeUrl(f.url); a.target = '_blank'; a.rel = 'noopener'; td.appendChild(a); }); tr.appendChild(td);
+      body.appendChild(tr);
+    }
+  });
+}
+['q', 'fComp', 'fCat', 'fHca', 'fDays', 'fFiles'].forEach(function(id){ $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
+$('vCards').onclick = function(){ view = 'cards'; $('vCards').setAttribute('aria-pressed', 'true'); $('vTable').setAttribute('aria-pressed', 'false'); render(); };
+$('vTable').onclick = function(){ view = 'table'; $('vTable').setAttribute('aria-pressed', 'true'); $('vCards').setAttribute('aria-pressed', 'false'); render(); };
+$('print').onclick = function(){ window.print(); };
+
+/* ---------- CSV export of what is currently shown ---------- */
+$('csv').onclick = function(){
+  function q(s){ s = String(s == null ? '' : s); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }
+  var head = ['Date', 'Competitor', 'Type', 'Where seen', 'Offer', 'Price / payment', 'System / job', 'Ends', 'Customer outcome', 'Advisor', 'What would help us compete', 'File links'];
+  var lines = [head.map(q).join(',')];
+  filtered().forEach(function(o){ lines.push([fmtDate(o.at), o.competitor, o.category, o.source, o.offer, o.price, o.job, fmtDay(o.expires), o.outcome, o.hca, o.help, (o.photos || []).join(' ')].map(q).join(',')); });
+  var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), a = el('a');
+  a.href = URL.createObjectURL(blob); a.download = 'competitor-offers.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+};
+
+var saved = store('cmMgrCode'); if (saved) { code = saved; load(); }
+</script>
+</body>
+</html>
