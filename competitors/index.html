@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Competitor Offers – HCA Tools</title>
+<!--
+  COMPETITOR OFFERS (HCA Tools). Lives at /sales-tools/competitors/ .
+  Advisors log what the competition is offering (flyer, quote, ad, email, text) with photos, so we can see where to be more competitive.
+  Submissions go to the "Competitor Offers" Google Sheet through its Apps Script link (see Code.gs).
+  Do NOT enter customer names or phone numbers here; the page asks for the offer only.
+  SETTINGS: ENDPOINT = the Apps Script Web app URL (ends in /exec). Until it is set, the page says submissions are not open yet.
+-->
+<style>
+  :root{--blue:#105CAB;--blue-dk:#0b4482;--orange:#F5821F;--orange-dk:#d96d10;--ink:#10233a;--muted:#5b6b7c;--line:#dde4ec;--bg:#eef2f6;--card:#fff;--red:#c0392b;--green:#1e7a46}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.45;
+       padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .wrap{max-width:760px;margin:0 auto;background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(16,35,58,.10)}
+  .nav{display:flex;flex-wrap:wrap;gap:8px 18px;padding:11px 22px;background:#f4f8fc;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+  .nav a{color:var(--blue);text-decoration:none;white-space:nowrap}
+  .nav a:hover{text-decoration:underline}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px;border-bottom:5px solid var(--orange)}
+  header img{display:block;height:56px;width:auto;max-width:50%}
+  .ttl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);text-align:right;line-height:1.4}
+  .ttl strong{display:block;color:var(--ink);font-size:15px;letter-spacing:.5px}
+  .tabs{display:flex;gap:8px;padding:18px 22px 0}
+  .tabs button{flex:1;font:inherit;font-weight:800;font-size:15px;padding:11px 8px;border:2px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;cursor:pointer}
+  .tabs button[aria-pressed="true"]{border-color:var(--blue);background:#eef5fc;color:var(--blue)}
+  .intro{padding:16px 22px 0;color:var(--muted);font-size:14px}
+  .intro b{color:var(--ink)}
+  form{padding:18px 22px 24px}
+  label{display:block;font-weight:700;font-size:14px;margin:0 0 6px}
+  .opt{font-weight:400;color:var(--muted)}
+  .field{margin-bottom:16px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  select,input,textarea{width:100%;font:inherit;font-size:16px;padding:12px 13px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+  textarea{min-height:96px;resize:vertical}
+  select:focus,input:focus,textarea:focus,button:focus-visible{outline:3px solid var(--orange);outline-offset:1px}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px}
+  .drop{border:2px dashed var(--blue);border-radius:12px;background:#f4f8fc;padding:16px;text-align:center}
+  .drop input{display:none}
+  .drop label.pick{display:inline-block;margin:0;background:var(--blue);color:#fff;font-weight:800;padding:11px 20px;border-radius:8px;cursor:pointer}
+  .thumbs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px}
+  .thumb{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(16,35,58,.8);color:#fff;font-size:15px;line-height:24px;padding:0;cursor:pointer}
+  .go{width:100%;font:inherit;font-weight:800;font-size:18px;padding:15px;border:0;border-radius:10px;background:var(--orange);color:#fff;cursor:pointer}
+  .go:hover{background:var(--orange-dk)}
+  .go[disabled]{opacity:.6;cursor:not-allowed}
+  .err{color:var(--red);font-size:13px;font-weight:700;min-height:18px;margin:8px 0 0}
+  .ok{padding:34px 24px 38px;text-align:center}
+  .ok .check{width:64px;height:64px;border-radius:50%;background:var(--green);color:#fff;font-size:34px;line-height:64px;margin:0 auto 14px}
+  .ok h2{margin:0 0 8px;font-size:24px}
+  .ok p{margin:6px auto;max-width:420px;color:var(--muted)}
+  .ok .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+  .ok button{font:inherit;font-weight:800;padding:12px 20px;border-radius:10px;border:2px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer}
+  .ok button.main{background:var(--blue);color:#fff}
+  .closed{margin:22px;padding:16px;border:2px solid var(--orange);border-radius:12px;background:#fff7ef;font-weight:700;text-align:center}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;padding:16px 22px 0}
+  .filters select{width:auto;flex:1;min-width:150px;padding:10px 12px;font-size:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:14px 22px 0}
+  .chip{border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:13px;background:#fff;cursor:pointer;font-family:inherit}
+  .chip b{color:var(--blue)}
+  .chip[aria-pressed="true"]{border-color:var(--blue);background:#eef5fc}
+  .feed{padding:14px 22px 22px;display:grid;gap:12px}
+  .offer{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
+  .offer h3{margin:0 0 2px;font-size:18px;color:var(--ink)}
+  .meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .tagc{display:inline-block;background:#eef5fc;color:var(--blue);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;margin-right:6px}
+  .offer p{margin:6px 0;font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .kv{font-size:13px;color:var(--ink);margin:4px 0}
+  .kv span{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:1px;margin-right:6px}
+  .help{margin-top:8px;padding:8px 12px;border-left:4px solid var(--orange);background:#fff7ef;font-size:14px;border-radius:0 8px 8px 0;overflow-wrap:anywhere}
+  .photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .photos a{font-size:13px;font-weight:700;color:var(--blue);text-decoration:none;border:1px solid var(--blue);border-radius:8px;padding:4px 10px}
+  .empty{padding:30px 22px;text-align:center;color:var(--muted)}
+  .note{padding:0 22px 22px;font-size:12px;color:var(--muted)}
+  footer{background:var(--blue);color:#dbe8f6;text-align:center;font-size:12px;padding:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav" aria-label="Site links">
+    <a href="../">&larr; HCA Tools</a>
+    <a href="../claim/board/">Comfort Club Claims Board</a>
+  </nav>
+  <header>
+    <img src="../cm-logo-email.png" alt="CM Heating, Cooling, Plumbing, Electrical">
+    <div class="ttl">HCA Tools<strong>Competitor Offers</strong></div>
+  </header>
+
+  <div class="tabs">
+    <button type="button" id="tabSubmit" aria-pressed="true">Add an offer</button>
+    <button type="button" id="tabFeed" aria-pressed="false">What we&rsquo;re seeing <span id="feedCount"></span></button>
+  </div>
+
+  <!-- ===== Add an offer ===== -->
+  <section id="submitPane">
+    <div class="intro"><b>Saw a competitor&rsquo;s offer? Log it.</b> A flyer, an ad, a quote a customer showed you, an email or a text. Add a photo or screenshot if you have one. <b>Please don&rsquo;t enter customer names or phone numbers.</b></div>
+    <div class="closed" id="closed" hidden>Submissions aren&rsquo;t open yet. Check back soon.</div>
+    <form id="form" novalidate>
+      <div class="two" style="margin-top:16px">
+        <div class="field"><label for="hca">Your name</label>
+          <select id="hca" required><option value="" selected disabled>Select your name&hellip;</option></select></div>
+        <div class="field"><label for="competitor">Competitor</label>
+          <input id="competitor" list="compList" autocomplete="off" placeholder="Company name" required>
+          <datalist id="compList"></datalist></div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="source">Where did you see it?</label>
+          <select id="source">
+            <option>Customer showed me a quote</option><option>Flyer or mailer</option><option>Website or online ad</option>
+            <option>Social media</option><option>Email or text</option><option>Truck, sign or yard sign</option><option>Other</option>
+          </select></div>
+        <div class="field"><label for="category">Type of offer</label>
+          <select id="category">
+            <option>Financing</option><option>Price or discount</option><option>Free upgrade or extra</option>
+            <option>Rebate or tax-credit help</option><option>Warranty</option><option>Membership or maintenance plan</option>
+            <option>Install speed or scheduling</option><option>Other</option>
+          </select></div>
+      </div>
+      <div class="field"><label for="offer">What is the offer?</label>
+        <textarea id="offer" maxlength="1500" placeholder="Example: 0% for 24 months on any heat pump, $500 off a full system, free thermostat..." required></textarea></div>
+      <div class="two">
+        <div class="field"><label for="price">Their price or monthly payment <span class="opt">(optional)</span></label>
+          <input id="price" maxlength="200" placeholder="Example: $12,900, or $149 a month"></div>
+        <div class="field"><label for="job">System or job <span class="opt">(optional)</span></label>
+          <select id="job"><option value="">Not sure</option><option>Furnace</option><option>Heat pump</option><option>Heat pump + air handler / full system</option>
+            <option>Air conditioner</option><option>Ductless mini-split</option><option>Water heater</option><option>Plumbing</option><option>Electrical</option><option>Other</option></select></div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="expires">Offer ends <span class="opt">(optional)</span></label><input id="expires" type="date"></div>
+        <div class="field"><label for="outcome">What did the customer do? <span class="opt">(optional)</span></label>
+          <select id="outcome"><option value="">Not sure yet</option><option>Still deciding</option><option>Chose us</option><option>Chose the competitor</option><option>Just a heads-up, not a live job</option></select></div>
+      </div>
+      <div class="field"><label for="help">What would help us compete? <span class="opt">(optional)</span></label>
+        <textarea id="help" maxlength="1000" placeholder="Example: a longer no-interest period, a free install-day thermostat..."></textarea></div>
+
+      <div class="field">
+        <label>Photos or screenshots <span class="opt">(optional, up to 3)</span></label>
+        <div class="drop">
+          <label class="pick" for="photos">Choose photos</label>
+          <input id="photos" type="file" accept="image/*" multiple>
+          <div class="hint">Photos are shrunk automatically so they upload fast.</div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+      </div>
+      <button class="go" id="send" type="submit">Submit offer</button>
+      <p class="err" id="err" role="alert"></p>
+    </form>
+    <div class="ok" id="ok" hidden>
+      <div class="check">&#10003;</div>
+      <h2>Thanks, offer logged</h2>
+      <p id="okMsg">The team can see it now.</p>
+      <div class="row"><button type="button" class="main" id="again">Add another</button><button type="button" id="seeFeed">See all offers</button></div>
+    </div>
+  </section>
+
+  <!-- ===== What we're seeing ===== -->
+  <section id="feedPane" hidden>
+    <div class="intro">Every offer the team has logged, newest first. Use it to spot patterns: who is offering what, and where we can do better.</div>
+    <div class="filters">
+      <select id="fComp" aria-label="Filter by competitor"><option value="">All competitors</option></select>
+      <select id="fCat" aria-label="Filter by type"><option value="">All types</option></select>
+    </div>
+    <div class="chips" id="chips" aria-label="Offers by competitor"></div>
+    <div class="empty" id="loading">Loading&hellip;</div>
+    <div class="empty" id="feedErr" hidden>Couldn&rsquo;t load the offers. Refresh in a minute.</div>
+    <div class="feed" id="feed"></div>
+    <div class="empty" id="feedEmpty" hidden>No offers logged yet. Be the first.</div>
+    <div class="note">Internal: please don&rsquo;t share outside CM Heating. Photos open when you are signed in to your CM Heating Google account.</div>
+  </section>
+  <footer>CM Heating &bull; (360) 941-5613 &bull; cmheating.com</footer>
+</div>
+
+<script>
+var CONFIG = {
+  ENDPOINT: 'https://script.google.com/a/macros/cmheating.com/s/AKfycbyiaSUQeaoDFj8uMCRBddr7N-seL-M4DmQUj9nykqQv1JZdlbo6qsPHxz5j4IXTcQtT/exec',   // Apps Script Web app URL (competitors/Code.gs)
+  HCAS: ['Adam Weberg', 'Amber Maddalena', 'Chester Granard', 'Davis Diosdado', 'Javierre Milo', 'Joseph Ruble', 'Kyle McAlister', 'Samir Khoury', 'Trevor Bohm', 'Geoff Simons'],
+  MAX_PHOTOS: 3, MAX_SIDE: 1600
+};
+var $ = function(id){ return document.getElementById(id); };
+var isOpen = !!CONFIG.ENDPOINT || location.protocol === 'file:' || /[?&]test=1\b/.test(location.search);
+var photos = [];   // {name, type, data(base64), url}
+var all = [];
+
+function store(k, v){ try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} }
+
+/* ---------- tabs ---------- */
+function show(which){
+  var feed = which === 'feed';
+  $('submitPane').hidden = feed; $('feedPane').hidden = !feed;
+  $('tabSubmit').setAttribute('aria-pressed', String(!feed)); $('tabFeed').setAttribute('aria-pressed', String(feed));
+  if (feed) loadFeed();
+}
+$('tabSubmit').onclick = function(){ show('submit'); };
+$('tabFeed').onclick = function(){ show('feed'); };
+$('seeFeed').onclick = function(){ show('feed'); };
+
+/* ---------- form ---------- */
+CONFIG.HCAS.forEach(function(n){ var o = document.createElement('option'); o.textContent = n; o.value = n; $('hca').appendChild(o); });
+var savedHca = store('cmCompHca'); if (savedHca && CONFIG.HCAS.indexOf(savedHca) >= 0) $('hca').value = savedHca;
+$('closed').hidden = isOpen;
+
+function readFile(f){
+  return new Promise(function(res, rej){
+    var fr = new FileReader();
+    fr.onload = function(){ res(fr.result); }; fr.onerror = rej; fr.readAsDataURL(f);
+  });
+}
+function shrink(dataUrl){
+  return new Promise(function(res){
+    var im = new Image();
+    im.onload = function(){
+      var s = Math.min(1, CONFIG.MAX_SIDE / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+      var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', 0.8));
+    };
+    im.onerror = function(){ res(null); };
+    im.src = dataUrl;
+  });
+}
+function drawThumbs(){
+  var box = $('thumbs'); box.innerHTML = '';
+  photos.forEach(function(p, i){
+    var d = document.createElement('div'); d.className = 'thumb';
+    var im = document.createElement('img'); im.src = p.url; im.alt = 'Photo ' + (i + 1);
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove photo ' + (i + 1));
+    x.onclick = function(){ photos.splice(i, 1); drawThumbs(); };
+    d.appendChild(im); d.appendChild(x); box.appendChild(d);
+  });
+}
+$('photos').addEventListener('change', function(){
+  var files = Array.prototype.slice.call(this.files || []), input = this;
+  var room = CONFIG.MAX_PHOTOS - photos.length;
+  if (files.length > room) $('err').textContent = 'Up to ' + CONFIG.MAX_PHOTOS + ' photos. Extra ones were skipped.';
+  files = files.slice(0, Math.max(0, room));
+  Promise.all(files.map(function(f){ return readFile(f).then(shrink); })).then(function(list){
+    list.forEach(function(u, i){
+      if (!u) return;
+      photos.push({ name: (files[i].name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', type: 'image/jpeg', data: u.split(',')[1], url: u });
+    });
+    input.value = ''; drawThumbs();
+  });
+});
+
+$('form').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var err = $('err'); err.textContent = '';
+  var d = {
+    action: 'submit', hca: $('hca').value, competitor: $('competitor').value.trim(), source: $('source').value, category: $('category').value,
+    offer: $('offer').value.trim(), price: $('price').value.trim(), job: $('job').value, expires: $('expires').value,
+    outcome: $('outcome').value, help: $('help').value.trim(),
+    photos: photos.map(function(p){ return { name: p.name, type: p.type, data: p.data }; })
+  };
+  if (!d.hca) { err.textContent = 'Please choose your name.'; $('hca').focus(); return; }
+  if (!d.competitor) { err.textContent = 'Please enter the competitor.'; $('competitor').focus(); return; }
+  if (!d.offer) { err.textContent = 'Please describe the offer.'; $('offer').focus(); return; }
+  if (!isOpen) { err.textContent = 'Submissions aren’t open yet.'; return; }
+  var btn = $('send'); btn.disabled = true; btn.textContent = 'Sending…';
+  store('cmCompHca', d.hca);
+  function done(n){
+    $('form').hidden = true; $('ok').hidden = false;
+    $('okMsg').textContent = n ? 'Your offer and ' + n + (n === 1 ? ' photo are' : ' photos are') + ' saved. The team can see it now.' : 'The team can see it now.';
+    all = []; // refresh the feed next time
+  }
+  if (!CONFIG.ENDPOINT) { done(photos.length); return; }   // local preview only: nothing is sent
+  fetch(CONFIG.ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      btn.disabled = false; btn.textContent = 'Submit offer';
+      if (j && j.ok) { done(j.photos || 0); return; }
+      err.textContent = j && j.error === 'bad_hca' ? 'Please choose your name from the list.' : j && j.error === 'missing_fields' ? 'Please fill in the competitor and the offer.' : 'Something went wrong. Please try again.';
+    })
+    .catch(function(){ btn.disabled = false; btn.textContent = 'Submit offer'; err.textContent = 'Something went wrong. Check your connection and try again.'; });
+});
+$('again').onclick = function(){
+  ['competitor', 'offer', 'price', 'expires', 'help'].forEach(function(id){ $(id).value = ''; });
+  $('job').value = ''; $('outcome').value = ''; photos = []; drawThumbs();
+  $('ok').hidden = true; $('form').hidden = false; $('err').textContent = '';
+};
+
+/* ---------- feed ---------- */
+function fmtWhen(iso){
+  var d = new Date(iso); if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtDay(s){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return s || '';
+  return new Date(s + 'T00:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+}
+function kv(parent, k, v){
+  if (!v) return;
+  var d = document.createElement('div'); d.className = 'kv';
+  var s = document.createElement('span'); s.textContent = k; d.appendChild(s); d.appendChild(document.createTextNode(v)); parent.appendChild(d);
+}
+function norm(s){ return String(s || '').trim().toLowerCase(); }
+
+function fillSelect(sel, values, firstLabel){
+  var cur = sel.value; sel.innerHTML = '';
+  var o = document.createElement('option'); o.value = ''; o.textContent = firstLabel; sel.appendChild(o);
+  values.forEach(function(v){ var x = document.createElement('option'); x.value = v; x.textContent = v; sel.appendChild(x); });
+  if (values.indexOf(cur) >= 0) sel.value = cur;
+}
+function render(){
+  var comp = $('fComp').value, cat = $('fCat').value;
+  var counts = {}, names = {}, cats = {};
+  all.forEach(function(o){ var k = norm(o.competitor); counts[k] = (counts[k] || 0) + 1; if (!names[k]) names[k] = o.competitor; cats[o.category] = 1; });
+  var compKeys = Object.keys(counts).sort(function(a, b){ return counts[b] - counts[a] || (names[a] < names[b] ? -1 : 1); });
+  fillSelect($('fComp'), compKeys.map(function(k){ return names[k]; }), 'All competitors');
+  fillSelect($('fCat'), Object.keys(cats).sort(), 'All types');
+  $('fComp').value = comp && names[norm(comp)] ? names[norm(comp)] : ''; $('fCat').value = cat && cats[cat] ? cat : '';
+  comp = $('fComp').value; cat = $('fCat').value;
+
+  var chips = $('chips'); chips.innerHTML = '';
+  compKeys.slice(0, 8).forEach(function(k){
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+    b.setAttribute('aria-pressed', String(norm(comp) === k));
+    var n = document.createElement('b'); n.textContent = counts[k]; b.appendChild(n); b.appendChild(document.createTextNode(' ' + names[k]));
+    b.onclick = function(){ $('fComp').value = norm(comp) === k ? '' : names[k]; render(); };
+    chips.appendChild(b);
+  });
+
+  var rows = all.filter(function(o){ return (!comp || norm(o.competitor) === norm(comp)) && (!cat || o.category === cat); });
+  var feed = $('feed'); feed.innerHTML = '';
+  rows.forEach(function(o){
+    var card = document.createElement('article'); card.className = 'offer';
+    var h = document.createElement('h3'); h.textContent = o.competitor; card.appendChild(h);
+    var m = document.createElement('div'); m.className = 'meta';
+    var t = document.createElement('span'); t.className = 'tagc'; t.textContent = o.category; m.appendChild(t);
+    m.appendChild(document.createTextNode(fmtWhen(o.at) + ' • logged by ' + o.hca + (o.source ? ' • ' + o.source : ''))); card.appendChild(m);
+    var p = document.createElement('p'); p.textContent = o.offer; card.appendChild(p);
+    kv(card, 'Price / payment', o.price); kv(card, 'System', o.job); kv(card, 'Ends', fmtDay(o.expires)); kv(card, 'Customer', o.outcome);
+    if (o.help) { var hp = document.createElement('div'); hp.className = 'help'; var hb = document.createElement('b'); hb.textContent = 'To compete: '; hp.appendChild(hb); hp.appendChild(document.createTextNode(o.help)); card.appendChild(hp); }
+    var links = (o.photos || []).filter(function(u){ return /^https:\/\/(drive|docs)\.google\.com\//.test(u); });
+    if (links.length) {
+      var ph = document.createElement('div'); ph.className = 'photos';
+      links.forEach(function(u, i){ var a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Photo ' + (i + 1); ph.appendChild(a); });
+      card.appendChild(ph);
+    }
+    feed.appendChild(card);
+  });
+  $('feedEmpty').hidden = rows.length !== 0;
+  $('feedCount').textContent = all.length ? '(' + all.length + ')' : '';
+}
+$('fComp').onchange = render; $('fCat').onchange = render;
+
+function loadFeed(){
+  if (!CONFIG.ENDPOINT) { $('loading').hidden = true; $('feedEmpty').hidden = false; return; }
+  $('loading').hidden = false; $('feedErr').hidden = true;
+  fetch(CONFIG.ENDPOINT + '?action=list', { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){ if (!j || j.ok === false) throw 0; all = j.offers || []; $('loading').hidden = true; render();
+      // competitor name suggestions for the form
+      var dl = $('compList'); dl.innerHTML = ''; var seen = {};
+      all.forEach(function(o){ var k = norm(o.competitor); if (!seen[k]) { seen[k] = 1; var op = document.createElement('option'); op.value = o.competitor; dl.appendChild(op); } }); })
+    .catch(function(){ $('loading').hidden = true; $('feedErr').hidden = false; });
+}
+if (CONFIG.ENDPOINT) {   // fetch quietly so the tab shows the count and the form suggests names
+  fetch(CONFIG.ENDPOINT + '?action=list', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    if (j && j.ok) { all = j.offers || []; $('feedCount').textContent = all.length ? '(' + all.length + ')' : '';
+      var dl = $('compList'), seen = {}; all.forEach(function(o){ var k = norm(o.competitor); if (!seen[k]) { seen[k] = 1; var op = document.createElement('option'); op.value = o.competitor; dl.appendChild(op); } }); }
+  }).catch(function(){});
+}
+if (location.hash === '#offers') show('feed');
+</script>
+</body>
+</html>
