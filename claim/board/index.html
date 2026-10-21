@@ -18,6 +18,9 @@
   body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.45;
        padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .wrap{max-width:720px;margin:0 auto;background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(16,35,58,.10)}
+  .nav{display:flex;flex-wrap:wrap;gap:8px 18px;padding:11px 22px;background:#f4f8fc;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+  .nav a{color:var(--blue);text-decoration:none;white-space:nowrap}
+  .nav a:hover{text-decoration:underline}
   header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px;border-bottom:5px solid var(--orange)}
   header img{display:block;height:56px;width:auto;max-width:55%}
   .week{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);text-align:right;line-height:1.4}
@@ -51,6 +54,11 @@
 </head>
 <body>
 <div class="wrap">
+  <nav class="nav" aria-label="Site links">
+    <a href="../../">&larr; HCA Tools</a>
+    <a href="../">Claim a coupon</a>
+    <a href="../../follow-up-tracker.html">My Follow-Up Tracker</a>
+  </nav>
   <header>
     <img src="https://cmheating.github.io/sales-tools/cm-logo-email.png" alt="CM Heating, Cooling, Plumbing, Electrical">
     <div class="week">Team Claims Board<br><strong id="weekLabel">Oct 19 &ndash; Oct 25</strong></div>
