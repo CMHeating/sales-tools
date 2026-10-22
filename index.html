@@ -4,70 +4,367 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-title" content="HCA Tools" />
+<meta name="theme-color" content="#0a1628" />
+<meta name="color-scheme" content="dark" />
 <title>HCA Tools | CM Heating</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
 <style>
-/* CRM dialect — matches REFERENCE-crm-style.css tokens (slate + navy accent) */
-:root{--bg:#f4f4f2;--surface:#fff;--ink:#16202a;--accent:#1f3b57;--topbar:#1f2a33;--nav:#aab4bd;--text2:#5b6670;--border:#d7dadd;--chip:#9aa3ab;--hair:#e3e6e8;--fill-strong:#4f5a63;--fill-strong2:#66727c;--fill-light:#eceeef;--fill-light2:#f7f8f8;--off:#8a939a}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;min-height:-webkit-fill-available;overflow-x:hidden}.screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}.hdr{min-height:54px;padding:10px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--topbar);color:#fff}.badge{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--nav);margin-bottom:2px}.hdr h1{font-size:17px;font-weight:700;line-height:1.2;color:#fff}.hdr p{font-size:12px;color:var(--nav);margin-top:2px}.clock{text-align:right;flex-shrink:0}.clock-time{font-size:15px;font-weight:700;color:#fff;line-height:1}.clock-date{font-size:12px;color:var(--nav);margin-top:2px}.divider{height:1px;background:var(--hair);margin:0}.section-lbl{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);padding:16px 20px 0;margin-bottom:10px}.cards{padding:0 20px 20px;display:flex;flex-direction:column;gap:12px}.tool-card{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;text-decoration:none;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s;-webkit-user-select:none;user-select:none}.tool-card:active{background:var(--fill-light2)}.tool-card:hover{border-color:var(--chip)}.tool-card.c0{border:1.5px solid var(--accent)}.card-icon{width:44px;height:44px;border-radius:10px;background:var(--fill-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}.card-body{flex:1}.card-title{font-size:15px;font-weight:700;color:var(--ink);line-height:1.2;margin-bottom:3px}.card-desc{font-size:12px;color:var(--text2);line-height:1.45}.card-tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-top:7px;display:inline-block}.tool-card.c0 .card-tag{color:var(--accent)}.card-arrow{font-size:18px;color:var(--chip);flex-shrink:0}.footer{padding:18px 22px 26px;text-align:center}.footer p{font-size:12px;color:var(--text2);letter-spacing:.02em}.modal-overlay{display:none;position:fixed;inset:0;background:rgba(22,32,42,.55);z-index:100;align-items:center;justify-content:center;padding:24px}.modal-overlay.open{display:flex}.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px 22px;width:100%;max-width:420px}.modal h2{font-size:18px;font-weight:700;margin-bottom:5px;color:var(--ink)}.modal p{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.5}.name-list{display:flex;flex-direction:column;gap:7px;max-height:380px;overflow-y:auto}.name-btn{width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--ink);font-family:inherit;font-size:14px;font-weight:500;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;justify-content:space-between}.name-btn:hover,.name-btn:active{border-color:var(--accent);background:var(--fill-light2)}.name-btn span{font-size:12px;color:var(--text2)}.name-btn.pending{opacity:.65}.vpn-warning{display:flex;align-items:flex-start;gap:12px;background:var(--fill-light2);border:1.5px dashed var(--accent);border-radius:8px;padding:14px 16px;margin-bottom:18px}.vpn-warning .vpn-icon{font-size:20px;flex-shrink:0;margin-top:1px}.vpn-warning .vpn-text{font-size:13px;color:var(--ink);line-height:1.5;font-weight:500}.vpn-warning .vpn-text strong{color:var(--ink);display:block;margin-bottom:3px;font-size:14px}.modal-actions{display:flex;flex-direction:column;gap:8px}.btn-primary{width:100%;height:40px;background:var(--accent);border:1px solid var(--accent);border-radius:17px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}.btn-primary:hover{background:#16293b}.btn-secondary{width:100%;padding:10px 16px;background:var(--surface);border:1px solid var(--chip);border-radius:17px;color:var(--ink);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;text-align:center;display:block}.btn-secondary:hover{background:var(--fill-light2)}.modal-cancel{width:100%;margin-top:4px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:17px;color:var(--text2);font-family:inherit;font-size:13px;cursor:pointer}@media(min-width:700px){.hdr{padding:10px 30px}.hdr h1{font-size:19px}.cards{padding:0 28px 24px}.section-lbl{padding:18px 28px 0}}@media(min-width:900px){.cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tool-card{flex-direction:column;align-items:flex-start;gap:12px;height:100%}.card-arrow{display:none}.tool-card.c0{grid-column:1/-1;flex-direction:row;align-items:center}.tool-card.c0 .card-title{font-size:18px}.tool-card.c0 .card-desc{font-size:13px}}
+/* HCA Tools home. Dark navy look (Outfit + Playfair Display) per the 2026-10-04 design decision, in an Apple-style layout:
+   a translucent header, inset grouped lists, instant press feedback, spring-feel sheets you can drag away. */
+:root{
+  --bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;
+  --orange:#c97d10;--gold:#f59e0b;--blue:#4aa3df;--green:#22c55e;
+  --glass:rgba(10,22,40,.62);--glass-line:rgba(255,255,255,.08);--press:rgba(255,255,255,.06);
+  --ease-out:cubic-bezier(.2,.9,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;color-scheme:dark;scroll-padding-top:72px}
+body{font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:var(--text);min-height:100vh;
+  background:radial-gradient(1100px 520px at 85% -8%,#16233f 0,transparent 62%),radial-gradient(800px 400px at -10% 30%,rgba(201,125,16,.07) 0,transparent 60%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:10px}
+
+/* ---------- header: a translucent layer, content scrolls under it ---------- */
+.bar{position:sticky;top:0;z-index:50;padding:max(10px,env(safe-area-inset-top,0)) max(18px,env(safe-area-inset-right,0)) 10px max(18px,env(safe-area-inset-left,0));
+  background:transparent;border-bottom:1px solid transparent;transition:background .25s,border-color .25s,backdrop-filter .25s}
+.bar.scrolled{background:var(--glass);border-bottom-color:var(--glass-line);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(160deg,#e0932a,var(--orange));display:grid;place-items:center;font-weight:800;font-size:13px;letter-spacing:-.02em;color:#fff;box-shadow:0 4px 14px rgba(201,125,16,.35)}
+.compact{font-weight:700;font-size:16px;letter-spacing:-.01em;opacity:0;transform:translateY(4px);transition:opacity .25s,transform .35s var(--ease-out)}
+.bar.scrolled .compact{opacity:1;transform:none}
+.clock{text-align:right;line-height:1.15;flex-shrink:0}
+.clock-time{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.clock-date{font-size:12px;color:var(--mut)}
+
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-right,0)) 40px max(18px,env(safe-area-inset-left,0))}
+
+/* ---------- large title ---------- */
+.title{padding:14px 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.title h1{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.2rem,7vw,3.4rem);line-height:1.04;letter-spacing:-.025em;margin:4px 0 6px}
+.title p{color:var(--mut);font-size:15px;max-width:34em}
+
+/* ---------- search ---------- */
+.search{position:relative;margin:4px 0 6px}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--mut);pointer-events:none}
+.search input{width:100%;height:46px;border-radius:14px;border:1px solid var(--line);background:rgba(17,26,46,.8);color:var(--text);font:inherit;font-size:16px;padding:0 44px 0 42px;transition:border-color .2s,box-shadow .2s}
+.search input::placeholder{color:#6b7a90}
+.search input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px rgba(245,158,11,.16)}
+.search .clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:var(--mut);font-size:20px;cursor:pointer;display:none}
+.search.has .clear{display:block}
+
+/* ---------- groups: inset lists ---------- */
+.groups{display:grid;gap:22px;margin-top:18px}
+.group{min-width:0}
+.glabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:0 6px 8px}
+.list{background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.tool{display:flex;align-items:center;gap:14px;padding:14px 16px;min-height:64px;cursor:pointer;position:relative;-webkit-user-select:none;user-select:none;transition:background .12s}
+.tool + .tool::before{content:"";position:absolute;left:74px;right:0;top:0;height:1px;background:var(--line)}
+.tool:hover{background:rgba(255,255,255,.035)}
+.tool:active,.tool.down{background:var(--press);transition:none}
+.ico{width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;font-size:21px;background:linear-gradient(160deg,#1a2744,#0f1830);border:1px solid var(--line)}
+.meta{flex:1;min-width:0;display:block}
+.ttl{display:block;font-weight:600;font-size:16px;line-height:1.25;letter-spacing:-.005em}
+.dsc{display:block;font-size:13px;line-height:1.45;color:var(--mut);margin-top:2px}
+.tag{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);background:rgba(245,158,11,.1);border-radius:999px;padding:2px 9px}
+.chev{flex:none;color:#5d6b82;font-size:22px;line-height:1;transition:transform .35s var(--ease-out),color .2s}
+.tool:hover .chev{transform:translateX(3px);color:var(--mut)}
+
+/* featured: CRM + start-here */
+.feature{display:grid;gap:12px;margin-top:16px}
+.fcard{display:flex;align-items:center;gap:16px;padding:18px 18px;border-radius:22px;border:1px solid rgba(201,125,16,.45);cursor:pointer;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,rgba(201,125,16,.22),rgba(17,26,46,.9) 62%),var(--panel);transition:transform .45s var(--ease-out),box-shadow .3s,border-color .2s}
+.fcard:hover{border-color:rgba(245,158,11,.7);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.fcard:active,.fcard.down{transform:scale(.982);transition:transform .1s ease-out}
+.fcard .ico{width:52px;height:52px;font-size:25px;border-radius:15px;background:rgba(10,22,40,.55);border-color:rgba(201,125,16,.4)}
+.fcard .ttl{font-family:"Playfair Display",Georgia,serif;font-size:21px;font-weight:700;letter-spacing:-.015em}
+.fcard .dsc{font-size:14px}
+.fcard.alt{background:linear-gradient(135deg,rgba(74,163,223,.16),rgba(17,26,46,.9) 62%),var(--panel);border-color:rgba(74,163,223,.35)}
+.fcard.alt:hover{border-color:rgba(74,163,223,.6)}
+.fcard.alt .ico{border-color:rgba(74,163,223,.35)}
+.fcard.alt .tag{color:var(--blue);background:rgba(74,163,223,.12)}
+
+.none{display:none;text-align:center;color:var(--mut);padding:40px 12px}
+.none.show{display:block}
+.foot{text-align:center;color:#6b7a90;font-size:12px;padding:30px 0 6px;letter-spacing:.02em}
+
+/* entrance: quick, staggered, never blocks input */
+@media(prefers-reduced-motion:no-preference){
+  .rise{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+
+/* ---------- sheets: bottom sheet on phones, centered dialog on larger screens ---------- */
+.scrim{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,8,18,.6);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .3s}
+.scrim.open{opacity:1;visibility:visible;transition:opacity .3s}
+.sheet{width:100%;max-width:480px;max-height:88vh;overflow:auto;background:rgba(17,26,46,.96);border:1px solid var(--glass-line);border-bottom:0;
+  border-radius:26px 26px 0 0;padding:8px 20px max(22px,env(safe-area-inset-bottom,0));transform:translateY(105%);transition:transform .45s var(--ease-out);
+  box-shadow:0 -20px 60px rgba(0,0,0,.45);touch-action:pan-y;overscroll-behavior:contain}
+.scrim.open .sheet{transform:translateY(0)}
+.grab{display:block;width:100%;padding:6px 0 14px;cursor:grab;touch-action:none;background:none;border:0}
+.grab::after{content:"";display:block;width:40px;height:5px;border-radius:3px;background:#3a4a68;margin:0 auto}
+.sheet h2{font-family:"Playfair Display",Georgia,serif;font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.sheet p{color:var(--mut);font-size:14px;margin-bottom:16px}
+.names{display:grid;gap:8px;max-height:46vh;overflow:auto}
+.name{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;padding:0 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);font-size:16px;font-weight:500;cursor:pointer;text-align:left;transition:background .12s,border-color .2s}
+.name span{font-size:13px;color:var(--mut)}
+.name:hover{border-color:#34466a}
+.name:active{background:var(--press);transition:none}
+.vpn{display:flex;gap:12px;align-items:flex-start;border:1.5px dashed rgba(245,158,11,.6);background:rgba(245,158,11,.07);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-size:14px}
+.vpn strong{display:block;margin-bottom:2px}
+.act{display:grid;gap:8px}
+.btn{min-height:48px;border-radius:999px;border:0;font-weight:700;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 18px;transition:transform .4s var(--ease-out),background .15s}
+.btn:active{transform:scale(.97);transition:transform .1s ease-out}
+.btn.main{background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff}
+.btn.sec{background:var(--panel2);border:1px solid #34466a;color:var(--text);font-weight:600}
+.btn.ghost{background:transparent;color:var(--mut);font-weight:600}
+@media(min-width:620px){
+  .scrim{align-items:center;padding:24px}
+  .sheet{border-radius:26px;border-bottom:1px solid var(--glass-line);transform:translateY(14px) scale(.96);opacity:0;transition:transform .4s var(--ease-out),opacity .25s;padding-top:24px}
+  .scrim.open .sheet{transform:none;opacity:1}
+  .grab{display:none}
+}
+
+/* ---------- layout on larger screens ---------- */
+@media(min-width:760px){
+  .feature{grid-template-columns:1fr 1fr}
+}
+@media(min-width:940px){
+  .groups{grid-template-columns:1fr 1fr;gap:24px 22px;align-items:start}
+  .group.wide{grid-column:1/-1}
+}
+
+/* ---------- accessibility signals ---------- */
+@media(prefers-reduced-transparency:reduce){
+  .bar.scrolled{background:#0a1628;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .scrim{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(3,8,18,.82)}
+  .sheet{background:#111a2e}
+}
+@media(prefers-contrast:more){
+  :root{--line:#3a4a68;--mut:#b6c2d4}
+  .list,.fcard,.sheet{border-color:#5b6f94}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
+  .sheet{transform:none!important}
+  .scrim .sheet{opacity:0}
+  .scrim.open .sheet{opacity:1}
+}
 </style>
 </head>
 <body>
-<div class="screen">
-  <div class="hdr">
-    <div class="hdr-left">
-      <div class="badge">CM Heating</div>
-      <h1>HCA Tools</h1>
-      <p>Home Comfort Advisor · Field Kit</p>
-    </div>
+<header class="bar" id="bar">
+  <div class="bar-in">
+    <div class="brand"><div class="mark" aria-hidden="true">CM</div><div class="compact">HCA Tools</div></div>
     <div class="clock"><div class="clock-time" id="clock-time">--:--</div><div class="clock-date" id="clock-date">---</div></div>
   </div>
-  <div class="divider"></div>
-  <div class="section-lbl">Select a tool</div>
-  <div class="cards">
-    <a class="tool-card c0" href="crm.html"><div class="card-icon">🎯</div><div class="card-body"><div class="card-title">HCA CRM</div><div class="card-desc">Your whole pipeline in one place — AR, sold jobs, follow-ups, and clearance stock. Sign in once and see your numbers.</div><span class="card-tag">Your dashboard</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c6" href="comfort-club-rental-process.html"><div class="card-icon">🚨</div><div class="card-body"><div class="card-title">ServiceTitan Comfort Club Rental Process</div><div class="card-desc">Start here for every Comfort Club rental sale — required process, contract setup, credit review, and penny test.</div><span class="card-tag">Start here</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c2" href="install-check.html"><div class="card-icon">📋</div><div class="card-body"><div class="card-title">Next-Day Install Check</div><div class="card-desc">Verify tomorrow's install — materials, layout, billing, sizing, discounts — then email the HCA good-to-go or needs-attention.</div><span class="card-tag">Pre-install</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c1" href="hca-layout-cheatsheet.html"><div class="card-icon">🧰</div><div class="card-body"><div class="card-title">Install Materials</div><div class="card-desc">The Layout-form materials cheat sheet — the example of what to stage for the job.</div><span class="card-tag">Materials</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c8" href="hca-field-guide.html"><div class="card-icon">📚</div><div class="card-body"><div class="card-title">HCA Field Guide</div><div class="card-desc">Fast answers for financing, rebates, jurisdictions, electrical, labor times, thermostat compatibility, permitting, and install rules.</div><span class="card-tag">Field Intelligence</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c1" href="caas-calculator.html"><div class="card-icon">💰</div><div class="card-body"><div class="card-title">Comfort Club vs. Buy</div><div class="card-desc">Run the numbers live — show the true cost of buying vs. Comfort Club on any quote.</div><span class="card-tag">On consult</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c3" href="claim/"><div class="card-icon">🎟️</div><div class="card-body"><div class="card-title">Claim a Comfort Club Coupon</div><div class="card-desc">This week only — 6 months before the first payment. Only 2 coupons for the whole team.</div><span class="card-tag">This week</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c4" href="claim/board/"><div class="card-icon">📊</div><div class="card-body"><div class="card-title">Comfort Club Claims Board</div><div class="card-desc">See which advisors have claimed this week's coupons and how many are left.</div><span class="card-tag">Live</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c1" href="competitors/"><div class="card-icon">🔍</div><div class="card-body"><div class="card-title">Competitor Offers</div><div class="card-desc">Saw a competitor's flyer, quote or ad? Upload it so we can see where to be more competitive.</div><span class="card-tag">New</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c2" href="hca-caas-quoting.html"><div class="card-icon">🧾</div><div class="card-body"><div class="card-title">HCA CaaS Quoting Tool</div><div class="card-desc">Governed COD + rental pricing for every AHRI-verified package — locked MSRPs, monthly payments, and residuals by size.</div><span class="card-tag">Governed pricing</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c3" href="hca-top-sellers.html"><div class="card-icon">🏆</div><div class="card-body"><div class="card-title">HCA Top Sellers — Laminated</div><div class="card-desc">Print-ready field reference: top-20 sold products with governed rental monthly, plus the full COD MSRP grid by size.</div><span class="card-tag">Print &amp; laminate</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c2" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener"><div class="card-icon">📅</div><div class="card-body"><div class="card-title">Install Availability</div><div class="card-desc">Grab open install slots in real time — close with a confirmed date on the spot.</div><span class="card-tag">Close the deal</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c3" href="follow-up-tracker.html"><div class="card-icon">📋</div><div class="card-body"><div class="card-title">My Follow-Up Tracker</div><div class="card-desc">Sign in with your CM Heating Google account to see your open leads.</div><span class="card-tag">Post consult</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c9" href="ar-collections.html"><div class="card-icon">💵</div><div class="card-body"><div class="card-title">AR Collections</div><div class="card-desc">Outstanding install invoices by rep — balances, aging, notes, and mark-paid. Pulls live from the AR Log.</div><span class="card-tag">Collections</span></div><div class="card-arrow">›</div></a>
-    <div class="tool-card c4" onclick="openSoldPicker()"><div class="card-icon">✅</div><div class="card-body"><div class="card-title">My Sold Job Tracker</div><div class="card-desc">Track sold jobs after the sale — TBD blockers, financing, permits, install dates, registration, duct cleaning, and done follow-up.</div><span class="card-tag">After sale</span></div><div class="card-arrow">›</div></div>
-    <a class="tool-card c1" href="clearance.html"><div class="card-icon">🏷️</div><div class="card-body"><div class="card-title">Clearance Inventory</div><div class="card-desc">Warehouse equipment ready to move — live from the inventory sheet. Filter available vs. committed, spot aging stock, and copy a sell list. HCA login required.</div><span class="card-tag">Sell from stock</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c9" href="hca-1on1.html"><div class="card-icon">🤝</div><div class="card-body"><div class="card-title">Book HCA 1:1</div><div class="card-desc">Book your required biweekly 20-minute 1:1 with Geoff. Amy can see booked times and protect the dispatch board.</div><span class="card-tag">Every 2 weeks</span></div><div class="card-arrow">›</div></a>
-    <a class="tool-card c5" href="https://iccloud.equifax.com/web/guest/home?p_p_state=maximized&p_p_mode=view&refererPlid=282&_com_liferay_login_web_portlet_LoginPortlet_mvcRenderCommandName=%2Flogin%2Flogin&saveLastPath=false&p_p_id=com_liferay_login_web_portlet_LoginPortlet&p_p_lifecycle=0&_com_liferay_login_web_portlet_LoginPortlet_redirect=%2F" target="_blank" rel="noopener"><div class="card-icon">🏦</div><div class="card-body"><div class="card-title">Comfort Club Credit Check</div><div class="card-desc">Equifax InterConnect — run credit approval for Comfort Club enrollment on the spot.</div><span class="card-tag">Credit approval</span></div><div class="card-arrow">›</div></a>
-    <div class="tool-card c6" onclick="openRise()"><div class="card-icon">🔥</div><div class="card-body"><div class="card-title">RISE 2.0</div><div class="card-desc">Heat load calculations and internal HCA tools. Requires Global Protect VPN.</div><span class="card-tag">Requires VPN</span></div><div class="card-arrow">›</div></div>
-    <a class="tool-card c7" href="investment-calculator.html"><div class="card-icon">📈</div><div class="card-body"><div class="card-title">Invest the Difference</div><div class="card-desc">Show what happens when they invest instead of buy — compound interest vs buy cost, with inflation.</div><span class="card-tag">Comfort Club closer</span></div><div class="card-arrow">›</div></a>
+</header>
+
+<main class="wrap">
+  <section class="title" id="title">
+    <div class="eyebrow" id="greet">CM Heating</div>
+    <h1>HCA Tools</h1>
+    <p>Home Comfort Advisor field kit. Everything you need from the first call to the final payment.</p>
+  </section>
+
+  <div class="search" id="search" role="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Find a tool" aria-label="Find a tool" autocomplete="off" enterkeyhint="search" />
+    <button class="clear" id="clear" type="button" aria-label="Clear search">&times;</button>
   </div>
-  <div class="footer"><p>CM Heating · Internal HCA Tool · Not for distribution</p></div>
+
+  <div class="feature" id="feature">
+    <a class="fcard rise" href="crm.html" data-s="hca crm pipeline dashboard ar sold jobs follow-ups clearance">
+      <span class="ico">🎯</span><span class="meta"><span class="ttl">HCA CRM</span><span class="dsc">Your whole pipeline in one place: AR, sold jobs, follow-ups, and clearance stock. Sign in once and see your numbers.</span><span class="tag">Your dashboard</span></span><span class="chev">›</span>
+    </a>
+    <a class="fcard alt rise" href="comfort-club-rental-process.html" data-s="servicetitan comfort club rental process contract credit penny test start here">
+      <span class="ico">🚨</span><span class="meta"><span class="ttl">ServiceTitan Comfort Club Rental Process</span><span class="dsc">Start here for every Comfort Club rental sale: required process, contract setup, credit review, and penny test.</span><span class="tag">Start here</span></span><span class="chev">›</span>
+    </a>
+  </div>
+
+  <div class="groups" id="groups">
+
+    <section class="group rise" data-group>
+      <div class="glabel">This week</div>
+      <div class="list">
+        <a class="tool" href="claim/"><span class="ico">🎟️</span><span class="meta"><span class="ttl">Claim a Comfort Club Coupon</span><span class="dsc">6 months before the first payment. A limited number of coupons for the whole team, first come first served.</span><span class="tag">This week</span></span><span class="chev">›</span></a>
+        <a class="tool" href="claim/board/"><span class="ico">📊</span><span class="meta"><span class="ttl">Comfort Club Claims Board</span><span class="dsc">See which advisors have claimed this week's coupons and how many are left.</span><span class="tag">Live</span></span><span class="chev">›</span></a>
+        <a class="tool" href="competitors/"><span class="ico">🔍</span><span class="meta"><span class="ttl">Competitor Offers</span><span class="dsc">Saw a competitor's flyer, quote or ad? Upload it so we can see where to be more competitive.</span><span class="tag">New</span></span><span class="chev">›</span></a>
+      </div>
+    </section>
+
+    <section class="group rise" data-group>
+      <div class="glabel">On the consult</div>
+      <div class="list">
+        <a class="tool" href="caas-calculator.html"><span class="ico">💰</span><span class="meta"><span class="ttl">Comfort Club vs. Buy</span><span class="dsc">Run the numbers live: show the true cost of buying vs. Comfort Club on any quote.</span><span class="tag">On consult</span></span><span class="chev">›</span></a>
+        <a class="tool" href="investment-calculator.html"><span class="ico">📈</span><span class="meta"><span class="ttl">Invest the Difference</span><span class="dsc">Show what happens when they invest instead of buy: compound interest vs buy cost, with inflation.</span><span class="tag">Comfort Club closer</span></span><span class="chev">›</span></a>
+        <a class="tool" href="hca-caas-quoting.html"><span class="ico">🧾</span><span class="meta"><span class="ttl">HCA CaaS Quoting Tool</span><span class="dsc">Governed COD + rental pricing for every AHRI-verified package: locked MSRPs, monthly payments, and residuals by size.</span><span class="tag">Governed pricing</span></span><span class="chev">›</span></a>
+        <a class="tool" href="hca-top-sellers.html"><span class="ico">🏆</span><span class="meta"><span class="ttl">HCA Top Sellers — Laminated</span><span class="dsc">Print-ready field reference: top-20 sold products with governed rental monthly, plus the full COD MSRP grid by size.</span><span class="tag">Print &amp; laminate</span></span><span class="chev">›</span></a>
+        <a class="tool" href="hca-field-guide.html"><span class="ico">📚</span><span class="meta"><span class="ttl">HCA Field Guide</span><span class="dsc">Fast answers for financing, rebates, jurisdictions, electrical, labor times, thermostat compatibility, permitting, and install rules.</span><span class="tag">Field Intelligence</span></span><span class="chev">›</span></a>
+        <a class="tool" href="https://iccloud.equifax.com/web/guest/home?p_p_state=maximized&amp;p_p_mode=view&amp;refererPlid=282&amp;_com_liferay_login_web_portlet_LoginPortlet_mvcRenderCommandName=%2Flogin%2Flogin&amp;saveLastPath=false&amp;p_p_id=com_liferay_login_web_portlet_LoginPortlet&amp;p_p_lifecycle=0&amp;_com_liferay_login_web_portlet_LoginPortlet_redirect=%2F" target="_blank" rel="noopener"><span class="ico">🏦</span><span class="meta"><span class="ttl">Comfort Club Credit Check</span><span class="dsc">Equifax InterConnect: run credit approval for Comfort Club enrollment on the spot.</span><span class="tag">Credit approval</span></span><span class="chev">›</span></a>
+        <div class="tool" role="button" tabindex="0" onclick="openRise(this)"><span class="ico">🔥</span><span class="meta"><span class="ttl">RISE 2.0</span><span class="dsc">Heat load calculations and internal HCA tools. Requires Global Protect VPN.</span><span class="tag">Requires VPN</span></span><span class="chev">›</span></div>
+      </div>
+    </section>
+
+    <section class="group rise" data-group>
+      <div class="glabel">Close and install</div>
+      <div class="list">
+        <a class="tool" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener"><span class="ico">📅</span><span class="meta"><span class="ttl">Install Availability</span><span class="dsc">Grab open install slots in real time and close with a confirmed date on the spot.</span><span class="tag">Close the deal</span></span><span class="chev">›</span></a>
+        <a class="tool" href="install-check.html"><span class="ico">📋</span><span class="meta"><span class="ttl">Next-Day Install Check</span><span class="dsc">Verify tomorrow's install: materials, layout, billing, sizing, discounts. Then email the HCA good-to-go or needs-attention.</span><span class="tag">Pre-install</span></span><span class="chev">›</span></a>
+        <a class="tool" href="hca-layout-cheatsheet.html"><span class="ico">🧰</span><span class="meta"><span class="ttl">Install Materials</span><span class="dsc">The Layout-form materials cheat sheet: the example of what to stage for the job.</span><span class="tag">Materials</span></span><span class="chev">›</span></a>
+        <a class="tool" href="clearance.html"><span class="ico">🏷️</span><span class="meta"><span class="ttl">Clearance Inventory</span><span class="dsc">Warehouse equipment ready to move, live from the inventory sheet. Filter available vs. committed, spot aging stock, and copy a sell list. HCA login required.</span><span class="tag">Sell from stock</span></span><span class="chev">›</span></a>
+      </div>
+    </section>
+
+    <section class="group rise" data-group>
+      <div class="glabel">After the sale</div>
+      <div class="list">
+        <a class="tool" href="follow-up-tracker.html"><span class="ico">📋</span><span class="meta"><span class="ttl">My Follow-Up Tracker</span><span class="dsc">Sign in with your CM Heating Google account to see your open leads.</span><span class="tag">Post consult</span></span><span class="chev">›</span></a>
+        <div class="tool" role="button" tabindex="0" onclick="openSoldPicker(this)"><span class="ico">✅</span><span class="meta"><span class="ttl">My Sold Job Tracker</span><span class="dsc">Track sold jobs after the sale: TBD blockers, financing, permits, install dates, registration, duct cleaning, and done follow-up.</span><span class="tag">After sale</span></span><span class="chev">›</span></div>
+        <a class="tool" href="ar-collections.html"><span class="ico">💵</span><span class="meta"><span class="ttl">AR Collections</span><span class="dsc">Outstanding install invoices by rep: balances, aging, notes, and mark-paid. Pulls live from the AR Log.</span><span class="tag">Collections</span></span><span class="chev">›</span></a>
+        <a class="tool" href="hca-1on1.html"><span class="ico">🤝</span><span class="meta"><span class="ttl">Book HCA 1:1</span><span class="dsc">Book your required biweekly 20-minute 1:1 with Geoff. Amy can see booked times and protect the dispatch board.</span><span class="tag">Every 2 weeks</span></span><span class="chev">›</span></a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="none" id="none">No tools match &ldquo;<span id="noneQ"></span>&rdquo;.</div>
+  <div class="foot">CM Heating · Internal HCA Tool · Not for distribution</div>
+</main>
+
+<!-- Sheets -->
+<div class="scrim" id="modal-sold" aria-hidden="true" onclick="closeOnOverlay(event,'modal-sold')">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="soldT">
+    <button class="grab" type="button" aria-label="Drag down to close"></button>
+    <h2 id="soldT">Sold Job Tracker</h2>
+    <p>Select your name to view sold jobs, TBD blockers, active installs, and done follow-up.</p>
+    <div class="names" id="sold-name-list"></div>
+    <div class="act" style="margin-top:12px"><button class="btn ghost" type="button" onclick="closeModal('modal-sold')">Cancel</button></div>
+  </div>
 </div>
-<div class="modal-overlay" id="modal-sold" onclick="closeOnOverlay(event,'modal-sold')"><div class="modal"><h2>Sold Job Tracker</h2><p>Select your name to view sold jobs, TBD blockers, active installs, and done follow-up.</p><div class="name-list" id="sold-name-list"></div><button class="modal-cancel" onclick="closeModal('modal-sold')">Cancel</button></div></div>
-<div class="modal-overlay" id="modal-rise" onclick="closeOnOverlay(event,'modal-rise')"><div class="modal"><h2>RISE 2.0</h2><p>Heat load calculations and HCA tools — Reliance internal platform.</p><div class="vpn-warning"><div class="vpn-icon">🔒</div><div class="vpn-text"><strong>Global Protect VPN required</strong>Make sure you're connected to Global Protect VPN before opening RISE 2.0, or the site won't load.</div></div><div class="modal-actions"><button class="btn-primary" onclick="openRiseApp()">I'm connected — Open RISE 2.0</button><a class="btn-secondary" href="https://acrobat.adobe.com/id/urn:aaid:sc:VA6C2:4ea8a4d8-44d6-4862-b9f7-ad247b8693f7" target="_blank" rel="noopener">📄 View RISE Instructions (PDF)</a><button class="modal-cancel" onclick="closeModal('modal-rise')">Cancel</button></div></div></div>
+<div class="scrim" id="modal-rise" aria-hidden="true" onclick="closeOnOverlay(event,'modal-rise')">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="riseT">
+    <button class="grab" type="button" aria-label="Drag down to close"></button>
+    <h2 id="riseT">RISE 2.0</h2>
+    <p>Heat load calculations and HCA tools. Reliance internal platform.</p>
+    <div class="vpn"><span aria-hidden="true">🔒</span><div><strong>Global Protect VPN required</strong>Make sure you're connected to Global Protect VPN before opening RISE 2.0, or the site won't load.</div></div>
+    <div class="act">
+      <button class="btn main" type="button" onclick="openRiseApp()">I'm connected: Open RISE 2.0</button>
+      <a class="btn sec" href="https://acrobat.adobe.com/id/urn:aaid:sc:VA6C2:4ea8a4d8-44d6-4862-b9f7-ad247b8693f7" target="_blank" rel="noopener">📄 View RISE Instructions (PDF)</a>
+      <button class="btn ghost" type="button" onclick="closeModal('modal-rise')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
-function tick(){var now=new Date(),h=now.getHours(),m=now.getMinutes(),ampm=h>=12?'PM':'AM';h=h%12||12;document.getElementById('clock-time').textContent=h+':'+(m<10?'0':'')+m+' '+ampm;var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];document.getElementById('clock-date').textContent=days[now.getDay()]+' '+months[now.getMonth()]+' '+now.getDate()}tick();setInterval(tick,10000);
-var SOLD_HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
-/* A11y: sequential top-to-bottom stagger (so the reordered cards animate in
-   order), and make the onclick div-cards keyboard-operable (button role + Enter/Space). */
+/* clock + greeting */
+function tick(){
+  var now=new Date(),h=now.getHours(),m=now.getMinutes(),ampm=h>=12?'PM':'AM',hh=h%12||12;
+  document.getElementById('clock-time').textContent=hh+':'+(m<10?'0':'')+m+' '+ampm;
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('clock-date').textContent=days[now.getDay()]+' '+months[now.getMonth()]+' '+now.getDate();
+  document.getElementById('greet').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening');
+}
+tick();setInterval(tick,10000);
+
+/* header turns to glass once the large title scrolls away */
 (function(){
-  var cards=document.querySelectorAll('.cards .tool-card');
-  Array.prototype.forEach.call(cards,function(c,i){
-    c.style.animationDelay=(0.12+i*0.05)+'s';
-    if(c.tagName==='DIV'){
-      c.setAttribute('role','button');
-      c.setAttribute('tabindex','0');
-      c.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();c.click();}});
+  var bar=document.getElementById('bar'),title=document.getElementById('title');
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(e){bar.classList.toggle('scrolled',!e[0].isIntersecting)},{rootMargin:'-56px 0px 0px 0px'}).observe(title);
+  }else{addEventListener('scroll',function(){bar.classList.toggle('scrolled',scrollY>60)},{passive:true})}
+})();
+
+/* stagger the entrance, and make the div "cards" keyboard-operable */
+(function(){
+  Array.prototype.forEach.call(document.querySelectorAll('.rise'),function(el,i){el.style.animationDelay=(0.05+i*0.06)+'s'});
+  Array.prototype.forEach.call(document.querySelectorAll('.tool[role=button]'),function(c){
+    c.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();c.click()}});
+  });
+  /* instant press feedback: highlight on pointer-down, not on release */
+  document.addEventListener('pointerdown',function(e){var t=e.target.closest&&e.target.closest('.tool,.fcard');if(!t)return;t.classList.add('down');
+    var off=function(){t.classList.remove('down');removeEventListener('pointerup',off);removeEventListener('pointercancel',off);removeEventListener('scroll',off,true)};
+    addEventListener('pointerup',off);addEventListener('pointercancel',off);addEventListener('scroll',off,true)});
+})();
+
+/* search: filters the tools as you type */
+(function(){
+  var q=document.getElementById('q'),box=document.getElementById('search'),clear=document.getElementById('clear'),none=document.getElementById('none'),noneQ=document.getElementById('noneQ');
+  var items=Array.prototype.slice.call(document.querySelectorAll('.tool,.fcard'));
+  items.forEach(function(el){el._t=(el.textContent+' '+(el.getAttribute('data-s')||'')).toLowerCase().replace(/\s+/g,' ')});
+  function run(){
+    var v=q.value.trim().toLowerCase(),words=v?v.split(' '):[];box.classList.toggle('has',!!v);var shown=0;
+    items.forEach(function(el){var ok=words.every(function(w){return el._t.indexOf(w)>=0});el.style.display=ok?'':'none';if(ok)shown++});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-group]'),function(g){g.style.display=g.querySelector('.tool:not([style*="none"])')?'':'none'});
+    document.getElementById('feature').style.display=document.querySelector('.fcard:not([style*="none"])')?'':'none';
+    noneQ.textContent=q.value.trim();none.classList.toggle('show',!!v&&!shown);
+  }
+  q.addEventListener('input',run);
+  clear.addEventListener('click',function(){q.value='';run();q.focus()});
+  q.addEventListener('keydown',function(e){if(e.key==='Escape'){q.value='';run()}});
+})();
+
+/* ---------- sheets ---------- */
+var SOLD_HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
+var lastOpener=null;
+function openSheet(id,opener){
+  var s=document.getElementById(id);lastOpener=opener||document.activeElement;
+  s.classList.add('open');s.setAttribute('aria-hidden','false');
+  var f=s.querySelector('.name,.btn.main');if(f)setTimeout(function(){f.focus({preventScroll:true})},60);
+}
+function openSoldPicker(opener){
+  var list=document.getElementById('sold-name-list');list.innerHTML='';
+  SOLD_HCAS.forEach(function(name){
+    var btn=document.createElement('button');btn.className='name';btn.type='button';btn.innerHTML=name+'<span>Open ›</span>';
+    btn.onclick=function(){window.open('sold-job-tracker.html?hca='+encodeURIComponent(name),'_blank');closeModal('modal-sold')};list.appendChild(btn);
+  });
+  openSheet('modal-sold',opener);
+}
+function openRise(opener){openSheet('modal-rise',opener)}
+function openRiseApp(){window.open('https://riseapp-prod.reliancecomfort.com/','_blank');closeModal('modal-rise')}
+function closeModal(id){
+  var s=document.getElementById(id),sh=s.querySelector('.sheet');
+  s.classList.remove('open');s.setAttribute('aria-hidden','true');
+  if(sh){sh.style.transition='';sh.style.transform=''}
+  if(lastOpener&&lastOpener.focus)lastOpener.focus({preventScroll:true});
+}
+function closeOnOverlay(e,id){if(e.target===document.getElementById(id))closeModal(id)}
+addEventListener('keydown',function(e){if(e.key==='Escape'){Array.prototype.forEach.call(document.querySelectorAll('.scrim.open'),function(s){closeModal(s.id)})}});
+
+/* Drag a sheet down to dismiss (phones). It follows your finger 1:1, resists upward like a rubber band,
+   and on release uses your speed to decide: a flick closes it, a small drag springs it back. */
+(function(){
+  var mq=matchMedia('(min-width:620px)');
+  function project(v){return (v/1000)*0.998/(1-0.998)*0.18}   // how far the flick would carry it (softened)
+  function ty(el){var m=getComputedStyle(el).transform;if(!m||m==='none')return 0;var p=m.match(/matrix.*\((.+)\)/);return p?parseFloat(p[1].split(', ')[5])||0:0}
+  Array.prototype.forEach.call(document.querySelectorAll('.scrim'),function(scrim){
+    var sheet=scrim.querySelector('.sheet'),grab=scrim.querySelector('.grab'),st=null;
+    grab.addEventListener('pointerdown',function(e){
+      if(mq.matches)return;
+      var start=ty(sheet);sheet.style.transition='none';sheet.style.transform='translateY('+start+'px)';   // interruptible: start from where it is on screen
+      grab.setPointerCapture(e.pointerId);st={y:e.clientY,base:start,t:[{y:e.clientY,t:performance.now()}]};
+    });
+    grab.addEventListener('pointermove',function(e){
+      if(!st)return;var dy=e.clientY-st.y,pos=st.base+dy;
+      if(pos<0)pos=-Math.min(40,-pos*0.35);   // rubber band above the resting position
+      sheet.style.transform='translateY('+pos+'px)';
+      st.t.push({y:e.clientY,t:performance.now()});if(st.t.length>6)st.t.shift();
+    });
+    function end(e){
+      if(!st)return;var a=st.t[0],b=st.t[st.t.length-1],v=b.t>a.t?(b.y-a.y)/(b.t-a.t)*1000:0;
+      var pos=ty(sheet),proj=pos+project(v),h=sheet.offsetHeight;st=null;
+      sheet.style.transition='transform .42s cubic-bezier(.2,.9,.2,1)';
+      if(proj>h*0.38||v>900){sheet.style.transform='translateY(105%)';setTimeout(function(){closeModal(scrim.id)},230)}
+      else{sheet.style.transform='translateY(0)';setTimeout(function(){sheet.style.transition='';sheet.style.transform=''},450)}
     }
+    grab.addEventListener('pointerup',end);grab.addEventListener('pointercancel',end);
   });
 })();
-function openSoldPicker(){var list=document.getElementById('sold-name-list');list.innerHTML='';SOLD_HCAS.forEach(function(name){var btn=document.createElement('button');btn.className='name-btn';btn.innerHTML=name+'<span>Open ›</span>';btn.onclick=function(){window.open('sold-job-tracker.html?hca='+encodeURIComponent(name),'_blank');closeModal('modal-sold')};list.appendChild(btn)});document.getElementById('modal-sold').classList.add('open')}
-function openRise(){document.getElementById('modal-rise').classList.add('open')}function openRiseApp(){window.open('https://riseapp-prod.reliancecomfort.com/','_blank');closeModal('modal-rise')}function closeModal(id){document.getElementById(id).classList.remove('open')}function closeOnOverlay(e,id){if(e.target===document.getElementById(id))closeModal(id)}
 </script>
 </body>
 </html>
