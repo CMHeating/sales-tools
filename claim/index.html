@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#105CAB">
 <title>Claim Your CM Heating Coupon</title>
 <!--
   CLAIM PAGE – opened from the Monday email buttons.
@@ -102,6 +105,24 @@
   @media (prefers-reduced-motion:reduce){.scarce.reveal{animation:none}}
   @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(192,57,43,.25)}}
   @keyframes pop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+  /* ---- Apple-style polish: softer surfaces, instant press feedback, calm springs, accessible fallbacks ---- */
+  body{background:radial-gradient(900px 420px at 50% -10%,#dfeaf6 0,transparent 65%),var(--bg);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  .wrap{border-radius:26px;box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 24px 60px rgba(16,35,58,.14)}
+  .nav{background:rgba(244,248,252,.78);-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%)}
+  .coupon{border-radius:22px;box-shadow:0 18px 40px rgba(16,92,171,.28),0 1px 0 rgba(255,255,255,.18) inset}
+  .big{letter-spacing:-.025em}
+  .sub{letter-spacing:-.01em}
+  select,input{border-radius:14px;transition:border-color .2s,box-shadow .2s}
+  select:focus,input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 4px rgba(245,130,31,.18)}
+  button{border-radius:999px;min-height:54px;transition:transform .45s cubic-bezier(.2,.9,.2,1),background .15s,box-shadow .2s;box-shadow:0 8px 20px rgba(245,130,31,.32)}
+  button:active{transform:scale(.98);transition:transform .1s ease-out}
+  .tabs button{border-radius:14px;min-height:0;box-shadow:none}
+  .tabs button:active{transform:scale(.98)}
+  .est,.scarce{border-radius:16px}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+  @media(prefers-reduced-transparency:reduce){.nav{background:#f4f8fc;-webkit-backdrop-filter:none;backdrop-filter:none}}
+  @media(prefers-contrast:more){.wrap{box-shadow:0 0 0 2px var(--ink)}}
 </style>
 </head>
 <body>
