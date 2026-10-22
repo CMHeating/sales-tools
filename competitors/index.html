@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <title>Competitor Offers – HCA Tools</title>
 <!--
   COMPETITOR OFFERS (HCA Tools). Lives at /sales-tools/competitors/ .
@@ -12,87 +16,131 @@
   SETTINGS: ENDPOINT = the Apps Script Web app URL (ends in /exec). Until it is set, the page says submissions are not open yet.
 -->
 <style>
-  :root{--blue:#105CAB;--blue-dk:#0b4482;--orange:#F5821F;--orange-dk:#d96d10;--ink:#10233a;--muted:#5b6b7c;--line:#dde4ec;--bg:#eef2f6;--card:#fff;--red:#c0392b;--green:#1e7a46}
-  *{box-sizing:border-box}
-  [hidden]{display:none!important}
-  html,body{margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.45;
-       padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-  .wrap{max-width:760px;margin:0 auto;background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(16,35,58,.10)}
-  .nav{display:flex;flex-wrap:wrap;gap:8px 18px;padding:11px 22px;background:#f4f8fc;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
-  .nav a{color:var(--blue);text-decoration:none;white-space:nowrap}
-  .nav a:hover{text-decoration:underline}
-  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px;border-bottom:5px solid var(--orange)}
-  header img{display:block;height:56px;width:auto;max-width:50%}
-  .ttl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);text-align:right;line-height:1.4}
-  .ttl strong{display:block;color:var(--ink);font-size:15px;letter-spacing:.5px}
-  .tabs{display:flex;gap:8px;padding:18px 22px 0}
-  .tabs button{flex:1;font:inherit;font-weight:800;font-size:15px;padding:11px 8px;border:2px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;cursor:pointer}
-  .tabs button[aria-pressed="true"]{border-color:var(--blue);background:#eef5fc;color:var(--blue)}
-  .intro{padding:16px 22px 0;color:var(--muted);font-size:14px}
-  .intro b{color:var(--ink)}
-  form{padding:18px 22px 24px}
-  label{display:block;font-weight:700;font-size:14px;margin:0 0 6px}
-  .opt{font-weight:400;color:var(--muted)}
-  .field{margin-bottom:16px}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media(max-width:560px){.two{grid-template-columns:1fr}}
-  select,input,textarea{width:100%;font:inherit;font-size:16px;padding:12px 13px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
-  textarea{min-height:96px;resize:vertical}
-  select:focus,input:focus,textarea:focus,button:focus-visible{outline:3px solid var(--orange);outline-offset:1px}
-  .hint{font-size:12px;color:var(--muted);margin-top:5px}
-  .drop{border:2px dashed var(--blue);border-radius:12px;background:#f4f8fc;padding:16px;text-align:center}
-  .drop input{display:none}
-  .drop label.pick{display:inline-block;margin:0;background:var(--blue);color:#fff;font-weight:800;padding:11px 20px;border-radius:8px;cursor:pointer}
-  .thumbs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px}
-  .thumb{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff}
-  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .thumb button{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(16,35,58,.8);color:#fff;font-size:15px;line-height:24px;padding:0;cursor:pointer}
-  .go{width:100%;font:inherit;font-weight:800;font-size:18px;padding:15px;border:0;border-radius:10px;background:var(--orange);color:#fff;cursor:pointer}
-  .go:hover{background:var(--orange-dk)}
-  .go[disabled]{opacity:.6;cursor:not-allowed}
-  .err{color:var(--red);font-size:13px;font-weight:700;min-height:18px;margin:8px 0 0}
-  .ok{padding:34px 24px 38px;text-align:center}
-  .ok .check{width:64px;height:64px;border-radius:50%;background:var(--green);color:#fff;font-size:34px;line-height:64px;margin:0 auto 14px}
-  .ok h2{margin:0 0 8px;font-size:24px}
-  .ok p{margin:6px auto;max-width:420px;color:var(--muted)}
-  .ok .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
-  .ok button{font:inherit;font-weight:800;padding:12px 20px;border-radius:10px;border:2px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer}
-  .ok button.main{background:var(--blue);color:#fff}
-  .closed{margin:22px;padding:16px;border:2px solid var(--orange);border-radius:12px;background:#fff7ef;font-weight:700;text-align:center}
+:root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--orange:#c97d10;--gold:#f59e0b;--blue:#4aa3df;--green:#22c55e;--red:#ef4444;
+  --glass:rgba(10,22,40,.62);--glass-line:rgba(255,255,255,.08);--press:rgba(255,255,255,.06);--ease-out:cubic-bezier(.2,.9,.2,1)}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+html,body{margin:0}
+body{font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:var(--text);min-height:100vh;
+  background:radial-gradient(1100px 520px at 85% -8%,#16233f 0,transparent 62%),radial-gradient(800px 400px at -10% 30%,rgba(201,125,16,.07) 0,transparent 60%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:10px}
+.bar{position:sticky;top:0;z-index:50;padding:max(10px,env(safe-area-inset-top,0)) max(18px,env(safe-area-inset-right,0)) 10px max(18px,env(safe-area-inset-left,0));
+  background:var(--glass);border-bottom:1px solid var(--glass-line);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;flex-wrap:wrap}
+.back{font-weight:600;font-size:15px;color:var(--gold);padding:8px 6px 8px 0;display:inline-flex;align-items:center;gap:2px;transition:opacity .12s}
+.back:active{opacity:.5;transition:none}
+.links{display:flex;gap:6px 18px;flex-wrap:wrap}
+.links a{font-size:14px;font-weight:500;color:var(--mut);padding:8px 0;transition:color .15s}
+.links a:hover{color:var(--text)}
+.links a.on{color:var(--text)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-right,0)) 40px max(18px,env(safe-area-inset-left,0))}
+.title{padding:16px 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.title h1{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.1rem,6.5vw,3.2rem);line-height:1.05;letter-spacing:-.025em;margin:4px 0 6px}
+.title p{color:var(--mut);font-size:15px;max-width:36em;margin:0}
+.glabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:0 6px 8px;margin:26px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;border:0;font-weight:700;font-size:16px;cursor:pointer;padding:0 24px;
+  background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff;transition:transform .4s var(--ease-out),filter .15s}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:scale(.97);transition:transform .1s ease-out}
+.btn.alt{background:transparent;border:1px solid #34466a;color:var(--text);font-weight:600}
+.btn.alt:hover{background:rgba(255,255,255,.04);filter:none}
+.foot{text-align:center;color:#6b7a90;font-size:12px;padding:30px 0 6px;letter-spacing:.02em}
+@media(prefers-reduced-motion:no-preference){
+  .rise{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-transparency:reduce){.bar{background:#0a1628;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){:root{--line:#3a4a68;--mut:#b6c2d4}.panel{border-color:#5b6f94}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 
-  .filters{display:flex;gap:10px;flex-wrap:wrap;padding:16px 22px 0}
-  .filters select{width:auto;flex:1;min-width:150px;padding:10px 12px;font-size:14px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:14px 22px 0}
-  .chip{border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:13px;background:#fff;cursor:pointer;font-family:inherit}
-  .chip b{color:var(--blue)}
-  .chip[aria-pressed="true"]{border-color:var(--blue);background:#eef5fc}
-  .feed{padding:14px 22px 22px;display:grid;gap:12px}
-  .offer{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
-  .offer h3{margin:0 0 2px;font-size:18px;color:var(--ink)}
-  .meta{font-size:12px;color:var(--muted);margin-bottom:8px}
-  .tagc{display:inline-block;background:#eef5fc;color:var(--blue);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;margin-right:6px}
-  .offer p{margin:6px 0;font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
-  .kv{font-size:13px;color:var(--ink);margin:4px 0}
-  .kv span{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:1px;margin-right:6px}
-  .help{margin-top:8px;padding:8px 12px;border-left:4px solid var(--orange);background:#fff7ef;font-size:14px;border-radius:0 8px 8px 0;overflow-wrap:anywhere}
-  .photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .photos a{font-size:13px;font-weight:700;color:var(--blue);text-decoration:none;border:1px solid var(--blue);border-radius:8px;padding:4px 10px}
-  .empty{padding:30px 22px;text-align:center;color:var(--muted)}
-  .note{padding:0 22px 22px;font-size:12px;color:var(--muted)}
-  footer{background:var(--blue);color:#dbe8f6;text-align:center;font-size:12px;padding:14px}
+.wrapb{max-width:760px}
+.tabs{display:flex;gap:4px;padding:4px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;margin:4px 0 16px}
+.tabs button{flex:1;border:0;background:transparent;color:var(--mut);font-weight:600;font-size:15px;padding:11px 8px;border-radius:11px;cursor:pointer;transition:background .25s var(--ease-out),color .15s}
+.tabs button[aria-pressed="true"]{background:var(--panel);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 14px rgba(0,0,0,.35)}
+.tabs button:active{transform:scale(.98)}
+.intro{color:var(--mut);font-size:14px;margin:0 0 14px}
+.intro b{color:var(--text);font-weight:600}
+.panel-f{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px 18px 20px}
+form{margin:0}
+label{display:block;font-weight:600;font-size:14px;margin:0 0 6px;color:var(--text)}
+.opt{font-weight:400;color:var(--mut)}
+.field{margin-bottom:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+select,input,textarea{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text);transition:border-color .2s,box-shadow .2s}
+select{appearance:none;-webkit-appearance:none;padding-right:38px;background-image:linear-gradient(45deg,transparent 50%,#94a3b8 50%),linear-gradient(135deg,#94a3b8 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 14px) 52%;background-size:6px 6px;background-repeat:no-repeat}
+textarea{min-height:100px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#6b7a90}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px rgba(245,158,11,.16)}
+input[type=date]{color-scheme:dark}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+.drop{border:1.5px dashed #34466a;border-radius:18px;background:var(--panel2);padding:18px;text-align:center}
+.drop input{display:none}
+.drop label.pick{display:inline-flex;align-items:center;margin:0;min-height:44px;background:#1a2744;border:1px solid #34466a;color:var(--text);font-weight:600;padding:0 20px;border-radius:999px;cursor:pointer;transition:background .15s,transform .4s var(--ease-out)}
+.drop label.pick:active{transform:scale(.97);transition:transform .1s ease-out}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
+.thumb{position:relative;width:96px;height:96px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--panel)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(3,8,18,.75);color:#fff;font-size:16px;line-height:26px;padding:0;cursor:pointer}
+.go{width:100%;min-height:52px;font-weight:700;font-size:17px;border:0;border-radius:999px;background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff;cursor:pointer;transition:transform .4s var(--ease-out),filter .15s}
+.go:hover{filter:brightness(1.07)}
+.go:active{transform:scale(.98);transition:transform .1s ease-out}
+.go[disabled]{opacity:.55;cursor:not-allowed}
+.err{color:#f87171;font-size:13px;font-weight:600;min-height:18px;margin:10px 0 0}
+.ok{padding:40px 20px 42px;text-align:center}
+.ok .check{width:68px;height:68px;border-radius:50%;background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.5);color:#4ade80;font-size:34px;line-height:66px;margin:0 auto 16px;box-shadow:0 0 30px rgba(34,197,94,.25)}
+.ok h2{font-family:"Playfair Display",Georgia,serif;margin:0 0 8px;font-size:28px;letter-spacing:-.02em}
+.ok p{margin:6px auto;max-width:420px;color:var(--mut)}
+.ok .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.ok button{font:inherit;font-weight:700;min-height:46px;padding:0 22px;border-radius:999px;border:1px solid #34466a;background:transparent;color:var(--text);cursor:pointer;transition:transform .4s var(--ease-out)}
+.ok button:active{transform:scale(.97);transition:transform .1s ease-out}
+.ok button.main{background:linear-gradient(160deg,#e0932a,var(--orange));border-color:transparent;color:#fff}
+.closed{margin:0 0 14px;padding:14px 16px;border:1px solid rgba(245,158,11,.5);border-radius:16px;background:rgba(245,158,11,.08);font-weight:600;text-align:center}
+.filters{display:flex;gap:10px;flex-wrap:wrap}
+.filters select{width:auto;flex:1;min-width:160px;padding:10px 38px 10px 14px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px;background:var(--panel);color:var(--mut);cursor:pointer;transition:border-color .15s,background .15s}
+.chip b{color:var(--gold);margin-right:2px}
+.chip[aria-pressed="true"]{border-color:var(--gold);background:rgba(245,158,11,.1);color:var(--text)}
+.feed{display:grid;gap:12px;margin-top:14px}
+.offer{border:1px solid var(--line);border-radius:20px;padding:16px 18px;background:var(--panel)}
+.offer h3{margin:0 0 2px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.meta{font-size:12px;color:var(--mut);margin-bottom:8px}
+.tagc{display:inline-block;background:rgba(245,158,11,.12);color:var(--gold);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;margin-right:6px}
+.offer p{margin:6px 0;font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+.kv{font-size:14px;margin:4px 0}
+.kv span{color:var(--mut);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.1em;margin-right:8px}
+.help{margin-top:10px;padding:10px 14px;border-left:3px solid var(--gold);background:rgba(245,158,11,.07);font-size:14px;border-radius:0 12px 12px 0;overflow-wrap:anywhere}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.photos a{font-size:13px;font-weight:600;color:var(--blue);border:1px solid rgba(74,163,223,.45);border-radius:999px;padding:5px 12px;transition:background .15s}
+.photos a:hover{background:rgba(74,163,223,.1)}
+.empty{padding:34px 18px;text-align:center;color:var(--mut)}
+.note{padding:16px 6px 0;font-size:12px;color:#6b7a90}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="nav" aria-label="Site links">
-    <a href="../">&larr; HCA Tools</a>
-    <a href="../claim/board/">Comfort Club Claims Board</a>
-  </nav>
-  <header>
-    <img src="../cm-logo-email.png" alt="CM Heating, Cooling, Plumbing, Electrical">
-    <div class="ttl">HCA Tools<strong>Competitor Offers</strong></div>
-  </header>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="back" href="../">&#8249; HCA Tools</a>
+    <nav class="links" aria-label="Site links">
+      <a href="../claim/board/">Claims Board</a>
+      <a href="manage/">Management view</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap wrapb">
+  <section class="title">
+    <div class="eyebrow">HCA Tools</div>
+    <h1>Competitor Offers</h1>
+    <p>Log what the competition is offering, so we can see where to be more competitive.</p>
+  </section>
 
   <div class="tabs">
     <button type="button" id="tabSubmit" aria-pressed="true">Add an offer</button>
@@ -103,8 +151,8 @@
   <section id="submitPane">
     <div class="intro"><b>Saw a competitor&rsquo;s offer? Log it.</b> A flyer, an ad, a quote a customer showed you, an email or a text. Add a photo or screenshot if you have one. <b>Please don&rsquo;t enter customer names or phone numbers.</b></div>
     <div class="closed" id="closed" hidden>Submissions aren&rsquo;t open yet. Check back soon.</div>
-    <form id="form" novalidate>
-      <div class="two" style="margin-top:16px">
+    <form id="form" class="panel-f" novalidate>
+      <div class="two">
         <div class="field"><label for="hca">Your name</label>
           <select id="hca" required><option value="" selected disabled>Select your name&hellip;</option></select></div>
         <div class="field"><label for="competitor">Competitor</label>
@@ -142,18 +190,18 @@
         <textarea id="help" maxlength="1000" placeholder="Example: a longer no-interest period, a free install-day thermostat..."></textarea></div>
 
       <div class="field">
-        <label>Photos or screenshots <span class="opt">(optional, up to 3)</span></label>
+        <label>Photos, screenshots or PDF estimates <span class="opt">(optional, up to 3)</span></label>
         <div class="drop">
-          <label class="pick" for="photos">Choose photos</label>
-          <input id="photos" type="file" accept="image/*" multiple>
-          <div class="hint">Photos are shrunk automatically so they upload fast.</div>
+          <label class="pick" for="photos">Choose files</label>
+          <input id="photos" type="file" accept="image/*,application/pdf" multiple>
+          <div class="hint">Photos are shrunk automatically. PDFs can be up to 3 MB.</div>
           <div class="thumbs" id="thumbs"></div>
         </div>
       </div>
       <button class="go" id="send" type="submit">Submit offer</button>
       <p class="err" id="err" role="alert"></p>
     </form>
-    <div class="ok" id="ok" hidden>
+    <div class="ok panel-f" id="ok" hidden>
       <div class="check">&#10003;</div>
       <h2>Thanks, offer logged</h2>
       <p id="okMsg">The team can see it now.</p>
@@ -175,8 +223,8 @@
     <div class="empty" id="feedEmpty" hidden>No offers logged yet. Be the first.</div>
     <div class="note">Internal: please don&rsquo;t share outside CM Heating. Photos open when you are signed in to your CM Heating Google account.</div>
   </section>
-  <footer>CM Heating &bull; (360) 941-5613 &bull; cmheating.com</footer>
-</div>
+  <div class="foot">CM Heating &middot; (360) 941-5613 &middot; cmheating.com</div>
+</main>
 
 <script>
 var CONFIG = {
@@ -230,21 +278,35 @@ function drawThumbs(){
   var box = $('thumbs'); box.innerHTML = '';
   photos.forEach(function(p, i){
     var d = document.createElement('div'); d.className = 'thumb';
-    var im = document.createElement('img'); im.src = p.url; im.alt = 'Photo ' + (i + 1);
-    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove photo ' + (i + 1));
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove file ' + (i + 1));
     x.onclick = function(){ photos.splice(i, 1); drawThumbs(); };
-    d.appendChild(im); d.appendChild(x); box.appendChild(d);
+    if (p.type === 'application/pdf') {
+      var pd = document.createElement('div'); pd.style.cssText = 'height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#f87171;text-align:center;padding:6px;overflow-wrap:anywhere';
+      pd.textContent = 'PDF ' + p.name; d.appendChild(pd);
+    } else {
+      var im = document.createElement('img'); im.src = p.url; im.alt = 'Photo ' + (i + 1); d.appendChild(im);
+    }
+    d.appendChild(x); box.appendChild(d);
   });
 }
 $('photos').addEventListener('change', function(){
   var files = Array.prototype.slice.call(this.files || []), input = this;
   var room = CONFIG.MAX_PHOTOS - photos.length;
-  if (files.length > room) $('err').textContent = 'Up to ' + CONFIG.MAX_PHOTOS + ' photos. Extra ones were skipped.';
+  $('err').textContent = '';
+  if (files.length > room) $('err').textContent = 'Up to ' + CONFIG.MAX_PHOTOS + ' files. Extra ones were skipped.';
   files = files.slice(0, Math.max(0, room));
-  Promise.all(files.map(function(f){ return readFile(f).then(shrink); })).then(function(list){
-    list.forEach(function(u, i){
-      if (!u) return;
-      photos.push({ name: (files[i].name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', type: 'image/jpeg', data: u.split(',')[1], url: u });
+  Promise.all(files.map(function(f){
+    if (f.type === 'application/pdf') {
+      if (f.size > 3 * 1024 * 1024) { $('err').textContent = 'That PDF is over 3 MB. Take a photo or screenshot of it instead.'; return null; }
+      return readFile(f).then(function(u){ return { pdf: true, u: u }; });
+    }
+    return readFile(f).then(shrink).then(function(u){ return u ? { pdf: false, u: u } : null; });
+  })).then(function(list){
+    list.forEach(function(r, i){
+      if (!r) return;
+      var base = (files[i].name || 'file').replace(/\.[^.]+$/, '');
+      photos.push(r.pdf ? { name: base + '.pdf', type: 'application/pdf', data: r.u.split(',')[1], url: '' }
+                        : { name: base + '.jpg', type: 'image/jpeg', data: r.u.split(',')[1], url: r.u });
     });
     input.value = ''; drawThumbs();
   });
@@ -272,13 +334,20 @@ $('form').addEventListener('submit', function(ev){
   }
   if (!CONFIG.ENDPOINT) { done(photos.length); return; }   // local preview only: nothing is sent
   fetch(CONFIG.ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) })
-    .then(function(r){ return r.json(); })
+    .then(function(r){
+      return r.text().then(function(t){
+        try { return JSON.parse(t); } catch (e) { var x = new Error('bad_reply'); x.detail = 'The server answered with HTTP ' + r.status + ' but not with data. Start of reply: ' + t.replace(/\s+/g, ' ').slice(0, 140); throw x; }
+      });
+    })
     .then(function(j){
       btn.disabled = false; btn.textContent = 'Submit offer';
       if (j && j.ok) { done(j.photos || 0); return; }
       err.textContent = j && j.error === 'bad_hca' ? 'Please choose your name from the list.' : j && j.error === 'missing_fields' ? 'Please fill in the competitor and the offer.' : 'Something went wrong. Please try again.';
     })
-    .catch(function(){ btn.disabled = false; btn.textContent = 'Submit offer'; err.textContent = 'Something went wrong. Check your connection and try again.'; });
+    .catch(function(e){
+      btn.disabled = false; btn.textContent = 'Submit offer';
+      err.textContent = 'Something went wrong. Please try again. ' + (e && e.detail ? '(' + e.detail + ')' : '(The browser could not reach the server: ' + (e && e.message ? e.message : 'blocked') + ')');
+    });
 });
 $('again').onclick = function(){
   ['competitor', 'offer', 'price', 'expires', 'help'].forEach(function(id){ $(id).value = ''; });
