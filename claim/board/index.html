@@ -2,80 +2,136 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark">
 <title>Comfort Club Claims Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <!--
   TEAM CLAIMS BOARD: shows who has claimed this week's Comfort Club coupons.
   Lives at /sales-tools/claim/board/ . Reads the same Google Apps Script link as the claim page (action=list).
   Shows advisor, when, expected signing date and status. It never shows customer names or phone numbers
   (this page is on a public site); those stay in the "Comfort Club Claims" sheet and in the advisor's email.
+  Look: the dark navy HCA toolkit style (Outfit + Playfair Display).
 -->
 <style>
-  :root{--blue:#105CAB;--orange:#F5821F;--ink:#10233a;--muted:#5b6b7c;--line:#dde4ec;--bg:#eef2f6;--card:#fff;--red:#c0392b;--green:#1e7a46}
-  *{box-sizing:border-box}
-  [hidden]{display:none!important}
-  html,body{margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.45;
-       padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-  .wrap{max-width:720px;margin:0 auto;background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(16,35,58,.10)}
-  .nav{display:flex;flex-wrap:wrap;gap:8px 18px;padding:11px 22px;background:#f4f8fc;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
-  .nav a{color:var(--blue);text-decoration:none;white-space:nowrap}
-  .nav a:hover{text-decoration:underline}
-  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px;border-bottom:5px solid var(--orange)}
-  header img{display:block;height:56px;width:auto;max-width:55%}
-  .week{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);text-align:right;line-height:1.4}
-  .week strong{color:var(--ink)}
-  .hero{margin:22px;border-radius:14px;padding:22px 18px;text-align:center;background:var(--blue);color:#fff;border:3px dashed var(--orange)}
-  .hero .tag{font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;color:#ffd2a6}
-  .hero .big{font-size:clamp(40px,12vw,56px);line-height:1.05;font-weight:900;margin:6px 0 0}
-  .hero .big s{opacity:.55;text-decoration-thickness:3px}
-  .pips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0 4px}
-  .pip{width:24px;height:24px;border-radius:50%;border:2px solid #ffd2a6;background:transparent}
-  .pip.on{background:var(--orange)}
-  .hero small{display:block;color:#dbe8f6;font-size:14px}
-  .cta{padding:0 22px 6px;text-align:center}
-  .cta a{display:inline-block;background:var(--orange);color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:12px 28px;border-radius:8px}
-  h2{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--blue);margin:22px 22px 8px}
-  .tablewrap{overflow-x:auto;padding:0 22px}
-  table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
-  th{text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line)}
-  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
-  .pill{display:inline-block;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700}
-  .pill.claimed{background:#e6f4ec;color:var(--green)}
-  .pill.cancelled{background:#f3e4e2;color:var(--red);text-decoration:line-through}
-  .empty{padding:26px 22px;text-align:center;color:var(--muted)}
-  .by{padding:0 22px;display:flex;flex-wrap:wrap;gap:8px}
-  .chip{border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:13px}
-  .chip b{color:var(--blue)}
-  .note{padding:14px 22px 22px;font-size:12px;color:var(--muted)}
-  .err{padding:14px 22px;text-align:center;color:var(--red);font-weight:700}
-  footer{background:var(--blue);color:#dbe8f6;text-align:center;font-size:12px;padding:14px}
+:root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--orange:#c97d10;--gold:#f59e0b;--blue:#4aa3df;--green:#22c55e;--red:#ef4444;
+  --glass:rgba(10,22,40,.62);--glass-line:rgba(255,255,255,.08);--press:rgba(255,255,255,.06);--ease-out:cubic-bezier(.2,.9,.2,1)}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+html,body{margin:0}
+body{font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:var(--text);min-height:100vh;
+  background:radial-gradient(1100px 520px at 85% -8%,#16233f 0,transparent 62%),radial-gradient(800px 400px at -10% 30%,rgba(201,125,16,.07) 0,transparent 60%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:10px}
+.bar{position:sticky;top:0;z-index:50;padding:max(10px,env(safe-area-inset-top,0)) max(18px,env(safe-area-inset-right,0)) 10px max(18px,env(safe-area-inset-left,0));
+  background:var(--glass);border-bottom:1px solid var(--glass-line);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;flex-wrap:wrap}
+.back{font-weight:600;font-size:15px;color:var(--gold);padding:8px 6px 8px 0;display:inline-flex;align-items:center;gap:2px;transition:opacity .12s}
+.back:active{opacity:.5;transition:none}
+.links{display:flex;gap:6px 18px;flex-wrap:wrap}
+.links a{font-size:14px;font-weight:500;color:var(--mut);padding:8px 0;transition:color .15s}
+.links a:hover{color:var(--text)}
+.links a.on{color:var(--text)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-right,0)) 40px max(18px,env(safe-area-inset-left,0))}
+.title{padding:16px 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.title h1{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.1rem,6.5vw,3.2rem);line-height:1.05;letter-spacing:-.025em;margin:4px 0 6px}
+.title p{color:var(--mut);font-size:15px;max-width:36em;margin:0}
+.glabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:0 6px 8px;margin:26px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;border:0;font-weight:700;font-size:16px;cursor:pointer;padding:0 24px;
+  background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff;transition:transform .4s var(--ease-out),filter .15s}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:scale(.97);transition:transform .1s ease-out}
+.btn.alt{background:transparent;border:1px solid #34466a;color:var(--text);font-weight:600}
+.btn.alt:hover{background:rgba(255,255,255,.04);filter:none}
+.foot{text-align:center;color:#6b7a90;font-size:12px;padding:30px 0 6px;letter-spacing:.02em}
+@media(prefers-reduced-motion:no-preference){
+  .rise{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-transparency:reduce){.bar{background:#0a1628;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){:root{--line:#3a4a68;--mut:#b6c2d4}.panel{border-color:#5b6f94}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+/* board */
+.wrapb{max-width:760px}
+.hero{margin-top:6px;padding:26px 20px 24px;text-align:center;border-radius:24px;border:1px solid rgba(201,125,16,.45);
+  background:linear-gradient(135deg,rgba(201,125,16,.2),rgba(17,26,46,.92) 60%),var(--panel)}
+.hero .eyebrow{color:#f0b35a}
+.hero .big{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.6rem,11vw,4.2rem);line-height:1.05;letter-spacing:-.03em;margin:6px 0 0;font-variant-numeric:tabular-nums}
+.hero .big s{opacity:.45;text-decoration-thickness:3px}
+.pips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0 8px}
+.pip{width:22px;height:22px;border-radius:50%;border:2px solid rgba(240,179,90,.55);background:transparent;transition:background .4s var(--ease-out),box-shadow .4s}
+.pip.on{background:var(--gold);border-color:var(--gold);box-shadow:0 0 14px rgba(245,158,11,.55)}
+.hero small{display:block;color:var(--mut);font-size:15px}
+.cta{text-align:center;margin:18px 0 4px}
+.by{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 14px;font-size:14px;color:var(--mut)}
+.chip b{color:var(--gold);margin-right:2px}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+th{text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+td{padding:14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+.pill{display:inline-block;border-radius:999px;padding:3px 11px;font-size:12px;font-weight:700}
+.pill.claimed{background:rgba(34,197,94,.14);color:#4ade80}
+.pill.claimed::before{content:"\2713\00a0"}
+.pill.cancelled{background:rgba(239,68,68,.13);color:#f87171;text-decoration:line-through}
+.pill.cancelled::before{content:"\2715\00a0";text-decoration:none;display:inline-block}
+.empty{padding:34px 18px;text-align:center;color:var(--mut)}
+.err{padding:14px 18px;text-align:center;color:#f87171;font-weight:600;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);border-radius:16px}
+@media(max-width:620px){
+  .tablewrap{background:transparent;border:0;overflow:visible}
+  table,tbody{display:block;min-width:0}
+  thead{display:none}
+  tbody tr{display:block;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:6px 16px;margin-bottom:10px}
+  tbody tr:hover{background:var(--panel)}
+  td{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);text-align:right}
+  tr:last-child td{border-bottom:1px solid var(--line)}
+  td:last-child{border-bottom:0}
+  td::before{content:attr(data-l);color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-align:left;flex:none;padding-top:2px}
+}
+.note{padding:18px 6px 0;font-size:12px;color:#6b7a90;line-height:1.6}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="nav" aria-label="Site links">
-    <a href="../../">&larr; HCA Tools</a>
-    <a href="../">Claim a coupon</a>
-    <a href="../../follow-up-tracker.html">My Follow-Up Tracker</a>
-  </nav>
-  <header>
-    <img src="https://cmheating.github.io/sales-tools/cm-logo-email.png" alt="CM Heating, Cooling, Plumbing, Electrical">
-    <div class="week">Team Claims Board<br><strong id="weekLabel">Oct 19 &ndash; Oct 25</strong></div>
-  </header>
+<header class="bar">
+  <div class="bar-in">
+    <a class="back" href="../../">&#8249; HCA Tools</a>
+    <nav class="links" aria-label="Site links">
+      <a href="../">Claim a coupon</a>
+      <a href="../../follow-up-tracker.html">My Follow-Up Tracker</a>
+    </nav>
+  </div>
+</header>
 
-  <div class="hero">
-    <div class="tag">Comfort Club &bull; 6 months before first payment</div>
+<main class="wrap wrapb">
+  <section class="title">
+    <div class="eyebrow">Team Claims Board</div>
+    <h1>Comfort Club</h1>
+    <p><span id="weekLabel">Oct 19 &ndash; Oct 25</span> &middot; 6 months before the first payment</p>
+  </section>
+
+  <div class="hero rise">
+    <div class="eyebrow">Claimed this week</div>
     <div class="big" id="count">&hellip;</div>
     <div class="pips" id="pips" aria-hidden="true"></div>
     <small id="sub">Loading the latest claims</small>
   </div>
-  <div class="cta"><a href="../">Claim a Comfort Club coupon &rarr;</a></div>
+  <div class="cta"><a class="btn" href="../">Claim a Comfort Club coupon &rarr;</a></div>
 
-  <h2>By advisor</h2>
+  <div class="glabel">By advisor</div>
   <div class="by" id="by"><span class="chip">&hellip;</span></div>
 
-  <h2>Claims, newest first</h2>
+  <div class="glabel">Claims, newest first</div>
   <div class="err" id="err" hidden>Couldn&rsquo;t load the claims. Refresh in a minute, or check the Comfort Club Claims sheet.</div>
   <div class="tablewrap" id="tablewrap" hidden>
     <table>
@@ -83,11 +139,11 @@
       <tbody id="rows"></tbody>
     </table>
   </div>
-  <div class="empty" id="empty" hidden>No claims yet this week.</div>
+  <div class="empty panel" id="empty" hidden>No claims yet this week.</div>
 
   <div class="note">Internal: please don&rsquo;t forward. Customer names and phone numbers are not shown here. Advisors get them by email when a coupon is claimed, and they are in the Comfort Club Claims sheet. Updates every minute.</div>
-  <footer>CM Heating &bull; (360) 941-5613 &bull; cmheating.com</footer>
-</div>
+  <div class="foot">CM Heating &middot; (360) 941-5613 &middot; cmheating.com</div>
+</main>
 
 <script>
 /* The same Google Apps Script web app link the claim page uses. */
@@ -116,7 +172,8 @@ function fmtWeek(s){
   if (isNaN(d)) return 'Week of ' + s;
   return 'Week of ' + d.toLocaleDateString('en-US', { timeZone: /^\d{2}\//.test(s) ? 'UTC' : 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric' });
 }
-function cell(tr, text, cls){ var td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; tr.appendChild(td); return td; }
+var LABELS = ['Claimed', 'Advisor', 'Expected signing', 'First payment', 'Status'];
+function cell(tr, text, cls){ var td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; td.setAttribute('data-l', LABELS[tr.children.length] || ''); tr.appendChild(td); return td; }
 
 function render(j){
   var cap = typeof j.capacity === 'number' ? j.capacity : ORIGINAL_TOTAL, claimed = j.claimed || 0, c = $('count');
@@ -132,7 +189,7 @@ function render(j){
   rows.forEach(function(r){
     var tr = document.createElement('tr');
     cell(tr, fmtTime(r.claimedAt)); cell(tr, r.hca); cell(tr, fmtDay(r.signDate)); cell(tr, fmtWeek(r.firstPaymentWeekOf));
-    var st = document.createElement('td'), pill = document.createElement('span');
+    var st = document.createElement('td'); st.setAttribute('data-l', 'Status'); var pill = document.createElement('span');
     pill.className = 'pill ' + (r.status === 'Claimed' ? 'claimed' : 'cancelled'); pill.textContent = r.status; st.appendChild(pill); tr.appendChild(st);
     body.appendChild(tr);
     if (r.status === 'Claimed') by[r.hca] = (by[r.hca] || 0) + 1;
