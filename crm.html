@@ -637,7 +637,7 @@ const HCA_SCHEDULE = {
                      /* effective Sun 10/4/26: Tue–Sat, ride Fri, sales meeting Wed, 1:1 stays Tue 9:00; one primary tech, same ride every week; secondary = backup HCA for another tech */
                      eff:[{ from:"2026-10-04", days:[2,3,4,5,6], ride:5, mtg:3, rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Hagen",0]] }, { from:"2026-10-11", mtg:[2,3] }],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
   "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8],  eff:[{ from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
-  "Kyle McAlister":  { sh:[8,16],  days:[1,2,3,4,5], ride:3, crew:"day", mtg:2, oo:[2,10], eff:[{ from:"2026-10-04", rot:["Hagen","Hagen","Hagen","Hagen"], techs:[["Hagen",1],["Doug",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Younis","Peter"],         techs:[["Alex",1],["Charles",1],["Peter",1],["Younis",0]] },
+  "Kyle McAlister":  { sh:[8,16],  days:[1,2,3,4,5], off:["2026-10-26"], hold:{ "2026-10-24":"Revisit and loose ends" } /* Mon 10/26 off; works Sat 10/24 on a revisit + loose ends, no new bookings */, ride:3, crew:"day", mtg:2, oo:[2,10], eff:[{ from:"2026-10-04", rot:["Hagen","Hagen","Hagen","Hagen"], techs:[["Hagen",1],["Doug",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Younis","Peter"],         techs:[["Alex",1],["Charles",1],["Peter",1],["Younis",0]] },
   "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9],  eff:[{ from:"2026-10-04", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Younis",0],["Conrad",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
   "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], eff:[{ from:"2026-10-04", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Alex",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
   "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  eff:[{ from:"2026-10-04", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan K",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
@@ -720,6 +720,7 @@ function schedPlan(p, d){
 function schedPlanCore(p, d){
   const dow = d.getDay(), wk = schedWeek(d);
   if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
+  if((p.hold||{})[schedIso(d)]) return { blocks:[[7,p.sh[0],"os",""],[p.sh[0],p.sh[1],"blk","NO NEW BOOKINGS · "+p.hold[schedIso(d)].toUpperCase()],[p.sh[1],19,"os",""]], book:0, lines:[p.hold[schedIso(d)]+" — no new appointments today."], sh:p.sh };
   if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
   if((p.off||[]).indexOf(schedIso(d)) >= 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
   if(SCHED_DAY_EVENTS[schedIso(d)]) return schedEventPlan(p, d, SCHED_DAY_EVENTS[schedIso(d)]);
@@ -785,6 +786,7 @@ function schedFor(p, d){ const iso = schedIso(d); let out = p;
 function schedPacketCell(p, d){
   const pl = schedPlan(schedFor(p, d), d);
   if(!pl.sh) return { kind:"off", text:"–", sub: pl.blocks[0] && pl.blocks[0][3] !== "DAY OFF" ? pl.blocks[0][3] : "", book:0 };
+  if(pl.blocks.some(b => /^NO NEW BOOKINGS/.test(b[3]))) return { kind:"meet", text:"HOLD", sub:"no new appts", book:0 };
   const parts = [];
   pl.blocks.forEach(b => { const t = b[3];
     if(b[2] === "ride") parts.push("R " + t.replace("TECH RIDE · ",""));
