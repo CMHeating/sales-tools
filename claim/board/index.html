@@ -152,10 +152,11 @@ var OFFER_START = '2026-10-19';   // <-- change this Monday each week (same date
 var ORIGINAL_TOTAL = 2;   // the number announced in Monday's email; if capacity grows past it, it is shown struck through
 
 var $ = function(id){ return document.getElementById(id); };
-(function(){
+function setWeek(){
   var a = new Date(OFFER_START + 'T00:00:00Z'), b = new Date(a.getTime() + 6 * 864e5), o = { timeZone: 'UTC', month: 'short', day: 'numeric' };
   $('weekLabel').textContent = a.toLocaleDateString('en-US', o) + ' \u2013 ' + b.toLocaleDateString('en-US', o);
-})();
+}
+setWeek();
 function fmtTime(iso){
   var d = new Date(iso); if (isNaN(d)) return iso;
   return d.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -176,6 +177,9 @@ var LABELS = ['Claimed', 'Advisor', 'Expected signing', 'First payment', 'Status
 function cell(tr, text, cls){ var td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text; td.setAttribute('data-l', LABELS[tr.children.length] || ''); tr.appendChild(td); return td; }
 
 function render(j){
+  if (j.offerStart && /^\d{4}-\d{2}-\d{2}$/.test(j.offerStart)) OFFER_START = j.offerStart;   // week comes from the claims script (Config tab); the constant is the fallback
+  if (typeof j.originalTotal === 'number') ORIGINAL_TOTAL = j.originalTotal;
+  setWeek();
   var cap = typeof j.capacity === 'number' ? j.capacity : ORIGINAL_TOTAL, claimed = j.claimed || 0, c = $('count');
   c.textContent = claimed + ' of ';
   if (cap > ORIGINAL_TOTAL) { var s = document.createElement('s'); s.textContent = ORIGINAL_TOTAL; c.appendChild(s); c.appendChild(document.createTextNode(' ')); }

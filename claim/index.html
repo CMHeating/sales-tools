@@ -281,12 +281,21 @@ function claimedNow(){
   return CONFIG.CLAIMS_ENDPOINT ? null : CONFIG.CLAIMED;     // no CRM link yet: the number set by hand in CONFIG
 }
 function leftNow(){ var c = claimedNow(); return c === null ? null : CONFIG.TOTAL - c; }
+function applyWeek(j){
+  if (typeof j.originalTotal === 'number') CONFIG.ORIGINAL_TOTAL = j.originalTotal;
+  if (j.offerStart && /^\d{4}-\d{2}-\d{2}$/.test(j.offerStart) && j.offerStart !== CONFIG.OFFER_START) {
+    CONFIG.OFFER_START = j.offerStart; CONFIG.OFFER_END = isoAdd(CONFIG.OFFER_START, 6); CONFIG.DEADLINE = pacificEndOfDay(CONFIG.OFFER_END);
+    $('legal').textContent = offer.legal.replace('{RANGE}', rangeLong());
+    renderDates(); buildSignDates(); $('claimForm').hidden = false; tick();
+  }
+}
 function loadClaims(){
   if (!CONFIG.CLAIMS_ENDPOINT || !offer.scarcity) return;
   fetch(CONFIG.CLAIMS_ENDPOINT + (CONFIG.CLAIMS_ENDPOINT.indexOf('?') < 0 ? '?' : '&') + 'offer=' + offerKey, { cache: 'no-store' })
     .then(function(r){ if (!r.ok) throw 0; return r.json(); })
     .then(function(j){
-      if (typeof j.capacity === 'number') CONFIG.TOTAL = j.capacity;   // capacity comes from the sheet (cell K2), so it can grow later
+      applyWeek(j);   // dates + announced number come from the claims script (Config tab); the constants above are the fallback
+      if (typeof j.capacity === 'number') CONFIG.TOTAL = j.capacity;   // capacity comes from the sheet (Config tab), so it can grow later
       LIVE.claimed = Math.max(0, Math.min(+j.claimed || 0, CONFIG.TOTAL));
       renderScarcity();
     })
@@ -329,14 +338,18 @@ function addMonths(d, m){
 function mondayOf(d){ return new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * DAY); }
 function fmt(d, o){ return d.toLocaleDateString('en-US', Object.assign({ timeZone: 'UTC' }, o)); }
 function weekOf(signed, months){ return 'week of ' + fmt(mondayOf(addMonths(signed, months)), { month: 'long', day: 'numeric', year: 'numeric' }); }
-{   // signing-date list is built once; the field is only shown for Comfort Club (see applyOffer)
+function buildSignDates(){   // the field is only shown for Comfort Club (see applyOffer); rebuilt if the claims script changes the week
   var today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   var first = today > CONFIG.OFFER_START ? today : CONFIG.OFFER_START;
+  signSel.innerHTML = '';
   var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Select a signing date…'; ph.disabled = true; ph.selected = true; signSel.appendChild(ph);
   for (var d = utc(first); d <= utc(CONFIG.OFFER_END); d = new Date(d.getTime() + DAY)) {
     var o = document.createElement('option'); o.value = d.toISOString().slice(0, 10);
     o.textContent = fmt(d, { weekday: 'long', month: 'long', day: 'numeric' }); signSel.appendChild(o);
   }
+}
+buildSignDates();
+{
   signSel.addEventListener('change', function(){
     var s = utc(signSel.value);
     $('estWeek').textContent = weekOf(s, offer.estimate.months).replace(/^week/, 'Week');
