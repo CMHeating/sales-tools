@@ -689,10 +689,10 @@ el('ready').addEventListener('change',function(){
   manualStatus=(chosen==='')?null:chosen;
   renderVerdict();
 });
-/* ===== Autosave (?autosave=1) — field-level drafts to icdraft, polling icget. The buttons are unchanged. =====
+/* ===== Autosave (on by default since 2026-10-25; ?autosave=0 turns it off) — field-level drafts to icdraft, polling icget. The buttons are unchanged. =====
    One "job" = customer + install date (the server's key). Only fields the person actually edits are sent
    (with the value they last saw as `base`), so nobody's work overwrites anybody else's. Nothing is emailed. */
-var AUTOSAVE=/[?&]autosave=1(&|$)/.test(location.search);
+var AUTOSAVE=!/[?&]autosave=0(&|$)/.test(location.search);
 var AS={job:null,flushT:null,pollT:null,keyT:null,lastInput:Date.now()};
 var DRAFT_IDS=FIELDS.filter(function(f){return ['customer','idate','ready'].indexOf(f)===-1;});
 var ROLE_BY={'jonathan jansen':'jon','lyle jones':'lyle','geoff simons':'geoff'};
@@ -703,11 +703,29 @@ var URL_ROLE='';
 function asRole(){return URL_ROLE||ROLE_BY[custKey(v('by'))]||'hca';}
 function asChip(t,warn){var c=el('asChip');if(!c)return;c.textContent=t;c.style.color=warn?'#e9960f':'var(--mut)';}
 function asTime(iso){try{return new Date(iso||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}catch(e){return '';}}
-function asNewJob(){var c=v('customer'),d=v('idate');if(!c||!d)return null;return {key:pendKey(c,d),cust:c,idate:d,base:{},dirty:{},conflicts:{},v:0,busy:false};}
+function asNewJob(){var c=v('customer'),d=v('idate');if(!c||!d)return null;return {key:pendKey(c,d),cust:c,idate:d,base:{},dirty:{},conflicts:{},signAs:{},ask:{},v:0,busy:false};}
 function asSaveLocal(J){try{var o={};Object.keys(J.dirty).forEach(function(id){o[id]=v(id);});var k='cmh_ic_draft:'+J.key;if(Object.keys(o).length)localStorage.setItem(k,JSON.stringify(o));else localStorage.removeItem(k);}catch(e){}}
+/* Sign-offs: Geoff often sets Electrical as well as Sales, and Jon sometimes both. The server only takes a sign-off
+   from its own role (soft check), so ask once per field and job; Yes sends that field under the owner's role, with
+   `by` still the person typing, so the record shows who actually set it. No puts the saved value back. */
+function asRoleFor(J,id){return J.signAs[id]||asRole();}
+function asAskSign(J,id){
+  var own=ROLE_OF_FIELD[id],e=el(id),dep={jon:'Electrical',lyle:'Install',geoff:'Sales'}[own];if(!e)return;
+  J.ask[id]=1;if(el('assign-'+id))return;
+  var d=document.createElement('div');d.id='assign-'+id;
+  d.style.cssText='font-size:12px;margin-top:6px;padding:8px 10px;border:1px solid var(--blue);border-radius:8px;line-height:1.5';
+  d.innerHTML='Sign '+dep+' for <b>'+qesc(ROLE_NAME[own])+'</b>? ';
+  function done(){delete J.ask[id];if(d.parentNode)d.parentNode.removeChild(d);}
+  function btn(t,fn){var b=document.createElement('button');b.type='button';b.className='ghost';b.textContent=t;b.style.cssText='padding:4px 10px;min-height:0;font-size:12px;margin:4px 6px 0 0';b.onclick=fn;d.appendChild(b);}
+  btn('Yes',function(){J.signAs[id]=own;done();asTouch({target:e});});
+  btn('No',function(){e.value=J.base[id]==null?'':J.base[id];done();renderVerdict();});
+  e.parentNode.appendChild(d);
+}
 function asTouch(e){
   if(!AS.job||!e||!e.target)return;var id=e.target.id;if(DRAFT_IDS.indexOf(id)===-1)return;
-  var J=AS.job;AS.lastInput=Date.now();J.dirty[id]=1;delete J.conflicts[id];asClearConflict(id);asSaveLocal(J);
+  var J=AS.job;AS.lastInput=Date.now();
+  if(ROLE_OF_FIELD[id]&&ROLE_OF_FIELD[id]!==asRoleFor(J,id)){asAskSign(J,id);return;}
+  J.dirty[id]=1;delete J.conflicts[id];asClearConflict(id);asSaveLocal(J);
   asChip('Unsaved changes…');clearTimeout(AS.flushT);AS.flushT=setTimeout(function(){asFlush(J);},2000);
 }
 function asFlush(J){
@@ -715,11 +733,12 @@ function asFlush(J){
   if(J.busy){if(J===AS.job)AS.flushT=setTimeout(function(){asFlush(J);},800);return Promise.resolve();}
   var ids=Object.keys(J.dirty).filter(function(id){return !J.conflicts[id];});
   if(!ids.length)return Promise.resolve();
+  var role=asRoleFor(J,ids[0]);ids=ids.filter(function(id){return asRoleFor(J,id)===role;});   /* one role per request; the rest follow */
   var used=0,pick=[];   /* keep the JSONP URL short: send what fits, the rest follows right after */
   ids.forEach(function(id){var n=v(id).length*2+String(J.base[id]||'').length+40;if(!pick.length||used+n<1800){pick.push(id);used+=n;}});
   var fields={},base={};pick.forEach(function(id){fields[id]=v(id);base[id]=J.base[id]==null?'':String(J.base[id]);});
   J.busy=true;asChip('Saving…');
-  return api({action:'icdraft',customer:J.cust,idate:J.idate,hca:v('hca'),role:asRole(),by:v('by')||ROLE_NAME[asRole()],fields:JSON.stringify(fields),base:JSON.stringify(base)}).then(function(d){
+  return api({action:'icdraft',customer:J.cust,idate:J.idate,hca:v('hca'),role:role,by:v('by')||ROLE_NAME[asRole()],fields:JSON.stringify(fields),base:JSON.stringify(base)}).then(function(d){
     J.busy=false;
     if(!d||d.retry){if(J===AS.job)AS.flushT=setTimeout(function(){asFlush(J);},3000);return;}
     if(!d.ok){asChip('Save error — kept on this device',1);return;}
@@ -749,7 +768,7 @@ function asAdopt(J,d){
   if(!d||!d.ok||J!==AS.job)return;
   var f=(d.payload&&d.payload.f)||{},changed=[];J.v=d.v||0;
   DRAFT_IDS.forEach(function(id){
-    if(!f.hasOwnProperty(id)||J.dirty[id])return;
+    if(!f.hasOwnProperty(id)||J.dirty[id]||J.ask[id])return;
     var sv=String(f[id]==null?'':f[id]),e=el(id);
     if(!e||document.activeElement===e||J.base[id]===sv)return;
     if(String(e.value||'')!==sv){e.value=sv;changed.push(id);}
