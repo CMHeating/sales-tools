@@ -496,6 +496,42 @@ function owedBy(payload){
     hca:(!done(f.heatload)||!done(f.video)||!done(f.photos)||!done(f.mat))};
 }
 var WHO_LABEL={all:'anyone',jon:'Jon',lyle:'Lyle',geoff:'Geoff',hca:'the HCA'};
+/* Mark installed (2026-10-25): Geoff / Lyle / Jon close an installed check that the Combo Log still lists
+   as PENDING. Their link carries #role=geoff|lyle|jon (soft check: a link is not a login; the server checks too).
+   The button shows only for a past or today's install date. Confirm is inline: in-app browsers block confirm(). */
+var MGR_ROLE=(function(){var m=(String(location.hash||'')+'&'+String(location.search||'')).match(/[#&?]role=(geoff|lyle|jon)(?=&|$)/i);return m?m[1].toLowerCase():'';})();
+var MGR_NAME={geoff:'Geoff',lyle:'Lyle',jon:'Jon'};
+function todayIso(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function canMark(c){return !!MGR_ROLE&&/^\d{4}-\d{2}-\d{2}$/.test(String(c.idate||''))&&c.idate<=todayIso();}
+function markParams(c,action){return {action:action,customer:c.customer||'',idate:c.idate||'',unit:String(c.key||'').split('|')[2]||'',role:MGR_ROLE,by:MGR_NAME[MGR_ROLE]};}
+function markToast(html,undo){
+  var t=el('mkToast');if(!t){t=document.createElement('div');t.id='mkToast';t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0));background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;z-index:50;display:none;box-shadow:0 6px 24px #0008';document.body.appendChild(t);}
+  clearTimeout(t._h);t.innerHTML=html;t.style.display='block';
+  var u=t.querySelector('.mkUndo');if(u&&undo)u.onclick=undo;
+  t._h=setTimeout(function(){t.style.display='none';},15000);
+}
+function markRow(row,c){
+  var box=document.createElement('div');box.style.cssText='flex:none;display:flex;gap:6px;align-items:center';
+  function idle(){box.innerHTML='<button class="ghost" style="padding:7px 10px;font-size:13px">Mark installed</button>';
+    box.firstChild.onclick=function(e){e.stopPropagation();ask();};}
+  function ask(){box.innerHTML='<span style="font-size:13px">Mark installed: <b>'+qesc(c.customer||'')+'</b>, '+qesc(c.idate||'')+'?</span>'+
+    '<button class="go" style="padding:7px 12px;font-size:13px">Yes</button><button class="ghost" style="padding:7px 10px;font-size:13px">Cancel</button>';
+    var b=box.querySelectorAll('button');b[0].onclick=function(e){e.stopPropagation();go(b);};b[1].onclick=function(e){e.stopPropagation();idle();};}
+  function go(b){b[0].disabled=b[1].disabled=true;b[0].textContent='…';
+    api(markParams(c,'icmarkinstalled')).then(function(d){
+      if(d&&d.ok&&(d.closed||d.already)){
+        OPEN_CHECKS=OPEN_CHECKS.filter(function(x){return x!==c;});renderOpenChecks();
+        if(d.closed)markToast('Closed — '+qesc(c.customer||'')+' <button class="ghost mkUndo" style="padding:5px 10px;font-size:13px;margin-left:8px">Undo</button>',function(){undo(c);});
+        else markToast('Already '+qesc(d.already||'closed')+' — '+qesc(c.customer||''));
+      } else {idle();box.insertAdjacentHTML('beforeend','<span style="font-size:12px;color:var(--red)">'+qesc((d&&d.error)||'Couldn’t close — try again')+'</span>');}
+    }).catch(function(){idle();box.insertAdjacentHTML('beforeend','<span style="font-size:12px;color:var(--red)">Couldn’t reach the server — try again</span>');});}
+  function undo(c){var t=el('mkToast');if(t)t.innerHTML='Undoing…';
+    api(markParams(c,'icreopen')).then(function(d){
+      if(d&&d.ok&&d.reopened){markToast('Reopened — '+qesc(c.customer||''));loadOpenChecks();}
+      else markToast('Couldn’t undo'+(d&&d.error?(': '+qesc(d.error)):''));
+    }).catch(function(){markToast('Couldn’t reach the server — Undo not done');});}
+  idle();row.appendChild(box);
+}
 function renderOpenChecks(){
   var card=el('resumeCard'),list=el('resumeList'),pg=el('resumeProg');if(!card||!list)return;
   if(!OPEN_CHECKS.length){card.style.display='none';return;}
@@ -507,6 +543,7 @@ function renderOpenChecks(){
     var row=document.createElement('div');row.className='qrow';
     row.innerHTML='<span class="qdot" style="background:#e0912f"></span><div class="qmain"><div class="qname">'+qesc(c.customer||'(no name)')+'</div><div class="qmeta">'+(c.idate?('install '+qesc(c.idate)+' · '):'')+qesc(c.outstanding||'in progress')+'</div></div>';
     row.onclick=function(){applyCheckPayload(c.payload,'Reopened in-progress check — finish the missing items and Send.');};
+    if(canMark(c))markRow(row,c);
     list.appendChild(row);
   });
   if(pg)pg.textContent=(who==='all')?(shown.length+' open'):(shown.length+' waiting on '+(WHO_LABEL[who]||who));
