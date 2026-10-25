@@ -337,6 +337,8 @@ made by `scripts/merge-install-availability-rules.py`.
 
 4. Read the live rules back with `database:get` and confirm they equal the merged file.
 
+Before step 3's deploy, announce it to the rules tripwire: `node scripts/rules-hash.mjs database.install-availability.merged.private.json`, then paste the printed hash into the **Firebase Rules Tripwire** project's Script Property `EXPECTED_RULES_SHA256`. The next hourly check records the new rules and emails "planned change confirmed". Without it the drift alarm fires; accept it by running `setBaselineFromLive()` in that project.
+
 Immediately after deploying, have one Admin and one HCA load the page and confirm schedule
 data appears. Signing in successfully is not sufficient — a rules problem lets a user
 authenticate and then shows them no data.

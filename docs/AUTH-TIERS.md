@@ -29,8 +29,9 @@ Safe procedure (protects the live site):
 1. Take a fresh private snapshot of the live Rules tab (it contains staff emails: keep it OUT of this public repo). Re-take it before every deploy; rules can change.
 2. `python3 rules/build-additive-rules.py LIVE.json rules/cmh_install_req.rules.fragment.json OUT.json` builds live + new nodes only and verifies every live node is byte-for-byte unchanged (it refuses a fragment that redefines a live node). `--check LIVE.json CANDIDATE.json` verifies any other candidate.
 3. Run `scripts/test-live-rules-unchanged.cjs` (differential: 9 identities x 30 operations, plus the Install Availability controls, must be IDENTICAL under live and new rules; it fails on the old proposal with 85 differences) and `scripts/test-install-req-rules.cjs` (every audit exploit) in the emulator.
-4. `firebase deploy --only database --dry-run`, then deploy from a private firebase config whose rules path is OUT.json. Geoff's action. Firebase login must be current.
-5. Afterwards: re-open the Install Availability page as an HCA and as Amy; re-run step 3 against a fresh snapshot.
+4. Announce the change to the rules tripwire first: `node scripts/rules-hash.mjs OUT.json`, then paste the printed hash into the **Firebase Rules Tripwire** project's Script Property `EXPECTED_RULES_SHA256`. The next hourly check then records the new rules and emails "planned change confirmed" instead of a drift alarm. Skip this and the drift alarm fires (accept it by running `setBaselineFromLive()` in that project).
+5. `firebase deploy --only database --dry-run`, then deploy from a private firebase config whose rules path is OUT.json. Geoff's action. Firebase login must be current.
+6. Afterwards: re-open the Install Availability page as an HCA and as Amy; re-run step 3 against a fresh snapshot.
 
 What this additive deploy does NOT change (on purpose): `cmh_sold_tracker` stays `auth != null` read+write (the sync writes anonymously). So until a separate, later cutover (dedicated writer account + per-HCA partition + verified Google read, see the other session's branch), the Google-only gate on sold/follow-up cards is a UI gate: a PIN session could still read the sold tracker by calling Firebase directly. `cmh_followup_tracker` is already verified-email gated live.
 
