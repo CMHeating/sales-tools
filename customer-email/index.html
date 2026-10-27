@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark">
+<title>Customer Coupon Email – HCA Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<!--
+  CUSTOMER COUPON EMAIL (HCA Tools). Lives at /sales-tools/customer-email/ .
+  Each advisor picks their name, and the week's customer email (Comfort Club 6 months + 18-month financing) is built with
+  THEIR phone number and sign-off. Copy it, paste into a Gmail message to their own customers.
+  The week dates and the number of coupons come from the Comfort Club claims script (Config tab), so nothing is edited weekly.
+  The email does not show a live "X of N claimed" count, because a forwarded email stays in inboxes all week.
+-->
+<style>
+:root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--orange:#c97d10;--gold:#f59e0b;--blue:#4aa3df;--green:#22c55e;--red:#ef4444;
+  --glass:rgba(10,22,40,.62);--glass-line:rgba(255,255,255,.08);--press:rgba(255,255,255,.06);--ease-out:cubic-bezier(.2,.9,.2,1)}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+html,body{margin:0}
+body{font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:var(--text);min-height:100vh;
+  background:radial-gradient(1100px 520px at 85% -8%,#16233f 0,transparent 62%),radial-gradient(800px 400px at -10% 30%,rgba(201,125,16,.07) 0,transparent 60%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:10px}
+.bar{position:sticky;top:0;z-index:50;padding:max(10px,env(safe-area-inset-top,0)) max(18px,env(safe-area-inset-right,0)) 10px max(18px,env(safe-area-inset-left,0));
+  background:var(--glass);border-bottom:1px solid var(--glass-line);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;flex-wrap:wrap}
+.back{font-weight:600;font-size:15px;color:var(--gold);padding:8px 6px 8px 0;display:inline-flex;align-items:center;gap:2px;transition:opacity .12s}
+.back:active{opacity:.5;transition:none}
+.links{display:flex;gap:6px 18px;flex-wrap:wrap}
+.links a{font-size:14px;font-weight:500;color:var(--mut);padding:8px 0;transition:color .15s}
+.links a:hover{color:var(--text)}
+.links a.on{color:var(--text)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-right,0)) 40px max(18px,env(safe-area-inset-left,0))}
+.title{padding:16px 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.title h1{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.1rem,6.5vw,3.2rem);line-height:1.05;letter-spacing:-.025em;margin:4px 0 6px}
+.title p{color:var(--mut);font-size:15px;max-width:36em;margin:0}
+.glabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:0 6px 8px;margin:26px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;border:0;font-weight:700;font-size:16px;cursor:pointer;padding:0 24px;
+  background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff;transition:transform .4s var(--ease-out),filter .15s}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:scale(.97);transition:transform .1s ease-out}
+.btn.alt{background:transparent;border:1px solid #34466a;color:var(--text);font-weight:600}
+.btn.alt:hover{background:rgba(255,255,255,.04);filter:none}
+.foot{text-align:center;color:#6b7a90;font-size:12px;padding:30px 0 6px;letter-spacing:.02em}
+@media(prefers-reduced-motion:no-preference){
+  .rise{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-transparency:reduce){.bar{background:#0a1628;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){:root{--line:#3a4a68;--mut:#b6c2d4}.panel{border-color:#5b6f94}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.wrapc{max-width:760px}
+.panel{padding:18px}
+label{display:block;font-weight:600;font-size:14px;margin:0 0 6px}
+select,input{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text)}
+select{appearance:none;-webkit-appearance:none;padding-right:38px;background-image:linear-gradient(45deg,transparent 50%,#94a3b8 50%),linear-gradient(135deg,#94a3b8 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 14px) 52%;background-size:6px 6px;background-repeat:no-repeat}
+select:focus,input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 4px rgba(245,158,11,.16)}
+.row2{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:14px}
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.steps .btn{flex:1;min-width:200px}
+.ok{color:#4ade80;font-weight:600;font-size:14px;min-height:20px;margin-top:10px}
+.how{color:var(--mut);font-size:14px;margin:14px 0 0;padding-left:18px}
+.how li{margin:5px 0}
+.how b{color:var(--text)}
+.week{display:inline-block;margin-top:4px;font-size:13px;color:var(--gold);background:rgba(245,158,11,.1);border-radius:999px;padding:3px 11px;font-weight:600}
+.preview{margin-top:18px;border-radius:20px;overflow:hidden;border:1px solid var(--line);background:#eef2f6}
+.note{padding:14px 6px 0;font-size:12px;color:#6b7a90}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="back" href="../">&#8249; HCA Tools</a>
+    <nav class="links" aria-label="Site links"><a href="../claim/board/">Claims Board</a></nav>
+  </div>
+</header>
+<main class="wrap wrapc">
+  <section class="title">
+    <div class="eyebrow">This week</div>
+    <h1>Customer Coupon Email</h1>
+    <p>This week&rsquo;s two offers, ready to send to your customers with your name and phone number.</p>
+    <span class="week" id="weekTag">Loading this week&hellip;</span>
+  </section>
+
+  <div class="panel">
+    <label for="hca">Your name</label>
+    <select id="hca"></select>
+    <div class="row2">
+      <div><label for="subject">Subject line</label><input id="subject" readonly></div>
+      <button class="btn alt" id="copySubj" type="button">Copy subject</button>
+    </div>
+    <div class="steps">
+      <button class="btn" id="copyEmail" type="button">Copy email</button>
+    </div>
+    <div class="ok" id="ok" role="status"></div>
+    <ol class="how">
+      <li>Pick your name. Your phone number and sign-off go into the email.</li>
+      <li>Click <b>Copy email</b>, open a new Gmail message, click the message body and paste (Ctrl+V or long-press, Paste).</li>
+      <li>Copy the subject, add your customer, and send. For several customers, put them in <b>Bcc</b>, never To or Cc.</li>
+      <li>Send only to customers you&rsquo;re working with or have quoted, and never to anyone who asked not to be contacted.</li>
+    </ol>
+  </div>
+
+  <div class="preview"><div id="email"></div></div>
+  <div class="note">The coupon count is not shown in the email because emails sit in inboxes all week; the claim page shows the live count. Claims go to the same page and sheet as always.</div>
+  <div class="foot">CM Heating &middot; Internal HCA tool</div>
+</main>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+var BASE = 'https://cmheating.github.io/sales-tools/';
+var LOGO = BASE + 'cm-logo-email.png';
+var CLAIM = BASE + 'claim/?offer=comfort-club';
+var BOARD = BASE + 'claim/board/';
+var PHONE = '(425) 390-8333', TEL = '4253908333';
+var MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAY = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+/* ---------- date helpers (all UTC so time zones never shift a day) ---------- */
+function parseISO(s){ var p = s.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); }
+function addDays(d, n){ return new Date(d.getTime() + n * 864e5); }
+function addMonths(d, n){
+  var y = d.getUTCFullYear(), m = d.getUTCMonth() + n, day = d.getUTCDate();
+  var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(day, last)));
+}
+function mondayOf(d){ var w = d.getUTCDay(); return addDays(d, w === 0 ? -6 : 1 - w); }
+function short(d){ return MON[d.getUTCMonth()].slice(0, 3) + ' ' + d.getUTCDate(); }
+function longd(d){ return MON[d.getUTCMonth()] + ' ' + d.getUTCDate(); }
+function full(d){ return longd(d) + ', ' + d.getUTCFullYear(); }
+
+function model(){
+  var mon = parseISO($('monday').value), sun = addDays(mon, 6);
+  var total = Math.max(0, parseInt($('total').value, 10) || 0);
+  var claimed = Math.max(0, parseInt($('claimed').value, 10) || 0);
+  var orig = Math.max(1, parseInt($('orig').value, 10) || total || 1);
+  var weeks = [], seen = {};
+  for (var i = 0; i < 7; i++) {
+    var w = mondayOf(addMonths(addDays(mon, i), 6)), k = w.getTime();
+    if (!seen[k]) { seen[k] = 1; weeks.push(w); }
+  }
+  var fp = weeks.length === 1 ? 'week of ' + full(weeks[0])
+         : 'week of ' + full(weeks[0]) + ' or ' + full(weeks[weeks.length - 1]) + ' (depends on the signing day)';
+  return {
+    mon: mon, sun: sun, total: total, claimed: claimed, orig: orig, left: Math.max(0, total - claimed),
+    range: short(mon) + ' &ndash; ' + short(sun),
+    rangeTxt: short(mon) + ' – ' + short(sun),
+    days: 'Monday, ' + short(mon) + ' through Sunday, ' + short(sun),
+    daysAnd: 'Monday, ' + short(mon) + ' and Sunday, ' + short(sun),
+    deadlineShort: 'Sunday, ' + short(sun),
+    deadlineLong: 'Sunday, ' + full(sun),
+    fine: 'Monday, ' + longd(mon) + ' through Sunday, ' + full(sun),
+    fp: fp, fpBold: weeks.length === 1 ? 'week of ' + full(weeks[0]) : fp
+  };
+}
+
+/* ---------- counts ---------- */
+function ofText(m){   // "1 of <struck 2> 5"
+  var s = m.claimed + ' of ';
+  if (m.total > m.orig) s += '<span style="text-decoration:line-through;opacity:.7;">' + m.orig + '</span> ';
+  return s + m.total;
+}
+function dots(m){
+  var s = '', n = Math.min(m.total, 12);
+  for (var i = 0; i < n; i++) s += i < m.claimed ? '&#9679;' : '&#9675;';
+  return s;
+}
+function badgeText(m){
+  if (m.total > 0 && m.left === 0) return 'ALL ' + m.total + ' CLAIMED';
+  var head = (m.claimed === 0 ? 'ONLY ' + m.total + ' AVAILABLE' : 'ONLY ' + m.left + ' LEFT');
+  return head + ' &bull; ' + ofText(m).toUpperCase() + ' CLAIMED';
+}
+
+/* ---------- shared pieces ---------- */
+function shell(label, m, rows, title){
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + title + '</title></head>\n' +
+  '<body style="margin:0;padding:0;background:#eef2f6;" bgcolor="#eef2f6">\n' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eef2f6" style="background:#eef2f6;"><tr><td align="center" style="padding:24px 12px;">\n' +
+  '<table role="presentation" width="600" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#10233a;">\n' +
+  '<tr><td style="padding:22px 28px;border-bottom:5px solid #F5821F;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+  '<td><img src="' + LOGO + '" width="120" alt="CM Heating, Cooling, Plumbing, Electrical" style="display:block;border:0;width:120px;height:auto;"></td>' +
+  '<td align="right" style="font-size:12px;line-height:1.4;color:#5b6b7c;text-transform:uppercase;letter-spacing:1.5px;">' + label + '<br><strong style="color:#10233a;">' + m.range + '</strong></td>' +
+  '</tr></table></td></tr>\n' + rows +
+  '<tr><td align="center" bgcolor="#105CAB" style="background:#105CAB;padding:16px 28px;font-size:12px;color:#dbe8f6;">CM Heating &bull; ' + PHONE + ' &bull; cmheating.com</td></tr>\n' +
+  '</table></td></tr></table>\n</body></html>';
+}
+function btn(href, text, color){
+  return '<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td bgcolor="' + color + '" style="border-radius:8px;"><a href="' + href + '" style="display:inline-block;padding:14px 34px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:17px;text-decoration:none;">' + text + '</a></td></tr></table>';
+}
+function check(html){
+  return '<tr><td width="22" valign="top" style="padding:4px 0;color:#F5821F;font-weight:bold;">&#10003;</td><td style="padding:4px 0;">' + html + '</td></tr>';
+}
+function checks(title, items){
+  return '<tr><td style="padding:16px 28px 4px;"><div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#105CAB;font-weight:bold;margin-bottom:6px;">' + title + '</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.5;color:#33475b;">' + items.join('') + '</table></td></tr>\n';
+}
+function intro(html){ return '<tr><td style="padding:24px 28px 4px;font-size:15px;line-height:1.5;color:#33475b;">' + html + '</td></tr>\n'; }
+function internalNote(extra){ return '<tr><td align="center" style="padding:16px 28px 22px;font-size:12px;color:#7a8896;">' + (extra || '') + 'Internal: please don&rsquo;t forward this email.</td></tr>\n'; }
+function kv(rows, light){
+  var kc = light ? '#105CAB' : '#ffd2a6', vc = light ? '#33475b' : '#dbe8f6';
+  return '<tr><td style="padding:6px 26px 6px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.5;color:' + vc + ';">' +
+    rows.map(function(r){ return '<tr><td style="padding:4px 12px 4px 0;color:' + kc + ';font-weight:bold;white-space:nowrap;" valign="top">' + r[0] + '</td><td style="padding:4px 0;">' + r[1] + '</td></tr>'; }).join('') +
+    '</table></td></tr>\n';
+}
+function strong(t, white){ return '<strong style="color:' + (white ? '#ffffff' : '#10233a') + ';">' + t + '</strong>'; }
+
+/* Comfort Club coupon block for the HCA emails */
+function hcaCC(m, tag, status, extraRows, note){
+  return '<tr><td style="padding:20px 28px 8px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#105CAB" style="background:#105CAB;border-radius:12px;border:3px dashed #F5821F;">' +
+  '<tr><td align="center" style="padding:26px 20px 10px;color:#ffffff;">' +
+  '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#ffd2a6;font-weight:bold;">' + tag + '</div>' +
+  '<div style="font-size:56px;line-height:1;font-weight:900;margin:10px 0 0;color:#ffffff;">6 MONTHS</div>' +
+  '<div style="font-size:24px;font-weight:800;margin:4px 0 12px;color:#F5821F;">BEFORE THE FIRST PAYMENT</div>' +
+  '<div style="font-size:15px;line-height:1.5;color:#dbe8f6;max-width:440px;">Our standard offer is 3 months, so this is double. The 6 months count from the day the customer ' + strong('signs', 1) + ' the Comfort Club agreement.</div>' +
+  '</td></tr>\n' + kv(extraRows.concat([['Status', strong(status, 1)]])) +
+  '<tr><td align="center" style="padding:14px 20px 24px;">' + btn(CLAIM, 'Claim a Comfort Club Coupon &rarr;', '#F5821F') +
+  '<div style="font-size:12px;color:#bcd2ea;margin-top:10px;">' + note + '</div></td></tr></table></td></tr>\n';
+}
+
+/* ---------- the four emails ---------- */
+function emailCustomer(m){
+  var rows =
+  '<tr><td style="padding:28px 28px 8px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#105CAB" style="background:#105CAB;border-radius:12px;border:3px dashed #F5821F;">' +
+  '<tr><td align="center" style="padding:28px 20px 10px;color:#ffffff;">' +
+  '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#ffd2a6;font-weight:bold;">Coupon 1 &bull; Comfort Club</div>' +
+  '<div style="font-size:64px;line-height:1;font-weight:900;margin:10px 0 0;color:#ffffff;">6 MONTHS</div>' +
+  '<div style="font-size:26px;font-weight:800;margin:4px 0 12px;color:#F5821F;">BEFORE YOUR FIRST PAYMENT</div>' +
+  '<div style="font-size:15px;line-height:1.5;color:#dbe8f6;max-width:440px;">Sign your Comfort Club agreement ' + strong(m.days, 1) + ' and enjoy a brand-new, high-efficiency system with ' + strong('no payment for 6 months from the day you sign', 1) + '. Our usual offer is 3 months &ndash; this week you get double.</div>' +
+  '<div style="display:inline-block;margin-top:14px;background:#2f74b8;border:1px solid #ffd2a6;border-radius:8px;padding:8px 16px;font-size:14px;color:#ffffff;">Sign this week &rarr; <strong style="color:#ffd2a6;">first payment ' + m.fpBold + '</strong></div>' +
+  '</td></tr>\n' +
+  '<tr><td align="center" style="padding:6px 20px 22px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td bgcolor="#ffffff" style="border-radius:20px;padding:5px 14px;color:#c0392b;font-weight:800;font-size:13px;letter-spacing:.5px;font-family:Arial,Helvetica,sans-serif;">' + dots(m) + ' &nbsp;' + badgeText(m) + '</td></tr></table>' +
+  '<div style="height:14px;line-height:14px;font-size:0;">&nbsp;</div>' + btn(CLAIM, 'Claim My 6 Months &rarr;', '#F5821F') +
+  '<div style="font-size:12px;color:#bcd2ea;margin-top:12px;">Call <a href="tel:' + TEL + '" style="color:#bcd2ea;text-decoration:underline;">' + PHONE + '</a> &nbsp;&bull;&nbsp; Mention this email</div></td></tr>\n' +
+  '<tr><td align="center" style="padding:0 20px 18px;font-size:12px;font-weight:bold;color:#ffd2a6;">Comfort Club agreement must be signed by ' + m.deadlineLong + '</td></tr></table></td></tr>\n' +
+
+  '<tr><td style="padding:14px 28px 4px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.5;color:#33475b;">' +
+  ['New equipment, installed by CM Heating', 'Repairs and maintenance covered while you&rsquo;re a member', 'One simple monthly payment &ndash; first payment due 6 months after you sign'].map(function(t){
+    return '<tr><td style="padding:3px 0;"><span style="color:#F5821F;font-weight:bold;">&#10003;</span>&nbsp; ' + t + '</td></tr>'; }).join('') + '</table></td></tr>\n' +
+
+  '<tr><td style="padding:8px 28px 10px;font-size:10.5px;line-height:1.5;color:#7a8896;">Comfort Club 6-month deferred first payment valid on new Comfort Club agreements signed ' + m.fine + '; standard offer is 3 months. The deferral period begins on the contract signing date, and the first monthly payment is due 6 months after signing. Subject to program terms and approval.</td></tr>\n' +
+  '<tr><td style="padding:10px 28px 0;"><div style="height:1px;background:#dde4ec;"></div></td></tr>\n' +
+
+  '<tr><td style="padding:24px 28px 8px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#fff7ef" style="background:#fff7ef;border-radius:12px;border:3px dashed #105CAB;">' +
+  '<tr><td align="center" style="padding:28px 20px 10px;">' +
+  '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#105CAB;font-weight:bold;">Coupon 2 &bull; COD &amp; &Agrave; La Carte Projects</div>' +
+  '<div style="font-size:64px;line-height:1;font-weight:900;margin:10px 0 0;color:#105CAB;">18 MONTHS</div>' +
+  '<div style="font-size:24px;line-height:1.15;font-weight:900;margin:4px 0 12px;color:#F5821F;">NO INTEREST IF PAID IN FULL*</div>' +
+  '<div style="font-size:15px;line-height:1.5;color:#33475b;max-width:440px;">Sign your project ' + strong(m.days) + ' and finance it through Wells Fargo with ' + strong('no interest if paid in full within 18 months') + '* &ndash; furnaces, heat pumps, AC, water heaters and more.</div>' +
+  '</td></tr>\n' +
+  '<tr><td align="center" style="padding:6px 20px 22px;">' + btn('tel:' + TEL, 'Call to Use This Offer &rarr;', '#105CAB') +
+  '<div style="font-size:12px;color:#5b6b7c;margin-top:12px;">Call <a href="tel:' + TEL + '" style="color:#5b6b7c;text-decoration:underline;">' + PHONE + '</a> &nbsp;&bull;&nbsp; Mention this email</div></td></tr>\n' +
+  '<tr><td align="center" style="padding:0 20px 18px;font-size:12px;font-weight:bold;color:#c0392b;">Contract must be signed by ' + m.deadlineLong + '</td></tr></table></td></tr>\n' +
+
+  '<tr><td style="padding:8px 28px 26px;font-size:10.5px;line-height:1.5;color:#7a8896;">*No interest if paid in full within 18 months with regular monthly payments of 3.5% of the amount financed ($40 minimum), on qualifying purchases with approved credit on the Wells Fargo Home Projects Credit Card. This is a deferred interest promotion: if the purchase balance is not paid in full within the 18-month promotional period, interest will be charged to the account from the purchase date at the regular APR for purchases. Making only the regular monthly payments will not pay off the purchase balance within the promotional period. Valid on cash-on-delivery and &agrave; la carte projects with a contract signed ' + m.fine + '. Not valid on Comfort Club agreements. Cannot be combined with other financing offers. Subject to credit approval; see the credit card agreement for terms. See your CM Heating Comfort Advisor for details.</td></tr>\n';
+  return shell('This Week Only', m, rows, 'CM Heating &ndash; Weekly Coupons');
+}
+
+
+/* ---------- this page ---------- */
+var CLAIMS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec';
+var HCAS = [
+  ['CM Heating (main line)', '(425) 390-8333'],
+  ['Adam Weberg', '(253) 245-4835'], ['Amber Maddalena', '(425) 539-2393'], ['Chester Granard', '(206) 608-1876'],
+  ['Davis Diosdado', '(425) 319-5229'], ['Javierre Milo', '(425) 542-0085'], ['Joseph Ruble', '(425) 891-7634'],
+  ['Kyle McAlister', '(425) 364-1143'], ['Samir Khoury', '(425) 876-6682'], ['Trevor Bohm', '(425) 231-3493']
+];
+// A forwarded email stays in inboxes all week, so show the limit, not a live count.
+function dots(m){ return ''; }
+function badgeText(m){ return 'ONLY ' + m.total + ' THIS WEEK &bull; FIRST COME, FIRST SERVED'; }
+
+var WEEK = { start: '', total: 2 };
+function thisMonday(){
+  var now = new Date(), d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())), w = d.getUTCDay();
+  return addDays(d, w === 0 ? 1 : 1 - w).toISOString().slice(0, 10);   // on Sunday, the coming week
+}
+function weekModel(){
+  var mon = parseISO(WEEK.start), sun = addDays(mon, 6), total = WEEK.total, weeks = [], seen = {};
+  for (var i = 0; i < 7; i++) { var w = mondayOf(addMonths(addDays(mon, i), 6)), k = w.getTime(); if (!seen[k]) { seen[k] = 1; weeks.push(w); } }
+  var fp = weeks.length === 1 ? 'week of ' + full(weeks[0]) : 'week of ' + full(weeks[0]) + ' or ' + full(weeks[weeks.length - 1]) + ' (depends on the signing day)';
+  return { mon: mon, sun: sun, total: total, claimed: 0, orig: total, left: total,
+    range: short(mon) + ' &ndash; ' + short(sun), rangeTxt: short(mon) + ' \u2013 ' + short(sun),
+    days: 'Monday, ' + short(mon) + ' through Sunday, ' + short(sun), deadlineLong: 'Sunday, ' + full(sun),
+    fine: 'Monday, ' + longd(mon) + ' through Sunday, ' + full(sun), fp: fp, fpBold: fp };
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function build(){
+  var m = weekModel(), pick = HCAS[$('hca').selectedIndex] || HCAS[0], name = pick[0], phone = pick[1], tel = phone.replace(/\D/g, '');
+  var html = emailCustomer(m).split('tel:' + TEL).join('tel:' + tel).split(PHONE).join(phone);
+  if ($('hca').selectedIndex > 0) {
+    var sign = '<tr><td style="padding:0 28px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#33475b;">' +
+      'Questions, or ready to lock in your 6 months? Call or text me at <a href="tel:' + tel + '" style="color:#105CAB;font-weight:bold;text-decoration:none;">' + esc(phone) + '</a>. ' +
+      'When you claim the coupon, choose <strong style="color:#10233a;">' + esc(name) + '</strong> as your advisor.<br><br>' +
+      '<strong style="color:#10233a;">' + esc(name) + '</strong><br>Home Comfort Advisor, CM Heating</td></tr>\n';
+    html = html.replace('<tr><td align="center" bgcolor="#105CAB"', sign + '<tr><td align="center" bgcolor="#105CAB"');
+  }
+  html = html.split('CM Heating &bull; ' + phone + ' &bull;').join('CM Heating &bull; ' + PHONE + ' &bull;');   // footer keeps the company line
+  var body = html.slice(html.indexOf('<body'), html.lastIndexOf('</body>'));
+  $('email').innerHTML = body.slice(body.indexOf('>') + 1);
+  $('subject').value = 'This Week Only: 6 Months Before Your First Payment (' + m.rangeTxt + ')';
+  $('weekTag').textContent = m.rangeTxt + ' \u00b7 ' + m.total + ' coupons for the whole team';
+}
+function copyText(txt){
+  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt);
+  return new Promise(function(res, rej){ var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy') ? res() : rej(); } catch (e) { rej(e); } document.body.removeChild(ta); });
+}
+function say(t){ $('ok').textContent = t; clearTimeout(say.t); say.t = setTimeout(function(){ $('ok').textContent = ''; }, 4000); }
+
+HCAS.forEach(function(h){ var o = document.createElement('option'); o.textContent = h[0]; $('hca').appendChild(o); });
+try { var saved = localStorage.getItem('cmCustEmailHca'); HCAS.forEach(function(h, i){ if (h[0] === saved) $('hca').selectedIndex = i; }); } catch (e) {}
+$('hca').addEventListener('change', function(){ try { localStorage.setItem('cmCustEmailHca', HCAS[$('hca').selectedIndex][0]); } catch (e) {} build(); });
+$('copyEmail').onclick = function(){
+  var r = document.createRange(); r.selectNodeContents($('email')); var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} s.removeAllRanges();
+  say(ok ? 'Email copied. Paste it into the body of a new Gmail message.' : 'Could not copy. Click inside the email below, press Ctrl+A then Ctrl+C.');
+};
+$('copySubj').onclick = function(){ copyText($('subject').value).then(function(){ say('Subject copied.'); }, function(){ $('subject').select(); }); };
+
+WEEK.start = thisMonday(); build();
+fetch(CLAIMS_ENDPOINT + '?offer=comfort-club', { cache: 'no-store' })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    // Use the script's week only when it is the week we are building for (on a Sunday the script still reports the week that is ending).
+    if (!j || j.offerStart !== WEEK.start) return;
+    var t = typeof j.originalTotal === 'number' ? j.originalTotal : (typeof j.capacity === 'number' ? j.capacity : null);
+    if (t) WEEK.total = t;
+    build();
+  }).catch(function(){});
+</script>
+</body>
+</html>

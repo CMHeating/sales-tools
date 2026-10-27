@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark">
+<title>Marketing Hub – HCA Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<!--
+  MARKETING HUB (HCA Tools). Lives at /sales-tools/marketing/ .
+  What customers are seeing from CM Heating marketing right now (mailers, website offers), so HCAs can honor it at the table.
+  Marketing offers are separate from the sales department's weekly coupons (claim page), which are linked at the bottom.
+  TO UPDATE when a new campaign drops: edit CAMPAIGN and OFFERS in the script below, and swap the two postcard images.
+  HUB_URL: the marketing hub link. NEVER put the hub password on this page; this site is public.
+-->
+<style>
+:root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--orange:#c97d10;--gold:#f59e0b;--blue:#4aa3df;--green:#22c55e;--red:#ef4444;
+  --glass:rgba(10,22,40,.62);--glass-line:rgba(255,255,255,.08);--press:rgba(255,255,255,.06);--ease-out:cubic-bezier(.2,.9,.2,1)}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+html,body{margin:0}
+body{font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:var(--text);min-height:100vh;
+  background:radial-gradient(1100px 520px at 85% -8%,#16233f 0,transparent 62%),radial-gradient(800px 400px at -10% 30%,rgba(201,125,16,.07) 0,transparent 60%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:10px}
+.bar{position:sticky;top:0;z-index:50;padding:max(10px,env(safe-area-inset-top,0)) max(18px,env(safe-area-inset-right,0)) 10px max(18px,env(safe-area-inset-left,0));
+  background:var(--glass);border-bottom:1px solid var(--glass-line);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;flex-wrap:wrap}
+.back{font-weight:600;font-size:15px;color:var(--gold);padding:8px 6px 8px 0;display:inline-flex;align-items:center;gap:2px;transition:opacity .12s}
+.back:active{opacity:.5;transition:none}
+.links{display:flex;gap:6px 18px;flex-wrap:wrap}
+.links a{font-size:14px;font-weight:500;color:var(--mut);padding:8px 0;transition:color .15s}
+.links a:hover{color:var(--text)}
+.links a.on{color:var(--text)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-right,0)) 40px max(18px,env(safe-area-inset-left,0))}
+.title{padding:16px 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.title h1{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.1rem,6.5vw,3.2rem);line-height:1.05;letter-spacing:-.025em;margin:4px 0 6px}
+.title p{color:var(--mut);font-size:15px;max-width:36em;margin:0}
+.glabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:0 6px 8px;margin:26px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;border:0;font-weight:700;font-size:16px;cursor:pointer;padding:0 24px;
+  background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff;transition:transform .4s var(--ease-out),filter .15s}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:scale(.97);transition:transform .1s ease-out}
+.btn.alt{background:transparent;border:1px solid #34466a;color:var(--text);font-weight:600}
+.btn.alt:hover{background:rgba(255,255,255,.04);filter:none}
+.foot{text-align:center;color:#6b7a90;font-size:12px;padding:30px 0 6px;letter-spacing:.02em}
+@media(prefers-reduced-motion:no-preference){
+  .rise{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-transparency:reduce){.bar{background:#0a1628;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){:root{--line:#3a4a68;--mut:#b6c2d4}.panel{border-color:#5b6f94}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.wrapm{max-width:880px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px}
+.hub{border-color:rgba(201,125,16,.45);background:linear-gradient(135deg,rgba(201,125,16,.2),rgba(17,26,46,.92) 62%),var(--panel)}
+.card h2{font-family:"Playfair Display",Georgia,serif;font-size:22px;letter-spacing:-.015em;margin:0 0 4px}
+.card p{color:var(--mut);font-size:14px;margin:0 0 14px}
+.btn[aria-disabled="true"]{opacity:.55;pointer-events:none}
+.phone{font-family:"Playfair Display",Georgia,serif;font-size:30px;font-weight:800;letter-spacing:-.02em;margin:2px 0 4px;font-variant-numeric:tabular-nums}
+.phone a{color:var(--text)}
+.sub{color:var(--mut);font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn.sm{min-height:42px;font-size:14px;padding:0 16px}
+.camp{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:26px 0 10px}
+.camp h2{font-family:"Playfair Display",Georgia,serif;font-size:26px;letter-spacing:-.02em;margin:0}
+.camp .meta{color:var(--mut);font-size:14px}
+.pill{display:inline-block;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700}
+.pill.live{background:rgba(34,197,94,.14);color:#4ade80}
+.pill.live::before{content:"\25CF\00a0"}
+.pill.soon{background:rgba(245,158,11,.14);color:var(--gold)}
+.pill.soon::before{content:"!\00a0"}
+.pill.off{background:rgba(239,68,68,.13);color:#f87171}
+.pill.off::before{content:"\2715\00a0"}
+.offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.offer{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:4px}
+.offer .big{font-family:"Playfair Display",Georgia,serif;font-size:32px;font-weight:800;line-height:1.05;letter-spacing:-.02em;color:var(--gold)}
+.offer .big small{font-family:Outfit,system-ui,sans-serif;font-size:14px;font-weight:600;color:var(--mut);letter-spacing:0;margin-left:4px}
+.offer .what{font-weight:600;font-size:16px;line-height:1.3}
+.offer ul{margin:6px 0 0;padding-left:18px;color:var(--mut);font-size:14px}
+.offer .fine{font-size:12px;color:#6b7a90;margin-top:auto;padding-top:8px}
+.offer .alert{margin-top:8px;padding:10px 12px;border-radius:12px;border:1px dashed rgba(245,158,11,.6);background:rgba(245,158,11,.08);font-size:13px;line-height:1.45}
+.offer .alert b{color:var(--gold)}
+.offer.expired{opacity:.5}
+.offer .state{align-self:flex-start;margin-bottom:4px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.cards{grid-template-columns:1fr}}
+.shot{display:block;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#fff;transition:transform .45s var(--ease-out),box-shadow .3s}
+.shot:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+.shot:active{transform:scale(.985);transition:transform .1s ease-out}
+.shot img{display:block;width:100%;height:auto}
+.cap{font-size:12px;color:var(--mut);margin-top:6px;text-align:center}
+.tips{margin:0;padding-left:18px;color:var(--mut);font-size:14px}
+.tips li{margin:6px 0}
+.tips b{color:var(--text)}
+.links2{display:grid;gap:10px}
+.lk{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);transition:background .12s}
+.lk:active{background:var(--press);transition:none}
+.lk .ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:19px;background:#1a2744;border:1px solid var(--line);flex:none}
+.lk b{display:block;font-weight:600}
+.lk span{font-size:13px;color:var(--mut)}
+.lk .chev{margin-left:auto;color:#5d6b82;font-size:22px}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0));transform:translate(-50%,20px);opacity:0;background:rgba(17,26,46,.95);border:1px solid var(--glass-line);color:var(--text);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;transition:opacity .2s,transform .35s var(--ease-out);pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="back" href="../">&#8249; HCA Tools</a>
+    <nav class="links" aria-label="Site links"><a href="../customer-email/">Customer Coupon Email</a><a href="../competitors/">Competitor Offers</a></nav>
+  </div>
+</header>
+
+<main class="wrap wrapm">
+  <section class="title">
+    <div class="eyebrow">HCA Tools</div>
+    <h1>Marketing Hub</h1>
+    <p>What customers are seeing from CM Heating right now, so you can recognize it and quote it at the kitchen table.</p>
+  </section>
+
+  <div class="grid2">
+    <div class="card hub rise">
+      <h2>CM Heating Marketing Hub</h2>
+      <p>Ads, mailers, rate sheets and brand files. Ask Geoff for the password; it is never posted here.</p>
+      <a class="btn" id="hubBtn" href="#" target="_blank" rel="noopener">Open the Marketing Hub &rarr;</a>
+    </div>
+    <div class="card rise">
+      <div class="eyebrow" style="color:var(--mut)">Number on all our ads</div>
+      <div class="phone"><a href="tel:4253908333">(425) 390-8333</a></div>
+      <div class="sub">Call or text, 24/7 &middot; <a href="https://cmheating.com" target="_blank" rel="noopener" style="color:var(--blue)">CMHeating.com</a></div>
+      <div class="row"><button class="btn alt sm" type="button" id="copyPhone">Copy number</button></div>
+    </div>
+  </div>
+
+  <div class="camp">
+    <div><h2 id="campName">Campaign</h2><div class="meta" id="campMeta"></div></div>
+    <span class="pill" id="campState"></span>
+  </div>
+  <div class="offers" id="offers"></div>
+
+  <div class="glabel">The mailer</div>
+  <div class="cards">
+    <div><a class="shot" href="fall-2026-front.jpg" target="_blank" rel="noopener"><img src="fall-2026-front.jpg" alt="Pre-Season Fall Savings postcard, front" loading="lazy"></a><div class="cap">Front &middot; tap to open full size</div></div>
+    <div><a class="shot" href="fall-2026-back.jpg" target="_blank" rel="noopener"><img src="fall-2026-back.jpg" alt="Pre-Season Fall Savings postcard, back" loading="lazy"></a><div class="cap">Back &middot; tap to open full size</div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:22px">
+    <div class="card">
+      <h2>At the kitchen table</h2>
+      <ol class="tips">
+        <li>If a customer mentions an ad, find it here and <b>honor what it says</b>, within its dates.</li>
+        <li>Marketing offers <b>cannot be combined</b> with each other. Check the fine print on the card.</li>
+        <li>An offer marked <b>Check with Geoff</b> has a price question. Ask before you quote it.</li>
+        <li>Our phone number on everything customer-facing is <b>(425) 390-8333</b>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>Sales coupons</h2>
+      <p>The weekly sales department coupons are separate from marketing offers.</p>
+      <div class="links2">
+        <a class="lk" href="../customer-email/"><span class="ico">✉️</span><span><b>Customer Coupon Email</b><span>This week's coupons, ready to send</span></span><span class="chev">›</span></a>
+        <a class="lk" href="../claim/board/"><span class="ico">📊</span><span><b>Comfort Club Claims Board</b><span>How many coupons are left</span></span><span class="chev">›</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">CM Heating &middot; Internal HCA tool &middot; Marketing offers by CM Heating marketing</div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ===== EDIT HERE when a new campaign drops ===== */
+var HUB_URL = 'https://us-marketing-hub-pink.vercel.app/#creative';   // <-- paste the Marketing Hub link here (the link only, never the password)
+var CAMPAIGN = { name: 'Pre-Season Fall Savings', source: 'Mailer postcard + CMHeating.com', ends: '2026-10-31' };
+var OFFERS = [
+  { big: '$84.99', unit: 'per month', what: 'Any size furnace, Comfort Club',
+    items: ['Lifetime repair coverage', 'Annual tune-ups', 'Filters, no extra charge ever'], fine: 'With approved credit.',
+    alert: '<b>Check with Geoff.</b> The price book today shows <b>$87.49/mo</b> for this package (Ameristar Value 80% furnace). A request to put it back to $84.99 is waiting on Paul’s approval.' },
+  { big: 'FREE', unit: 'furnace', what: 'Cooling system + free furnace + free clean air upgrade', items: [], fine: 'Call for details. Some exclusions may apply.' },
+  { big: '$89', unit: '', what: 'Furnace tune-up & safety inspection', items: [], fine: 'Call for details. Some exclusions may apply.' },
+  { big: '$69 off', unit: '', what: 'Any electrical repair', items: ['+ Free electrical safety inspection'], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
+  { big: '$44.99', unit: 'per month', what: 'New water heater', items: ['+ Free plumbing inspection'], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
+  { big: '$50 off', unit: '', what: 'Any HVAC repair', items: [], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
+  { big: '$500 off', unit: '', what: 'Tankless water heater', items: ['+ Free plumbing inspection'], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
+  { big: 'FREE', unit: '', what: 'Estimates', items: [], fine: '' }
+];
+/* ================================================ */
+
+var $ = function(id){ return document.getElementById(id); };
+function todayPT(){ return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }   // YYYY-MM-DD
+function pretty(ymd){ var p = ymd.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); }
+function daysLeft(ymd){ var a = todayPT().split('-'), b = ymd.split('-'); return Math.round((Date.UTC(+b[0], +b[1] - 1, +b[2]) - Date.UTC(+a[0], +a[1] - 1, +a[2])) / 864e5); }
+function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function state(ends){
+  if (!ends) return { cls: 'live', txt: 'Running' };
+  var d = daysLeft(ends);
+  if (d < 0) return { cls: 'off', txt: 'Ended ' + pretty(ends) };
+  if (d === 0) return { cls: 'soon', txt: 'Ends today' };
+  if (d <= 7) return { cls: 'soon', txt: 'Ends in ' + d + (d === 1 ? ' day' : ' days') };
+  return { cls: 'live', txt: 'Running' };
+}
+
+/* hub link */
+var hub = $('hubBtn');
+if (/^https:\/\//.test(HUB_URL)) hub.href = HUB_URL;
+else { hub.setAttribute('aria-disabled', 'true'); hub.textContent = 'Link coming soon'; hub.removeAttribute('href'); }
+
+/* campaign */
+$('campName').textContent = CAMPAIGN.name;
+$('campMeta').textContent = CAMPAIGN.source + (CAMPAIGN.ends ? ' · through ' + pretty(CAMPAIGN.ends) : '');
+var cs = state(CAMPAIGN.ends); $('campState').className = 'pill ' + cs.cls; $('campState').textContent = cs.txt;
+
+/* offers */
+OFFERS.forEach(function(o, i){
+  var c = el('article', 'offer rise'); c.style.animationDelay = (0.05 + i * 0.04) + 's';
+  var big = el('div', 'big', o.big); if (o.unit) big.appendChild(el('small', '', o.unit)); c.appendChild(big);
+  c.appendChild(el('div', 'what', o.what));
+  if (o.items && o.items.length) { var ul = el('ul'); o.items.forEach(function(t){ ul.appendChild(el('li', '', t)); }); c.appendChild(ul); }
+  if (o.alert) { var a = el('div', 'alert'); a.innerHTML = o.alert; c.appendChild(a); }   // alert text is written in this file, never user input
+  var fine = (o.fine || '') + (o.expires ? ' Expires ' + pretty(o.expires) + '.' : '');
+  if (fine) c.appendChild(el('div', 'fine', fine.trim()));
+  if (o.expires) { var s = state(o.expires); if (s.cls !== 'live') { var p = el('span', 'pill state ' + s.cls, s.txt); c.insertBefore(p, c.firstChild); } if (s.cls === 'off') c.classList.add('expired'); }
+  $('offers').appendChild(c);
+});
+
+/* copy number */
+function toast(t){ var x = $('toast'); x.textContent = t; x.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(function(){ x.classList.remove('show'); }, 2200); }
+$('copyPhone').onclick = function(){
+  var t = '(425) 390-8333';
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast('Number copied'); }, function(){ toast(t); });
+};
+</script>
+</body>
+</html>
