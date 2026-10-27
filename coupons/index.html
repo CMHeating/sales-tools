@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="color-scheme" content="dark">
+<title>Coupon Hub – HCA Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<!--
+  COUPON HUB (HCA Tools). Lives at /sales-tools/coupons/ .
+  One place for the sales department's weekly coupons: this week's two offers, the live Comfort Club count,
+  and links to the claim page, the customer email and the claims board.
+  Nothing to edit weekly: the week and the coupon count come from the Comfort Club claims script (Config tab).
+  If the script can't be reached, the page still shows this week's dates and says the count is unavailable.
+-->
+<style>
+:root{--bg:#0a1628;--panel:#111a2e;--panel2:#0d1526;--line:#1e2a44;--text:#e6edf7;--mut:#94a3b8;--orange:#c97d10;--gold:#f59e0b;--blue:#4aa3df;--green:#22c55e;--red:#ef4444;
+  --glass:rgba(10,22,40,.62);--glass-line:rgba(255,255,255,.08);--press:rgba(255,255,255,.06);--ease-out:cubic-bezier(.2,.9,.2,1)}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;color-scheme:dark}
+html,body{margin:0}
+body{font-family:Outfit,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;color:var(--text);min-height:100vh;
+  background:radial-gradient(1100px 520px at 85% -8%,#16233f 0,transparent 62%),radial-gradient(800px 400px at -10% 30%,rgba(201,125,16,.07) 0,transparent 60%),var(--bg);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:10px}
+.bar{position:sticky;top:0;z-index:50;padding:max(10px,env(safe-area-inset-top,0)) max(18px,env(safe-area-inset-right,0)) 10px max(18px,env(safe-area-inset-left,0));
+  background:var(--glass);border-bottom:1px solid var(--glass-line);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;flex-wrap:wrap}
+.back{font-weight:600;font-size:15px;color:var(--gold);padding:8px 6px 8px 0;display:inline-flex;align-items:center;gap:2px;transition:opacity .12s}
+.back:active{opacity:.5;transition:none}
+.links{display:flex;gap:6px 18px;flex-wrap:wrap}
+.links a{font-size:14px;font-weight:500;color:var(--mut);padding:8px 0;transition:color .15s}
+.links a:hover{color:var(--text)}
+.links a.on{color:var(--text)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-right,0)) 40px max(18px,env(safe-area-inset-left,0))}
+.title{padding:16px 0 18px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.title h1{font-family:"Playfair Display",Georgia,serif;font-weight:800;font-size:clamp(2.1rem,6.5vw,3.2rem);line-height:1.05;letter-spacing:-.025em;margin:4px 0 6px}
+.title p{color:var(--mut);font-size:15px;max-width:36em;margin:0}
+.glabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:0 6px 8px;margin:26px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;border:0;font-weight:700;font-size:16px;cursor:pointer;padding:0 24px;
+  background:linear-gradient(160deg,#e0932a,var(--orange));color:#fff;transition:transform .4s var(--ease-out),filter .15s}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:scale(.97);transition:transform .1s ease-out}
+.btn.alt{background:transparent;border:1px solid #34466a;color:var(--text);font-weight:600}
+.btn.alt:hover{background:rgba(255,255,255,.04);filter:none}
+.foot{text-align:center;color:#6b7a90;font-size:12px;padding:30px 0 6px;letter-spacing:.02em}
+@media(prefers-reduced-motion:no-preference){
+  .rise{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-transparency:reduce){.bar{background:#0a1628;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-contrast:more){:root{--line:#3a4a68;--mut:#b6c2d4}.panel{border-color:#5b6f94}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.wraph{max-width:880px}
+.offers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:720px){.offers{grid-template-columns:1fr}}
+.ocard{border-radius:24px;padding:20px 20px 18px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.ocard.cc{border-color:rgba(201,125,16,.5);background:linear-gradient(140deg,rgba(201,125,16,.22),rgba(17,26,46,.92) 60%),var(--panel)}
+.ocard.wf{border-color:rgba(74,163,223,.4);background:linear-gradient(140deg,rgba(74,163,223,.16),rgba(17,26,46,.92) 60%),var(--panel)}
+.tag{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#f0b35a}
+.wf .tag{color:var(--blue)}
+.big{font-family:"Playfair Display",Georgia,serif;font-size:clamp(2.6rem,9vw,3.4rem);font-weight:800;line-height:1;letter-spacing:-.03em;margin:8px 0 2px}
+.sub{font-weight:700;font-size:16px;color:var(--gold);letter-spacing:.02em}
+.wf .sub{color:var(--blue)}
+.desc{color:var(--mut);font-size:14px;margin:10px 0 0}
+.facts{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px}
+.facts li{display:flex;gap:10px}
+.facts span{color:var(--mut);min-width:108px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding-top:2px}
+.count{margin-top:16px;padding:12px 14px;border-radius:16px;background:rgba(10,22,40,.5);border:1px solid rgba(240,179,90,.3)}
+.count .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.count b{font-family:"Playfair Display",Georgia,serif;font-size:24px;letter-spacing:-.02em}
+.pips{display:flex;gap:7px;flex-wrap:wrap}
+.pip{width:18px;height:18px;border-radius:50%;border:2px solid rgba(240,179,90,.55)}
+.pip.on{background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px rgba(245,158,11,.5)}
+.count small{display:block;color:var(--mut);font-size:13px;margin-top:6px}
+.count.out{border-color:rgba(239,68,68,.5)}
+.ocard .btn{margin-top:16px;align-self:flex-start}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+@media(max-width:720px){.actions{grid-template-columns:1fr}}
+.act{display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;background:var(--panel);border:1px solid var(--line);transition:background .12s,border-color .2s,transform .45s var(--ease-out)}
+.act:hover{border-color:#34466a}
+.act:active,.act.down{background:var(--press);transform:scale(.985);transition:transform .1s ease-out}
+.act .ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:21px;flex:none;background:linear-gradient(160deg,#1a2744,#0f1830);border:1px solid var(--line)}
+.act b{display:block;font-weight:600;font-size:16px;line-height:1.25}
+.act span{font-size:13px;color:var(--mut)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px}
+.card h2{font-family:"Playfair Display",Georgia,serif;font-size:22px;letter-spacing:-.015em;margin:0 0 10px}
+.say{margin:0;padding-left:18px;color:var(--mut);font-size:14px}
+.say li{margin:8px 0}
+.say b{color:var(--text)}
+.say q{color:var(--text);font-style:italic}
+details.mgr{margin-top:22px;background:var(--panel2);border:1px solid var(--line);border-radius:22px;padding:4px 18px}
+details.mgr summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+details.mgr summary::-webkit-details-marker{display:none}
+details.mgr summary::after{content:"\203A";font-size:22px;color:var(--mut);transition:transform .35s var(--ease-out)}
+details.mgr[open] summary::after{transform:rotate(90deg)}
+.mgr ol{margin:0 0 16px;padding-left:18px;color:var(--mut);font-size:14px}
+.mgr li{margin:8px 0}
+.mgr b{color:var(--text)}
+.code{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.code code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:#0a1324;border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--text)}
+.btn.sm{min-height:38px;font-size:13px;padding:0 14px}
+.status{font-size:14px;color:var(--mut);margin-top:4px}
+.status b{color:var(--text)}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0));transform:translate(-50%,20px);opacity:0;background:rgba(17,26,46,.95);border:1px solid var(--glass-line);color:var(--text);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;transition:opacity .2s,transform .35s var(--ease-out);pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="back" href="../">&#8249; HCA Tools</a>
+    <nav class="links" aria-label="Site links"><a href="../marketing/">Marketing Hub</a><a href="../competitors/">Competitor Offers</a></nav>
+  </div>
+</header>
+
+<main class="wrap wraph">
+  <section class="title">
+    <div class="eyebrow">This week&rsquo;s sales coupons</div>
+    <h1>Coupon Hub</h1>
+    <p id="weekLine">Loading this week&hellip;</p>
+  </section>
+
+  <div class="offers">
+    <article class="ocard cc rise">
+      <div class="tag">Coupon 1 &middot; Comfort Club</div>
+      <div class="big">6 months</div>
+      <div class="sub">BEFORE THE FIRST PAYMENT</div>
+      <p class="desc">Our standard is 3 months, so this is double. The 6 months count from the day the customer <b>signs</b>.</p>
+      <ul class="facts">
+        <li><span>First payment</span><b id="fpWeek">&hellip;</b></li>
+        <li><span>Sign by</span><b id="signBy">&hellip;</b></li>
+      </ul>
+      <div class="count" id="countBox">
+        <div class="row"><b id="countTxt">&hellip;</b><div class="pips" id="pips" aria-hidden="true"></div></div>
+        <small id="countSub">Checking the live count</small>
+      </div>
+      <a class="btn" id="claimBtn" href="../claim/?offer=comfort-club&amp;from=hca">Claim for my customer &rarr;</a>
+    </article>
+
+    <article class="ocard wf rise">
+      <div class="tag">Coupon 2 &middot; COD &amp; &agrave; la carte</div>
+      <div class="big">18 months</div>
+      <div class="sub">NO INTEREST IF PAID IN FULL*</div>
+      <p class="desc">Wells Fargo plan 0018. <b>No claim needed</b>: offer it when you quote the job.</p>
+      <ul class="facts">
+        <li><span>Monthly</span><b>3.5% of the amount ($40 min)</b></li>
+        <li><span>After 18 mo</span><b>Interest back to the purchase date if not paid in full</b></li>
+        <li><span>Not for</span><b>Comfort Club agreements</b></li>
+        <li><span>Sign by</span><b id="signBy2">&hellip;</b></li>
+      </ul>
+      <p class="desc" style="font-size:12px;margin-top:auto;padding-top:14px">*Deferred interest. Subject to credit approval.</p>
+    </article>
+  </div>
+
+  <div class="actions">
+    <a class="act" href="../claim/?offer=comfort-club&amp;from=hca"><span class="ico">🎟️</span><span><b>Claim a coupon</b><span>For a customer about to sign</span></span></a>
+    <a class="act" href="../customer-email/"><span class="ico">✉️</span><span><b>Send the customer email</b><span>Both offers, with your name and number</span></span></a>
+    <a class="act" href="../claim/board/"><span class="ico">📊</span><span><b>Claims board</b><span>Who claimed, how many are left</span></span></a>
+  </div>
+
+  <div class="glabel">At the kitchen table</div>
+  <div class="card">
+    <ol class="say">
+      <li>Say <q>no interest if paid in full within 18 months.</q> <b>Never say &ldquo;0%&rdquo;</b>; it is deferred interest, and the regular payments alone won&rsquo;t pay it off in 18 months.</li>
+      <li>Both coupons need the contract <b>signed by Sunday</b> of this week. The Comfort Club coupon counts from the signing date, not the install date.</li>
+      <li>Asked <q>how many are left?</q> Check the count above; it&rsquo;s live. Coupons are shared by the whole team, first come, first served.</li>
+      <li>Claim the Comfort Club coupon <b>before</b> they sign, so it&rsquo;s held for them. If the deal falls through, tell Geoff so the coupon can be released.</li>
+      <li>Coupons are a sales department deal and <b>don&rsquo;t combine</b> with the marketing mailer offers. Those are in the <a href="../marketing/" style="color:var(--blue)">Marketing Hub</a>.</li>
+    </ol>
+  </div>
+
+  <details class="mgr">
+    <summary>Manager: weekly setup</summary>
+    <ol>
+      <li><b>Before Sunday</b>, add next week&rsquo;s row to the <b>Config</b> tab of the Comfort Club Claims sheet. Columns: offer key, Monday, total coupons, number announced in the email.
+        <div class="code"><code id="cfgRow">&hellip;</code><button class="btn alt sm" type="button" id="copyCfg">Copy</button></div>
+        The script switches weeks at midnight Monday and archives the finished week to its own tab. Nothing else to clear.</li>
+      <li><b>More coupons mid-week:</b> change the Total for this week&rsquo;s row on the Config tab. Pages pick it up within a minute.</li>
+      <li><b>Write the weekly emails</b> (HCA weekly, customer, reminder, coupons added) in the <a href="../email-builder/" style="color:var(--blue)">email builder</a>.</li>
+      <li><b>Release a coupon:</b> on the claims tab, change that row&rsquo;s Status from Claimed to Cancelled.</li>
+    </ol>
+  </details>
+
+  <div class="foot">CM Heating &middot; Sales department coupons &middot; Internal HCA tool</div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+var ENDPOINT = 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec';   // Comfort Club claims script (same as the claim page)
+var DEFAULT_TOTAL = 2;   // used for next week's Config row suggestion
+
+var $ = function(id){ return document.getElementById(id); };
+var MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function utc(ymd){ var p = ymd.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); }
+function ymd(d){ return d.toISOString().slice(0, 10); }
+function addDays(d, n){ return new Date(d.getTime() + n * 864e5); }
+function addMonths(d, n){ var y = d.getUTCFullYear(), m = d.getUTCMonth() + n, day = d.getUTCDate(), last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); return new Date(Date.UTC(y, m, Math.min(day, last))); }
+function mondayOf(d){ var w = d.getUTCDay(); return addDays(d, w === 0 ? -6 : 1 - w); }
+function shortD(d){ return MON[d.getUTCMonth()].slice(0, 3) + ' ' + d.getUTCDate(); }
+function longD(d){ return MON[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear(); }
+function todayPT(){ return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }
+
+function render(st){
+  var start = st && /^\d{4}-\d{2}-\d{2}$/.test(st.offerStart || '') ? utc(st.offerStart) : mondayOf(utc(todayPT()));
+  var end = addDays(start, 6), today = utc(todayPT()), left = Math.round((end - today) / 864e5);
+  var ended = st && st.expired === true || left < 0;
+  $('weekLine').innerHTML = '';
+  $('weekLine').appendChild(document.createTextNode(shortD(start) + ' – ' + shortD(end) + ' · '));
+  var b = document.createElement('b');
+  b.textContent = ended ? 'This week’s coupons have ended' : left === 0 ? 'Last day: sign by tonight' : left + (left === 1 ? ' day' : ' days') + ' left to sign';
+  $('weekLine').appendChild(b);
+  $('signBy').textContent = $('signBy2').textContent = 'Sunday, ' + longD(end);
+  var w1 = mondayOf(addMonths(start, 6)), w2 = mondayOf(addMonths(end, 6));
+  $('fpWeek').textContent = 'Week of ' + longD(w1) + (w2.getTime() !== w1.getTime() ? ' or ' + longD(w2) : '');
+  var next = addDays(start, 7);
+  $('cfgRow').textContent = 'comfort-club | ' + ymd(next) + ' | ' + DEFAULT_TOTAL + ' | ' + DEFAULT_TOTAL;
+
+  var box = $('countBox'), pips = $('pips'); pips.innerHTML = ''; box.classList.remove('out');
+  if (!st || typeof st.capacity !== 'number') {
+    $('countTxt').textContent = 'Count unavailable';
+    $('countSub').textContent = st ? 'No limit is set for this week.' : 'Couldn’t reach the claims sheet. The claim page still checks before saving.';
+    return;
+  }
+  var total = st.capacity, used = st.claimed || 0, rem = Math.max(0, total - used);
+  for (var i = 0; i < Math.min(total, 12); i++) { var p = document.createElement('span'); p.className = 'pip' + (i < used ? ' on' : ''); pips.appendChild(p); }
+  if (ended) { $('countTxt').textContent = used + ' of ' + total + ' claimed'; $('countSub').textContent = 'The offer week is over. Next week’s coupons start Monday.'; return; }
+  if (rem === 0) { box.classList.add('out'); $('countTxt').textContent = 'All ' + total + ' claimed'; $('countSub').textContent = '✕ None left this week. Ask Geoff if a customer is close; he can add more.'; return; }
+  $('countTxt').textContent = rem + ' of ' + total + ' left';
+  $('countSub').textContent = '✓ ' + used + ' claimed so far. First come, first served for the whole team.';
+}
+
+function load(){
+  fetch(ENDPOINT + '?offer=comfort-club', { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){ if (!j || j.ok === false) throw 0; render(j); })
+    .catch(function(){ render(null); });
+}
+render(null); load(); setInterval(load, 60000);
+
+/* small touches */
+document.addEventListener('pointerdown', function(e){ var t = e.target.closest && e.target.closest('.act'); if (!t) return; t.classList.add('down'); var off = function(){ t.classList.remove('down'); removeEventListener('pointerup', off); removeEventListener('pointercancel', off); }; addEventListener('pointerup', off); addEventListener('pointercancel', off); });
+function toast(t){ var x = $('toast'); x.textContent = t; x.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(function(){ x.classList.remove('show'); }, 2200); }
+$('copyCfg').onclick = function(){ var t = $('cfgRow').textContent.split(' | ').join('\t');
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast('Copied. Paste into the first empty row of the Config tab.'); }, function(){ toast($('cfgRow').textContent); }); };
+</script>
+</body>
+</html>
