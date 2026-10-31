@@ -181,6 +181,11 @@
 
 <script>
 /* ================= CONFIG ================= */
+function pacificMonday(){   // Monday (YYYY-MM-DD) of the current week in Pacific time: the fallback until the live sheet answers
+  var p = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).split('-');
+  var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
 var CONFIG = {
   MAIN_PHONE: '(425) 390-8333',  // CM Heating main number, used until an advisor is chosen or for "Not sure yet"
   // Active advisors and their own phone numbers (from the Referral Email config.json roster, 2026-10-08).
@@ -200,7 +205,7 @@ var CONFIG = {
   TOTAL: 2,               // Comfort Club coupons for the WHOLE week, shared by every HCA (the sheet's capacity overrides this)
   ORIGINAL_TOTAL: 2,      // the number announced in Monday's email. If capacity grows past it, this is shown struck through.
   CLAIMED: 0,             // coupons claimed so far. Stays 0 until a real claim happens; then update it (or use CLAIMS_ENDPOINT).
-  OFFER_START: '2026-10-19',   // <-- change this Monday each week. Everything else is calculated from it.
+  OFFER_START: pacificMonday(),   // fallback = this week's Monday (Pacific). The live sheet's week overrides it. Nothing to change weekly.
   FORM_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec',      // your CRM / form URL (POST). Leave blank to test.
   CLAIMS_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec'     // CRM URL (GET) that returns {"claimed": N} = real Comfort Club coupons claimed this week.
                           // When set, the page uses this real count (CLAIMED is ignored). If it can't be reached, the page only states the limit.

@@ -148,7 +148,12 @@ tbody tr:hover{background:rgba(255,255,255,.03)}
 <script>
 /* The same Google Apps Script web app link the claim page uses. */
 var ENDPOINT = 'https://script.google.com/macros/s/AKfycbwblfX1YYDp2bTm9cZjEakNpIINIttnE8NNcmGVDDL5O_3nmUQqUd_Gkpoi6RRUBb1stw/exec';
-var OFFER_START = '2026-10-19';   // <-- change this Monday each week (same date as the claim page)
+function pacificMonday(){   // Monday (YYYY-MM-DD) of the current week in Pacific time: the fallback until the live sheet answers
+  var p = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).split('-');
+  var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+var OFFER_START = pacificMonday();   // fallback = this week's Monday (Pacific); the live sheet's week overrides it
 var ORIGINAL_TOTAL = 2;   // the number announced in Monday's email; if capacity grows past it, it is shown struck through
 
 var $ = function(id){ return document.getElementById(id); };
