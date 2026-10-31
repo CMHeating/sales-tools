@@ -297,6 +297,10 @@ office printer) use the grayscale print style: rules, bold and grey fills, never
 
 The Leaderboard and Install Availability tools use Firebase JS SDK v10 loaded via CDN (`https://www.gstatic.com/firebasejs/10.12.0/`). Other tools are pure client-side, with Google Fonts and — for anything talking to a backend — `fetch` to an Apps Script `/exec` URL.
 
+### Outgoing email
+
+Email keeps the IBM Plex Sans / navy palette (separate from the dark toolkit pages above), in two variants: an internal "CRM look" (dark bar `#1f2a33` with the logo on a white tile, white cards on `#f4f4f2`) and a light homeowner letter. Table layout and inline styles only; always send a plain-text part. Scripts make Gmail drafts and a person sends; homeowner mail is sent by the HCA from their own company address through a "Send to homeowner" mailto button, never from a manager's account and never forwarded. Job numbers are not shown in the body of an HCA email. The tokens and rules live in the "CM EMAIL STYLE STANDARD" document in the private Second Brain vault; the helper code is `recapEmailHtml.js` (Daily Recap), `cmEmailStyle.js` (Sold Tracker Sync) and `cm_email_style.py` (Referral Email). The hosted logo is `cm-logo-email.png` in this repo's root; do not rename or recompress it.
+
 ## graphify
 
 This repo has a local knowledge graph (god nodes, community structure, cross-file

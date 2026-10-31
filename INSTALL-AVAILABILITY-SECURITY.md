@@ -202,12 +202,17 @@ Step 1 — take the live page as the base:
     rm -rf firebase-hosting-install
     mkdir -p firebase-hosting-install
     curl -fsS https://install-availability-tracker.web.app/ -o firebase-hosting-install/index.html
+    cp audit.html firebase-hosting-install/audit.html
     cp firebase-hosting-install/index.html /tmp/live-before.html
+
+A deploy replaces the WHOLE site with this folder. `audit.html` must be in it, or the
+audit log page goes 404 (happened 2026-10-20; restored the same day).
 
 Step 2 — confirm you fetched a real page, not an error body:
 
     wc -c firebase-hosting-install/index.html
     grep -c "INSTALL_USERS" firebase-hosting-install/index.html
+    ls firebase-hosting-install          # must list audit.html AND index.html
 
 The byte count should be close to the current live size, and the grep must return at least 1.
 If either looks wrong, stop — do not deploy a failed download.
@@ -250,6 +255,7 @@ Step 6 — verify what actually shipped:
 
     curl -fsS https://install-availability-tracker.web.app/ -o /tmp/live-after.html
     diff firebase-hosting-install/index.html /tmp/live-after.html
+    curl -s -o /dev/null -w '%{http_code}\n' https://install-availability-tracker.web.app/audit.html   # must be 200
 
 That diff must be empty. If it is not, the deploy did not ship what you built.
 
