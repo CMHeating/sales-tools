@@ -683,7 +683,9 @@ const SCHED_ANCHOR = new Date(2026, 8, 27);   // Sun 9/27/26 = rotation week 1
 const SCHED_MTG_DATES = {
   "2026-10-13": { all:true, at:7, label:"TRAINING 7:00–9:00", end:{ "Amber Maddalena":15.5 } },
   "2026-10-14": { all:true, at:8, label:"TRAINING 8:00–9:00" },
-  "2026-10-15": { none:true }
+  "2026-10-15": { none:true },
+  /* Thu 11/5/26 only: the Thursday sales meeting moves to 1:30–3:00 PM (same attendees as a normal Thursday). */
+  "2026-11-05": { pm:true, at:13.5, to:15, label:"SALES MEETING 1:30–3:00", text:"Sales meeting 1:30–3:00 PM" }
 };
 /* Whole-team events that replace the normal day plan. Thu 10/15/26: town hall 7:30–11:00 (already blocked in ServiceTitan).
    Riders join their tech at 11:00; oo moves 1:1s; end caps a shift so nobody works an extra-long day. */
@@ -757,7 +759,9 @@ function schedMtg(p, d){
   if(o && o.none) return null;
   if(o && o.all) return { at:o.at, label:o.label, training:true, text:"Training "+schedClock(o.at)+"–9:00", end:(o.end||{})[name] };
   const days = Array.isArray(p.mtg) ? p.mtg : [p.mtg];
-  return days.indexOf(dow) >= 0 ? { at:8, label:"SALES MEETING 8:00", text:"Sales meeting 8:00–9:00" } : null;
+  if(days.indexOf(dow) < 0) return null;
+  if(o && o.pm) return { pm:true, at:o.at, to:o.to, label:o.label, text:o.text };
+  return { at:8, label:"SALES MEETING 8:00", text:"Sales meeting 8:00–9:00" };
 }
 /* Plan for a day, with vacations applied on top of the normal schedule. */
 function schedPlan(p, d){
@@ -822,6 +826,24 @@ function schedPlanCore(p, d){
       if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
       return { blocks, book, lines, sh };
     }
+    if(isM && mt.pm){
+      sh = p.sh; lines.push(mt.text+".");
+      if(ooHere) lines.push("One on One with Geoff at "+p.oo[1]+":00.");
+      let open = 0;
+      const slot = s => {
+        if(ooHere && s===8 && (p.oo[1]===8 || p.oo[1]===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+p.oo[1]+":00"]); return; }
+        if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); return; }
+        if(ooHere && p.oo[1]===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); return; }
+        blocks.push([s,s+2,"open","Open"]); open++;
+      };
+      for(let s=sh[0]; s+2<=mt.at; s+=2) slot(s);
+      blocks.push([mt.at,mt.to,"blk",mt.label]);
+      for(let s=mt.to; s+2<=sh[1]; s+=2) slot(s);
+      book = Math.min(open, p.cap);
+      if(sh[0] > 7) blocks.unshift([7,sh[0],"os",""]);
+      if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
+      return { blocks, book, lines, sh };
+    }
     sh = (isM && p.flex) ? [8,16] : p.sh;
     if(isM && p.flex) lines.push("Early shift today: 8–4 for the "+(mt.training ? "training" : "sales meeting")+".");
     if(isM) lines.push(mt.text+".");
@@ -856,6 +878,7 @@ function schedPacketCell(p, d){
     if(b[2] === "ride") parts.push("R " + t.replace("TECH RIDE · ",""));
     else if(/ \+ ONE ON ONE 9:00$/.test(t)) parts.push(t.indexOf("TRAINING") === 0 ? "TRN 8:00" : "MTG 8:00", "One on One 9:00");
     else if(t === "SALES MEETING 8:00") parts.push("MTG 8:00");
+    else if(t.indexOf("SALES MEETING ") === 0) parts.push("MTG " + t.slice(14, t.indexOf("–")));
     else if(t.indexOf("TRAINING ") === 0) parts.push("TRN " + t.slice(9, t.indexOf("–")));
     else if(t.indexOf("TOWN HALL ") === 0) parts.push("TOWN HALL");
     else if(t.indexOf("ONE ON ONE WITH GEOFF ") === 0) parts.push("One on One " + t.replace("ONE ON ONE WITH GEOFF ",""));
