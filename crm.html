@@ -141,6 +141,46 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .hidden{display:none!important}
 @media(min-width:820px){.grid{grid-template-columns:1fr 1fr}.title h1{font-size:38px}}
 @media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
+
+/* ===== MY NUMBERS (BI, month to date) ===== */
+.card.numbers{border-left-color:#14b8a6;grid-column:1/-1;min-width:0}
+.card.numbers .card-head{flex-wrap:wrap}
+.num-seg{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
+.num-seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:6px 12px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.num-seg button.on{background:rgba(20,184,166,.22);color:#fff;box-shadow:inset 0 0 0 1px rgba(20,184,166,.7)}
+.num-rot{height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin:0 0 14px}
+.num-rot i{display:block;height:100%;width:0;background:#14b8a6}
+.num-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.num-kpi{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.03)}
+.num-kpi .k{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2)}
+.num-kpi .v{font-size:30px;font-weight:800;line-height:1.1;margin-top:4px}
+.num-kpi .d{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.num-kpi.pending{border-style:dashed}.num-kpi.pending .v{color:var(--muted2);font-size:20px}
+.num-bar{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:8px}
+.num-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#14b8a6}
+.num-bar b{position:absolute;top:-3px;width:2px;height:12px;background:#fff;opacity:.7}
+.num-up{color:#bbf7d0}.num-dn{color:#fecaca}
+.num-tbl{overflow-x:auto}
+.num-tbl table{width:100%;border-collapse:collapse;font-size:13px}
+.num-tbl th{font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.num-tbl th button{all:unset;cursor:pointer}
+.num-tbl th:first-child,.num-tbl td:first-child{text-align:left}
+.num-tbl td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.num-tbl tr.me td{background:rgba(20,184,166,.12);font-weight:800}
+.num-tbl tr.tot td{color:var(--muted);font-weight:700}
+.num-calls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+.num-call{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45}
+.num-call b{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#99f6e4;display:block}
+.num-call.pending{border-style:dashed;color:var(--muted)}.num-call.pending b{color:var(--muted2)}
+/* ===== DAILY ACTIVITIES lanes ===== */
+.act-lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.act-lane{border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.act-lane h3{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fde68a;margin-bottom:6px}
+.act-lane .metric{display:flex;justify-content:space-between;align-items:baseline;min-width:0;padding:3px 0}
+.act-lane .metric strong{order:2;font-size:18px;color:#fde68a}
+.act-lane .metric span{order:1;margin-top:0;font-size:12px;letter-spacing:.02em;text-transform:none;font-weight:600;color:var(--muted)}
+/* keyboard focus */
+.btn:focus-visible,.num-seg button:focus-visible,.num-tbl th button:focus-visible,.select:focus-visible,.sched-view button:focus-visible,.sched-jump button:focus-visible{outline:2px solid #99f6e4;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -183,6 +223,19 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
       <div class="hello" id="hello">—</div>
 
       <div class="grid">
+        <!-- MY NUMBERS (BI month to date; rotates to the team board) -->
+        <div class="card numbers" id="numbersCard">
+          <div class="card-head"><h2 id="numsTitle">My Numbers</h2>
+            <div class="num-seg" role="group" aria-label="Numbers view">
+              <button id="numMe" class="on" type="button" aria-pressed="true">Me</button>
+              <button id="numTeam" type="button" aria-pressed="false">Team</button>
+              <button id="numPause" type="button" aria-pressed="false" aria-label="Pause auto-rotate" title="Pause auto-rotate">&#10074;&#10074;</button>
+            </div>
+          </div>
+          <div class="num-rot" aria-hidden="true"><i id="numRotBar"></i></div>
+          <div class="card-body" style="justify-content:flex-start"><div id="numsBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="numsNote"></span></div>
+        </div>
         <!-- AR -->
         <div class="card ar">
           <div class="card-head"><h2>Accounts Receivable</h2><span class="tag">Your open invoices</span></div>
@@ -215,16 +268,24 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
         <div class="card activities">
           <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
           <div class="card-body" style="justify-content:flex-start">
-            <div id="activitiesBody" class="metrics" style="gap:16px;">
-              <div class="metric yellow"><strong id="cntRideAlong">0</strong><span>Ride Alongs</span></div>
-              <div class="metric yellow"><strong id="cntSelfGen">0</strong><span>Self-Gen</span></div>
-              <div class="metric yellow"><strong id="cntInstallVisit">0</strong><span>Install Visits</span></div>
-              <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
-              <div class="metric yellow"><strong id="cntNetworking">0</strong><span>Networking</span></div>
-              <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
-              <div class="metric yellow"><strong id="cntTechCheckIn">0</strong><span>Tech Check-ins</span></div>
-              <div class="metric yellow"><strong id="cntMeeting">0</strong><span>Meetings / Training</span></div>
-              <div class="metric yellow"><strong id="cntProjMgmt">0</strong><span>Project Mgmt</span></div>
+            <div id="activitiesBody" class="act-lanes">
+              <div class="act-lane"><h3>Create leads</h3>
+                <div class="metric yellow"><strong id="cntSelfGen">0</strong><span>Self-Gen</span></div>
+                <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
+                <div class="metric yellow"><strong id="cntNetworking">0</strong><span>Networking</span></div>
+              </div>
+              <div class="act-lane"><h3>Work the techs</h3>
+                <div class="metric yellow"><strong id="cntRideAlong">0</strong><span>Ride Alongs</span></div>
+                <div class="metric yellow"><strong id="cntTechCheckIn">0</strong><span>Tech Check-ins</span></div>
+              </div>
+              <div class="act-lane"><h3>Close + care</h3>
+                <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
+                <div class="metric yellow"><strong id="cntInstallVisit">0</strong><span>Install Visits</span></div>
+                <div class="metric yellow"><strong id="cntProjMgmt">0</strong><span>Project Mgmt</span></div>
+              </div>
+              <div class="act-lane"><h3>Team time</h3>
+                <div class="metric yellow"><strong id="cntMeeting">0</strong><span>Meetings / Training</span></div>
+              </div>
             </div>
             <div class="act-fu" id="actFuNote"></div>
             <div class="act-week" id="actWeek"></div>
@@ -416,6 +477,7 @@ function lock(){
   $("btnLogout").classList.add("hidden");
   badge("○ Login required", "bad");
   if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
+  numStop();
 }
 
 function unlock(){
@@ -458,6 +520,7 @@ function loadCards(){
     // Clear out activities
     if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
     actReset("Select a rep");
+    setBody("numsBody", '<div class="soon">Select a rep.</div>');
     renderSchedule();
     return;
   }
@@ -465,6 +528,7 @@ function loadCards(){
   loadSoldCard(who);
   loadArCard(who);
   loadActivitiesCard(who);
+  loadNumbersCard(who);
   renderSchedule();
 }
 
@@ -925,6 +989,111 @@ function schedOverlay(fromIso, toIso){
   return CMHProjects.overlayHtml(soldJobsAll(), pipelineAll(), who, fromIso, toIso, pacificTodayIso());
 }
 /* ===== end INSTALL PROJECTS ===== */
+
+
+/* ===== MY NUMBERS =====
+   Source: "HCA Numbers Feed" Apps Script web app (apps-script/hca-numbers.gs). It reads the morning BI exports in Drive
+   (Leaderboard Install Mix + Revenue, All Leads, All Installs) and serves month-to-date per-HCA counts as JSON.
+   Read-only: nothing here writes to Firebase. Same login as the rest of the page (PIN or Google).
+   Me view rotates to the Team board every 12 s; a tap on Me/Team or the pause button stops the rotation;
+   it also holds while the tab is hidden and never auto-rotates with reduced motion. */
+const NUMBERS_EXEC = "";   // paste the /exec URL after deploying hca-numbers.gs
+const NUM_DWELL = 12000;
+let numData = null, numErr = "", numView = "me", numPaused = false, numT0 = 0, numTimer = null, numSort = "l2c";
+const NUM_REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function numFind(who){
+  if(!numData || !who) return null;
+  const hs = numData.hcas || [];
+  return hs.find(h => norm(h.name) === norm(who.full)) || hs.find(h => lastName(h.name) === lastName(who.full)) || null;
+}
+function numOrd(n){ const s=["th","st","nd","rd"], v=n%100; return n + (s[(v-20)%10] || s[v] || s[0]); }
+function numShort(n){ const u = USERS.find(x => norm(x.full) === norm(n)); return u ? u.short : String(n).split(" ")[0]; }
+function numDate(iso){ if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); const dt = new Date(y, m-1, d); return DAY_NAMES[dt.getDay()].slice(0,3) + " " + m + "/" + d; }
+function numKpi(k, v, d, fill, mark, cls){
+  return `<div class="num-kpi ${cls||""}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${d}</div>` +
+    (fill != null ? `<div class="num-bar"><i style="width:${Math.max(0,Math.min(fill,100))}%"></i>${mark != null ? `<b style="left:${Math.max(0,Math.min(mark,100))}%"></b>` : ""}</div>` : "") + `</div>`;
+}
+function numVs(a, b){ if(b == null) return ""; const d = Math.round((a-b)*10)/10; return `<span class="${d>=0?"num-up":"num-dn"}">${d>=0?"▲":"▼"} ${Math.abs(d)} pts</span> vs team ${esc(b)}%`; }
+function numTopFlip(){
+  const hs = (numData.hcas || []).filter(h => h.tfLeads > 0);
+  if(!hs.length) return "No tech-flip installs yet this month.";
+  const t = [...hs].sort((a,b) => b.tfInstalls - a.tfInstalls || b.tfL2c - a.tfL2c)[0];
+  return `${esc(numShort(t.name))}: ${t.tfInstalls} of ${t.tfLeads} tech flips installed (${t.tfL2c}%). Most installs; a tie goes to the higher rate.`;
+}
+function numRenderMe(){
+  const who = viewRep, me = numFind(who), T = numData.team || {}, hs = numData.hcas || [], n = hs.length;
+  $("numsTitle").textContent = "My Numbers";
+  if(!me){ setBody("numsBody", `<div class="soon">No BI numbers for ${esc(who.full)} this month yet.</div>`); return; }
+  const rk = [...hs].sort((a,b) => b.l2c - a.l2c).findIndex(h => h.name === me.name) + 1;
+  const tr = [...hs].sort((a,b) => b.tfL2c - a.tfL2c).findIndex(h => h.name === me.name) + 1;
+  setBody("numsBody", `<div class="num-hero">
+    ${numKpi("Lead → cash", me.l2c + "%", `${me.installs} installs / ${me.leads} leads · ${numOrd(rk)} of ${n}<br>${numVs(me.l2c, T.l2c)}<br>BI revenue page shows ${me.l2cRev != null ? esc(me.l2cRev) + "%" : "—"}`, me.l2c, T.l2c)}
+    ${numKpi("Tech flips", `${me.tfInstalls} / ${me.tfLeads}`, `installed / tech-flip consults · ${me.tfL2c}% · ${numOrd(tr)} of ${n}<br>${numVs(me.tfL2c, T.tfL2c)}`, me.tfL2c, T.tfL2c)}
+    ${numKpi("Rentals installed", me.rentalInstalled, `${me.rentalMix}% of my installs · team ${esc(T.rentalMix)}%`, me.rentalMix, T.rentalMix)}
+    ${numKpi("Rentals sold", "—", "Coming from the Sold Tracker (not in BI)", null, null, "pending")}
+    ${numKpi("Self-gen", `${me.sgInstalls} / ${me.sgLeads}`, `installed / self-gen leads · team ${T.sgInstalls} / ${T.sgLeads}`, null)}
+    ${numKpi("Marketed L2C", me.mktL2c + "%", `Inbound + webform leads${T.mktL2c != null ? " · team " + esc(T.mktL2c) + "%" : ""}`, me.mktL2c, T.mktL2c)}
+  </div>
+  <div class="num-calls">
+    <div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div>
+    <div class="num-call pending"><b>Top tech flipper (service tech)</b>Coming once BI adds the tech who generated each lead.</div>
+  </div>`);
+}
+function numRenderTeam(){
+  $("numsTitle").textContent = "Team Board";
+  const hs = numData.hcas || [], T = numData.team || {}, me = numFind(viewRep);
+  const cols = [["name","HCA"],["l2c","L2C %"],["installs","Inst"],["leads","Leads"],["tfInstalls","TF inst"],["tfL2c","TF L2C"],["rentalInstalled","Rent inst"],["sgInstalls","SG inst"]];
+  const rows = [...hs].sort((a,b) => numSort === "name" ? numShort(a.name).localeCompare(numShort(b.name)) : (b[numSort]||0) - (a[numSort]||0));
+  setBody("numsBody", `<div class="num-tbl"><table><thead><tr>${cols.map(([k,l]) => `<th><button type="button" data-k="${k}">${l}${k===numSort?" ▾":""}</button></th>`).join("")}</tr></thead><tbody>
+    ${rows.map((h,i) => `<tr class="${me && h.name===me.name ? "me" : ""}"><td>${i+1}. ${esc(numShort(h.name))}</td><td>${h.l2c}%</td><td>${h.installs}</td><td>${h.leads}</td><td>${h.tfInstalls}</td><td>${h.tfL2c}%</td><td>${h.rentalInstalled}</td><td>${h.sgInstalls}</td></tr>`).join("")}
+    <tr class="tot"><td>Team</td><td>${T.l2c}%</td><td>${T.installs}</td><td>${T.leads}</td><td>${T.tfInstalls}</td><td>${T.tfL2c}%</td><td>${T.rentalInstalled}</td><td>${T.sgInstalls}</td></tr></tbody></table></div>
+    <div class="num-calls"><div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div></div>`);
+  $("numsBody").querySelectorAll("th button").forEach(b => b.addEventListener("click", () => { numSort = b.dataset.k; numHold(); numRenderTeam(); }));
+}
+function numShow(v){
+  numView = v;
+  [["numMe","me"],["numTeam","team"]].forEach(([id,val]) => { const b=$(id); b.classList.toggle("on", v===val); b.setAttribute("aria-pressed", v===val ? "true" : "false"); });
+  if(!numData || !viewRep || viewRep.role !== "HCA") return;
+  v === "me" ? numRenderMe() : numRenderTeam();
+  numT0 = performance.now();
+}
+function numHold(){ numPaused = true; const p=$("numPause"); p.classList.add("on"); p.setAttribute("aria-pressed","true"); $("numRotBar").style.width = "0"; }
+function numStop(){ if(numTimer){ clearInterval(numTimer); numTimer = null; } }
+function numStart(){
+  numStop();
+  if(NUM_REDUCED){ $("numRotBar").style.width = "0"; return; }
+  numT0 = performance.now();
+  numTimer = setInterval(() => {
+    if(numPaused || document.hidden || !numData){ numT0 = performance.now(); return; }
+    const p = (performance.now() - numT0) / NUM_DWELL;
+    $("numRotBar").style.width = Math.min(p*100, 100) + "%";
+    if(p >= 1) numShow(numView === "me" ? "team" : "me");
+  }, 250);
+}
+function numNote(){
+  const a = numData && numData.asOf;
+  $("numsNote").textContent = a ? `Month to date · BI data through ${numDate(a.dataThrough)} (BI runs a day behind and doesn't refresh on weekends)` : "";
+}
+function loadNumbersCard(who){
+  if(!NUMBERS_EXEC){ setBody("numsBody", '<div class="soon">My Numbers goes live once the BI numbers feed is published.</div>'); $("numsNote").textContent = ""; return; }
+  if(numData){ numNote(); numShow(numView); if(!numTimer) numStart(); return; }
+  if(numErr){ setBody("numsBody", `<div class="soon">${esc(numErr)}</div>`); return; }
+  setBody("numsBody", '<div class="loading">Loading your numbers…</div>');
+  fetch(NUMBERS_EXEC + "?v=" + Date.now())
+    .then(r => r.json())
+    .then(d => {
+      if(!d || !d.ok){ numErr = "BI numbers aren't available yet."; setBody("numsBody", `<div class="soon">${esc(numErr)}</div>`); return; }
+      numData = d; numNote(); numShow("me"); numStart();
+    })
+    .catch(err => { console.error("Numbers:", err); numErr = ""; setBody("numsBody", '<div class="soon">Numbers unavailable right now. Try again in a minute.</div>'); });
+}
+$("numMe").addEventListener("click", () => { numHold(); numShow("me"); });
+$("numTeam").addEventListener("click", () => { numHold(); numShow("team"); });
+$("numPause").addEventListener("click", () => {
+  numPaused = !numPaused; const p=$("numPause"); p.classList.toggle("on", numPaused); p.setAttribute("aria-pressed", numPaused ? "true" : "false");
+  numT0 = performance.now(); if(numPaused) $("numRotBar").style.width = "0";
+});
+/* ===== end MY NUMBERS ===== */
 
 /* CLEARANCE: shared count. */
 function loadClearanceCard(){
