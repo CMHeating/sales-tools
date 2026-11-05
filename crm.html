@@ -143,6 +143,12 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 @media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
 
 /* ===== MY NUMBERS (BI, month to date) ===== */
+.num-open{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.num-open p{margin:0;color:var(--muted);line-height:1.5;max-width:56ch}
+.num-open ul{margin:0;padding-left:18px;color:var(--muted);line-height:1.6}
+.num-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:12px;background:#14b8a6;color:#04201c;font-weight:800;text-decoration:none;transition:transform .1s ease-out}
+.num-btn:active{transform:scale(.97)}
+.num-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .card.numbers{border-left-color:#14b8a6;grid-column:1/-1;min-width:0}
 .card.numbers .card-head{flex-wrap:wrap}
 .num-seg{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
@@ -1021,6 +1027,13 @@ function schedOverlay(fromIso, toIso){
    Me view rotates to the Team board every 12 s; a tap on Me/Team or the pause button stops the rotation;
    it also holds while the tab is hidden and never auto-rotates with reduced motion. */
 const NUMBERS_EXEC = "";   // paste the /exec URL after deploying hca-numbers.gs
+/* 2026-11-05 (claude-16, Geoff "do what's logical"): while NUMBERS_EXEC is empty, the card opens the live
+   My Numbers page in the HCA Recap App (Google sign-in; pilot gate there too). No numbers are fetched here. */
+const MY_NUMBERS_URL = "https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec?view=numbers";
+function numLinkMode(on){
+  ["numMe","numTeam","numPause"].forEach(id => { const b = $(id); if(b) b.parentElement.style.display = on ? "none" : ""; });
+  const r = $("numRotBar"); if(r && r.parentElement) r.parentElement.style.display = on ? "none" : "";
+}
 const NUM_DWELL = 12000;
 let numData = null, numErr = "", numView = "me", numPaused = false, numT0 = 0, numTimer = null, numSort = "l2c";
 const NUM_REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1098,7 +1111,20 @@ function numNote(){
   $("numsNote").textContent = a ? `Month to date · BI data through ${numDate(a.dataThrough)} (BI runs a day behind and doesn't refresh on weekends)` : "";
 }
 function loadNumbersCard(who){
-  if(!NUMBERS_EXEC){ setBody("numsBody", '<div class="soon">My Numbers goes live once the BI numbers feed is published.</div>'); $("numsNote").textContent = ""; return; }
+  if(!NUMBERS_EXEC){
+    numLinkMode(true);
+    $("numsTitle").textContent = "My Numbers";
+    if(pilotOn(who)){
+      setBody("numsBody", `<div class="num-open"><p>Your month to date, updated every morning after the BI export.</p>
+        <ul><li>Team sales by day, same-day vs follow-up</li><li>Your sold, same-day %, installs, leads and lead to cash, with your rank</li><li>Rentals, month and year to date</li></ul>
+        <a class="num-btn" href="${MY_NUMBERS_URL}" target="_blank" rel="noopener">Open My Numbers &rarr;</a></div>`);
+      $("numsNote").textContent = "Opens in a new tab. Sign in with your @cmheating.com Google account.";
+    } else {
+      setBody("numsBody", '<div class="soon">My Numbers is in a pilot. It comes to everyone after the pilot.</div>');
+      $("numsNote").textContent = "";
+    }
+    return;
+  }
   if(numData){ numNote(); numShow(numView); if(!numTimer) numStart(); return; }
   if(numErr){ setBody("numsBody", `<div class="soon">${esc(numErr)}</div>`); return; }
   setBody("numsBody", '<div class="loading">Loading your numbers…</div>');
