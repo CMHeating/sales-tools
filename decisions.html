@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decisions</title>
+<meta name="apple-mobile-web-app-title" content="Decisions">
+<meta name="application-name" content="Decisions">
+<meta name="theme-color" content="#12355b">
+<link rel="apple-touch-icon" href="decisions-icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="decisions-icon-512.png">
+<style>
+  :root { --bg:#f6f7f9; --fg:#12355b; --muted:#5b6675; --btn:#12355b; --btnfg:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1720; --fg:#e8eef5; --muted:#9aa7b6; --btn:#f2a33a; --btnfg:#12355b; } }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--fg); font:16px/1.4 -apple-system, system-ui, sans-serif; padding:16px; box-sizing:border-box; }
+  .card { max-width:360px; text-align:center; }
+  img { width:72px; height:72px; border-radius:16px; }
+  h1 { font-size:22px; margin:12px 0 4px; }
+  p { color:var(--muted); margin:6px 0; }
+  a.btn { display:inline-block; margin-top:16px; padding:14px 22px; border-radius:12px; background:var(--btn); color:var(--btnfg);
+          text-decoration:none; font-weight:600; }
+  .tip { font-size:13px; margin-top:20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="decisions-icon-180.png" alt="">
+  <h1>Decision Engine</h1>
+  <p id="status">Opening…</p>
+  <a class="btn" id="go" href="#">Open Decision Engine</a>
+  <p class="tip">Sign in with your <b>@cmheating.com</b> Google account. If Google says "unable to open the file", sign out of other Google accounts in this browser and try again.</p>
+</div>
+<script>
+  // Decision Engine lives in the CM Heating Recap App (Apps Script, cmheating.com domain only, managers-gated).
+  var BASE = "https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec";
+  var card = new URLSearchParams(location.search).get("card");          // optional: decisions.html?card=D-5
+  var target = BASE + "?view=decisions" + (card && /^D-\d+$/.test(card) ? "&card=" + card : "");
+  document.getElementById("go").href = target;
+  // Stay in the normal browser tab (not standalone) so the Google sign-in session is kept.
+  setTimeout(function(){ location.replace(target); }, 400);
+</script>
+</body>
+</html>
