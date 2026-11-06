@@ -989,11 +989,13 @@ $("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
 const PILOT_HCAS = ["Samir Khoury"];
 function pacificTodayIso(){ return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 /* 2026-11-05 (Geoff 19:56 PT "fine for Google account"): install projects, upcoming installs and the schedule
-   overlay are on for every HCA; customer cards need Google sign-in for everyone. PILOT_HCAS now only picks
-   who gets the "Open My Numbers" link (the Recap App page is still pilot-gated there). */
+   overlay are on for every HCA; customer cards need Google sign-in for everyone. PILOT_HCAS is now unused
+   (kept for rollback). */
 const PROJECTS_FOR_ALL = true;
 function pilotOn(who){ return !!who && (PROJECTS_FOR_ALL || PILOT_HCAS.some(n => norm(n) === norm(who.full))); }
-function numLinkOn(who){ return !!who && PILOT_HCAS.some(n => norm(n) === norm(who.full)); }
+/* 2026-11-06 (Geoff 06:47 PT, REQUEST 2007): the My Numbers page is open to every roster HCA, so every HCA gets the link. */
+const NUMBERS_LINK_FOR_ALL = true;
+function numLinkOn(who){ return !!who && (NUMBERS_LINK_FOR_ALL || PILOT_HCAS.some(n => norm(n) === norm(who.full))); }
 function soldJobsAll(){ return !soldData || !soldData.jobs ? [] : (Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs)); }
 function pipelineAll(){ const p = soldData && soldData.pipeline; return !p ? [] : (Array.isArray(p) ? p : Object.values(p)); }
 function renderProjects(who){
