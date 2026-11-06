@@ -29,7 +29,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .main{padding:20px 22px 44px}
 .hello{font-family:"Playfair Display",serif;font-size:22px;margin-bottom:4px}
 .hello small{font-family:Outfit,sans-serif;font-size:13px;color:var(--muted);font-weight:400}
-.grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
 .card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--muted2);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;min-height:150px}
 .card.ar{border-left-color:var(--red)}
 .card.sold{border-left-color:var(--green)}
@@ -139,7 +139,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 #content{display:none}
 #content.show{display:block}
 .hidden{display:none!important}
-@media(min-width:820px){.grid{grid-template-columns:1fr 1fr}.title h1{font-size:38px}}
+@media(min-width:820px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.title h1{font-size:38px}}
 @media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
 
 /* ===== MY NUMBERS (BI, month to date) ===== */
@@ -161,6 +161,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .num-kpi .k{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2)}
 .num-kpi .v{font-size:30px;font-weight:800;line-height:1.1;margin-top:4px}
 .num-kpi .d{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+@media(max-width:620px){.num-hero{grid-template-columns:repeat(2,minmax(0,1fr))}.num-kpi .v{font-size:26px}}
 .num-kpi.pending{border-style:dashed}.num-kpi.pending .v{color:var(--muted2);font-size:20px}
 .num-bar{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:8px}
 .num-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#14b8a6}
@@ -987,7 +988,12 @@ $("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
    PILOT: only the listed HCAs (or an admin viewing them) see the new list, overlay and link. Everyone else is unchanged. */
 const PILOT_HCAS = ["Samir Khoury"];
 function pacificTodayIso(){ return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
-function pilotOn(who){ return !!who && PILOT_HCAS.some(n => norm(n) === norm(who.full)); }
+/* 2026-11-05 (Geoff 19:56 PT "fine for Google account"): install projects, upcoming installs and the schedule
+   overlay are on for every HCA; customer cards need Google sign-in for everyone. PILOT_HCAS now only picks
+   who gets the "Open My Numbers" link (the Recap App page is still pilot-gated there). */
+const PROJECTS_FOR_ALL = true;
+function pilotOn(who){ return !!who && (PROJECTS_FOR_ALL || PILOT_HCAS.some(n => norm(n) === norm(who.full))); }
+function numLinkOn(who){ return !!who && PILOT_HCAS.some(n => norm(n) === norm(who.full)); }
 function soldJobsAll(){ return !soldData || !soldData.jobs ? [] : (Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs)); }
 function pipelineAll(){ const p = soldData && soldData.pipeline; return !p ? [] : (Array.isArray(p) ? p : Object.values(p)); }
 function renderProjects(who){
@@ -1062,27 +1068,32 @@ function numRenderMe(){
   if(!me){ setBody("numsBody", `<div class="soon">No BI numbers for ${esc(who.full)} this month yet.</div>`); return; }
   const rk = [...hs].sort((a,b) => b.l2c - a.l2c).findIndex(h => h.name === me.name) + 1;
   const tr = [...hs].sort((a,b) => b.tfL2c - a.tfL2c).findIndex(h => h.name === me.name) + 1;
+  const sales = numData.salesOk && me.sold != null;
+  const srk = sales ? [...new Set(hs.map(h => h.sold || 0))].sort((a,b) => b-a).indexOf(me.sold) + 1 : 0;
+  const sdp = sales && me.sold ? Math.round(me.sameDay / me.sold * 100) : 0, tsdp = sales && T.sold ? Math.round(T.sameDay / T.sold * 100) : 0;
   setBody("numsBody", `<div class="num-hero">
-    ${numKpi("Lead → cash", me.l2c + "%", `${me.installs} installs / ${me.leads} leads · ${numOrd(rk)} of ${n}<br>${numVs(me.l2c, T.l2c)}<br>BI revenue page shows ${me.l2cRev != null ? esc(me.l2cRev) + "%" : "—"}`, me.l2c, T.l2c)}
+    ${sales ? numKpi("Sold this month", me.sold, `${me.sameDay} same-day · ${me.follow} follow-up · ${numOrd(srk)} of ${n}<br>Team ${esc(T.sold)} sold`, null) : numKpi("Sold this month", "—", "Sales numbers unavailable right now", null, null, "pending")}
+    ${sales ? numKpi("Same-day close", sdp + "%", `${me.sameDay} of ${me.sold} sold on the first visit<br>team ${tsdp}%`, sdp, tsdp) : ""}
+    ${numKpi("Lead → cash", me.l2c + "%", `${me.installs} installs / ${me.leads} leads · ${numOrd(rk)} of ${n}<br>${numVs(me.l2c, T.l2c)}${me.l2cRev != null ? "<br>BI revenue page shows " + esc(me.l2cRev) + "%" : ""}`, me.l2c, T.l2c)}
     ${numKpi("Tech flips", `${me.tfInstalls} / ${me.tfLeads}`, `installed / tech-flip consults · ${me.tfL2c}% · ${numOrd(tr)} of ${n}<br>${numVs(me.tfL2c, T.tfL2c)}`, me.tfL2c, T.tfL2c)}
     ${numKpi("Rentals installed", me.rentalInstalled, `${me.rentalMix}% of my installs · team ${esc(T.rentalMix)}%`, me.rentalMix, T.rentalMix)}
-    ${numKpi("Rentals sold", "—", "Coming from the Sold Tracker (not in BI)", null, null, "pending")}
+    ${me.rentalSalesMtd != null ? numKpi("Rentals sold", me.rentalSalesMtd, `this month · ${me.rentalSalesYtd} since Aug 1`, null) : numKpi("Rentals sold", "—", "Coming from the Sold Tracker (not in BI)", null, null, "pending")}
     ${numKpi("Self-gen", `${me.sgInstalls} / ${me.sgLeads}`, `installed / self-gen leads · team ${T.sgInstalls} / ${T.sgLeads}`, null)}
     ${numKpi("Marketed L2C", me.mktL2c + "%", `Inbound + webform leads${T.mktL2c != null ? " · team " + esc(T.mktL2c) + "%" : ""}`, me.mktL2c, T.mktL2c)}
   </div>
   <div class="num-calls">
     <div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div>
     <div class="num-call pending"><b>Top tech flipper (service tech)</b>Coming once BI adds the tech who generated each lead.</div>
-  </div>`);
+  </div>${numLinkHtml(who)}`);
 }
 function numRenderTeam(){
   $("numsTitle").textContent = "Team Board";
   const hs = numData.hcas || [], T = numData.team || {}, me = numFind(viewRep);
-  const cols = [["name","HCA"],["l2c","L2C %"],["installs","Inst"],["leads","Leads"],["tfInstalls","TF inst"],["tfL2c","TF L2C"],["rentalInstalled","Rent inst"],["sgInstalls","SG inst"]];
+  const cols = [["name","HCA"],...(numData.salesOk ? [["sold","Sold"],["sameDay","Same day"]] : []),["l2c","L2C %"],["installs","Inst"],["leads","Leads"],["tfInstalls","TF inst"],["tfL2c","TF L2C"],["rentalInstalled","Rent inst"],["sgInstalls","SG inst"]];
   const rows = [...hs].sort((a,b) => numSort === "name" ? numShort(a.name).localeCompare(numShort(b.name)) : (b[numSort]||0) - (a[numSort]||0));
   setBody("numsBody", `<div class="num-tbl"><table><thead><tr>${cols.map(([k,l]) => `<th><button type="button" data-k="${k}">${l}${k===numSort?" ▾":""}</button></th>`).join("")}</tr></thead><tbody>
-    ${rows.map((h,i) => `<tr class="${me && h.name===me.name ? "me" : ""}"><td>${i+1}. ${esc(numShort(h.name))}</td><td>${h.l2c}%</td><td>${h.installs}</td><td>${h.leads}</td><td>${h.tfInstalls}</td><td>${h.tfL2c}%</td><td>${h.rentalInstalled}</td><td>${h.sgInstalls}</td></tr>`).join("")}
-    <tr class="tot"><td>Team</td><td>${T.l2c}%</td><td>${T.installs}</td><td>${T.leads}</td><td>${T.tfInstalls}</td><td>${T.tfL2c}%</td><td>${T.rentalInstalled}</td><td>${T.sgInstalls}</td></tr></tbody></table></div>
+    ${rows.map((h,i) => `<tr class="${me && h.name===me.name ? "me" : ""}"><td>${i+1}. ${esc(numShort(h.name))}</td>${numData.salesOk ? `<td>${h.sold}</td><td>${h.sameDay}</td>` : ""}<td>${h.l2c}%</td><td>${h.installs}</td><td>${h.leads}</td><td>${h.tfInstalls}</td><td>${h.tfL2c}%</td><td>${h.rentalInstalled}</td><td>${h.sgInstalls}</td></tr>`).join("")}
+    <tr class="tot"><td>Team</td>${numData.salesOk ? `<td>${T.sold}</td><td>${T.sameDay}</td>` : ""}<td>${T.l2c}%</td><td>${T.installs}</td><td>${T.leads}</td><td>${T.tfInstalls}</td><td>${T.tfL2c}%</td><td>${T.rentalInstalled}</td><td>${T.sgInstalls}</td></tr></tbody></table></div>
     <div class="num-calls"><div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div></div>`);
   $("numsBody").querySelectorAll("th button").forEach(b => b.addEventListener("click", () => { numSort = b.dataset.k; numHold(); numRenderTeam(); }));
 }
@@ -1108,13 +1119,35 @@ function numStart(){
 }
 function numNote(){
   const a = numData && numData.asOf;
-  $("numsNote").textContent = a ? `Month to date · BI data through ${numDate(a.dataThrough)} (BI runs a day behind and doesn't refresh on weekends)` : "";
+  $("numsNote").textContent = a ? `Month to date · installs & leads through ${numDate(a.dataThrough)} (BI runs a day behind, no weekend refresh)${numData.salesOk && a.salesUpdated ? " · sold updated " + a.salesUpdated : ""}` : "";
+}
+/* 2026-11-05: numbers come from cmh_sold_tracker/numbers (HCA Sold Tracker Sync, numbersFeed.js). Counts and
+   percentages only, no dollars or customer names, so they show on PIN and Google sessions alike. */
+let numSub = null, numFeedState = "";   // "" = not asked, "wait", "ok", "none"
+function numSubscribe(){
+  if(numSub) return;
+  numFeedState = "wait";
+  numSub = onValue(ref(db, DB_SOLD + "/numbers"), snap => {
+    const d = snap.val();
+    numData = d && d.ok && Array.isArray(d.hcas) ? d : null;
+    numFeedState = numData ? "ok" : "none";
+    if(viewRep && viewRep.role === "HCA") loadNumbersCard(viewRep);
+  }, err => { console.error("Numbers feed:", err); numFeedState = "none"; if(viewRep && viewRep.role === "HCA") loadNumbersCard(viewRep); });
+}
+function numLinkHtml(who){
+  return numLinkOn(who) ? `<a class="num-btn" href="${MY_NUMBERS_URL}" target="_blank" rel="noopener" style="margin-top:12px">Your full My Numbers page &rarr;</a>` : "";
 }
 function loadNumbersCard(who){
   if(!NUMBERS_EXEC){
+    if(!numFeedState){ numSubscribe(); setBody("numsBody", '<div class="loading">Loading your numbers…</div>'); return; }
+    if(numFeedState === "wait"){ setBody("numsBody", '<div class="loading">Loading your numbers…</div>'); return; }
+    if(numFeedState === "ok"){
+      numLinkMode(false); numNote(); numShow(numView);
+      if(!numTimer) numStart(); return;
+    }
     numLinkMode(true);
     $("numsTitle").textContent = "My Numbers";
-    if(pilotOn(who)){
+    if(numLinkOn(who)){
       setBody("numsBody", `<div class="num-open"><p>Your month to date, updated every morning after the BI export.</p>
         <ul><li>Team sales by day, same-day vs follow-up</li><li>Your sold, same-day %, installs, leads and lead to cash, with your rank</li><li>Rentals, month and year to date</li></ul>
         <a class="num-btn" href="${MY_NUMBERS_URL}" target="_blank" rel="noopener">Open My Numbers &rarr;</a></div>`);
