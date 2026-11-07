@@ -1011,12 +1011,21 @@ function renderProjects(who){
 /* "Project completion" stays greyed out until a project is chosen; the choice carries the job into the page. */
 function setProjectChoice(pick, lk, opts){
   if(!pick || !lk) return;
-  pick.innerHTML = CMHProjects.optionsHtml(opts);
+  /* D-11 (2026-11-07): keep the HCA's chosen project across re-renders. The sold tracker refreshes on every sync
+     write and used to rebuild the list and reset the choice. Skip the rebuild when nothing changed; otherwise
+     restore the choice by its link. */
+  const html = CMHProjects.optionsHtml(opts);
+  const prev = pick.dataset.lk && pick.value !== "" ? pick.dataset.lk : "";
+  if(pick.dataset.html !== html){
+    pick.innerHTML = html; pick.dataset.html = html;
+    const k = prev ? opts.findIndex(o => o.link === prev) : -1;
+    pick.value = k >= 0 ? String(k) : "";
+  }
   pick.disabled = !opts.length;
   const sync = () => {
     const o = opts[Number(pick.value)];
-    if(pick.value !== "" && o){ lk.href = o.link; lk.removeAttribute("aria-disabled"); lk.removeAttribute("tabindex"); }
-    else { lk.href = "#"; lk.setAttribute("aria-disabled", "true"); lk.setAttribute("tabindex", "-1"); }
+    if(pick.value !== "" && o){ lk.href = o.link; pick.dataset.lk = o.link; lk.removeAttribute("aria-disabled"); lk.removeAttribute("tabindex"); }
+    else { lk.href = "#"; pick.dataset.lk = ""; lk.setAttribute("aria-disabled", "true"); lk.setAttribute("tabindex", "-1"); }
   };
   pick.onchange = sync; sync();
 }
