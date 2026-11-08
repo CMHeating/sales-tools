@@ -698,7 +698,11 @@ const SCHED_MTG_DATES = {
    Riders join their tech at 11:00; oo moves 1:1s; end caps a shift so nobody works an extra-long day. */
 const SCHED_DAY_EVENTS = {
   "2026-10-15": { at:7.5, to:11, label:"TOWN HALL 7:30–11:00", text:"Town hall 7:30–11:00", ride:{ day:[11,14], eve:[11,16] },
-                  oo:{ "Trevor Bohm":11, "Samir Khoury":12 }, end:{ "Amber Maddalena":16 } }
+                  oo:{ "Trevor Bohm":11, "Samir Khoury":12 }, end:{ "Amber Maddalena":16 } },
+  /* Fri 11/13/26: benefits meeting 7:00–8:00 in the warehouse (HR, Amber Prasad 11/2 + 11/4); virtual make-up Mon 11/16 4:00 PM for anyone off.
+     Riders meet their tech at 8:00; Samir's day capped at 5:00 so it is not 7–6. */
+  "2026-11-13": { at:7, to:8, label:"BENEFITS MEETING 7:00–8:00", text:"Benefits meeting 7:00–8:00 in the warehouse", ride:{ day:[8,13.5], eve:[10,15.5] },
+                  end:{ "Samir Khoury":17 } }
 };
 /* Vacations / PTO. from = first day (fromHour = leaves at that hour that day), to = last day off, back = return date shown to the HCA. */
 const SCHED_TIME_OFF = {
@@ -715,7 +719,7 @@ const HCA_SCHEDULE = {
   "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], eff:[{ from:"2026-11-01", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Emmanuel",0]] }, { from:"2026-10-04", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Alex",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
   "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  eff:[{ from:"2026-11-01", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Caleb",0],["Austin",0]] }, { from:"2026-10-04", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan K",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
   "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  eff:[{ from:"2026-11-01", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan D",0]] }, { from:"2026-10-04", rot:["Younis","Younis","Younis","Younis"], techs:[["Younis",1],["Carter",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Dewaynne","Nicco","Dan D"],  techs:[["Dan D",1],["Dewaynne",0],["Nicco",0]] },
-  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], ride:2, crew:"eve", mtg:4, oo:[1,10], eff:[{ from:"2026-11-01", rot:["Emmanuel","Emmanuel","Emmanuel","Emmanuel"], techs:[["Emmanuel",1],["Dan K",0]] }, { from:"2026-10-04", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Emmanuel",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:true,  rot:["Emmanuel","Dan K","Nicco","Emmanuel"],     techs:[["Emmanuel",1],["Dan K",1],["Nicco",1]] },
+  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], off:["2026-11-09"] /* Mon 11/9 off all day (approved; her 11/2 email); 1:1 skipped that week */, ride:2, crew:"eve", mtg:4, oo:[1,10], eff:[{ from:"2026-11-01", rot:["Emmanuel","Emmanuel","Emmanuel","Emmanuel"], techs:[["Emmanuel",1],["Dan K",0]] }, { from:"2026-10-04", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Emmanuel",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:true,  rot:["Emmanuel","Dan K","Nicco","Emmanuel"],     techs:[["Emmanuel",1],["Dan K",1],["Nicco",1]] },
   "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], off:["2026-09-27"] /* starts Sundays 10/4 */, ride:4, crew:"eve", mtg:2, oo:[3,10], eff:[{ from:"2026-11-01", rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Younis",0]] }, { from:"2026-10-04", rot:["Charles","Nicco","Charles","Nicco"] /* Thu ride alternates: Nicco wk of 10/4, Charles 10/11, ... */, techs:[["Emmanuel",1],["Dan D",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
 };
 const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
