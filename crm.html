@@ -171,6 +171,8 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .num-tbl table{width:100%;border-collapse:collapse;font-size:13px}
 .num-tbl th{font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .num-tbl th button{all:unset;cursor:pointer}
+.num-badge{display:inline-block;margin-left:3px;font-size:13px;line-height:1;vertical-align:-1px}
+.num-legend{font-size:11px;color:var(--muted2);line-height:1.4;margin:8px 2px 0}
 .num-tbl th:first-child,.num-tbl td:first-child{text-align:left}
 .num-tbl td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .num-tbl tr.me td{background:rgba(20,184,166,.12);font-weight:800}
@@ -1064,6 +1066,16 @@ function numFind(who){
   return hs.find(h => norm(h.name) === norm(who.full)) || hs.find(h => lastName(h.name) === lastName(who.full)) || null;
 }
 function numOrd(n){ const s=["th","st","nd","rd"], v=n%100; return n + (s[(v-20)%10] || s[v] || s[0]); }
+/* 2026-11-10 (claude-16, Geoff 06:03): leader badges from the numbers feed (true/false only, no dollars).
+   Shown as text beside the name, each with an aria-label, so meaning never rests on the emoji alone. */
+function numBadges(h){
+  if(!h) return "";
+  const b = [];
+  if(h.badgeRentals) b.push('<span class="num-badge" role="img" aria-label="Most rentals sold" title="Most rentals sold">\u{1F451}</span>');
+  if(h.badgeL2c) b.push('<span class="num-badge" role="img" aria-label="Best lead to cash, 3 or more leads" title="Best lead to cash (3+ leads)">\u{1F525}</span>');
+  if(h.badgeRev) b.push('<span class="num-badge" role="img" aria-label="Most installed rental revenue" title="Most installed rental revenue">\u{1F4B0}</span>');
+  return b.length ? " " + b.join("") : "";
+}
 function numShort(n){ const u = USERS.find(x => norm(x.full) === norm(n)); return u ? u.short : String(n).split(" ")[0]; }
 function numDate(iso){ if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); const dt = new Date(y, m-1, d); return DAY_NAMES[dt.getDay()].slice(0,3) + " " + m + "/" + d; }
 function numKpi(k, v, d, fill, mark, cls){
@@ -1079,7 +1091,7 @@ function numTopFlip(){
 }
 function numRenderMe(){
   const who = viewRep, me = numFind(who), T = numData.team || {}, hs = numData.hcas || [], n = hs.length;
-  $("numsTitle").textContent = "My Numbers";
+  $("numsTitle").innerHTML = "My Numbers" + numBadges(me);
   if(!me){ setBody("numsBody", `<div class="soon">No BI numbers for ${esc(who.full)} this month yet.</div>`); return; }
   const rk = [...hs].sort((a,b) => b.l2c - a.l2c).findIndex(h => h.name === me.name) + 1;
   const tr = [...hs].sort((a,b) => b.tfL2c - a.tfL2c).findIndex(h => h.name === me.name) + 1;
@@ -1104,11 +1116,12 @@ function numRenderMe(){
 function numRenderTeam(){
   $("numsTitle").textContent = "Team Board";
   const hs = numData.hcas || [], T = numData.team || {}, me = numFind(viewRep);
-  const cols = [["name","HCA"],...(numData.salesOk ? [["sold","Sold"],["sameDay","Same day"]] : []),["l2c","L2C %"],["installs","Inst"],["leads","Leads"],["tfInstalls","TF inst"],["tfL2c","TF L2C"],["rentalInstalled","Rent inst"],["sgInstalls","SG inst"]];
+  const cols = [["name","HCA"],...(numData.salesOk ? [["sold","Sold"],["sameDay","Same day"]] : []),["l2c","L2C %"],["installs","Inst"],["leads","Leads"],["tfInstalls","TF inst"],["tfL2c","TF L2C"],["rentalSalesMtd","Rentals"],["sgInstalls","SG inst"]];
   const rows = [...hs].sort((a,b) => numSort === "name" ? numShort(a.name).localeCompare(numShort(b.name)) : (b[numSort]||0) - (a[numSort]||0));
   setBody("numsBody", `<div class="num-tbl"><table><thead><tr>${cols.map(([k,l]) => `<th><button type="button" data-k="${k}">${l}${k===numSort?" ▾":""}</button></th>`).join("")}</tr></thead><tbody>
-    ${rows.map((h,i) => `<tr class="${me && h.name===me.name ? "me" : ""}"><td>${i+1}. ${esc(numShort(h.name))}</td>${numData.salesOk ? `<td>${h.sold}</td><td>${h.sameDay}</td>` : ""}<td>${h.l2c}%</td><td>${h.installs}</td><td>${h.leads}</td><td>${h.tfInstalls}</td><td>${h.tfL2c}%</td><td>${h.rentalInstalled}</td><td>${h.sgInstalls}</td></tr>`).join("")}
-    <tr class="tot"><td>Team</td>${numData.salesOk ? `<td>${T.sold}</td><td>${T.sameDay}</td>` : ""}<td>${T.l2c}%</td><td>${T.installs}</td><td>${T.leads}</td><td>${T.tfInstalls}</td><td>${T.tfL2c}%</td><td>${T.rentalInstalled}</td><td>${T.sgInstalls}</td></tr></tbody></table></div>
+    ${rows.map((h,i) => `<tr class="${me && h.name===me.name ? "me" : ""}"><td>${i+1}. ${esc(numShort(h.name))}${numBadges(h)}</td>${numData.salesOk ? `<td>${h.sold}</td><td>${h.sameDay}</td>` : ""}<td>${h.l2c}%</td><td>${h.installs}</td><td>${h.leads}</td><td>${h.tfInstalls}</td><td>${h.tfL2c}%</td><td>${h.rentalSalesMtd != null ? h.rentalSalesMtd : "—"} / ${h.rentalInstalled}</td><td>${h.sgInstalls}</td></tr>`).join("")}
+    <tr class="tot"><td>Team</td>${numData.salesOk ? `<td>${T.sold}</td><td>${T.sameDay}</td>` : ""}<td>${T.l2c}%</td><td>${T.installs}</td><td>${T.leads}</td><td>${T.tfInstalls}</td><td>${T.tfL2c}%</td><td>${T.rentalSalesMtd != null ? T.rentalSalesMtd : "—"} / ${T.rentalInstalled}</td><td>${T.sgInstalls}</td></tr></tbody></table></div>
+    <div class="num-legend">Rentals = sold / installed this month. \u{1F451} most rentals sold · \u{1F525} best lead to cash (3+ leads) · \u{1F4B0} most installed rental revenue. Ties share; none at zero.</div>
     <div class="num-calls"><div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div></div>`);
   $("numsBody").querySelectorAll("th button").forEach(b => b.addEventListener("click", () => { numSort = b.dataset.k; numHold(); numRenderTeam(); }));
 }
