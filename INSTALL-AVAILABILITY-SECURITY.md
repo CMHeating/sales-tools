@@ -177,6 +177,32 @@ This script only creates or verifies. It has no delete path — removing a user 
 action in the Firebase console. It also reads every PIN from `pin-config.private.json` and
 provisions the whole roster, so it is a bulk tool. To add one person, use the console.
 
+## Deploy credentials (service account, added 2026-11-11)
+
+Personal `firebase login` tokens get revoked every so often (Google makes the account sign in again),
+which blocks deploys until Geoff re-runs `firebase login --reauth`. Deploys now use a deploy-only
+service account instead. It can publish Hosting for this one project and nothing else: it cannot read
+or write the database, change Authentication users, or touch the security rules.
+
+One-time setup (Geoff, in the browser, ~5 minutes):
+
+1. Open https://console.cloud.google.com/iam-admin/serviceaccounts?project=install-availability-tracker
+2. Create service account: name `ia-hosting-deployer`, description "Install Availability Hosting deploys (Mac mini)".
+3. Grant it exactly one role: **Firebase Hosting Admin**. No other roles.
+4. Open the new account > Keys > Add key > Create new key > JSON. The file downloads.
+5. Tell claude-16. It moves the file to `~/.config/cmh/ia-hosting-deployer.json` (outside every repo,
+   folder 700, file 600) and deletes the copy in Downloads. The key never goes into Git, Drive or chat.
+
+Deploy with it (after steps 1-4 of the next section):
+
+    ./scripts/deploy-install-availability.sh
+
+The script refuses to run unless `firebase-hosting-install/` holds a real page (INSTALL_USERS present) and
+`audit.html`, deploys with the key, then re-downloads the live page and fails unless it matches the build
+exactly and audit.html returns 200.
+
+Revoke: delete the key (or the account) in the same console page; deploys fall back to `firebase login`.
+
 ## Deploy Firebase Hosting
 
 This keeps the original live URL:
