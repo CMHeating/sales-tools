@@ -99,7 +99,7 @@ body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color
 <script>
 var FIREBASE_WEB_API_KEY='AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0';
 var DATA_BASE='https://install-availability-tracker-default-rtdb.firebaseio.com/cmh_sold_tracker.json';
-var HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joseph Ruble','Kyle McAlister','Samir Khoury','Trevor Bohm'];
+var HCAS=['Adam Weberg','Amber Maddalena','Chester Granard','Davis Diosdado','Javierre Milo','Joseph Ruble','Samir Khoury','Trevor Bohm'];
 var ALIASES={'ADAM WEBERG':'Adam Weberg','JAY MILO':'Javierre Milo','JAVIERRE MILO':'Javierre Milo','JOE RUBLE':'Joseph Ruble','JOSEPH RUBLE':'Joseph Ruble'};
 var data={jobs:[],updated:null,sourceStatus:'waiting'},selectedHca='',currentView='all',currentSearch='';
 function esc(v){return String(v||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
@@ -160,7 +160,7 @@ function card(job){var g=group(job.stage);var today=isInstallToday(job);var toda
 function setStatus(text,cls){var el=document.getElementById('connBadge');el.className='status-pill '+(cls||'');el.textContent=text}
 function setView(v){currentView=v;document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.toggle('active',b.dataset.view===v)});render()}
 function copySummary(){var jobs=visibleJobs();var text=selectedHca+' Sold Job Tracker\nNeeds: '+jobs.filter(function(j){return group(j.stage)==='needs'}).length+'\nActive: '+jobs.filter(function(j){return group(j.stage)==='active'}).length+'\nDone: '+jobs.filter(function(j){return group(j.stage)==='done'}).length+'\nLast sync: '+(data.updated||'waiting');navigator.clipboard?navigator.clipboard.writeText(text).then(function(){alert('Summary copied.')}):alert(text)}
-var STAFF=[{n:"Geoff",e:"geoffrey.simons@cmheating.com"},{n:"Amy",e:"amy@cmheating.com"},{n:"Laura",e:"laura.weiss@cmheating.com"},{n:"Jazryn",e:"jazryn.delacruz@cmheating.com"},{n:"Sabrina",e:"sabrina.kennard@cmheating.com"},{n:"Jen",e:"jennifer@cmheating.com"},{n:"Brittny",e:"bmiller@cmheating.com"},{n:"Vanessa",e:"vanessa.williams@cmheating.com"},{n:"Amber",e:"amber.maddalena@cmheating.com"},{n:"Chester",e:"chester.granard@cmheating.com"},{n:"Davis",e:"davis.diosdado@cmheating.com"},{n:"Jay",e:"javierre.milo@cmheating.com"},{n:"Joseph",e:"joseph.ruble@cmheating.com"},{n:"Kyle",e:"kmcalister@cmheating.com"},{n:"Samir",e:"samir.khoury@cmheating.com"},{n:"Trevor",e:"trevor.bohm@cmheating.com"},{n:"Adam",e:"adam@cmheating.com"}];
+var STAFF=[{n:"Geoff",e:"geoffrey.simons@cmheating.com"},{n:"Amy",e:"amy@cmheating.com"},{n:"Laura",e:"laura.weiss@cmheating.com"},{n:"Jazryn",e:"jazryn.delacruz@cmheating.com"},{n:"Sabrina",e:"sabrina.kennard@cmheating.com"},{n:"Jen",e:"jennifer@cmheating.com"},{n:"Brittny",e:"bmiller@cmheating.com"},{n:"Vanessa",e:"vanessa.williams@cmheating.com"},{n:"Amber",e:"amber.maddalena@cmheating.com"},{n:"Chester",e:"chester.granard@cmheating.com"},{n:"Davis",e:"davis.diosdado@cmheating.com"},{n:"Jay",e:"javierre.milo@cmheating.com"},{n:"Joseph",e:"joseph.ruble@cmheating.com"},{n:"Samir",e:"samir.khoury@cmheating.com"},{n:"Trevor",e:"trevor.bohm@cmheating.com"},{n:"Adam",e:"adam@cmheating.com"}];
 var AUTH_KEY='cmhSoldAuth';
 function pwFromPin(pin){return 'CMH-'+String(pin||'').replace(/\D/g,'')+'!'}
 function readAuth(){try{var a=JSON.parse(sessionStorage.getItem(AUTH_KEY)||'null');if(a&&a.idToken&&a.exp>Date.now()+60000)return a}catch(e){}return null}
