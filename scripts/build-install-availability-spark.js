@@ -207,8 +207,9 @@ if (output.includes("@install-availability.cmheating.com")) {
   throw new Error("Secure output still contains placeholder install-availability emails.");
 }
 
-if (!output.includes("kmcalister@cmheating.com")) {
-  throw new Error("Secure output missing corrected Kyle email.");
+// D-71 (2026-11-13): Kyle McAlister left; his entry must NOT be in the output.
+if (output.includes("kmcalister@cmheating.com")) {
+  throw new Error("Secure output still contains departed HCA Kyle McAlister (D-71).");
 }
 
 if (!output.includes("signInWithEmailAndPassword")) {
