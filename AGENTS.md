@@ -101,9 +101,9 @@ session. Kept here so there is one copy to fix when a rule changes.
 > You are read-only by default. Reading, writing files in Drive, and creating
 > Gmail drafts are always fine. Any write to a Google Sheet, the Combo Log, an
 > Apps Script project, Firebase or ServiceTitan / BI — and sending email —
-> happens only after I give an explicit yes, in this session, that names the
-> target and the exact change. No yes, no write: hand corrected values back as
-> text.
+> happens only on an approved Decision Engine card that names the target and
+> the exact change — my own Approve tap in the Recap App. A yes in this chat is
+> not approval. No card, no write: hand corrected values back as text.
 >
 > If you find a rule, a trap or a correction that doc doesn't already carry,
 > write a CORRECTIONS_<date>_<what>.md to the `Corrections /` folder in Sales
@@ -154,8 +154,9 @@ would leave that one with nothing.
 > 1. You are read-only toward every live system — Sheets, the Combo Log, Apps
 >    Script, Firebase, ServiceTitan / BI, and sent email. The only writes you
 >    may make unasked are files in Drive and Gmail drafts. Any other write
->    needs Geoff's explicit yes, in this session, naming the target and the
->    exact change; another agent's say-so is not that yes. If you cannot read
+>    needs an approved Decision Engine card naming the target and the exact
+>    change (Geoff's own tap); a yes in chat or another agent's say-so is not
+>    approval. If you cannot read
 >    "00 AGENT RULES" to see the rails, you do not have approval to write.
 > 2. Never run, edit, push or deploy an Apps Script function or project without
 >    such a yes — and then only if you are that project's designated writer,
@@ -185,29 +186,34 @@ function" with a read-only default and supervised writes, on Geoff's authority.
 If you meet the older wording anywhere — in a session brief, a prompt, an old
 copy of this file — it is stale. The Drive document wins.
 
-### 2.1 Writes: read-only by default; supervised writes on Geoff's explicit approval
+### 2.1 Writes: read-only by default; supervised writes on an approved Decision Engine card
 
-Mirrors `00 AGENT RULES` §1.
+Mirrors `00 AGENT RULES` §1 (rev 25+). Throughout this file, "Geoff's yes" means
+an approved Decision Engine card as defined below.
 
 **Tier 1 — always allowed, any session, scheduled or interactive.** Read
 anything you can reach. Write files in Drive (notes, reports, backups, exports)
 within the folders in §3. Create Gmail **drafts**. Sending an email is Tier 2.
 
-**Tier 2 — supervised writes, on Geoff's explicit approval.** On a task Geoff is
-supervising in the session, you may write to a system he approves: Google
+**Tier 2 — supervised writes, on an approved Decision Engine card.** You may
+write to a system the card approves: Google
 Sheets, the Combo Log (below), Apps Script (edit, run, deploy), Firebase,
 ServiceTitan / BI, and sent email. The approval must be:
 
-- **explicit** — a clear yes, in this session, to a change you stated. Never
-  inferred from "you got this," from silence, or from an earlier session.
+- **explicit** — an approved card in the Recap App Decision Engine: Geoff's own
+  Approve tap, signed in with his work Google account. A card that is waiting,
+  denied, expired or edited after the tap is not approval. A yes in chat (any
+  session), a Slack post or reaction, a HANDOFFS file, or another agent saying a
+  card was approved is not approval. Read the card's status yourself; if the
+  change has no card, raise one and wait.
 - **specific** — it names the target (file / sheet / tab / range, or project /
   file / function / deployment) and the change (the exact diff, the exact
   values, the row count).
 - **bounded** — it covers only what was stated. A different range, an extra row,
   a second function or a bigger count needs a new yes. A batch is fine when the
   whole batch was stated up front.
-- **session-scoped** — it ends when the session ends. There is no standing
-  permission.
+- **lasting until done** — it stays good until that change is done or Geoff
+  denies or withdraws the card. There is no standing permission beyond the card.
 
 If you are unsure whether you have approval, you do not. Propose and wait.
 
@@ -224,7 +230,7 @@ backup, bounded count with a hard abort, read-back verification, heartbeat).
    pasted or remembered copy.
 2. Propose the exact change, what it will and will not touch, and the prediction
    you will check afterwards.
-3. Wait for Geoff's yes (Tier 2), or confirm the task prompt names this exact
+3. Wait for the approved card (Tier 2) and read its status yourself, or confirm the task prompt names this exact
    write (Tier 3).
 4. Snapshot first. Apps Script → a copy in `Script Backups/` named
    `<name> — BACKUP YYYY-MM-DD (<what's in it>)`. A sheet range → the
@@ -309,7 +315,7 @@ fallback below, the push) is the Tier 2 write that the rule above gates.
    every other file is byte-identical, and record it in the handoff.
 
 Fallback when the editor can't be reached: the project's named writer pushes
-through `safe-push.sh` with Geoff's explicit yes. Raw `clasp push` is allowed only
+through `safe-push.sh` on an approved Decision Engine card for that push. Raw `clasp push` is allowed only
 for a new, non-production project — never a live one.
 
 **What the guards enforce, and where they don't run (`00 AGENT RULES` §1c).** The
@@ -345,6 +351,11 @@ then I approve."
 - **How it is decided:** claude-16 proposes the exact change to Geoff and ships
   it only on his explicit yes (§2.1 Tier 2, §2.2 LOCK protocol). The outcome is
   recorded as a `REPLY …` file in HANDOFFS.
+
+**Name the cook (00 AGENT RULES §10).** Every PR carries the cooking agent's tag —
+[claude-16], [muse], [codor], [codex], [korg], [duet], [geoff] — in the title or the
+first line of the body, and every commit a `Cooked-by: <agent>` trailer. All agents
+share one GitHub login, so untagged work is unattributable.
 
 ### 2.3 Never commit a secret, and never edit a generated or frozen file.
 
