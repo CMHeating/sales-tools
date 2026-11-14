@@ -721,7 +721,7 @@ const SCHED_TIME_OFF = {
 };
 const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-11-27":"Day after Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
 const HCA_SCHEDULE = {
-  "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],
+  "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], off:["2026-11-28"] /* PTO Fri 11/27-Sat 11/28 in Paychex; Fri is closed (D-85) */, ride:1, crew:"day", mtg:2, oo:[2,9],
                      /* effective Sun 10/4/26: Tue–Sat, ride Fri, sales meeting Wed, 1:1 stays Tue 9:00; one primary tech, same ride every week; secondary = backup HCA for another tech */
                      eff:[{ from:"2026-11-01", rot:["Austin","Austin","Austin","Austin"], techs:[["Austin",1],["Doug",0]] }, { from:"2026-10-04", days:[2,3,4,5,6], ride:5, mtg:3, rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Hagen",0]] }, { from:"2026-10-11", mtg:[2,3] }],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
   "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8.5],  eff:[{ from:"2026-11-15", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Dan D",0]] } /* D-83: Alex primary; Dan D backup until his move to Sales Dec 5 */, { from:"2026-11-01", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Alex",0]] }, { from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
