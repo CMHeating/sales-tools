@@ -722,7 +722,7 @@ const HCA_SCHEDULE = {
   "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],
                      /* effective Sun 10/4/26: Tue–Sat, ride Fri, sales meeting Wed, 1:1 stays Tue 9:00; one primary tech, same ride every week; secondary = backup HCA for another tech */
                      eff:[{ from:"2026-11-01", rot:["Austin","Austin","Austin","Austin"], techs:[["Austin",1],["Doug",0]] }, { from:"2026-10-04", days:[2,3,4,5,6], ride:5, mtg:3, rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Hagen",0]] }, { from:"2026-10-11", mtg:[2,3] }],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
-  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8],  eff:[{ from:"2026-11-01", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Alex",0]] }, { from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
+  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8.5],  eff:[{ from:"2026-11-01", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Alex",0]] }, { from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
   "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9],  eff:[{ from:"2026-11-01", rot:["Hagen","Hagen","Hagen","Hagen"], techs:[["Hagen",1],["Carter",0],["Conrad",0]] }, { from:"2026-10-04", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Younis",0],["Conrad",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
   "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], eff:[{ from:"2026-11-01", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Emmanuel",0]] }, { from:"2026-10-04", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Alex",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
   "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], ride:4, crew:"day", mtg:2, oo:[5,8],  eff:[{ from:"2026-11-01", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Caleb",0],["Austin",0]] }, { from:"2026-10-04", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan K",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:2, /* can take a 3rd on overflow */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
@@ -742,6 +742,7 @@ function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:
 function schedWeek(d){ const days=Math.round((d-SCHED_ANCHOR)/86400000); return ((Math.floor(days/7)%4)+4)%4; }
 
 /* HCA name for a schedule row (eff copies keep the same oo array). */
+function ooT(h){ return Math.floor(h) + ":" + (h % 1 ? "30" : "00"); }
 function schedName(p){ return Object.keys(HCA_SCHEDULE).find(k => HCA_SCHEDULE[k].oo === p.oo) || ""; }
 /* Day plan for a whole-team event day (SCHED_DAY_EVENTS). */
 function schedEventPlan(p, d, ev){
@@ -756,12 +757,12 @@ function schedEventPlan(p, d, ev){
   } else {
     const end = (ev.end || {})[name] || p.sh[1], oo = p.oo[0] === dow ? ((ev.oo || {})[name] || p.oo[1]) : null;
     sh = [ev.at, end];
-    if(oo) lines.push("One on One with Geoff at " + oo + ":00.");
+    if(oo) lines.push("One on One with Geoff at " + ooT(oo) + ".");
     if(end < p.sh[1]) lines.push("Your day ends at " + schedClock(end) + ".");
     let t = ev.to, open = 0;
     while(t < end){
-      const nx = oo && oo >= t ? oo : Infinity;
-      if(oo === t){ blocks.push([t, t + 1, "blk", "ONE ON ONE WITH GEOFF " + oo + ":00"]); t += 1; continue; }
+      const nx = oo && Math.floor(oo) >= t ? Math.floor(oo) : Infinity;
+      if(oo && Math.floor(oo) === t){ blocks.push([t, t + 1, "blk", "ONE ON ONE WITH GEOFF " + ooT(oo) + ""]); t += 1; continue; }
       if(t + 2 <= nx && t + 2 <= end){ blocks.push([t, t + 2, "open", "Open"]); open++; t += 2; continue; }
       if(nx < end && nx > t){ t = nx; continue; }
       break;
@@ -833,11 +834,11 @@ function schedPlanCore(p, d){
     if(isM && mt.at === 7){
       /* 7:00 training: day runs 7:00–4:00 for everyone */
       sh=[7, endCap || 16]; blocks.push([7,9,"blk",mt.label]); lines.push(mt.text+". Your day runs 7:00–"+schedClock(sh[1])+".");
-      if(ooHere && p.oo[1]===9){ blocks.push([9,10,"blk","ONE ON ONE WITH GEOFF 9:00"]); }
-      if(ooHere) lines.push("One on One with Geoff at "+p.oo[1]+":00.");
+      if(ooHere && Math.floor(p.oo[1])===9){ blocks.push([9,10,"blk","ONE ON ONE WITH GEOFF 9:00"]); }
+      if(ooHere) lines.push("One on One with Geoff at "+ooT(p.oo[1])+".");
       let open = 0;
       for(let s=10; s<sh[1]; s+=2){
-        if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
+        if(ooHere && Math.floor(p.oo[1])===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
         blocks.push([s,Math.min(s+2,sh[1]),"open","Open"]); open++;
       }
       book = Math.min(open, p.cap);
@@ -847,12 +848,12 @@ function schedPlanCore(p, d){
     }
     if(isM && mt.pm){
       sh = p.sh; lines.push(mt.text+".");
-      if(ooHere) lines.push("One on One with Geoff at "+p.oo[1]+":00.");
+      if(ooHere) lines.push("One on One with Geoff at "+ooT(p.oo[1])+".");
       let open = 0;
       const slot = s => {
-        if(ooHere && s===8 && (p.oo[1]===8 || p.oo[1]===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+p.oo[1]+":00"]); return; }
-        if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); return; }
-        if(ooHere && p.oo[1]===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); return; }
+        if(ooHere && s===8 && (Math.floor(p.oo[1])===8 || Math.floor(p.oo[1])===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+ooT(p.oo[1])+""]); return; }
+        if(ooHere && Math.floor(p.oo[1])===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); return; }
+        if(ooHere && Math.floor(p.oo[1])===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); return; }
         blocks.push([s,s+2,"open","Open"]); open++;
       };
       for(let s=sh[0]; s+2<=mt.at; s+=2) slot(s);
@@ -866,13 +867,13 @@ function schedPlanCore(p, d){
     sh = (isM && p.flex) ? [8,16] : p.sh;
     if(isM && p.flex) lines.push("Early shift today: 8–4 for the "+(mt.training ? "training" : "sales meeting")+".");
     if(isM) lines.push(mt.text+".");
-    if(ooHere) lines.push("One on One with Geoff at "+p.oo[1]+":00.");
+    if(ooHere) lines.push("One on One with Geoff at "+ooT(p.oo[1])+".");
     let open = 0;
     for(let s=sh[0]; s<sh[1]; s+=2){
-      if(s===8 && isM){ blocks.push([8,10,"blk",(ooHere && p.oo[1]===9) ? mt.label+" + ONE ON ONE 9:00" : mt.label]); continue; }
-      if(ooHere && s===8 && (p.oo[1]===8 || p.oo[1]===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+p.oo[1]+":00"]); continue; }
-      if(ooHere && p.oo[1]===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
-      if(ooHere && p.oo[1]===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); continue; }
+      if(s===8 && isM){ blocks.push([8,10,"blk",(ooHere && Math.floor(p.oo[1])===9) ? mt.label+" + ONE ON ONE 9:00" : mt.label]); continue; }
+      if(ooHere && s===8 && (Math.floor(p.oo[1])===8 || Math.floor(p.oo[1])===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+ooT(p.oo[1])+""]); continue; }
+      if(ooHere && Math.floor(p.oo[1])===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
+      if(ooHere && Math.floor(p.oo[1])===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); continue; }
       blocks.push([s,s+2,"open","Open"]); open++;
     }
     book = Math.min(open, p.cap);
