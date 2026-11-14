@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **Read [`AGENTS.md`](./AGENTS.md) first.** It is the master routing file for
 > every agent surface — Claude, Codex, Gemini, scheduled runs — and carries the
 > rules that hold on every surface (read-only by default, with writes to a sheet,
-> Apps Script, Firebase or sent email only on Geoff's explicit yes naming the
-> target and the change; never commit a secret; nothing goes outward without a
+> Apps Script, Firebase or sent email only on an approved Decision Engine card
+> naming the target and the change — a yes in chat is not approval; never commit a secret; nothing goes outward without a
 > human), plus where finished work and new rules are supposed to land.
 >
 > This file is the **repo-mechanics** reference: build, deploy, file routing,
