@@ -137,9 +137,7 @@ const execData = [
   {name:'Chester', conv:31, doc:57, attempts:110, conversions:40, revenue:587416,  leads:87,  pts:6560,  pipeline:1682255, critical:68},
   {name:'Davis',   conv:40, doc:22, attempts:32,  conversions:52, revenue:627374,  leads:79,  pts:6100,  pipeline:1420569, critical:64},
   {name:'Jay',     conv:40, doc:17, attempts:24,  conversions:53, revenue:766697,  leads:78,  pts:5980,  pipeline:1233278, critical:65},
-  {name:'Joe',     conv:41, doc:2,  attempts:2,   conversions:48, revenue:637838,  leads:69,  pts:4860,  pipeline:1028338, critical:54},
   {name:'Joseph',  conv:39, doc:1,  attempts:2,   conversions:58, revenue:824221,  leads:92,  pts:5840,  pipeline:1733486, critical:73},
-  {name:'Kyle',    conv:43, doc:27, attempts:58,  conversions:61, revenue:839976,  leads:82,  pts:7440,  pipeline:1426404, critical:66},
   {name:'Samir',   conv:33, doc:21, attempts:28,  conversions:37, revenue:496829,  leads:75,  pts:4440,  pipeline:1209402, critical:51},
   {name:'Trevor',  conv:42, doc:58, attempts:61,  conversions:30, revenue:528637,  leads:41,  pts:4430,  pipeline:870536,  critical:35},
 ];
@@ -206,25 +204,13 @@ const maxPipe = Math.max(...execData.map(d=>d.pipeline));
 });
 
 document.getElementById('highlights').innerHTML = `
-  <div class="highlight-item"><div class="hi-icon">👑</div><div>
-    <div class="hi-label">Top Points</div>
-    <div class="hi-text">Kyle leads with 7,440 pts — team-high 43% conv, $840K revenue, 58 attempts. #1 on all key metrics.</div>
-  </div></div>
-  <div class="highlight-item"><div class="hi-icon">💰</div><div>
-    <div class="hi-label">Top Revenue</div>
-    <div class="hi-text">Joseph at $824K and Kyle at $840K lead revenue. Jay third at $767K — highest close rate among high-volume reps.</div>
-  </div></div>
   <div class="highlight-item"><div class="hi-icon">⭐</div><div>
     <div class="hi-label">Best Habits</div>
     <div class="hi-text">Trevor — 42% conv + 58% doc rate. Most balanced follow-up discipline on the team. Recognize publicly.</div>
   </div></div>
-  <div class="highlight-item"><div class="hi-icon">⚠️</div><div>
-    <div class="hi-label">Urgent — Joe &amp; Joseph</div>
-    <div class="hi-text">Strong closers (41%/39% conv) but 2 total follow-up attempts combined across 161 open leads. $2.76M open pipeline with near-zero outreach. Coaching needed this week.</div>
-  </div></div>
   <div class="highlight-item"><div class="hi-icon">🔴</div><div>
     <div class="hi-label">Aging Pipeline</div>
-    <div class="hi-text">${totalCritical} of ${totalLeads} open leads (${Math.round(totalCritical/totalLeads*100)}%) are 21+ days old. Kyle has leads from 275 days never contacted. Chester has two over a year old. Team-wide close-or-cut review needed.</div>
+    <div class="hi-text">${totalCritical} of ${totalLeads} open leads (${Math.round(totalCritical/totalLeads*100)}%) are 21+ days old. Chester has two over a year old. Team-wide close-or-cut review needed.</div>
   </div></div>`;
 </script>
 </body>
