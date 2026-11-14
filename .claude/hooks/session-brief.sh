@@ -30,9 +30,9 @@ the moment:
 
   1. Read-only by default. Always allowed: read anything, write files in Drive,
      create Gmail drafts. A write to a Sheet, Apps Script, Firebase,
-     ServiceTitan / BI, or a sent email needs Geoff's explicit yes, in this
-     session, naming the target and the exact change. It covers only what was
-     stated and ends with the session. An unattended run writes nothing outside
+     ServiceTitan / BI, or a sent email needs an approved Decision Engine card
+     naming the target and the exact change; a yes in chat is not approval. It
+     covers only what the card states. An unattended run writes nothing outside
      its own Drive files. No yes, no write: hand values back as text.
   2. Apps Script is one of those writes, with one writer per project. Read
      "00 WRITE RULES" (HANDOFFS) and follow its LOCK protocol on every push.
@@ -44,7 +44,8 @@ the moment:
   4. This repo is PUBLIC. No PINs, customer names, dollar figures, staff
      emails, or Drive file IDs in anything committed.
   5. Nothing goes outward without a human. A Gmail draft is the end of your
-     job; sending needs Geoff's explicit yes naming the message.
+     job; sending needs an approved Decision Engine card naming the message
+     (a yes in chat is not approval).
   6. One writer per canonical document. Hand back paste-ready text for START
      HERE and the account skill; do not edit them unless Geoff pointed you at
      them.
