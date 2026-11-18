@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PREVIEW — HCA CRM score card | CM Heating</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#0a1628;--panel:#131f33;--line:rgba(255,255,255,.11);--muted:rgba(255,255,255,.62);--muted2:rgba(255,255,255,.38);--orange:#c97d10;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Outfit,system-ui,sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(201,125,16,.15),transparent 62%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(42,108,196,.26),transparent 60%);pointer-events:none}
+.screen{position:relative;z-index:1;min-height:100vh}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 22px 18px;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;background:var(--orange);font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:8px}
+.title h1{font-family:"Playfair Display",serif;font-size:30px;line-height:1.05}
+.title p{font-size:13px;color:var(--muted);margin-top:6px;max-width:780px}
+.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.status-pill{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:1px solid rgba(245,158,11,.35);color:#fde68a;background:rgba(245,158,11,.12);white-space:nowrap}
+.status-pill.ok{color:#bbf7d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12)}
+.status-pill.bad{color:#fecaca;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
+.back-link{color:var(--muted);font-size:12px;text-decoration:none}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:9px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;text-decoration:none;display:inline-block}
+.adminbar{display:none;padding:14px 22px;border-bottom:1px solid var(--line);align-items:center;gap:12px;flex-wrap:wrap;background:rgba(201,125,16,.06)}
+.adminbar.show{display:flex}
+.adminbar label{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#ffd399}
+.select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:15px;padding:10px 14px;outline:none;min-width:220px}
+.select option{color:#0a1628}
+.main{padding:20px 22px 44px}
+.hello{font-family:"Playfair Display",serif;font-size:22px;margin-bottom:4px}
+.hello small{font-family:Outfit,sans-serif;font-size:13px;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
+.card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-left:5px solid var(--muted2);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.16);display:flex;flex-direction:column;min-height:150px}
+.card.ar{border-left-color:var(--red)}
+.card.sold{border-left-color:var(--green)}
+.card.followup{border-left-color:var(--blue)}
+.card.activities{border-left-color:var(--yellow)}
+.act-fu{margin-top:10px;font-size:12px;color:var(--muted)}
+.act-week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:14px}
+.act-day{border:1px solid var(--line);border-radius:10px;padding:6px 2px;text-align:center;font-size:11px;font-weight:700;color:var(--muted2);line-height:1.25}
+.act-day b{display:block;font-size:18px;font-weight:800;color:#fde68a;line-height:1.2}
+.act-day.zero b{color:var(--muted2)}
+.act-day.off{opacity:.5}
+.act-day.today{box-shadow:inset 0 0 0 2px rgba(245,158,11,.6)}
+.act-foot{flex-wrap:wrap}
+.act-links{display:flex;gap:8px;flex-wrap:wrap}
+.proj-list{max-height:230px;overflow-y:auto;margin-top:12px;border-top:1px solid var(--line)}
+.proj-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.proj-row:hover{background:rgba(255,255,255,.05)}
+.proj-dot{width:18px;height:18px;border-radius:50%;flex:none;background:var(--yellow);color:#0a1628;font-size:11px;font-weight:900;line-height:18px;text-align:center}
+.proj-dot.g{background:var(--green)}.proj-dot.r{background:var(--red)}.proj-dot.y{background:var(--yellow)}
+.proj-main{flex:1;display:flex;flex-direction:column;font-size:14px;line-height:1.25}
+.proj-main span{font-size:12px;color:var(--muted)}
+.proj-n{font-size:13px;font-weight:700;white-space:nowrap}
+.btn[aria-disabled=true]{opacity:.4;pointer-events:none;cursor:not-allowed}
+#projPick{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;color:#fff;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;padding:9px 12px;max-width:260px}
+#projPick option,#projPick optgroup{color:#0a1628}
+.proj-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+.proj-tag{font-size:11px;font-weight:700;color:var(--muted)}
+.sched-ov{margin-top:14px}.sched-ov-h{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+
+.card.clearance{border-left-color:var(--orange)}
+.card.install{border-left-color:#14b8a6}
+.card.schedule{border-left-color:#a78bfa;grid-column:1/-1}
+.sched-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sched-nav .btn{padding:9px 16px;font-size:14px}
+.sched-date{flex:1;text-align:center;font-family:"Playfair Display",serif;font-size:19px}
+.sched-axis{position:relative;height:16px;font-size:10px;font-weight:700;color:var(--muted2)}
+.sched-axis span{position:absolute;transform:translateX(-50%)}
+.sched-axis span:first-child{transform:none}
+.sched-track{position:relative;height:56px;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px calc(100%/12))}
+.sb{position:absolute;top:4px;bottom:4px;border-radius:7px;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 7px;overflow:hidden;white-space:nowrap;letter-spacing:.02em}
+.sb.blk{background:rgba(201,125,16,.28);border:1px solid rgba(201,125,16,.7);color:#ffd399}
+.sb.ride{background:repeating-linear-gradient(45deg,rgba(59,130,246,.38) 0 8px,rgba(59,130,246,.2) 8px 16px);border:1px solid rgba(59,130,246,.75);color:#dbeafe}
+.sb.open{border:1px solid rgba(34,197,94,.6);background:rgba(34,197,94,.08);color:#bbf7d0}
+.sb.after{border:1px dashed rgba(34,197,94,.85);color:#bbf7d0}
+.sb.os{background:rgba(255,255,255,.03)}
+.sb.off{background:rgba(255,255,255,.05);color:var(--muted2);justify-content:center}
+.sched-plan{margin-top:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.sched-lines{flex:1;min-width:220px;font-size:14px;line-height:1.55}
+.sched-techs{flex:1;min-width:200px;font-size:13px;color:var(--muted);line-height:1.5}
+.sched-techs b{color:#fff;font-weight:700}
+.sched-view{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
+.sched-view button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:6px 14px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.sched-view button.on{background:rgba(167,139,250,.22);color:#fff;box-shadow:inset 0 0 0 1px rgba(167,139,250,.7)}
+.sched-wk{display:flex;flex-direction:column;gap:6px}
+.sched-row{display:grid;grid-template-columns:96px 1fr 48px;gap:10px;align-items:center;cursor:pointer;border-radius:10px}
+.sched-row .sched-track{height:44px}
+.sched-row:hover .sched-track,.sched-row:focus-visible .sched-track{outline:1px solid rgba(167,139,250,.75);outline-offset:1px}
+.sched-row .d{font-size:13px;font-weight:800;line-height:1.25}
+.sched-row .d span{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
+.sched-row.today .d{color:#c4b5fd}
+.sched-row .n{font-size:18px;font-weight:800;text-align:center}
+.sched-row .n span{display:block;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase}
+.sched-jump{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:-4px 0 14px}
+.sched-jump button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;cursor:pointer}
+.sched-jump button.on{color:#fff;border-color:rgba(167,139,250,.7);background:rgba(167,139,250,.14)}
+.sched-wkt{width:100%;border-collapse:separate;border-spacing:6px 0;table-layout:fixed}
+.sched-wkt th{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);text-align:center;padding:0 0 8px}
+.sched-wkt th span{display:block;font-size:15px;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:700}
+.sched-wkt th.today span{color:#c4b5fd}
+.sched-wkt td{vertical-align:top}
+.sched-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;min-height:92px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:8px 6px;text-align:center;cursor:pointer;font-size:13px;font-weight:800;line-height:1.25}
+.sched-cell:hover,.sched-cell:focus-visible{outline:1px solid rgba(167,139,250,.75);outline-offset:1px}
+.sched-cell .dot{font-size:20px;color:#bbf7d0}
+.sched-cell.sell{border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.07)}
+.sched-cell.ride{border-color:rgba(59,130,246,.7);background:repeating-linear-gradient(45deg,rgba(59,130,246,.22) 0 8px,rgba(59,130,246,.1) 8px 16px);color:#dbeafe}
+.sched-cell.meet{border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.16);color:#ffd399}
+.sched-cell.off{color:var(--muted2);font-weight:600;cursor:default}
+.sched-cell.today{box-shadow:inset 0 0 0 2px rgba(167,139,250,.75)}
+.sched-cell small{display:block;font-size:11px;font-weight:600;color:var(--muted2)}
+.sched-cell .slots{font-size:11px;font-weight:700;color:var(--muted)}
+.sched-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}
+.sched-legend i{display:inline-block;width:20px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid}
+@media (max-width:720px){.sched-wkt{border-spacing:3px 0}.sched-cell{min-height:78px;font-size:11px;padding:6px 3px}.sched-wkt th span{font-size:13px}}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h2{font-family:"Playfair Display",serif;font-size:19px}
+.card-head .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.card-body{flex:1;display:flex;flex-direction:column;justify-content:center}
+.metrics{display:flex;gap:22px;flex-wrap:wrap}
+.metric{min-width:80px}
+.metric strong{display:block;font-size:30px;line-height:1}
+.metric span{display:block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-top:5px}
+.metric.red strong{color:#fecaca}.metric.green strong{color:#bbf7d0}.metric.blue strong{color:#bfdbfe}.metric.yellow strong{color:#fde68a}.metric.orange strong{color:#ffd399}
+.card-foot{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-note{font-size:12px;color:var(--muted2)}
+.loading{color:var(--muted);font-size:14px}
+.soon{color:var(--muted2);font-size:13px;font-style:italic}
+.locked{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;gap:16px}
+.locked .lock{font-size:52px}
+.locked h2{font-family:"Playfair Display",serif;font-size:26px}
+.locked p{color:var(--muted);max-width:520px}
+.loginform{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px}
+.linput{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:#fff;font-family:Outfit,sans-serif;font-size:16px;padding:12px 14px;outline:none;min-width:160px}
+.linput::placeholder{color:var(--muted2)}
+.btn.primary{background:rgba(201,125,16,.22);border-color:rgba(201,125,16,.55);color:#ffd399}
+.loginmsg{margin-top:10px;font-size:13px;color:#fecaca;min-height:18px}
+.footer-note{margin-top:26px;color:var(--muted2);font-size:12px;line-height:1.5}
+#content{display:none}
+#content.show{display:block}
+.hidden{display:none!important}
+@media(min-width:820px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.title h1{font-size:38px}}
+@media(max-width:620px){.top{flex-direction:column}.top-actions{align-items:flex-start}.select{width:100%;min-width:0}}
+
+/* ===== MY NUMBERS (BI, month to date) ===== */
+.num-open{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.num-open p{margin:0;color:var(--muted);line-height:1.5;max-width:56ch}
+.num-open ul{margin:0;padding-left:18px;color:var(--muted);line-height:1.6}
+.num-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:12px;background:#14b8a6;color:#04201c;font-weight:800;text-decoration:none;transition:transform .1s ease-out}
+
+/* D-98 preview: score card (claude-16, 2026-11-15) */
+.sc-block{margin:0 0 14px;padding:14px;border-radius:14px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.sc-top{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.sc-ring{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:22px;flex:none;color:#04201c}
+.sc-ring.green{background:#34c759}.sc-ring.yellow{background:#ffcc00}.sc-ring.red{background:#ff453a;color:#fff}.sc-ring.none{background:rgba(255,255,255,.12);color:var(--muted)}
+.sc-band{font-weight:800;font-size:17px}.sc-sub{color:var(--muted);font-size:13px}
+.sc-p{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.sc-dot{width:11px;height:11px;border-radius:50%;flex:none;background:rgba(255,255,255,.18)}
+.sc-dot.green{background:#34c759}.sc-dot.yellow{background:#ffcc00}.sc-dot.red{background:#ff453a}
+.sc-pl{flex:1;min-width:0}.sc-pl small{display:block;color:var(--muted);font-size:12px}
+.sc-pv{font-weight:700}.sc-pw{color:var(--muted);font-size:12px;min-width:44px;text-align:right}
+.sc-coach{padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:14px}
+.sc-note{color:var(--muted);font-size:14px;line-height:1.45}
+.sc-prov{font-size:11px;color:var(--muted);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:0 5px;margin-left:6px}
+.num-btn:active{transform:scale(.97)}
+.num-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.card.numbers{border-left-color:#14b8a6;grid-column:1/-1;min-width:0}
+.card.numbers .card-head{flex-wrap:wrap}
+.num-seg{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
+.num-seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:6px 12px;font-family:Outfit,sans-serif;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.num-seg button.on{background:rgba(20,184,166,.22);color:#fff;box-shadow:inset 0 0 0 1px rgba(20,184,166,.7)}
+.num-rot{height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin:0 0 14px}
+.num-rot i{display:block;height:100%;width:0;background:#14b8a6}
+.num-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.num-kpi{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.03)}
+.num-kpi .k{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2)}
+.num-kpi .v{font-size:30px;font-weight:800;line-height:1.1;margin-top:4px}
+.num-kpi .d{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+@media(max-width:620px){.num-hero{grid-template-columns:repeat(2,minmax(0,1fr))}.num-kpi .v{font-size:26px}}
+.num-kpi.pending{border-style:dashed}.num-kpi.pending .v{color:var(--muted2);font-size:20px}
+.num-bar{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:8px}
+.num-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#14b8a6}
+.num-bar b{position:absolute;top:-3px;width:2px;height:12px;background:#fff;opacity:.7}
+.num-up{color:#bbf7d0}.num-dn{color:#fecaca}
+.num-tbl{overflow-x:auto}
+.num-tbl table{width:100%;border-collapse:collapse;font-size:13px}
+.num-tbl th{font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.num-tbl th button{all:unset;cursor:pointer}
+.num-badge{display:inline-block;margin-left:3px;font-size:13px;line-height:1;vertical-align:-1px}
+.num-legend{font-size:11px;color:var(--muted2);line-height:1.4;margin:8px 2px 0}
+.num-tbl th:first-child,.num-tbl td:first-child{text-align:left}
+.num-tbl td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.num-tbl tr.me td{background:rgba(20,184,166,.12);font-weight:800}
+.num-tbl tr.tot td{color:var(--muted);font-weight:700}
+.num-calls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+.num-call{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45}
+.num-call b{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#99f6e4;display:block}
+.num-call.pending{border-style:dashed;color:var(--muted)}.num-call.pending b{color:var(--muted2)}
+/* ===== DAILY ACTIVITIES lanes ===== */
+.act-lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.act-lane{border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.act-lane h3{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fde68a;margin-bottom:6px}
+.act-lane .metric{display:flex;justify-content:space-between;align-items:baseline;min-width:0;padding:3px 0}
+.act-lane .metric strong{order:2;font-size:18px;color:#fde68a}
+.act-lane .metric span{order:1;margin-top:0;font-size:12px;letter-spacing:.02em;text-transform:none;font-weight:600;color:var(--muted)}
+/* keyboard focus */
+.btn:focus-visible,.num-seg button:focus-visible,.num-tbl th button:focus-visible,.select:focus-visible,.sched-view button:focus-visible,.sched-jump button:focus-visible{outline:2px solid #99f6e4;outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="top">
+    <div class="title">
+      <div class="badge">CM Heating</div>
+      <h1>HCA CRM</h1>
+      <p>Your pipeline in one place — AR, sold jobs, follow-ups, activities, and clearance stock. Signs you in once and shows your numbers.</p>
+    </div>
+    <div class="top-actions">
+      <div id="statusBadge" class="status-pill bad">○ Login required</div>
+      <button class="btn" id="btnLogin" type="button">Log in</button>
+      <button class="btn hidden" id="btnLogout" type="button">Log out</button>
+      <a class="back-link" href="index.html">← HCA Toolkit</a>
+    </div>
+  </header>
+
+  <div id="adminBar" class="adminbar">
+    <label for="viewAs">Viewing as</label>
+    <select id="viewAs" class="select"></select>
+    <a class="btn primary" href="install-home.html" style="margin-left:auto;text-decoration:none">Install tools &rarr;</a>
+  </div>
+
+  <div id="locked" class="locked">
+    <div class="lock">🔒</div>
+    <h2>Staff login required</h2>
+    <p>Sign in with your CM Heating Google account to see customer information (sold jobs, projects, follow-ups). Or use your first name and PIN for schedules and tools.</p>
+    <button id="btnGoogle" class="btn primary" type="button" style="margin-bottom:12px">Sign in with Google</button>
+    <form id="loginForm" class="loginform" autocomplete="off">
+      <input id="fName" class="linput" type="text" placeholder="First name" autocomplete="off">
+      <input id="fPin"  class="linput" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off">
+      <button id="fSubmit" class="btn primary" type="submit">Sign in</button>
+    </form>
+    <div id="loginMsg" class="loginmsg"></div>
+  </div>
+
+  <div id="content">
+    <main class="main">
+      <div class="hello" id="hello">—</div>
+
+      <div class="grid">
+        <!-- MY NUMBERS (BI month to date; rotates to the team board) -->
+        <div class="card numbers" id="numbersCard">
+          <div class="card-head"><h2 id="numsTitle">My Numbers</h2>
+            <div class="num-seg" role="group" aria-label="Numbers view">
+              <button id="numMe" class="on" type="button" aria-pressed="true">Me</button>
+              <button id="numTeam" type="button" aria-pressed="false">Team</button>
+              <button id="numPause" type="button" aria-pressed="false" aria-label="Pause auto-rotate" title="Pause auto-rotate">&#10074;&#10074;</button>
+            </div>
+          </div>
+          <div class="num-rot" aria-hidden="true"><i id="numRotBar"></i></div>
+          <div class="card-body" style="justify-content:flex-start;padding-bottom:0"><div id="scoreBlock" class="sc-block" hidden></div></div>
+          <div class="card-body" style="justify-content:flex-start"><div id="numsBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="numsNote"></span></div>
+        </div>
+        <!-- DRIVING (D-57/D-59, 2026-11-12): own status for HCAs; team view for managers. Data stays in the Recap App page. -->
+        <div class="card driving">
+          <div class="card-head"><h2>Driving Status</h2><span class="tag">Since Nov 11</span></div>
+          <div class="card-body" style="justify-content:flex-start"><div class="num-open">
+            <p>Your standing under the speeding standard: infractions, current step, events, and your weekly Geotab scorecard. Only you see your record.</p>
+            <a class="num-btn" href="https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec?view=driving" target="_blank" rel="noopener">Open Driving Status &rarr;</a>
+          </div></div>
+        </div>
+        <!-- AR -->
+        <div class="card ar">
+          <div class="card-head"><h2>Accounts Receivable</h2><span class="tag">Your open invoices</span></div>
+          <div class="card-body"><div id="arBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="arNote"></span><a class="btn" href="ar-collections.html">Open AR</a></div>
+        </div>
+
+        <!-- SOLD -->
+        <div class="card sold">
+          <div class="card-head"><h2>Sold Jobs</h2><span class="tag">In install ops</span></div>
+          <div class="card-body"><div id="soldBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="soldNote"></span><a class="btn" href="sold-job-tracker.html">Open Sold Tracker</a></div>
+        </div>
+
+        <!-- INSTALL AVAILABILITY (opens the live booking app; same login usually carries) -->
+        <div class="card install">
+          <div class="card-head"><h2>Install Availability</h2><span class="tag">Grab a slot</span></div>
+          <div class="card-body"><div id="installBody" class="soon">Open the live install board to grab a slot and close with a confirmed date. Your login usually carries — if not, sign in as usual.</div></div>
+          <div class="card-foot"><span class="card-note"></span><a class="btn" href="https://install-availability-tracker.web.app/" target="_blank" rel="noopener">Open Install Availability</a></div>
+        </div>
+
+        <!-- FOLLOW-UP -->
+        <div class="card followup">
+          <div class="card-head"><h2>Follow-Ups</h2><span class="tag">Open leads</span></div>
+          <div class="card-body"><div id="followupBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="followupNote"></span><a class="btn" id="followupLink" href="follow-up-tracker.html">Open Follow-Up</a></div>
+        </div>
+
+        <!-- ACTIVITIES -->
+        <div class="card activities">
+          <div class="card-head"><h2>Daily Activities</h2><span class="tag">From the recap form</span></div>
+          <div class="card-body" style="justify-content:flex-start">
+            <div id="activitiesBody" class="act-lanes">
+              <div class="act-lane"><h3>Create leads</h3>
+                <div class="metric yellow"><strong id="cntSelfGen">0</strong><span>Self-Gen</span></div>
+                <div class="metric yellow"><strong id="cntReferrals">0</strong><span>Referrals</span></div>
+                <div class="metric yellow"><strong id="cntNetworking">0</strong><span>Networking</span></div>
+              </div>
+              <div class="act-lane"><h3>Work the techs</h3>
+                <div class="metric yellow"><strong id="cntRideAlong">0</strong><span>Ride Alongs</span></div>
+                <div class="metric yellow"><strong id="cntTechCheckIn">0</strong><span>Tech Check-ins</span></div>
+              </div>
+              <div class="act-lane"><h3>Close + care</h3>
+                <div class="metric yellow"><strong id="cntUnsold">0</strong><span>Follow-ups</span></div>
+                <div class="metric yellow"><strong id="cntInstallVisit">0</strong><span>Install Visits</span></div>
+                <div class="metric yellow"><strong id="cntProjMgmt">0</strong><span>Project Mgmt</span></div>
+              </div>
+              <div class="act-lane"><h3>Team time</h3>
+                <div class="metric yellow"><strong id="cntMeeting">0</strong><span>Meetings / Training</span></div>
+              </div>
+            </div>
+            <div class="act-fu" id="actFuNote"></div>
+            <div class="act-week" id="actWeek"></div>
+            <div class="proj-list" id="projList" style="display:none"></div>
+          </div>
+          <div class="card-foot act-foot">
+            <span class="card-note" id="actLastUpdated">No submissions today</span>
+            <span class="act-links"><a class="btn" id="actRecapLink" href="https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec" target="_blank" rel="noopener">File today's recap</a><a class="btn" id="actFuLink" href="follow-up-tracker.html">Log a follow-up</a><select id="projPick" aria-label="Choose a project" style="display:none"><option value="">Choose a project…</option></select><a class="btn" id="actCompleteLink" href="#" aria-disabled="true" tabindex="-1" style="display:none">Project completion</a></span>
+          </div>
+        </div>
+
+        <!-- CLEARANCE (shared) -->
+        <div class="card clearance">
+          <div class="card-head"><h2>Clearance</h2><span class="tag">Shared — sell from stock</span></div>
+          <div class="card-body"><div id="clearanceBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="clearanceNote"></span><a class="btn" href="clearance.html">Open Clearance</a></div>
+        </div>
+
+        <!-- MY SCHEDULE (planned blockers from the weekly schedule; full width, last) -->
+        <div class="card schedule">
+          <div class="card-head"><h2>My Schedule</h2><span class="tag" id="schedTag">Planned week</span></div>
+          <div class="sched-nav">
+            <button class="btn" id="schedPrev" type="button" aria-label="Previous week">&lsaquo;</button>
+            <div class="sched-date" id="schedDate">—</div>
+            <button class="btn" id="schedNext" type="button" aria-label="Next week">&rsaquo;</button>
+            <button class="btn" id="schedToday" type="button">Today</button>
+            <div class="sched-view" role="group" aria-label="Schedule view"><button id="schedDayBtn" type="button" aria-pressed="false">Day</button><button class="on" id="schedWeekBtn" type="button" aria-pressed="true">Week</button></div>
+          </div>
+          <div class="sched-jump" id="schedJump"></div>
+          <div class="card-body" style="justify-content:flex-start"><div id="schedBody" class="loading">—</div></div>
+          <div class="card-foot"><span class="card-note" id="schedNote">Planned schedule. Booked consults stay on the ServiceTitan board.</span></div>
+        </div>
+      </div>
+
+      <p class="footer-note">All numbers load from the CM Heating database after login and are scoped to you. Admins can view another rep with the selector up top. CM Heating · Internal HCA Tool.</p>
+    </main>
+  </div>
+</div>
+
+<script src="js/install-projects.js"></script>
+<script>CMHProjects.config.hashExtra = "&live=1";   /* pilot HCAs only: the project list and link are pilot-gated in renderProjects() */</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAHnZ4r-WFQECx0XXqLuo8sqw6eoI1gEC0",
+  authDomain: "install-availability-tracker.firebaseapp.com",
+  databaseURL: "https://install-availability-tracker-default-rtdb.firebaseio.com",
+  projectId: "install-availability-tracker",
+  storageBucket: "install-availability-tracker.firebasestorage.app",
+  messagingSenderId: "187871662912",
+  appId: "1:187871662912:web:1d52671de23c4f38d620a5"
+};
+
+/* ---- Roster + name reconciliation across the four feeds ----
+   short  = auth roster name (login)
+   full   = Firebase full name (cmh_followup_tracker / cmh_sold_tracker)
+   ar     = AR /exec rep-name spelling (verify at AR-card build; blank = not an HCA in AR)
+   Admins (office) have no HCA pipeline of their own — role ADMIN, no full/ar. */
+const USERS = [
+  { role:"ADMIN", short:"Geoff",   email:"geoffrey.simons@cmheating.com" },
+  { role:"ADMIN", short:"Amy",     email:"amy@cmheating.com" },
+  { role:"ADMIN", short:"Laura",   email:"laura.weiss@cmheating.com" },
+  { role:"ADMIN", short:"Jazryn",  email:"jazryn.delacruz@cmheating.com" },
+  { role:"ADMIN", short:"Sabrina", email:"sabrina.kennard@cmheating.com" },
+  { role:"ADMIN", short:"Jen",     email:"jennifer@cmheating.com" },
+  { role:"ADMIN", short:"Brittny", email:"bmiller@cmheating.com" },
+  { role:"ADMIN", short:"Vanessa", email:"vanessa.williams@cmheating.com" },
+  { role:"HCA", short:"Amber",   email:"amber.maddalena@cmheating.com", full:"Amber Maddalena",   ar:"Amber Maddalena" },
+  { role:"HCA", short:"Chester", email:"chester.granard@cmheating.com", full:"Chester Granard",   ar:"Chester Granard" },
+  { role:"HCA", short:"Davis",   email:"davis.diosdado@cmheating.com",  full:"Davis Diosdado",    ar:"Davis Diosdado" },
+  { role:"HCA", short:"Jay",     email:"javierre.milo@cmheating.com",   full:"Javierre Milo",     ar:"Javierre Milo" },
+  { role:"HCA", short:"Joseph",  email:"joseph.ruble@cmheating.com",    full:"Joseph Ruble",      ar:"Joseph Ruble" },
+  { role:"HCA", short:"Samir",   email:"samir.khoury@cmheating.com",    full:"Samir Khoury",      ar:"Samir Khoury" },
+  { role:"HCA", short:"Trevor",  email:"trevor.bohm@cmheating.com",     full:"Trevor Bohm",       ar:"Trevor Bohm" },
+  { role:"HCA", short:"Adam",    email:"adam@cmheating.com",            full:"Adam Weberg",       ar:"Adam Weberg" }
+];
+
+const DB_FOLLOWUP  = "cmh_followup_tracker";
+const DB_SOLD      = "cmh_sold_tracker";
+const DB_CLEARANCE = "cmh_clearance";
+const DB_ACTIVITY  = "cmh_hca_activity";
+const AR_EXEC = "https://script.google.com/macros/s/AKfycbwMwAsCfE8cyTBBesEITz6t_jdS4JGnI1QEKanIZc2ZalEXUkwGPf14FRq6e6ndnEgcEQ/exec";
+
+const app  = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+const $ = id => document.getElementById(id);
+const norm = v => String(v || "").trim().toLowerCase();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const findByEmail = e => USERS.find(u => norm(u.email) === norm(e)) || null;
+function findByName(input){
+  const t = norm(input); if(!t) return null;
+  const exact = USERS.find(u => u.short.toLowerCase() === t);
+  if (exact) return exact;
+  const m = USERS.filter(u => u.short.toLowerCase().startsWith(t));
+  return m.length === 1 ? m[0] : null;
+}
+function buildFirebasePassword(pin){ return `CMH-${String(pin || "").replace(/\D/g,"")}!`; }
+function badge(txt,cls){ const b=$("statusBadge"); b.textContent=txt; b.className="status-pill "+cls; }
+
+const emailKeyOf = e => String(e || "").toLowerCase().split(".").join(",");
+const hcaSlug = n => String(n || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+let ownHcaKey = null;   // roster key for the signed-in HCA (their own subtree under the tracker nodes)
+/* Tracker data is partitioned per HCA under the verified-email rules. Read the viewed HCA's subtree; if it is
+   empty (data not partitioned yet) fall back to the legacy root layout so the page works before and after cutover. */
+function readTracker(base, who, cb, errCb){
+  const key = (currentUser && currentUser.role === "HCA" && ownHcaKey) ? ownHcaKey : hcaSlug(who.full);
+  onValue(ref(db, base + "/" + key), snap => {
+    const v = snap.val();
+    if(v) { cb(v, base + "/" + key); return; }
+    onValue(ref(db, base), s2 => cb(s2.val() || {}, base), errCb);
+  }, errCb);
+}
+let currentUser = null;   // {role,short,email,...}
+let viewRep = null;       // the USERS row whose pipeline is being shown (HCA = self; admin = selected)
+let actUnsubscribe = null; // store unsubscribe for activities listener
+
+async function doLogin(name, pin){
+  const msg = $("loginMsg");
+  const user = findByName(name);
+  if(!user){ msg.textContent = "Name not recognized — use your first name exactly as listed."; return; }
+  msg.textContent = "Signing in…";
+  try{
+    await signInWithEmailAndPassword(auth, user.email, buildFirebasePassword(pin));
+    msg.textContent = "";
+  }catch(err){
+    console.error("Login error:", err);
+    msg.textContent = "Incorrect PIN, or your account isn't set up yet.";
+  }
+}
+/* ---- Two tiers. PIN = schedules and tools. Google (verified @cmheating.com) = customer information.
+   The database rules are the real control; the UI below only decides what to show and when to ask. ---- */
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ hd: "cmheating.com" });
+let GOOGLE_SESSION = false;
+/* The tier is decided by the provider of the CURRENT sign-in (token claim), never by linked providers. */
+async function refreshTier(user){
+  try{ const t = await user.getIdTokenResult(); GOOGLE_SESSION = !!user.emailVerified && t.signInProvider === "google.com"; }
+  catch(e){ GOOGLE_SESSION = false; }
+}
+function isGoogle(){ return GOOGLE_SESSION; }
+async function googleSignIn(){
+  try{ await signInWithPopup(auth, googleProvider); }
+  catch(err){
+    console.error("Google sign-in:", err);
+    if(err && (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment")){
+      try{ await signInWithRedirect(auth, googleProvider); }catch(e2){ console.error(e2); }
+    }
+  }
+}
+function lockedCardHtml(what){
+  return `<div class="soon">Customer information is behind your Google sign-in.<br><button class="btn primary" type="button" data-gsign style="margin-top:10px">Sign in with Google to see ${esc(what)}</button></div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-gsign]"); if(b) googleSignIn(); });
+const _gb = $("btnGoogle"); if(_gb) _gb.addEventListener("click", googleSignIn);
+const loginForm = $("loginForm");
+if(loginForm){
+  loginForm.addEventListener("submit", e => {
+    e.preventDefault();
+    doLogin($("fName").value.trim(), $("fPin").value.trim());
+  });
+}
+const topLogin = $("btnLogin");
+if(topLogin){ topLogin.addEventListener("click", () => { const f=$("fName"); if(f) f.focus(); }); }
+$("btnLogout").addEventListener("click", () => signOut(auth).catch(e=>console.error(e)));
+
+onAuthStateChanged(auth, async user => {
+  const known = user ? findByEmail(user.email) : null;
+  if(!known){ currentUser=null; GOOGLE_SESSION=false; ownHcaKey=null; lock(); if(user) signOut(auth).catch(e=>console.error(e)); return; }
+  currentUser = known;
+  await refreshTier(user);
+  ownHcaKey = null;
+  if(known.role === "HCA" && isGoogle()){
+    try{ const snap = await get(ref(db, "cmh_followup_roster/hcas/" + emailKeyOf(user.email))); ownHcaKey = snap.val() || null; }catch(e){ ownHcaKey = null; }
+  }
+  unlock();
+});
+
+function lock(){
+  $("locked").classList.remove("hidden");
+  $("content").classList.remove("show");
+  $("adminBar").classList.remove("show");
+  $("btnLogin").classList.remove("hidden");
+  $("btnLogout").classList.add("hidden");
+  badge("○ Login required", "bad");
+  if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
+  numStop();
+}
+
+function unlock(){
+  $("locked").classList.add("hidden");
+  $("content").classList.add("show");
+  $("btnLogin").classList.add("hidden");
+  $("btnLogout").classList.remove("hidden");
+  badge(`● ${currentUser.role}: ${currentUser.short} · ${isGoogle() ? "Google" : (pilotOn(currentUser) ? "PIN — customer info locked" : "PIN")}`, "ok");
+
+  const isAdmin = currentUser.role === "ADMIN";
+  if(isAdmin){
+    const sel = $("viewAs");
+    sel.innerHTML = USERS.filter(u => u.role === "HCA")
+      .map(u => `<option value="${esc(u.email)}">${esc(u.full || u.short)}</option>`).join("");
+    $("adminBar").classList.add("show");
+    // default: first HCA (admins have no pipeline of their own)
+    viewRep = USERS.find(u => u.email === sel.value) || null;
+    sel.onchange = () => { viewRep = USERS.find(u => u.email === sel.value) || null; loadCards(); };
+  } else {
+    $("adminBar").classList.remove("show");
+    viewRep = currentUser;   // HCA sees themselves
+  }
+  loadCards();
+}
+
+/* ---- Cards ---- */
+function loadCards(){
+  const who = viewRep;
+  $("hello").innerHTML = who
+    ? `${esc(who.full || who.short)} <small>· your pipeline</small>`
+    : `— <small>select a rep above</small>`;
+
+  loadClearanceCard();      // shared — always
+  if(!who || who.role !== "HCA"){
+    // admin with no HCA selected (shouldn't happen; selector defaults to an HCA)
+    setBody("arBody", '<div class="soon">Select a rep to view AR.</div>');
+    setBody("soldBody", '<div class="soon">Select a rep.</div>');
+    setBody("followupBody", '<div class="soon">Select a rep.</div>');
+    
+    // Clear out activities
+    if(actUnsubscribe) { actUnsubscribe(); actUnsubscribe = null; }
+    actReset("Select a rep");
+    setBody("numsBody", '<div class="soon">Select a rep.</div>');
+    renderSchedule();
+    return;
+  }
+  loadFollowupCard(who);
+  loadSoldCard(who);
+  loadArCard(who);
+  loadActivitiesCard(who);
+  loadNumbersCard(who);
+  loadScoreCard(who);
+  renderSchedule();
+}
+
+function setBody(id, html){ const el=$(id); el.className=""; el.innerHTML=html; }
+function metric(val,label,cls){ return `<div class="metric ${cls||''}"><strong>${esc(val)}</strong><span>${esc(label)}</span></div>`; }
+
+/* DAILY ACTIVITIES — two sources, one card:
+   1. Recap Form → "Activity Log" sheet → HCA Sold Tracker Sync (activityFirebase.js, every 15 min)
+      → cmh_hca_activity/<Full Name>/<yyyy-MM-dd> = { counts:{...}, updated }  (keys are plain names, not URL-encoded)
+   2. Follow-Up Tracker "Log it" → cmh_followup_log/<hca-key>/<id> = { at, status, customer, ... }
+   Follow-ups shown = recap follow-ups (counts.followUpUnsold: old Form "Follow-up Unsold" and new-page
+   "Follow-up" rows, since 2026-10-17) + tracker entries that Pacific day.
+   Since 2026-10-17 the feed also carries techCheckIn, meeting and projectManagement (own tiles).
+   A day with no activity record may still have a recap (consults only), so the strip never says "missed". */
+const RECAP_FORM_URL = "https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec";
+const ACT_IDS = ["cntRideAlong","cntSelfGen","cntInstallVisit","cntReferrals","cntNetworking","cntUnsold","cntTechCheckIn","cntMeeting","cntProjMgmt"];
+function pacIso(d){ return d.toLocaleDateString("en-CA", { timeZone:"America/Los_Angeles" }); }
+function actHcaKey(name){ return String(name == null ? "" : name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+function actTotal(c){ return c ? Object.values(c).reduce((a,v) => a + (Number(v) || 0), 0) : 0; }
+function actReset(note){
+  if(actUnsubscribe){ actUnsubscribe(); actUnsubscribe = null; }
+  ACT_IDS.forEach(id => $(id).textContent = "0");
+  $("actLastUpdated").textContent = note; $("actFuNote").textContent = ""; $("actWeek").innerHTML = "";
+}
+function loadActivitiesCard(who){
+  if(actUnsubscribe){ actUnsubscribe(); actUnsubscribe = null; }
+  $("actFuLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  let act = null, fu = null, fuErr = false;
+  const draw = () => {
+    if(act === null) return;
+    const today = pacIso(new Date());
+    const fuByDay = {};
+    Object.values(fu || {}).forEach(e => { if(e && e.at){ const k = pacIso(new Date(e.at)); fuByDay[k] = (fuByDay[k] || 0) + 1; } });
+    const rec = act[today], c = (rec && rec.counts) || {}, fuT = fuByDay[today] || 0;
+    $("cntRideAlong").textContent    = c.techRideAlong || 0;
+    $("cntSelfGen").textContent      = c.selfGen || 0;
+    $("cntInstallVisit").textContent = c.installVisit || 0;
+    $("cntReferrals").textContent    = c.referrals || 0;
+    $("cntNetworking").textContent   = (c.realtorNetworking || 0) + (c.socialNetworking || 0);
+    $("cntUnsold").textContent       = (c.followUpUnsold || 0) + fuT;
+    $("cntTechCheckIn").textContent  = c.techCheckIn || 0;
+    $("cntMeeting").textContent      = c.meeting || 0;
+    $("cntProjMgmt").textContent     = c.projectManagement || 0;
+    $("actFuNote").textContent = `Follow-ups today: ${c.followUpUnsold || 0} from the recap · ` +
+      (fuErr ? "tracker log not readable with this sign-in" : `${fuT} logged in the Follow-Up Tracker`);
+    $("actLastUpdated").textContent = rec && rec.updated
+      ? "Counts refreshed " + new Date(rec.updated).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })
+      : "No activity recorded today yet";
+    const [y,m,d] = today.split("-").map(Number), p = HCA_SCHEDULE[who.full];
+    let cells = "";
+    for(let i=6;i>=0;i--){
+      const day = new Date(y, m-1, d-i), iso = schedIso(day);
+      const n = actTotal(act[iso] && act[iso].counts) + (fuByDay[iso] || 0);
+      const off = p && day >= SCHED_ANCHOR && !schedPlan(schedFor(p, day), day).sh;
+      cells += `<div class="act-day${n ? "" : " zero"}${off ? " off" : ""}${i===0 ? " today" : ""}" title="${off ? "Scheduled off" : n + " activities logged"}">${DAY_NAMES[day.getDay()].slice(0,3)} ${day.getMonth()+1}/${day.getDate()}<b>${n || "–"}</b>${off ? "off" : ""}</div>`;
+    }
+    $("actWeek").innerHTML = cells;
+  };
+  const u1 = onValue(ref(db, `${DB_ACTIVITY}/${who.full}`),
+    snap => { act = snap.val() || {}; draw(); },
+    err  => { act = {}; draw(); $("actLastUpdated").textContent = "Activities unavailable"; console.error("Activities error:", err); });
+  const u2 = onValue(ref(db, `cmh_followup_log/${actHcaKey(who.full)}`),
+    snap => { fu = snap.val() || {}; fuErr = false; draw(); },
+    err  => { fu = {}; fuErr = true; draw(); });
+  actUnsubscribe = () => { u1(); u2(); };
+}
+
+/* FOLLOW-UP: read cmh_followup_tracker, scope to this rep's full name.
+   (Step-2 wiring; frame already reads live data — count of open leads for the rep.) */
+let followupData = null;
+let followupKey = null;
+function loadFollowupCard(who){
+  $("followupLink").href = "follow-up-tracker.html?hca=" + encodeURIComponent(who.full);
+  if(pilotOn(who) && !isGoogle()){ setBody("followupBody", lockedCardHtml("your follow-ups")); $("followupNote").textContent = ""; return; }
+  const want = (currentUser && currentUser.role === "HCA" && ownHcaKey ? ownHcaKey : hcaSlug(who.full));
+  if(followupData && followupKey === want){ renderFollowup(who); return; }
+  readTracker(DB_FOLLOWUP, who, (data, path) => {
+    followupData = data || {}; followupKey = want;
+    if(viewRep && viewRep.role === "HCA") renderFollowup(viewRep);
+  }, err => setBody("followupBody", '<div class="soon">Follow-up data unavailable.</div>'));
+}
+function renderFollowup(who){
+  const leads = (followupData && Array.isArray(followupData.leads) ? followupData.leads : [])
+    .filter(l => norm(l.hca) === norm(who.full));
+  const never = leads.filter(l => !l.followUps).length;
+  const stale = leads.filter(l => l.status && /stale/i.test(l.status)).length;
+  setBody("followupBody", `<div class="metrics">${metric(leads.length,"Open","blue")}${metric(never,"Never touched","blue")}</div>`);
+  $("followupNote").textContent = leads.length ? "" : "No open leads.";
+}
+
+/* SOLD: read cmh_sold_tracker for this rep. */
+let soldData = null;
+let soldKey = null;
+function loadSoldCard(who){
+  if(pilotOn(who) && !isGoogle()){ setBody("soldBody", lockedCardHtml("your sold jobs")); $("soldNote").textContent = ""; renderProjects(who); return; }
+  const want = (currentUser && currentUser.role === "HCA" && ownHcaKey ? ownHcaKey : hcaSlug(who.full));
+  if(soldData && soldKey === want){ renderSold(who); return; }
+  readTracker(DB_SOLD, who, (data, path) => {
+    soldData = data || {}; soldKey = want;
+    if(viewRep && viewRep.role === "HCA") renderSold(viewRep);
+  }, err => setBody("soldBody", '<div class="soon">Sold data unavailable.</div>'));
+}
+function renderSold(who){
+  // sold node shape: hcas/<name> or jobs keyed; frame counts jobs for the rep by name.
+  let jobs = [];
+  if(soldData){
+    if(soldData.jobs){
+      const all = Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs);
+      jobs = all.filter(j => norm(j.hca) === norm(who.full) || norm(j.salesRep) === norm(who.full));
+    }
+  }
+  const needs = jobs.filter(j => /needs|tbd|blocker/i.test(j.stage||"")).length;
+  setBody("soldBody", `<div class="metrics">${metric(jobs.length,"Sold jobs","green")}${metric(needs,"Needs attention","red")}</div>`);
+  $("soldNote").textContent = jobs.length ? "" : "No sold jobs found for this name.";
+  try{ renderProjects(who); if(typeof renderSchedule === "function") renderSchedule(); }catch(e){ console.error("projects", e); }
+}
+
+/* AR: fetch /exec?action=list, filter to this rep's AR name. */
+let arData = null;
+function loadArCard(who){
+  if(arData){ renderAr(who); return; }
+  setBody("arBody", '<div class="loading">Loading AR\u2026</div>');
+  // Read AR from Firebase cmh_ar (populated by the AR Automation's pushArToFirebase).
+  // Reliable, same-origin auth as the other cards \u2014 no cross-origin /exec fetch (which 404'd intermittently).
+  onValue(ref(db, "cmh_ar"), snap => {
+    arData = snap.val() || { rows: [] };
+    if(viewRep && viewRep.role === "HCA") renderAr(viewRep);
+  }, err => setBody("arBody", '<div class="soon">AR unavailable right now.</div>'));
+}
+function lastName(n){ const p = String(n||"").trim().split(/\s+/); return p.length ? norm(p[p.length-1]) : ""; }
+function renderAr(who){
+  // AR feed may spell names differently ("Jay Milo" vs "Javierre Milo"). Match on exact
+  // ar-name OR shared LAST NAME (stable across nickname/spelling differences).
+  const wantExact = norm(who.ar);
+  const wantLast  = lastName(who.full) || lastName(who.ar);
+  const rows = (arData && Array.isArray(arData.rows) ? arData.rows : [])
+    .filter(r => { const rn = norm(r.salesRep); return rn === wantExact || (wantLast && lastName(r.salesRep) === wantLast); });
+  const total  = rows.reduce((s,r)=> s + (Number(r.balance)||0), 0);
+  const oldest = rows.reduce((m,r)=> Math.max(m, Number(r.days)||0), 0);
+  setBody("arBody", `<div class="metrics">${metric("$"+Math.round(total).toLocaleString(),"Balance","red")}${metric(rows.length,"Invoices","red")}${metric(oldest||"—","Oldest days","red")}</div>`);
+  $("arNote").textContent = rows.length ? "" : "No open AR for this name.";
+}
+
+/* MY SCHEDULE: planned day from the weekly HCA schedule (effective week of Sun 9/27/26).
+   Blockers only — tech ride-along, sales meeting, One on One, meeting-day flex, off shift — plus the
+   open 2-hour consult windows. Booked consults are NOT shown here; they live on the ServiceTitan board.
+   To change someone's schedule, edit their row in HCA_SCHEDULE (keyed by USERS.full).
+   Days: 0=Sun … 6=Sat. Hours are 24h. rot = ride-along tech for rotation weeks 1–4. */
+const SCHED_ANCHOR = new Date(2026, 8, 27);   // Sun 9/27/26 = rotation week 1
+/* Date-specific meeting overrides. all = every HCA working that day attends; none = no meeting that day.
+   at = start hour (meetings end by 9:00). A 7:00 start makes the day 7:00–4:00; end:{name:hour} ends a day early. */
+const SCHED_MTG_DATES = {
+  "2026-10-13": { all:true, at:7, label:"TRAINING 7:00–9:00", end:{ "Amber Maddalena":15.5 } },
+  "2026-10-14": { all:true, at:8, label:"TRAINING 8:00–9:00" },
+  "2026-10-15": { none:true },
+  /* Thu 11/5/26 only: the Thursday sales meeting moves to 1:30–3:00 PM (same attendees as a normal Thursday). */
+  "2026-11-05": { pm:true, at:13.5, to:15, label:"SALES MEETING 1:30–3:00", text:"Sales meeting 1:30–3:00 PM" },
+  /* Wed 11/25/26: Geoff off; no sales meeting (D-84). Thu/Fri closed. */
+  "2026-11-25": { none:true }
+};
+/* Whole-team events that replace the normal day plan. Thu 10/15/26: town hall 7:30–11:00 (already blocked in ServiceTitan).
+   Riders join their tech at 11:00; oo moves 1:1s; end caps a shift so nobody works an extra-long day. */
+const SCHED_DAY_EVENTS = {
+  "2026-10-15": { at:7.5, to:11, label:"TOWN HALL 7:30–11:00", text:"Town hall 7:30–11:00", ride:{ day:[11,14], eve:[11,16] },
+                  oo:{ "Trevor Bohm":11, "Samir Khoury":12 }, end:{ "Amber Maddalena":16 } },
+  /* Fri 11/13/26: benefits meeting 7:00–8:00 in the warehouse (HR, Amber Prasad 11/2 + 11/4); virtual make-up Mon 11/16 4:00 PM for anyone off.
+     Riders meet their tech at 8:00; Samir's day capped at 5:00 so it is not 7–6. */
+  "2026-11-13": { at:7, to:8, label:"BENEFITS MEETING 7:00–8:00", text:"Benefits meeting 7:00–8:00 in the warehouse", ride:{ day:[8,13.5], eve:[10,15.5] },
+                  end:{ "Samir Khoury":17 } }
+};
+/* Vacations / PTO. from = first day (fromHour = leaves at that hour that day), to = last day off, back = return date shown to the HCA. */
+const SCHED_TIME_OFF = {
+  "Adam Weberg": [ { from:"2026-10-22", fromHour:14, rideEnd:12, holdFrom:12, to:"2026-10-29", back:"Fri 10/30" } ]
+};
+const SCHED_HOLIDAYS = { "2026-11-26":"Thanksgiving", "2026-11-27":"Day after Thanksgiving", "2026-12-25":"Christmas", "2027-01-01":"New Year's Day" };
+const HCA_SCHEDULE = {
+  "Joseph Ruble":    { sh:[8,16],  days:[1,2,3,4,5], ride:1, crew:"day", mtg:2, oo:[2,9],
+                     /* effective Sun 10/4/26: Tue–Sat, ride Fri, sales meeting Wed, 1:1 stays Tue 9:00; one primary tech, same ride every week; secondary = backup HCA for another tech */
+                     eff:[{ from:"2026-11-22", days:[1,2,3,4,5] } /* Rev. 16 (D-87): Mon-Fri, Kyle's old spot; Sat/Sun off */, { from:"2026-11-01", rot:["Austin","Austin","Austin","Austin"], techs:[["Austin",1],["Doug",0]] }, { from:"2026-10-04", days:[2,3,4,5,6], ride:5, mtg:3, rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Hagen",0]] }, { from:"2026-10-11", mtg:[2,3] }],  cap:3, flex:false, rot:["Doug","Hagen","Caleb","Younis"],          techs:[["Younis",1],["Hagen",0],["Doug",0],["Caleb",0]] },
+  "Chester Granard": { sh:[8,16],  days:[0,1,2,3,4], ride:2, crew:"day", mtg:3, oo:[1,8.5],  eff:[{ from:"2026-11-15", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Dan D",0]] } /* D-83: Alex primary; Dan D backup until his move to Sales Dec 5 */, { from:"2026-11-01", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Alex",0]] }, { from:"2026-10-04", rot:["Dan D","Dan D","Dan D","Dan D"], techs:[["Dan D",1],["Caleb",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Emmanuel","Anderson","Dan D"],  techs:[["Anderson",1],["Dan D",0],["Emmanuel",0]] },
+  "Davis Diosdado":  { sh:[8,16],  days:[1,2,3,4,5], ride:4, crew:"day", mtg:3, oo:[3,9], ooSkip:["2026-11-25"] /* Geoff off Wed 11/25 (D-84) */,  eff:[{ from:"2026-11-01", rot:["Hagen","Hagen","Hagen","Hagen"], techs:[["Hagen",1],["Carter",0],["Conrad",0]] }, { from:"2026-10-04", rot:["Alex","Alex","Alex","Alex"], techs:[["Alex",1],["Younis",0],["Conrad",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:false, rot:["Alex","Charles","Dewaynne","Alex"],        techs:[["Dewaynne",1],["Alex",0],["Charles",0]] },
+  "Trevor Bohm":     { sh:[8,16],  days:[1,3,4,6],   ride:3, crew:"day", mtg:4, oo:[4,10], eff:[{ from:"2026-11-01", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Emmanuel",0]] }, { from:"2026-10-04", rot:["Carter","Carter","Carter","Carter"], techs:[["Carter",1],["Conrad",1],["Alex",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Conrad","Carter","Dan K","Conrad"],        techs:[["Carter",1],["Conrad",0],["Dan K",0]] },
+  "Adam Weberg":     { sh:[8,16],  days:[2,3,4,5,6], off:["2026-11-21"] /* PTO Sat 11/21, in Paychex (D-83) */, ride:4, crew:"day", mtg:2, oo:[5,8],  eff:[{ from:"2026-11-01", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Caleb",0],["Austin",0]] }, { from:"2026-10-04", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan K",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, /* Rev. 16 (D-87): 3 per day */ flex:false, rot:["Carter","Peter","Anderson","Carter"],      techs:[["Carter",0],["Peter",0],["Anderson",0]] },
+  "Samir Khoury":    { sh:[8,18],  days:[2,3,4,5,6], ride:3, crew:"eve", mtg:4, oo:[4,9],  eff:[{ from:"2026-11-01", rot:["Caleb","Caleb","Caleb","Caleb"], techs:[["Caleb",1],["Dan D",0]] }, { from:"2026-10-04", rot:["Younis","Younis","Younis","Younis"], techs:[["Younis",1],["Carter",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:false, rot:["Dan D","Dewaynne","Nicco","Dan D"],  techs:[["Dan D",1],["Dewaynne",0],["Nicco",0]] },
+  "Amber Maddalena": { sh:[10,18], days:[0,1,2,3,4], off:["2026-11-09"] /* Mon 11/9 off all day (approved; her 11/2 email); 1:1 skipped that week */, ride:2, crew:"eve", mtg:4, oo:[1,10], eff:[{ from:"2026-11-01", rot:["Emmanuel","Emmanuel","Emmanuel","Emmanuel"], techs:[["Emmanuel",1],["Dan K",0]] }, { from:"2026-10-04", rot:["Dan K","Dan K","Dan K","Dan K"], techs:[["Dan K",1],["Emmanuel",0]] }, { from:"2026-10-11", mtg:[3,4] }], cap:3, flex:true,  rot:["Emmanuel","Dan K","Nicco","Emmanuel"],     techs:[["Emmanuel",1],["Dan K",1],["Nicco",1]] },
+  "Javierre Milo":   { sh:[10,18], days:[0,1,2,3,4], off:["2026-09-27"] /* starts Sundays 10/4 */, ride:4, crew:"eve", mtg:2, oo:[3,10], ooSkip:["2026-11-25"] /* Geoff off Wed 11/25 (D-84) */, eff:[{ from:"2026-11-01", rot:["Doug","Doug","Doug","Doug"], techs:[["Doug",1],["Younis",0]] }, { from:"2026-10-04", rot:["Charles","Nicco","Charles","Nicco"] /* Thu ride alternates: Nicco wk of 10/4, Charles 10/11, ... */, techs:[["Emmanuel",1],["Dan D",0]] }, { from:"2026-10-11", mtg:[2,3] }], cap:3, flex:true,  rot:["Hagen","Doug","Caleb","Conrad"],           techs:[["Hagen",1],["Doug",1],["Caleb",1],["Conrad",1]] },
+};
+const TECH_DAYS = (() => { const MF=[1,2,3,4,5], TS=[2,3,4,5,6], SW=[0,1,2,3];
+  return { Austin:MF /* Mon-Fri, confirmed by Geoff 10/27 */, Hagen:MF, Doug:MF, Caleb:MF, "Dan K":MF, Conrad:MF, Younis:MF, Charles:MF, Nicco:MF,
+           Alex:TS, Carter:TS, Peter:TS, Dewaynne:TS, Anderson:TS, "Dan D":SW, Emmanuel:SW }; })();
+const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+let schedDate = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })();
+let schedView = "week";   // "day" | "week"
+
+function schedIso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function schedClock(h){ const w=Math.floor(h), m=(h%1)?":30":":00", x=w>12?w-12:w; return x+m; }
+function schedWeek(d){ const days=Math.round((d-SCHED_ANCHOR)/86400000); return ((Math.floor(days/7)%4)+4)%4; }
+
+/* HCA name for a schedule row (eff copies keep the same oo array). */
+function ooT(h){ return Math.floor(h) + ":" + (h % 1 ? "30" : "00"); }
+function schedName(p){ return Object.keys(HCA_SCHEDULE).find(k => HCA_SCHEDULE[k].oo === p.oo) || ""; }
+/* Day plan for a whole-team event day (SCHED_DAY_EVENTS). */
+function schedEventPlan(p, d, ev){
+  const dow = d.getDay(), wk = schedWeek(d), name = schedName(p), blocks = [[ev.at, ev.to, "blk", ev.label]], lines = [ev.text + " — whole team."];
+  let sh, book = 0;
+  if(dow === p.ride){
+    const tech = p.rot[wk], r = p.crew === "day" ? ev.ride.day : ev.ride.eve;
+    blocks.push([r[0], r[1], "ride", "TECH RIDE · " + tech]);
+    lines.push("Then meet <b>" + esc(tech) + "</b> at " + schedClock(r[0]) + " for the ride-along until " + schedClock(r[1]) + ".");
+    if(p.crew === "day"){ sh = [ev.at, r[1]]; lines.push("No appointment after the ride today."); }
+    else { sh = [ev.at, 18]; blocks.push([16, 18, "after", "Open · after ride"]); lines.push("4:00–6:00 appointment: revisit or tech flip."); book = 1; }
+  } else {
+    const end = (ev.end || {})[name] || p.sh[1], oo = p.oo[0] === dow ? ((ev.oo || {})[name] || p.oo[1]) : null;
+    sh = [ev.at, end];
+    if(oo) lines.push("One on One with Geoff at " + ooT(oo) + ".");
+    if(end < p.sh[1]) lines.push("Your day ends at " + schedClock(end) + ".");
+    let t = ev.to, open = 0;
+    while(t < end){
+      const nx = oo && Math.floor(oo) >= t ? Math.floor(oo) : Infinity;
+      if(oo && Math.floor(oo) === t){ blocks.push([t, t + 1, "blk", "ONE ON ONE WITH GEOFF " + ooT(oo) + ""]); t += 1; continue; }
+      if(t + 2 <= nx && t + 2 <= end){ blocks.push([t, t + 2, "open", "Open"]); open++; t += 2; continue; }
+      if(nx < end && nx > t){ t = nx; continue; }
+      break;
+    }
+    book = Math.min(open, p.cap);
+  }
+  if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
+  if(sh[1] < 19) blocks.unshift([sh[1], 19, "os", ""]);
+  return { blocks, book, lines, sh };
+}
+/* Meeting for this HCA on this day, or null. p.mtg is a day number or an array of day numbers. */
+function schedMtg(p, d){
+  const o = SCHED_MTG_DATES[schedIso(d)], dow = d.getDay(), name = schedName(p);
+  if(o && o.none) return null;
+  if(o && o.all) return { at:o.at, label:o.label, training:true, text:"Training "+schedClock(o.at)+"–9:00", end:(o.end||{})[name] };
+  const days = Array.isArray(p.mtg) ? p.mtg : [p.mtg];
+  if(days.indexOf(dow) < 0) return null;
+  if(o && o.pm) return { pm:true, at:o.at, to:o.to, label:o.label, text:o.text };
+  return { at:8, label:"SALES MEETING 8:00", text:"Sales meeting 8:00–9:00" };
+}
+/* Plan for a day, with vacations applied on top of the normal schedule. */
+function schedPlan(p, d){
+  const iso = schedIso(d), v = (SCHED_TIME_OFF[schedName(p)] || []).find(x => x.from <= iso && iso <= x.to);
+  if(!v) return schedPlanCore(p, d);
+  if(p.days.indexOf(d.getDay()) < 0 && !SCHED_HOLIDAYS[iso]) return schedPlanCore(p, d);
+  if(iso !== v.from || !v.fromHour) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
+  const base = schedPlanCore(p, d), cut = v.fromHour;
+  if(!base.sh || base.sh[0] >= cut) return { blocks:[[7,19,"off","VACATION"]], book:0, lines:["Vacation — back " + v.back + "."], sh:null };
+  const sh = [base.sh[0], Math.min(base.sh[1], cut)];
+  const stop = v.holdFrom || cut;   /* nothing bookable after holdFrom; ride ends at rideEnd */
+  let blocks = base.blocks.filter(b => b[2] !== "os" && b[0] < stop).map(b => [b[0], Math.min(b[1], b[2] === "ride" && v.rideEnd ? v.rideEnd : stop), b[2], b[3]]).filter(b => b[1] - b[0] >= (b[2] === "open" || b[2] === "after" ? 2 : 0.25));
+  if(v.holdFrom) blocks.push([v.holdFrom, cut, "blk", "NO BOOKING · " + schedClock(v.holdFrom) + "–" + schedClock(cut)]);
+  const opens = blocks.filter(b => b[2] === "open").length, after = blocks.filter(b => b[2] === "after").length;
+  const book = after ? 1 : Math.min(opens, p.cap);
+  let lines = base.lines.filter(l => !/appointment/.test(l) || after);
+  if(v.rideEnd) lines = lines.map(l => l.replace(/ride until [0-9:]+/, "ride until " + schedClock(v.rideEnd)));
+  if(v.holdFrom) lines.push("No booking " + schedClock(v.holdFrom) + "–" + schedClock(cut) + ".");
+  lines.push("Vacation starts at " + schedClock(cut) + " — back " + v.back + ".");
+  blocks.push([cut, 19, "off", "VACATION"]);
+  if(sh[0] > 7) blocks.unshift([7, sh[0], "os", ""]);
+  return { blocks, book, lines, sh };
+}
+function schedPlanCore(p, d){
+  const dow = d.getDay(), wk = schedWeek(d);
+  if(SCHED_HOLIDAYS[schedIso(d)]) return { blocks:[[7,19,"off",SCHED_HOLIDAYS[schedIso(d)].toUpperCase()+" · CLOSED"]], book:0, lines:[SCHED_HOLIDAYS[schedIso(d)]+" — office closed."], sh:null };
+  if((p.hold||{})[schedIso(d)]) return { blocks:[[7,p.sh[0],"os",""],[p.sh[0],p.sh[1],"blk","NO NEW BOOKINGS · "+p.hold[schedIso(d)].toUpperCase()],[p.sh[1],19,"os",""]], book:0, lines:[p.hold[schedIso(d)]+" — no new appointments today."], sh:p.sh };
+  if(p.days.indexOf(dow) < 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
+  if((p.off||[]).indexOf(schedIso(d)) >= 0) return { blocks:[[7,19,"off","DAY OFF"]], book:0, lines:["Day off."], sh:null };
+  if(SCHED_DAY_EVENTS[schedIso(d)]) return schedEventPlan(p, d, SCHED_DAY_EVENTS[schedIso(d)]);
+  const blocks=[], lines=[]; let sh, book;
+  const mt = schedMtg(p, d), isM = !!mt, endCap = mt && mt.end;
+  if(dow === p.ride){
+    const tech = p.rot[wk];
+    if(isM) blocks.push([mt.at,9,"blk",mt.label]);
+    if(p.crew === "day"){
+      sh=[isM ? mt.at : 7,16]; blocks.push([isM ? 9 : 7,13.5,"ride","TECH RIDE · "+tech]); blocks.push([14,16,"after","Open · after ride"]);
+      lines.push(isM ? mt.text+", then meet <b>"+esc(tech)+"</b> for the ride-along until 1:30." : "Tech ride-along with <b>"+esc(tech)+"</b> — meet at 7:00, ride until 1:30.", "2:00–4:00 appointment: revisit or tech flip.");
+      book = 1;
+    } else {
+      const fin = endCap || 18;
+      sh=[isM ? mt.at : 10, fin]; blocks.push([10,15.5,"ride","TECH RIDE · "+tech]);
+      if(isM) lines.push(mt.text+".");
+      lines.push("Tech ride-along with <b>"+esc(tech)+"</b> — meet at 10:00, ride until 3:30.");
+      if(fin > 16){ blocks.push([16,18,"after","Open · after ride"]); lines.push("4:00–6:00 appointment: revisit or tech flip."); book = 1; }
+      else { lines.push("Your day ends at "+schedClock(fin)+" — no appointment after the ride."); book = 0; }
+    }
+  } else {
+    const ooHere = p.oo[0] === dow && (p.ooSkip || []).indexOf(schedIso(d)) < 0;   /* ooSkip: dates with no One on One (D-84) */
+    if(isM && mt.at === 7){
+      /* 7:00 training: day runs 7:00–4:00 for everyone */
+      sh=[7, endCap || 16]; blocks.push([7,9,"blk",mt.label]); lines.push(mt.text+". Your day runs 7:00–"+schedClock(sh[1])+".");
+      if(ooHere && Math.floor(p.oo[1])===9){ blocks.push([9,10,"blk","ONE ON ONE WITH GEOFF 9:00"]); }
+      if(ooHere) lines.push("One on One with Geoff at "+ooT(p.oo[1])+".");
+      let open = 0;
+      for(let s=10; s<sh[1]; s+=2){
+        if(ooHere && Math.floor(p.oo[1])===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
+        blocks.push([s,Math.min(s+2,sh[1]),"open","Open"]); open++;
+      }
+      book = Math.min(open, p.cap);
+      if(sh[0] > 7) blocks.unshift([7,sh[0],"os",""]);
+      if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
+      return { blocks, book, lines, sh };
+    }
+    if(isM && mt.pm){
+      sh = p.sh; lines.push(mt.text+".");
+      if(ooHere) lines.push("One on One with Geoff at "+ooT(p.oo[1])+".");
+      let open = 0;
+      const slot = s => {
+        if(ooHere && s===8 && (Math.floor(p.oo[1])===8 || Math.floor(p.oo[1])===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+ooT(p.oo[1])+""]); return; }
+        if(ooHere && Math.floor(p.oo[1])===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); return; }
+        if(ooHere && Math.floor(p.oo[1])===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); return; }
+        blocks.push([s,s+2,"open","Open"]); open++;
+      };
+      for(let s=sh[0]; s+2<=mt.at; s+=2) slot(s);
+      blocks.push([mt.at,mt.to,"blk",mt.label]);
+      for(let s=mt.to; s+2<=sh[1]; s+=2) slot(s);
+      book = Math.min(open, p.cap);
+      if(sh[0] > 7) blocks.unshift([7,sh[0],"os",""]);
+      if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
+      return { blocks, book, lines, sh };
+    }
+    sh = (isM && p.flex) ? [8,16] : p.sh;
+    if(isM && p.flex) lines.push("Early shift today: 8–4 for the "+(mt.training ? "training" : "sales meeting")+".");
+    if(isM) lines.push(mt.text+".");
+    if(ooHere) lines.push("One on One with Geoff at "+ooT(p.oo[1])+".");
+    let open = 0;
+    for(let s=sh[0]; s<sh[1]; s+=2){
+      if(s===8 && isM){ blocks.push([8,10,"blk",(ooHere && Math.floor(p.oo[1])===9) ? mt.label+" + ONE ON ONE 9:00" : mt.label]); continue; }
+      if(ooHere && s===8 && (Math.floor(p.oo[1])===8 || Math.floor(p.oo[1])===9)){ blocks.push([8,10,"blk","ONE ON ONE WITH GEOFF "+ooT(p.oo[1])+""]); continue; }
+      if(ooHere && Math.floor(p.oo[1])===10 && s===10){ blocks.push([10,12,"blk","ONE ON ONE WITH GEOFF 10:00"]); continue; }
+      if(ooHere && Math.floor(p.oo[1])===10 && s===8){ blocks.push([8,10,"blk","No booking · One on One at 10"]); continue; }
+      blocks.push([s,s+2,"open","Open"]); open++;
+    }
+    book = Math.min(open, p.cap);
+    if(!lines.length) lines.push("Full selling day.");
+  }
+  if(sh[0] > 7) blocks.unshift([7,sh[0],"os",""]);
+  if(sh[1] < 19) blocks.unshift([sh[1],19,"os",""]);
+  return { blocks, book, lines, sh };
+}
+
+/* Effective-dated schedule changes: the latest eff entry whose "from" is on or before the day wins. */
+function schedFor(p, d){ const iso = schedIso(d); let out = p;
+  (p.eff || []).filter(e => e.from <= iso).sort((a,b) => a.from < b.from ? -1 : 1).forEach(e => { out = Object.assign({}, out, e); });
+  return out; }
+/* Week cell text in master-packet terms: ● selling, R tech ride, MTG / One on One, – off. */
+function schedPacketCell(p, d){
+  const pl = schedPlan(schedFor(p, d), d);
+  if(!pl.sh) return { kind:"off", text:"–", sub: pl.blocks[0] && pl.blocks[0][3] !== "DAY OFF" ? pl.blocks[0][3] : "", book:0 };
+  if(pl.blocks.some(b => /^NO NEW BOOKINGS/.test(b[3]))) return { kind:"meet", text:"HOLD", sub:"no new appts", book:0 };
+  const parts = [];
+  pl.blocks.forEach(b => { const t = b[3];
+    if(b[2] === "ride") parts.push("R " + t.replace("TECH RIDE · ",""));
+    else if(/ \+ ONE ON ONE 9:00$/.test(t)) parts.push(t.indexOf("TRAINING") === 0 ? "TRN 8:00" : "MTG 8:00", "One on One 9:00");
+    else if(t === "SALES MEETING 8:00") parts.push("MTG 8:00");
+    else if(t.indexOf("SALES MEETING ") === 0) parts.push("MTG " + t.slice(14, t.indexOf("–")));
+    else if(t.indexOf("TRAINING ") === 0) parts.push("TRN " + t.slice(9, t.indexOf("–")));
+    else if(t.indexOf("TOWN HALL ") === 0) parts.push("TOWN HALL");
+    else if(t.indexOf("ONE ON ONE WITH GEOFF ") === 0) parts.push("One on One " + t.replace("ONE ON ONE WITH GEOFF ",""));
+  });
+  const early = pl.sh[0] === 8 && pl.sh[1] === 16 && schedFor(p, d).crew === "eve";
+  const kind = parts.some(x => x[0] === "R") ? "ride" : parts.length ? "meet" : "sell";
+  return { kind, text: parts.length ? parts.join(" + ") : "●", sub: early ? "(8–4)" : "", book: pl.book };
+}
+const schedAdd = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+const schedSun = d => schedAdd(d, -d.getDay());
+const schedMd = d => (d.getMonth()+1) + "/" + d.getDate();
+function schedToday(){ const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+function schedRenderJump(){
+  const el = $("schedJump"); if(!el) return;
+  const s0 = schedSun(schedToday()), cs = schedSun(schedDate).getTime();
+  el.innerHTML = [0,1,2,3].map(i => { const s = schedAdd(s0, 7*i);
+    return `<button type="button" data-w="${i}" class="${s.getTime()===cs?"on":""}">${i===0?"This week":i===1?"Next week":"Week of "+schedMd(s)}</button>`; }).join("");
+  el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { schedDate = schedAdd(schedSun(schedToday()), 7*Number(b.dataset.w)); renderSchedule(); }));
+}
+function schedBars(pl){
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  const bl = [];
+  pl.blocks.forEach(b => { if(/ \+ ONE ON ONE 9:00$/.test(b[3])){ bl.push([b[0],9,b[2],b[3].indexOf("TRAINING") === 0 ? "TRAINING 8:00" : "MTG 8:00"], [9,b[1],b[2],"ONE ON ONE 9:00"]); } else bl.push(b); });
+  return bl.map(b => `<div class="sb ${b[2]}" style="left:calc(${pct(b[0])} + 2px);width:calc(${((b[1]-b[0])/12*100).toFixed(3)}% - 4px)">${esc(b[3])}</div>`).join("");
+}
+function schedAxis(){
+  const pct = h => ((h-7)/12*100).toFixed(3) + "%";
+  return [7,9,11,13,15,17,19].map(h => `<span style="left:${pct(h)}">${h>12?h-12:h}${h>=12?"p":"a"}</span>`).join("");
+}
+function renderScheduleWeek(p){
+  const s = schedSun(schedDate), todayT = schedToday().getTime();
+  $("schedDate").textContent = "Week of Sun " + schedMd(s) + " – Sat " + schedMd(schedAdd(s,6));
+  if(schedAdd(s,6) < SCHED_ANCHOR){ setBody("schedBody", '<div class="soon">This schedule starts the week of Sun 9/27/26.</div>'); return; }
+  let head = "", row = "", total = 0;
+  for(let i=0;i<7;i++){ const d = schedAdd(s,i), isT = d.getTime() === todayT;
+    head += `<th class="${isT?"today":""}">${DAY_NAMES[i].slice(0,3)}<span>${schedMd(d)}</span></th>`;
+    if(d < SCHED_ANCHOR){ row += `<td><div class="sched-cell off">–<small>Before new schedule</small></div></td>`; continue; }
+    const c = schedPacketCell(p, d); total += c.book;
+    const main = c.kind === "sell" ? `<span class="dot">●</span>` : esc(c.text).replace(/ \+ /g, "<br>");
+    const extra = c.kind === "off" ? (c.sub ? `<small>${esc(c.sub)}</small>` : "") : `${c.sub ? `<small>${esc(c.sub)}</small>` : ""}<span class="slots">${c.book} slot${c.book===1?"":"s"}</span>`;
+    row += c.kind === "off" ? `<td><div class="sched-cell off${isT?" today":""}">${main}${extra}</div></td>`
+      : `<td><div class="sched-cell ${c.kind}${isT?" today":""}" role="button" tabindex="0" data-i="${i}" aria-label="Open ${DAY_NAMES[i]} ${schedMd(d)}">${main}${extra}</div></td>`;
+  }
+  const pe = schedFor(p, schedAdd(s,3) < SCHED_ANCHOR ? SCHED_ANCHOR : schedAdd(s,3));
+  const techs = pe.techs.length ? pe.techs.map(t => t[1] ? `<b>${esc(t[0])}</b>` : esc(t[0])).join(", ") : "Overflow and unpaired leads";
+  setBody("schedBody",
+    `<table class="sched-wkt"><thead><tr>${head}</tr></thead><tbody><tr>${row}</tr></tbody></table>
+     <div class="sched-legend"><span><i style="border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.1)"></i>● Selling</span><span><i style="border-color:rgba(59,130,246,.75);background:rgba(59,130,246,.3)"></i>R = tech ride</span><span><i style="border-color:rgba(201,125,16,.7);background:rgba(201,125,16,.25)"></i>Meeting / One on One</span><span>– Off · tap a day to open it</span></div>
+     <div class="sched-plan"><div class="metric" style="min-width:110px"><strong>${total}</strong><span>Consults bookable this week</span></div>
+       <div class="sched-techs">Shift ${schedClock(pe.sh[0])}–${schedClock(pe.sh[1])} · Rotation week ${schedWeek(schedAdd(s,3))+1}<br>Paired techs (bold = primary): ${techs}</div></div>${schedOverlay(schedIso(s), schedIso(schedAdd(s,6)))}`);
+  const body = $("schedBody");
+  if(body) body.querySelectorAll(".sched-cell[data-i]").forEach(el => {
+    const go = () => { schedDate = schedAdd(s, Number(el.dataset.i)); schedSetView("day"); };
+    el.addEventListener("click", go);
+    el.addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); } });
+  });
+}
+function schedSetView(v){
+  schedView = v;
+  [["schedDayBtn","day"],["schedWeekBtn","week"]].forEach(([id,val]) => { const b = $(id); b.className = v === val ? "on" : ""; b.setAttribute("aria-pressed", v === val ? "true" : "false"); });
+  $("schedTag").textContent = v === "week" ? "Planned week" : "Planned day";
+  $("schedPrev").setAttribute("aria-label", v === "week" ? "Previous week" : "Previous day");
+  $("schedNext").setAttribute("aria-label", v === "week" ? "Next week" : "Next day");
+  renderSchedule();
+}
+
+function renderSchedule(){
+  schedRenderJump();
+  const d = schedDate, who = viewRep;
+  $("schedDate").textContent = DAY_NAMES[d.getDay()] + " " + (d.getMonth()+1) + "/" + d.getDate();
+  const p = who && who.role === "HCA" ? HCA_SCHEDULE[who.full] : null;
+  if(!p){ setBody("schedBody", '<div class="soon">No schedule on file for this rep.</div>'); return; }
+  if(schedView === "week"){ renderScheduleWeek(p); return; }
+  if(d < SCHED_ANCHOR){ setBody("schedBody", '<div class="soon">This schedule starts the week of Sun 9/27/26.</div>'); return; }
+  const pl = schedPlan(schedFor(p, d), d);
+  const axis = schedAxis(), bars = schedBars(pl);
+  const dow = d.getDay();
+  const techs = !pl.sh ? "—" : !schedFor(p, d).techs.length ? "Overflow and unpaired leads."
+    : (schedFor(p, d).techs.filter(t => (TECH_DAYS[t[0]]||[]).indexOf(dow) >= 0).map(t => `<b>${esc(t[0])}</b> ${t[1] ? "(primary)" : "(secondary)"}`).join(" · ") || "None of your paired techs work today.");
+  const shiftTxt = pl.sh ? `On shift ${schedClock(pl.sh[0])}–${schedClock(pl.sh[1])} · ` : "";
+  setBody("schedBody",
+    `<div class="sched-axis">${axis}</div>
+     <div class="sched-track">${bars}</div>
+     <div class="sched-plan">
+       <div class="sched-lines">${pl.lines.join("<br>")}</div>
+       <div class="metric" style="min-width:110px"><strong>${pl.book}</strong><span>Consults bookable</span></div>
+       <div class="sched-techs">${shiftTxt}Rotation week ${schedWeek(d)+1}<br>Your techs working: ${techs}</div>
+     </div>${schedOverlay(schedIso(d), schedIso(d))}`);
+}
+function schedShift(n){ const k = schedView === "week" ? 7*n : n; schedDate = new Date(schedDate.getFullYear(), schedDate.getMonth(), schedDate.getDate()+k); renderSchedule(); }
+$("schedPrev").addEventListener("click", () => schedShift(-1));
+$("schedNext").addEventListener("click", () => schedShift(1));
+$("schedToday").addEventListener("click", () => { const t=new Date(); schedDate=new Date(t.getFullYear(), t.getMonth(), t.getDate()); renderSchedule(); });
+$("schedDayBtn").addEventListener("click", () => schedSetView("day"));
+$("schedWeekBtn").addEventListener("click", () => schedSetView("week"));
+
+/* ===== INSTALL PROJECTS (pilot): sold + backlog/pipeline jobs -> Daily Activities list + My Schedule overlay =====
+   All logic lives in js/install-projects.js (shared with the sandbox preview). Reads the sold tracker node the CRM
+   already loads; backlog/pipeline jobs come from soldData.pipeline when the sync provides it.
+   PILOT: only the listed HCAs (or an admin viewing them) see the new list, overlay and link. Everyone else is unchanged. */
+const PILOT_HCAS = ["Samir Khoury"];
+function pacificTodayIso(){ return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+/* 2026-11-05 (Geoff 19:56 PT "fine for Google account"): install projects, upcoming installs and the schedule
+   overlay are on for every HCA; customer cards need Google sign-in for everyone. PILOT_HCAS is now unused
+   (kept for rollback). */
+const PROJECTS_FOR_ALL = true;
+function pilotOn(who){ return !!who && (PROJECTS_FOR_ALL || PILOT_HCAS.some(n => norm(n) === norm(who.full))); }
+/* 2026-11-06 (Geoff 06:47 PT, REQUEST 2007): the My Numbers page is open to every roster HCA, so every HCA gets the link. */
+const NUMBERS_LINK_FOR_ALL = true;
+function numLinkOn(who){ return !!who && (NUMBERS_LINK_FOR_ALL || PILOT_HCAS.some(n => norm(n) === norm(who.full))); }
+function soldJobsAll(){ return !soldData || !soldData.jobs ? [] : (Array.isArray(soldData.jobs) ? soldData.jobs : Object.values(soldData.jobs)); }
+function pipelineAll(){ const p = soldData && soldData.pipeline; return !p ? [] : (Array.isArray(p) ? p : Object.values(p)); }
+function renderProjects(who){
+  const on = pilotOn(who), box = $("projList"), lk = $("actCompleteLink"), pick = $("projPick");
+  if(box) box.style.display = on ? "" : "none";
+  if(lk) lk.style.display = on ? "" : "none";
+  if(pick) pick.style.display = on ? "" : "none";
+  if(!on || !box) return;
+  if(!isGoogle()){ box.innerHTML = lockedCardHtml("your projects"); setProjectChoice(pick, lk, []); return; }
+  setProjectChoice(pick, lk, CMHProjects.options(soldJobsAll(), pipelineAll(), who, pacificTodayIso()));
+  box.innerHTML = CMHProjects.listHtml(soldJobsAll(), pipelineAll(), who, pacificTodayIso());
+}
+/* "Project completion" stays greyed out until a project is chosen; the choice carries the job into the page. */
+function setProjectChoice(pick, lk, opts){
+  if(!pick || !lk) return;
+  /* D-11 (2026-11-07): keep the HCA's chosen project across re-renders. The sold tracker refreshes on every sync
+     write and used to rebuild the list and reset the choice. Skip the rebuild when nothing changed; otherwise
+     restore the choice by its link. */
+  const html = CMHProjects.optionsHtml(opts);
+  const prev = pick.dataset.lk && pick.value !== "" ? pick.dataset.lk : "";
+  if(pick.dataset.html !== html){
+    pick.innerHTML = html; pick.dataset.html = html;
+    const k = prev ? opts.findIndex(o => o.link === prev) : -1;
+    pick.value = k >= 0 ? String(k) : "";
+  }
+  pick.disabled = !opts.length;
+  const sync = () => {
+    const o = opts[Number(pick.value)];
+    if(pick.value !== "" && o){ lk.href = o.link; pick.dataset.lk = o.link; lk.removeAttribute("aria-disabled"); lk.removeAttribute("tabindex"); }
+    else { lk.href = "#"; pick.dataset.lk = ""; lk.setAttribute("aria-disabled", "true"); lk.setAttribute("tabindex", "-1"); }
+  };
+  pick.onchange = sync; sync();
+}
+function schedOverlay(fromIso, toIso){
+  const who = viewRep; if(!pilotOn(who)) return "";
+  if(!isGoogle()) return '<div class="sched-ov">' + lockedCardHtml("your sold installs") + "</div>";
+  return CMHProjects.overlayHtml(soldJobsAll(), pipelineAll(), who, fromIso, toIso, pacificTodayIso());
+}
+/* ===== end INSTALL PROJECTS ===== */
+
+
+/* ===== MY NUMBERS =====
+   Source: "HCA Numbers Feed" Apps Script web app (apps-script/hca-numbers.gs). It reads the morning BI exports in Drive
+   (Leaderboard Install Mix + Revenue, All Leads, All Installs) and serves month-to-date per-HCA counts as JSON.
+   Read-only: nothing here writes to Firebase. Same login as the rest of the page (PIN or Google).
+   Me view rotates to the Team board every 12 s; a tap on Me/Team or the pause button stops the rotation;
+   it also holds while the tab is hidden and never auto-rotates with reduced motion. */
+const NUMBERS_EXEC = "";   // paste the /exec URL after deploying hca-numbers.gs
+/* 2026-11-05 (claude-16, Geoff "do what's logical"): while NUMBERS_EXEC is empty, the card opens the live
+   My Numbers page in the HCA Recap App (Google sign-in; pilot gate there too). No numbers are fetched here. */
+const MY_NUMBERS_URL = "https://script.google.com/a/macros/cmheating.com/s/AKfycbyfmH8LfTOL-c-MdIj-PaTkqQR2yEIcJSOOBHhTJl8_NUBrGoH6nazFFsbt-IHbRt5M/exec?view=numbers";
+function numLinkMode(on){
+  ["numMe","numTeam","numPause"].forEach(id => { const b = $(id); if(b) b.parentElement.style.display = on ? "none" : ""; });
+  const r = $("numRotBar"); if(r && r.parentElement) r.parentElement.style.display = on ? "none" : "";
+}
+const NUM_DWELL = 12000;
+let numData = null, numErr = "", numView = "me", numPaused = false, numT0 = 0, numTimer = null, numSort = "l2c";
+const NUM_REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function numFind(who){
+  if(!numData || !who) return null;
+  const hs = numData.hcas || [];
+  return hs.find(h => norm(h.name) === norm(who.full)) || hs.find(h => lastName(h.name) === lastName(who.full)) || null;
+}
+function numOrd(n){ const s=["th","st","nd","rd"], v=n%100; return n + (s[(v-20)%10] || s[v] || s[0]); }
+/* 2026-11-10 (claude-16, Geoff 06:03): leader badges from the numbers feed (true/false only, no dollars).
+   Shown as text beside the name, each with an aria-label, so meaning never rests on the emoji alone. */
+function numBadges(h){
+  if(!h) return "";
+  const b = [];
+  if(h.badgeRentals) b.push('<span class="num-badge" role="img" aria-label="Most rentals sold" title="Most rentals sold">\u{1F451}</span>');
+  if(h.badgeL2c) b.push('<span class="num-badge" role="img" aria-label="Best lead to cash, 3 or more leads" title="Best lead to cash (3+ leads)">\u{1F525}</span>');
+  if(h.badgeRev) b.push('<span class="num-badge" role="img" aria-label="Most installed rental revenue" title="Most installed rental revenue">\u{1F4B0}</span>');
+  return b.length ? " " + b.join("") : "";
+}
+function numShort(n){ const u = USERS.find(x => norm(x.full) === norm(n)); return u ? u.short : String(n).split(" ")[0]; }
+function numDate(iso){ if(!iso) return "—"; const [y,m,d] = iso.split("-").map(Number); const dt = new Date(y, m-1, d); return DAY_NAMES[dt.getDay()].slice(0,3) + " " + m + "/" + d; }
+function numKpi(k, v, d, fill, mark, cls){
+  return `<div class="num-kpi ${cls||""}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${d}</div>` +
+    (fill != null ? `<div class="num-bar"><i style="width:${Math.max(0,Math.min(fill,100))}%"></i>${mark != null ? `<b style="left:${Math.max(0,Math.min(mark,100))}%"></b>` : ""}</div>` : "") + `</div>`;
+}
+function numVs(a, b){ if(b == null) return ""; const d = Math.round((a-b)*10)/10; return `<span class="${d>=0?"num-up":"num-dn"}">${d>=0?"▲":"▼"} ${Math.abs(d)} pts</span> vs team ${esc(b)}%`; }
+function numTopFlip(){
+  const hs = (numData.hcas || []).filter(h => h.tfLeads > 0);
+  if(!hs.length) return "No tech-flip installs yet this month.";
+  const t = [...hs].sort((a,b) => b.tfInstalls - a.tfInstalls || b.tfL2c - a.tfL2c)[0];
+  return `${esc(numShort(t.name))}: ${t.tfInstalls} of ${t.tfLeads} tech flips installed (${t.tfL2c}%). Most installs; a tie goes to the higher rate.`;
+}
+function numRenderMe(){
+  const who = viewRep, me = numFind(who), T = numData.team || {}, hs = numData.hcas || [], n = hs.length;
+  $("numsTitle").innerHTML = "My Numbers" + numBadges(me);
+  if(!me){ setBody("numsBody", `<div class="soon">No BI numbers for ${esc(who.full)} this month yet.</div>`); return; }
+  const rk = [...hs].sort((a,b) => b.l2c - a.l2c).findIndex(h => h.name === me.name) + 1;
+  const tr = [...hs].sort((a,b) => b.tfL2c - a.tfL2c).findIndex(h => h.name === me.name) + 1;
+  const sales = numData.salesOk && me.sold != null;
+  const srk = sales ? [...new Set(hs.map(h => h.sold || 0))].sort((a,b) => b-a).indexOf(me.sold) + 1 : 0;
+  const sdp = sales && me.sold ? Math.round(me.sameDay / me.sold * 100) : 0, tsdp = sales && T.sold ? Math.round(T.sameDay / T.sold * 100) : 0;
+  setBody("numsBody", `<div class="num-hero">
+    ${sales ? numKpi("Sold this month", me.sold, `${me.sameDay} same-day · ${me.follow} follow-up · ${numOrd(srk)} of ${n}<br>Team ${esc(T.sold)} sold`, null) : numKpi("Sold this month", "—", "Sales numbers unavailable right now", null, null, "pending")}
+    ${sales ? numKpi("Same-day close", sdp + "%", `${me.sameDay} of ${me.sold} sold on the first visit<br>team ${tsdp}%`, sdp, tsdp) : ""}
+    ${numKpi("Lead → cash", me.l2c + "%", `${me.installs} installs / ${me.leads} leads · ${numOrd(rk)} of ${n}<br>${numVs(me.l2c, T.l2c)}${me.l2cRev != null ? "<br>BI revenue page shows " + esc(me.l2cRev) + "%" : ""}`, me.l2c, T.l2c)}
+    ${numKpi("Tech flips", `${me.tfInstalls} / ${me.tfLeads}`, `installed / tech-flip consults · ${me.tfL2c}% · ${numOrd(tr)} of ${n}<br>${numVs(me.tfL2c, T.tfL2c)}`, me.tfL2c, T.tfL2c)}
+    ${numKpi("Rentals installed", me.rentalInstalled, `${me.rentalMix}% of my installs · team ${esc(T.rentalMix)}%`, me.rentalMix, T.rentalMix)}
+    ${me.rentalSalesMtd != null ? numKpi("Rentals sold", me.rentalSalesMtd, `this month · ${me.rentalSalesYtd} since Aug 1`, null) : numKpi("Rentals sold", "—", "Coming from the Sold Tracker (not in BI)", null, null, "pending")}
+    ${numKpi("Self-gen", `${me.sgInstalls} / ${me.sgLeads}`, `installed / self-gen leads · team ${T.sgInstalls} / ${T.sgLeads}`, null)}
+    ${numKpi("Marketed L2C", me.mktL2c + "%", `Inbound + webform leads${T.mktL2c != null ? " · team " + esc(T.mktL2c) + "%" : ""}`, me.mktL2c, T.mktL2c)}
+  </div>
+  <div class="num-calls">
+    <div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div>
+    <div class="num-call pending"><b>Top tech flipper (service tech)</b>Coming once BI adds the tech who generated each lead.</div>
+  </div>${numLinkHtml(who)}`);
+}
+function numRenderTeam(){
+  $("numsTitle").textContent = "Team Board";
+  const hs = numData.hcas || [], T = numData.team || {}, me = numFind(viewRep);
+  const cols = [["name","HCA"],...(numData.salesOk ? [["sold","Sold"],["sameDay","Same day"]] : []),["l2c","L2C %"],["installs","Inst"],["leads","Leads"],["tfInstalls","TF inst"],["tfL2c","TF L2C"],["rentalSalesMtd","Rentals"],["sgInstalls","SG inst"]];
+  const rows = [...hs].sort((a,b) => numSort === "name" ? numShort(a.name).localeCompare(numShort(b.name)) : (b[numSort]||0) - (a[numSort]||0));
+  setBody("numsBody", `<div class="num-tbl"><table><thead><tr>${cols.map(([k,l]) => `<th><button type="button" data-k="${k}">${l}${k===numSort?" ▾":""}</button></th>`).join("")}</tr></thead><tbody>
+    ${rows.map((h,i) => `<tr class="${me && h.name===me.name ? "me" : ""}"><td>${i+1}. ${esc(numShort(h.name))}${numBadges(h)}</td>${numData.salesOk ? `<td>${h.sold}</td><td>${h.sameDay}</td>` : ""}<td>${h.l2c}%</td><td>${h.installs}</td><td>${h.leads}</td><td>${h.tfInstalls}</td><td>${h.tfL2c}%</td><td>${h.rentalSalesMtd != null ? h.rentalSalesMtd : "—"} / ${h.rentalInstalled}</td><td>${h.sgInstalls}</td></tr>`).join("")}
+    <tr class="tot"><td>Team</td>${numData.salesOk ? `<td>${T.sold}</td><td>${T.sameDay}</td>` : ""}<td>${T.l2c}%</td><td>${T.installs}</td><td>${T.leads}</td><td>${T.tfInstalls}</td><td>${T.tfL2c}%</td><td>${T.rentalSalesMtd != null ? T.rentalSalesMtd : "—"} / ${T.rentalInstalled}</td><td>${T.sgInstalls}</td></tr></tbody></table></div>
+    <div class="num-legend">Rentals = sold / installed this month. \u{1F451} most rentals sold · \u{1F525} best lead to cash (3+ leads) · \u{1F4B0} most installed rental revenue. Ties share; none at zero.</div>
+    <div class="num-calls"><div class="num-call"><b>Top tech-flip closer</b>${numTopFlip()}</div></div>`);
+  $("numsBody").querySelectorAll("th button").forEach(b => b.addEventListener("click", () => { numSort = b.dataset.k; numHold(); numRenderTeam(); }));
+}
+function numShow(v){
+  numView = v;
+  [["numMe","me"],["numTeam","team"]].forEach(([id,val]) => { const b=$(id); b.classList.toggle("on", v===val); b.setAttribute("aria-pressed", v===val ? "true" : "false"); });
+  if(!numData || !viewRep || viewRep.role !== "HCA") return;
+  v === "me" ? numRenderMe() : numRenderTeam();
+  numT0 = performance.now();
+}
+function numHold(){ numPaused = true; const p=$("numPause"); p.classList.add("on"); p.setAttribute("aria-pressed","true"); $("numRotBar").style.width = "0"; }
+function numStop(){ if(numTimer){ clearInterval(numTimer); numTimer = null; } }
+function numStart(){
+  numStop();
+  if(NUM_REDUCED){ $("numRotBar").style.width = "0"; return; }
+  numT0 = performance.now();
+  numTimer = setInterval(() => {
+    if(numPaused || document.hidden || !numData){ numT0 = performance.now(); return; }
+    const p = (performance.now() - numT0) / NUM_DWELL;
+    $("numRotBar").style.width = Math.min(p*100, 100) + "%";
+    if(p >= 1) numShow(numView === "me" ? "team" : "me");
+  }, 250);
+}
+function numNote(){
+  const a = numData && numData.asOf;
+  $("numsNote").textContent = a ? `Month to date · installs & leads through ${numDate(a.dataThrough)} (BI runs a day behind, no weekend refresh)${numData.salesOk && a.salesUpdated ? " · sold updated " + a.salesUpdated : ""}` : "";
+}
+/* 2026-11-05: numbers come from cmh_sold_tracker/numbers (HCA Sold Tracker Sync, numbersFeed.js). Counts and
+   percentages only, no dollars or customer names, so they show on PIN and Google sessions alike. */
+let numSub = null, numFeedState = "";   // "" = not asked, "wait", "ok", "none"
+function numSubscribe(){
+  if(numSub) return;
+  numFeedState = "wait";
+  numSub = onValue(ref(db, DB_SOLD + "/numbers"), snap => {
+    const d = snap.val();
+    numData = d && d.ok && Array.isArray(d.hcas) ? d : null;
+    numFeedState = numData ? "ok" : "none";
+    if(viewRep && viewRep.role === "HCA") loadNumbersCard(viewRep);
+  }, err => { console.error("Numbers feed:", err); numFeedState = "none"; if(viewRep && viewRep.role === "HCA") loadNumbersCard(viewRep); });
+}
+function numLinkHtml(who){
+  return numLinkOn(who) ? `<a class="num-btn" href="${MY_NUMBERS_URL}" target="_blank" rel="noopener" style="margin-top:12px">Your full My Numbers page &rarr;</a>` : "";
+}
+/* D-98 preview (claude-16, 2026-11-15): the HCA's score card, read from Firebase cmh_hca_scorecard (copied nightly
+   from the scorecard file hca_ryg_status.json by the Mac job). Firebase rules let each HCA read only their own row;
+   Geoff (cmh_followup_roster/admins) reads any. Weights, colours and figures come from the data, never from this page. */
+let scoreDesign = null, scoreSeq = 0;
+async function loadScoreCard(who){
+  const el = $("scoreBlock"); if(!el) return;
+  const seq = ++scoreSeq;
+  el.hidden = true; el.innerHTML = "";
+  if(!who || who.role !== "HCA" || !who.email) return;
+  if(!isGoogle()){ el.hidden = false; el.innerHTML = '<div class="sc-note">Sign in with your @cmheating.com Google account to see your score.</div>'; return; }
+  try{
+    if(!scoreDesign){ const d = await get(ref(db, "cmh_hca_scorecard/design")); scoreDesign = d.val() || {}; }
+    const snap = await get(ref(db, "cmh_hca_scorecard/hcas/" + emailKeyOf(who.email)));
+    if(seq !== scoreSeq) return;
+    const r = snap.val();
+    el.innerHTML = r ? scoreHtml(r, scoreDesign) : '<div class="sc-note">No score yet. It updates every night after 9 PM.</div>';
+    el.hidden = false;
+  }catch(e){
+    if(seq !== scoreSeq) return;
+    console.error("Score card:", e);
+    el.hidden = false; el.innerHTML = '<div class="sc-note">This score is visible to the HCA and Geoff only.</div>';
+  }
+}
+function scoreHtml(r, d){
+  const w = (d && d.weights) || {};
+  if(w.driving > 0) return '<div class="sc-note"><b>Your score is being recalculated.</b> The scoring changed on November 15; it returns after tonight\'s run.</div>';
+  const band = {green:"Green", yellow:"Yellow", red:"Red"}[r.overall] || "Not scored yet";
+  const order = (d && d.order) || Object.keys(r.pillars || {});
+  const rows = order.map(k => {
+    const p = (r.pillars || {})[k]; if(!p) return "";
+    return `<div class="sc-p"><span class="sc-dot ${esc(p.color || "none")}"></span><span class="sc-pl">${esc(p.label || k)}${p.provisional ? '<span class="sc-prov">provisional</span>' : ""}${p.sub ? `<small>${esc(p.sub)}</small>` : ""}</span><span class="sc-pv">${esc(p.figure ?? "–")}</span><span class="sc-pw">${esc(p.weight)} pts</span></div>`;
+  }).join("");
+  return `<div class="sc-top"><div class="sc-ring ${esc(r.overall || "none")}">${r.score == null ? "–" : esc(r.score)}</div>` +
+    `<div><div class="sc-band">${esc(band)}</div><div class="sc-sub">Score out of 100 · updated ${esc(r.computedAtText || "")}</div></div></div>` +
+    rows + (r.coachLabel ? `<div class="sc-coach">Coach focus: <b>${esc(r.coachLabel)}</b></div>` : "") +
+    `<div class="sc-note" style="margin-top:8px"><a href="${MY_NUMBERS_URL}" target="_blank" rel="noopener" style="color:#14b8a6">How the score is figured &rarr;</a></div>`;
+}
+function loadNumbersCard(who){
+  if(!NUMBERS_EXEC){
+    if(!numFeedState){ numSubscribe(); setBody("numsBody", '<div class="loading">Loading your numbers…</div>'); return; }
+    if(numFeedState === "wait"){ setBody("numsBody", '<div class="loading">Loading your numbers…</div>'); return; }
+    if(numFeedState === "ok"){
+      numLinkMode(false); numNote(); numShow(numView);
+      if(!numTimer) numStart(); return;
+    }
+    numLinkMode(true);
+    $("numsTitle").textContent = "My Numbers";
+    if(numLinkOn(who)){
+      setBody("numsBody", `<div class="num-open"><p>Your month to date, updated every morning after the BI export.</p>
+        <ul><li>Team sales by day, same-day vs follow-up</li><li>Your sold, same-day %, installs, leads and lead to cash, with your rank</li><li>Rentals, month and year to date</li></ul>
+        <a class="num-btn" href="${MY_NUMBERS_URL}" target="_blank" rel="noopener">Open My Numbers &rarr;</a></div>`);
+      $("numsNote").textContent = "Opens in a new tab. Sign in with your @cmheating.com Google account.";
+    } else {
+      setBody("numsBody", '<div class="soon">My Numbers is in a pilot. It comes to everyone after the pilot.</div>');
+      $("numsNote").textContent = "";
+    }
+    return;
+  }
+  if(numData){ numNote(); numShow(numView); if(!numTimer) numStart(); return; }
+  if(numErr){ setBody("numsBody", `<div class="soon">${esc(numErr)}</div>`); return; }
+  setBody("numsBody", '<div class="loading">Loading your numbers…</div>');
+  fetch(NUMBERS_EXEC + "?v=" + Date.now())
+    .then(r => r.json())
+    .then(d => {
+      if(!d || !d.ok){ numErr = "BI numbers aren't available yet."; setBody("numsBody", `<div class="soon">${esc(numErr)}</div>`); return; }
+      numData = d; numNote(); numShow("me"); numStart();
+    })
+    .catch(err => { console.error("Numbers:", err); numErr = ""; setBody("numsBody", '<div class="soon">Numbers unavailable right now. Try again in a minute.</div>'); });
+}
+$("numMe").addEventListener("click", () => { numHold(); numShow("me"); });
+$("numTeam").addEventListener("click", () => { numHold(); numShow("team"); });
+$("numPause").addEventListener("click", () => {
+  numPaused = !numPaused; const p=$("numPause"); p.classList.toggle("on", numPaused); p.setAttribute("aria-pressed", numPaused ? "true" : "false");
+  numT0 = performance.now(); if(numPaused) $("numRotBar").style.width = "0";
+});
+/* ===== end MY NUMBERS ===== */
+
+/* CLEARANCE: shared count. */
+function loadClearanceCard(){
+  onValue(ref(db, DB_CLEARANCE), snap => {
+    const d = snap.val() || {};
+    const units = Array.isArray(d.units) ? d.units : (d.units ? Object.values(d.units) : []);
+    const avail = units.filter(u => u.status === "Available").length;
+    setBody("clearanceBody", `<div class="metrics">${metric(avail,"Available","orange")}${metric(units.length,"Total units","orange")}</div>`);
+  }, err => setBody("clearanceBody", '<div class="soon">Clearance unavailable.</div>'));
+}
+</script>
+</body>
+</html>
