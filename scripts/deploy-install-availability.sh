@@ -3,6 +3,8 @@
 # Runbook steps 5-6 of INSTALL-AVAILABILITY-SECURITY.md. Expects firebase-hosting-install/ already built
 # (step 1-4: live page as base, intended edits only, diff read). claude-16 2026-11-11, Geoff "Option 2".
 set -euo pipefail
+# D-48 approval gate: CMH_CARD=D-NN (approved) or OVERRIDE='reason'.
+"$HOME/bin/card-gate" "Install Availability live deploy" || exit 3
 KEY="$HOME/.config/cmh/ia-hosting-deployer.json"
 cd "$(dirname "$0")/.."
 [[ -f "$KEY" ]] || { echo "Missing key $KEY (see INSTALL-AVAILABILITY-SECURITY.md, Deploy credentials)"; exit 2; }
