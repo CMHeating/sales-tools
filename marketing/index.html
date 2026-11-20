@@ -126,7 +126,7 @@ button,input,select,textarea{font:inherit;color:inherit}
   <section class="title">
     <div class="eyebrow">HCA Tools</div>
     <h1>Marketing Hub</h1>
-    <p>What customers are seeing from CM Heating right now, so you can recognize it and quote it at the kitchen table.</p>
+    <p>No marketing mailer is running right now. When the next campaign drops, its offers and postcard show here.</p>
   </section>
 
   <div class="grid2">
@@ -143,17 +143,7 @@ button,input,select,textarea{font:inherit;color:inherit}
     </div>
   </div>
 
-  <div class="camp">
-    <div><h2 id="campName">Campaign</h2><div class="meta" id="campMeta"></div></div>
-    <span class="pill" id="campState"></span>
-  </div>
-  <div class="offers" id="offers"></div>
-
-  <div class="glabel">The mailer</div>
-  <div class="cards">
-    <div><a class="shot" href="fall-2026-front.jpg" target="_blank" rel="noopener"><img src="fall-2026-front.jpg" alt="Pre-Season Fall Savings postcard, front" loading="lazy"></a><div class="cap">Front &middot; tap to open full size</div></div>
-    <div><a class="shot" href="fall-2026-back.jpg" target="_blank" rel="noopener"><img src="fall-2026-back.jpg" alt="Pre-Season Fall Savings postcard, back" loading="lazy"></a><div class="cap">Back &middot; tap to open full size</div></div>
-  </div>
+  <!-- D-136 (2026-11-20): Fall 2026 mailer removed, all four coupons expired 10/31/2026. Restore from git history (commit before D-136) when a new campaign drops. -->
 
   <div class="grid2" style="margin-top:22px">
     <div class="card">
@@ -182,19 +172,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 <script>
 /* ===== EDIT HERE when a new campaign drops ===== */
 var HUB_URL = 'https://us-marketing-hub-pink.vercel.app/#creative';   // <-- paste the Marketing Hub link here (the link only, never the password)
-var CAMPAIGN = { name: 'Pre-Season Fall Savings', source: 'Mailer postcard + CMHeating.com', ends: '2026-10-31' };
-var OFFERS = [
-  { big: '$84.99', unit: 'per month', what: 'Any size furnace, Comfort Club',
-    items: ['Lifetime repair coverage', 'Annual tune-ups', 'Filters, no extra charge ever'], fine: 'With approved credit.',
-    alert: '<b>Check with Geoff.</b> The price book today shows <b>$87.49/mo</b> for this package (Ameristar Value 80% furnace). A request to put it back to $84.99 is waiting on Paul’s approval.' },
-  { big: 'FREE', unit: 'furnace', what: 'Cooling system + free furnace + free clean air upgrade', items: [], fine: 'Call for details. Some exclusions may apply.' },
-  { big: '$89', unit: '', what: 'Furnace tune-up & safety inspection', items: [], fine: 'Call for details. Some exclusions may apply.' },
-  { big: '$69 off', unit: '', what: 'Any electrical repair', items: ['+ Free electrical safety inspection'], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
-  { big: '$44.99', unit: 'per month', what: 'New water heater', items: ['+ Free plumbing inspection'], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
-  { big: '$50 off', unit: '', what: 'Any HVAC repair', items: [], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
-  { big: '$500 off', unit: '', what: 'Tankless water heater', items: ['+ Free plumbing inspection'], fine: 'Call for details. Cannot be combined.', expires: '2026-10-31' },
-  { big: 'FREE', unit: '', what: 'Estimates', items: [], fine: '' }
-];
 /* ================================================ */
 
 var $ = function(id){ return document.getElementById(id); };
@@ -215,24 +192,6 @@ function state(ends){
 var hub = $('hubBtn');
 if (/^https:\/\//.test(HUB_URL)) hub.href = HUB_URL;
 else { hub.setAttribute('aria-disabled', 'true'); hub.textContent = 'Link coming soon'; hub.removeAttribute('href'); }
-
-/* campaign */
-$('campName').textContent = CAMPAIGN.name;
-$('campMeta').textContent = CAMPAIGN.source + (CAMPAIGN.ends ? ' · through ' + pretty(CAMPAIGN.ends) : '');
-var cs = state(CAMPAIGN.ends); $('campState').className = 'pill ' + cs.cls; $('campState').textContent = cs.txt;
-
-/* offers */
-OFFERS.forEach(function(o, i){
-  var c = el('article', 'offer rise'); c.style.animationDelay = (0.05 + i * 0.04) + 's';
-  var big = el('div', 'big', o.big); if (o.unit) big.appendChild(el('small', '', o.unit)); c.appendChild(big);
-  c.appendChild(el('div', 'what', o.what));
-  if (o.items && o.items.length) { var ul = el('ul'); o.items.forEach(function(t){ ul.appendChild(el('li', '', t)); }); c.appendChild(ul); }
-  if (o.alert) { var a = el('div', 'alert'); a.innerHTML = o.alert; c.appendChild(a); }   // alert text is written in this file, never user input
-  var fine = (o.fine || '') + (o.expires ? ' Expires ' + pretty(o.expires) + '.' : '');
-  if (fine) c.appendChild(el('div', 'fine', fine.trim()));
-  if (o.expires) { var s = state(o.expires); if (s.cls !== 'live') { var p = el('span', 'pill state ' + s.cls, s.txt); c.insertBefore(p, c.firstChild); } if (s.cls === 'off') c.classList.add('expired'); }
-  $('offers').appendChild(c);
-});
 
 /* copy number */
 function toast(t){ var x = $('toast'); x.textContent = t; x.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(function(){ x.classList.remove('show'); }, 2200); }
