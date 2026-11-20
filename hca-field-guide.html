@@ -394,6 +394,7 @@ details div{margin-top:12px}
 .rb-bar{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-10px;background:inherit;padding:8px 0;z-index:1}
 .rb-bar button{font:600 15px system-ui,sans-serif;padding:8px 14px;border-radius:10px;border:1px solid rgba(127,127,127,.4);background:transparent;color:inherit}
 .rb-nav{display:flex;gap:8px}
+.rb-bar button:disabled{opacity:.35}
 #rb-body{color:var(--ink)}
 </style>
 </head>
@@ -626,18 +627,18 @@ Manager approval required before accounting is added.</div>
 
     <h3 class="hub-group">🏭 Manufacturer rebates — through Gensco</h3>
     <div class="rb-grid">
-      <button class="rb-tile t-success" data-rb="3" type="button"><span class="rb-ttl">Mitsubishi — Fall Rebate (Diamond Contractor)</span><span class="rb-sub">Dates: sold Sep 26 – Nov 25, 2026 ; installed and claimed by Dec…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Mitsubishi — Fall Rebate (Diamond Contractor) Dates: sold Sep 26 – Nov 25, 2026 ; installed and claimed by Dec 31, 2026 . $750 homeowner rebate on these outdoor units: MXZ2D20NL, MXZ3D24NL, MXZ4D30NL, MXZ3D36NL, MXZ5D42NL, MXZ2D20NLHZ, MXZ3D24NLHZ, MXZ3D30NLHZ. Extra $750 when one listed PAA coil is added to the job: PAA-AA24NL, PAA-BA24NL, PAA-BA30NL, PAA-BA36NL, PAA-BA42NL, PAA-CA36NL, PAA-CA42NL. With a branch box: $1,050 — MXZ3M36NL · $1,150 — MXZ3M48NL, MXZ3M60NL · $1,350 — MXZ3M36NLHZ, MXZ3M42NLHZ · $1,450 — MXZ3M48NLHZ, MXZ3M60NLHZ. How it&#x27;s paid: CM takes the rebate off the install price on the homeowner&#x27;s invoice (the invoice must show the discount) and files the claim on GenscoCustomer.com. Contractor incentive applies. Rules: homeowner sales only (no builder/contractor/commercial) · bought from Gensco inside the promotion window · R454B equipment only — R410A does not qualify · availability varies by branch. Source: Gensco Promotions — 2026 Fall Rebate flyer (dealer login). Checked Nov 19, 2026.</span></button>
-      <button class="rb-tile t-warning" data-rb="4" type="button"><span class="rb-ttl">American Standard — &quot;Set the Standard&quot; Fall 2026</span><span class="rb-sub">Sales closed Nov 15, 2026 — claims window only. Do not quote this…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">American Standard — &quot;Set the Standard&quot; Fall 2026 Sales closed Nov 15, 2026 — claims window only. Do not quote this on a new sale. Still open for jobs already sold Oct 1 – Nov 15: install by Dec 1, 2026 ; claims due Dec 9, 2026 . Ducted systems (outdoor unit + furnace or air handler): $850 Platinum 20 AccuComfort VS AC/HP (5A7V0, 5A6V0) · $700 Platinum 18 AccuComfort VS AC/HP (5A7V3, 5A6V8) — with S9V2, S9V2VS, S8V2C, Legacy Platinum 95 VS AUHM/ADHM, or air handler 5TAMX/5TEMC · $400 Gold 17 Multi-Speed AC/HP (5A7A7, 5A6H7) — with S9V2, S9V2VS, S8V2C, S9X2, S9X1, S8X2, S8X1, AUHM/ADHM, or air handler 5TAMX/5TEMC/5TAM5/5TEM8. Furnace only: $200 Platinum 90%+ VS (S9V2, S9V2VS, AUHM, ADHM) · $150 Platinum 80% VS (S8V2C) · $100 Gold 90%+ two-stage (S9X2). Thermostat bonus $50: AMS smart thermostat (ALINK360, AZON1050, ACONT850, ACONT824, ACONT724, ACONT24P, ACONT24C) sold with an eligible system (&quot;up to $900&quot; = $850 + $50). Claims: American Standard Dealer Rewards · 888-565-7628 (Mon–Fri 7 AM–7 PM CT) · ContactUs@ExperienceDealerRewards.com. No substitutions; the grid is not a matchup guide. Source: Gensco Promotions — product grid · consumer flyer (dealer login). Checked Nov 19, 2026.</span></button>
+      <button class="rb-tile t-success" data-rb="3" type="button"><span class="rb-ttl">Mitsubishi — Fall Rebate (Diamond Contractor)</span><span class="rb-sub">Dates: sold Sep 26 – Nov 25, 2026; installed and claimed by Dec…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Mitsubishi — Fall Rebate (Diamond Contractor) Dates: sold Sep 26 – Nov 25, 2026; installed and claimed by Dec 31, 2026. $750 homeowner rebate on these outdoor units: MXZ2D20NL, MXZ3D24NL, MXZ4D30NL, MXZ3D36NL, MXZ5D42NL, MXZ2D20NLHZ, MXZ3D24NLHZ, MXZ3D30NLHZ. Extra $750 when one listed PAA coil is added to the job: PAA-AA24NL, PAA-BA24NL, PAA-BA30NL, PAA-BA36NL, PAA-BA42NL, PAA-CA36NL, PAA-CA42NL. With a branch box: $1,050 — MXZ3M36NL · $1,150 — MXZ3M48NL, MXZ3M60NL · $1,350 — MXZ3M36NLHZ, MXZ3M42NLHZ · $1,450 — MXZ3M48NLHZ, MXZ3M60NLHZ. How it&#x27;s paid: CM takes the rebate off the install price on the homeowner&#x27;s invoice (the invoice must show the discount) and files the claim on GenscoCustomer.com. Contractor incentive applies. Rules: homeowner sales only (no builder/contractor/commercial) · bought from Gensco inside the promotion window · R454B equipment only — R410A does not qualify · availability varies by branch. Source: Gensco Promotions — 2026 Fall Rebate flyer (dealer login). Checked Nov 19, 2026.</span></button>
+      <button class="rb-tile t-warning" data-rb="4" type="button"><span class="rb-ttl">American Standard — &quot;Set the Standard&quot; Fall 2026</span><span class="rb-sub">Sales closed Nov 15, 2026 — claims window only. Do not quote this…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">American Standard — &quot;Set the Standard&quot; Fall 2026 Sales closed Nov 15, 2026 — claims window only. Do not quote this on a new sale. Still open for jobs already sold Oct 1 – Nov 15: install by Dec 1, 2026; claims due Dec 9, 2026. Ducted systems (outdoor unit + furnace or air handler): $850 Platinum 20 AccuComfort VS AC/HP (5A7V0, 5A6V0) · $700 Platinum 18 AccuComfort VS AC/HP (5A7V3, 5A6V8) — with S9V2, S9V2VS, S8V2C, Legacy Platinum 95 VS AUHM/ADHM, or air handler 5TAMX/5TEMC · $400 Gold 17 Multi-Speed AC/HP (5A7A7, 5A6H7) — with S9V2, S9V2VS, S8V2C, S9X2, S9X1, S8X2, S8X1, AUHM/ADHM, or air handler 5TAMX/5TEMC/5TAM5/5TEM8. Furnace only: $200 Platinum 90%+ VS (S9V2, S9V2VS, AUHM, ADHM) · $150 Platinum 80% VS (S8V2C) · $100 Gold 90%+ two-stage (S9X2). Thermostat bonus $50: AMS smart thermostat (ALINK360, AZON1050, ACONT850, ACONT824, ACONT724, ACONT24P, ACONT24C) sold with an eligible system (&quot;up to $900&quot; = $850 + $50). Claims: American Standard Dealer Rewards · 888-565-7628 (Mon–Fri 7 AM–7 PM CT) · ContactUs@ExperienceDealerRewards.com. No substitutions; the grid is not a matchup guide. Source: Gensco Promotions — product grid · consumer flyer (dealer login). Checked Nov 19, 2026.</span></button>
     </div>
 
     <h3 class="hub-group">⚡ Utility rebates</h3>
     <div class="rb-grid">
       <button class="rb-tile t-plain" data-rb="5" type="button"><span class="rb-ttl">Midstream — instant distributor discount (PSE &amp; Seattle City Light)</span><span class="rb-sub">$300 / $400 / $600 per unit by efficiency tier, taken off at…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Midstream — instant distributor discount (PSE &amp; Seattle City Light) $300 / $400 / $600 per unit by efficiency tier, taken off at equipment purchase through a participating distributor (Gensco, Johnstone). PSE: PSE electric customer · air-source heat pump under 5 tons. Seattle City Light: SCL customer · air-source heat pump under 5.4 tons. (SCL&#x27;s limited-time $1,200 Tier 3 offer is the next card.) Figures are the verified cheat-sheet channel figures — the Gensco claim center is not visible to this account yet, so confirm the tier with Amy before quoting a number. Source: CM rebate cheat sheet, checked Nov 14, 2026.</span></button>
-      <button class="rb-tile t-plain" data-rb="6" type="button"><span class="rb-ttl">Seattle City Light — Midstream Heat Pump Rebate</span><span class="rb-sub">Limited-time offer: midstream rebate doubled to $1,200 on Tier 3…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Seattle City Light — Midstream Heat Pump Rebate Limited-time offer: midstream rebate doubled to $1,200 on Tier 3 residential heat pumps under 5.4 tons — minimum 9.5 HSPF2 and 16 SEER2 . Who: Seattle City Light customers only. Equipment must meet the Tier 3 ratings above. How midstream works: the rebate runs through the distributor. CM sends the distributor the required information for each qualifying sale. 2027 deadline: starting January 1, 2027 , all required information must reach the distributor within 60 days of the equipment sales date . Late = rebate at risk. Offer end date: not stated by the program. Do not quote an end date — check with Geoff before promising one. Customer pricing: [Pending Geoff — how the $1,200 shows on the customer quote. Do not promise &quot;$1,200 off&quot; until this line is filled in.] Small business (HEAR, while supplies last): extra incentives on qualifying heat pump water heaters (under 120 gal) and cold-climate certified heat pumps (under 5.4 tons). Amounts are in the program&#x27;s Small Business Stacked Rebate Flyer — ask Geoff or Amy for it. Program questions: Energy Solutions — pnw-rebates@energy-solution.com · (503) 914-0008 (8:30 AM–5:30 PM PT). Source: Seattle City Light Midstream HVAC+ Program contractor email, Nov 17, 2026.</span></button>
+      <button class="rb-tile t-plain" data-rb="6" type="button"><span class="rb-ttl">Seattle City Light — Midstream Heat Pump Rebate</span><span class="rb-sub">Limited-time offer: midstream rebate doubled to $1,200 on Tier 3…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Seattle City Light — Midstream Heat Pump Rebate Limited-time offer: midstream rebate doubled to $1,200 on Tier 3 residential heat pumps under 5.4 tons — minimum 9.5 HSPF2 and 16 SEER2. Who: Seattle City Light customers only. Equipment must meet the Tier 3 ratings above. How midstream works: the rebate runs through the distributor. CM sends the distributor the required information for each qualifying sale. 2027 deadline: starting January 1, 2027, all required information must reach the distributor within 60 days of the equipment sales date. Late = rebate at risk. Offer end date: not stated by the program. Do not quote an end date — check with Geoff before promising one. Customer pricing: [Pending Geoff — how the $1,200 shows on the customer quote. Do not promise &quot;$1,200 off&quot; until this line is filled in.] Small business (HEAR, while supplies last): extra incentives on qualifying heat pump water heaters (under 120 gal) and cold-climate certified heat pumps (under 5.4 tons). Amounts are in the program&#x27;s Small Business Stacked Rebate Flyer — ask Geoff or Amy for it. Program questions: Energy Solutions — pnw-rebates@energy-solution.com · (503) 914-0008 (8:30 AM–5:30 PM PT). Source: Seattle City Light Midstream HVAC+ Program contractor email, Nov 17, 2026.</span></button>
       <button class="rb-tile t-plain" data-rb="7" type="button"><span class="rb-ttl">PSE — Heat Pump Rebates</span><span class="rb-sub">$1,500 — electric heat to heat pump.</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">PSE — Heat Pump Rebates $1,500 — electric heat to heat pump. $1,500 — heat pump to heat pump upgrade. $1,500 — gas furnace to hybrid heat pump. $2,400 Efficiency Boost (income-qualified) — replaces the $1,500, does not stack. $4,000 — gas heat to all-electric (income-based). How it&#x27;s paid: PSE Trade Ally / REP installs only, paid through the contractor. PSE pays nothing on out-of-network installs. Source: CM rebate cheat sheet, checked Nov 14, 2026.</span></button>
       <button class="rb-tile t-plain" data-rb="8" type="button"><span class="rb-ttl">PSE / Targeted Electrification</span><span class="rb-sub">Customers with existing natural gas forced-air furnace or boiler…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">PSE / Targeted Electrification Customers with existing natural gas forced-air furnace or boiler may not qualify for standard rebate. They may qualify through PSE Targeted Electrification Pilot. Existing gas furnace must be removed to qualify for certain full electrification incentives. No gas furnace can remain part of the new system for those electric conversion incentives. Confirm exact current program before quoting rebate.</span></button>
       <button class="rb-tile t-plain" data-rb="9" type="button"><span class="rb-ttl">Snohomish PUD — Heat Pumps</span><span class="rb-sub">$1,800 — ducted conversion (primary heat electric; min 7.5 HSPF2 /…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Snohomish PUD — Heat Pumps $1,800 — ducted conversion (primary heat electric; min 7.5 HSPF2 / 13.8 SEER2). $2,500 — ducted inverter (min 8.5 HSPF2 / 13.8 SEER2). How it&#x27;s paid: a Registered PUD contractor files it; the amount comes off the invoice. No ductless rebate on the PUD&#x27;s current heating page — do not quote one. Work the job with the PUD Quick Calc workflow above (photos + heat load early). Source: CM rebate cheat sheet (Nov 14, 2026); re-checked against Snohomish PUD&#x27;s current pages Nov 19, 2026.</span></button>
-      <button class="rb-tile t-plain" data-rb="10" type="button"><span class="rb-ttl">Cascade Natural Gas (CNGC) — WA Energy Efficiency Program</span><span class="rb-sub">Furnace: $1,600 — 95% AFUE+ · $2,400 — 98% AFUE+.</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Cascade Natural Gas (CNGC) — WA Energy Efficiency Program Furnace: $1,600 — 95% AFUE+ · $2,400 — 98% AFUE+. Condensing boiler 95% AFUE+: $2,000 (combi boilers do not qualify). Thermostat: $150 — programmable (5–2 day) or Wi-Fi. Ducts: sealing $1,000 (≥30% of supply ducts in unconditioned space) · insulation $2.50/ln ft (seal first). Who: CNGC residential customer (rate schedule 503) · home primarily heated by natural gas · no multi-zone ductless electric heat pump in the home · installs on or after Mar 15, 2026. How it&#x27;s paid: customer completes the CNGC residential application within 90 days of install and turns it in to Amy . Rebates are in the ServiceTitan Pricebook under Package Pricing / Rebates. Attic/floor/wall insulation and air-sealing measures exist but need a CNGC qualified Trade Ally — ask before quoting. CNGC contacts: Stephanie Reed — TradeAlly@cngc.com · 360-788-2349 · Jacinda Ashby — jacinda.ashby@cngc.com Source: CNGC 2026–2027 Rebate Incentives sheet ; CM process per Amy, Jul 16, 2026. Checked Nov 19, 2026.</span></button>
+      <button class="rb-tile t-plain" data-rb="10" type="button"><span class="rb-ttl">Cascade Natural Gas (CNGC) — WA Energy Efficiency Program</span><span class="rb-sub">Furnace: $1,600 — 95% AFUE+ · $2,400 — 98% AFUE+.</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Cascade Natural Gas (CNGC) — WA Energy Efficiency Program Furnace: $1,600 — 95% AFUE+ · $2,400 — 98% AFUE+. Condensing boiler 95% AFUE+: $2,000 (combi boilers do not qualify). Thermostat: $150 — programmable (5–2 day) or Wi-Fi. Ducts: sealing $1,000 (≥30% of supply ducts in unconditioned space) · insulation $2.50/ln ft (seal first). Who: CNGC residential customer (rate schedule 503) · home primarily heated by natural gas · no multi-zone ductless electric heat pump in the home · installs on or after Mar 15, 2026. How it&#x27;s paid: customer completes the CNGC residential application within 90 days of install and turns it in to Amy. Rebates are in the ServiceTitan Pricebook under Package Pricing / Rebates. Attic/floor/wall insulation and air-sealing measures exist but need a CNGC qualified Trade Ally — ask before quoting. CNGC contacts: Stephanie Reed — TradeAlly@cngc.com · 360-788-2349 · Jacinda Ashby — jacinda.ashby@cngc.com Source: CNGC 2026–2027 Rebate Incentives sheet; CM process per Amy, Jul 16, 2026. Checked Nov 19, 2026.</span></button>
     </div>
 
     <h3 class="hub-group">🏙️ City &amp; State programs</h3>
@@ -656,7 +657,7 @@ Manager approval required before accounting is added.</div>
 
     <h3 class="hub-group">⛔ Do not quote</h3>
     <div class="rb-grid">
-      <button class="rb-tile t-danger" data-rb="17" type="button"><span class="rb-ttl">Energize Shoreline</span><span class="rb-sub">CM Heating is not set up with this program . Do not quote the…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Energize Shoreline CM Heating is not set up with this program . Do not quote the $2,500 / $6,000 Shoreline discounts.</span></button>
+      <button class="rb-tile t-danger" data-rb="17" type="button"><span class="rb-ttl">Energize Shoreline</span><span class="rb-sub">CM Heating is not set up with this program. Do not quote the…</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Energize Shoreline CM Heating is not set up with this program. Do not quote the $2,500 / $6,000 Shoreline discounts.</span></button>
       <button class="rb-tile t-danger" data-rb="18" type="button"><span class="rb-ttl">Tacoma Power</span><span class="rb-sub">Not a CM Heating program. Do not quote Tacoma Power rebates.</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Tacoma Power Not a CM Heating program. Do not quote Tacoma Power rebates.</span></button>
       <button class="rb-tile t-danger" data-rb="19" type="button"><span class="rb-ttl">Federal 25C tax credit</span><span class="rb-sub">Expired Dec 31, 2025. Do not quote it.</span><span class="rb-chev">›</span><span class="rb-q" aria-hidden="true">Federal 25C tax credit Expired Dec 31, 2025. Do not quote it.</span></button>
     </div>
@@ -1287,31 +1288,52 @@ document.querySelectorAll(".filter-chip").forEach(function(btn){
 </script>
 
 <script>
-/* Rebate Hub per-program sheet (2026-11-19) */
+/* Rebate Hub per-program sheet (2026-11-19, v2: Back closes once, focus kept in the sheet, ends disabled) */
 (function(){
   var sheet=document.getElementById('rb-sheet'), body=document.getElementById('rb-body');
   if(!sheet)return;
-  var tpl=[].slice.call(document.querySelectorAll('template.rb-card')), cur=-1;
-  function show(i,push){
-    if(i<0||i>=tpl.length)return; cur=i;
-    body.innerHTML=''; body.appendChild(tpl[i].content.cloneNode(true));
-    sheet.classList.add('open'); document.body.style.overflow='hidden';
-    sheet.querySelector('.rb-sheet-in').scrollTop=0;
-    if(push)history.pushState({rb:i},'','#rb-'+i);
+  var inner=sheet.querySelector('.rb-sheet-in'), btnClose=document.getElementById('rb-close'),
+      btnPrev=document.getElementById('rb-prev'), btnNext=document.getElementById('rb-next');
+  var tpl=[].slice.call(document.querySelectorAll('template.rb-card')), cur=-1, pushed=false, opener=null;
+  function paint(i){
+    cur=i; body.innerHTML=''; body.appendChild(tpl[i].content.cloneNode(true)); inner.scrollTop=0;
+    btnPrev.disabled=(i<=0); btnNext.disabled=(i>=tpl.length-1);
   }
-  function hide(push){
+  function open(i,how){
+    if(!(i>=0&&i<tpl.length)){ if(cur>=0)close(false); return; }
+    if(cur<0){ opener=document.activeElement; sheet.classList.add('open'); document.body.style.overflow='hidden'; }
+    paint(i);
+    if(how==='push'){ history.pushState({rb:i},'','#rb-'+i); pushed=true; }
+    else if(how==='replace'){ history.replaceState({rb:i},'','#rb-'+i); }
+    btnClose.focus();
+  }
+  function close(useHistory){
+    if(useHistory&&pushed){ pushed=false; history.back(); return; }  /* popstate finishes the close */
     sheet.classList.remove('open'); document.body.style.overflow=''; cur=-1;
-    if(push)history.pushState({},'',location.pathname+location.search);
+    if(/^#rb-/.test(location.hash)) history.replaceState({},'',location.pathname+location.search);
+    if(opener&&opener.focus)opener.focus(); opener=null;
   }
   document.querySelectorAll('.rb-tile').forEach(function(b){
-    b.addEventListener('click',function(){show(+b.dataset.rb,true);});
+    b.addEventListener('click',function(){open(+b.dataset.rb,'push');});
   });
-  document.getElementById('rb-close').onclick=function(){hide(true);};
-  document.getElementById('rb-prev').onclick=function(){show(cur-1,true);};
-  document.getElementById('rb-next').onclick=function(){show(cur+1,true);};
-  sheet.addEventListener('click',function(e){if(e.target===sheet)hide(true);});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&cur>=0)hide(true);});
-  function fromHash(){var m=location.hash.match(/^#rb-(\d+)$/);if(m)show(+m[1],false);else if(cur>=0)hide(false);}
+  btnClose.onclick=function(){close(true);};
+  btnPrev.onclick=function(){open(cur-1,'replace');};
+  btnNext.onclick=function(){open(cur+1,'replace');};
+  sheet.addEventListener('click',function(e){if(e.target===sheet)close(true);});
+  document.addEventListener('keydown',function(e){
+    if(cur<0)return;
+    if(e.key==='Escape'){close(true);return;}
+    if(e.key==='Tab'){ /* keep focus inside the sheet */
+      var f=[].slice.call(inner.querySelectorAll('button:not([disabled]),a[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'));
+      if(!f.length)return; var a=f[0], z=f[f.length-1];
+      if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus();}
+      else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus();}
+    }
+  });
+  function fromHash(){
+    var m=location.hash.match(/^#rb-(\d+)$/);
+    if(m)open(+m[1],null); else if(cur>=0){ pushed=false; close(false); }
+  }
   window.addEventListener('popstate',fromHash); fromHash();
 })();
 </script>
