@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Rebate Hub — CM Heating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1f4;
+    --surface:#ffffff;
+    --surface-2:#f6f8fa;
+    --ink:#132433;
+    --ink-2:#3d5266;
+    --muted:#64788c;
+    --line:#d9e1e9;
+    --navy:#0e2a47;
+    --navy-2:#163d63;
+    --accent:#0b6e4f;
+    --money:#0b6e4f;
+    --amber-bg:#fff7e0;
+    --amber-line:#e9a426;
+    --amber-ink:#5c3d00;
+    --amber-solid:#b45309;
+    --red-bg:#fdf0ef;
+    --red-line:#c92a1f;
+    --red-ink:#7a130c;
+    --red-solid:#b91c1c;
+    --chip-bg:#eaf0f5;
+    --chip-ink:#1c3a54;
+    --warn-bg:#fff3d1;
+    --warn-line:#d99a06;
+    --shadow:0 1px 3px rgba(14,42,71,.08),0 6px 18px rgba(14,42,71,.06);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0c141c;
+      --surface:#16222e;
+      --surface-2:#1c2c3c;
+      --ink:#eef4f8;
+      --ink-2:#c3d2de;
+      --muted:#93a7b8;
+      --line:#2b3f52;
+      --navy:#0a1f35;
+      --navy-2:#12304f;
+      --accent:#3ecf9a;
+      --money:#4ade9e;
+      --amber-bg:#2b2108;
+      --amber-line:#b97f10;
+      --amber-ink:#ffd97a;
+      --amber-solid:#d97706;
+      --red-bg:#331210;
+      --red-line:#e05245;
+      --red-ink:#ffb4a8;
+      --red-solid:#dc2626;
+      --chip-bg:#24384c;
+      --chip-ink:#cfe2f2;
+      --warn-bg:#2b2108;
+      --warn-line:#b97f10;
+      --shadow:0 1px 3px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.25);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--navy-2)}
+  @media (prefers-color-scheme: dark){a{color:#8ec5f0}}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 16px 48px}
+
+  /* ---------- Header ---------- */
+  header.hero{background:var(--navy);color:#fff;margin:0 -16px;padding:28px 20px 22px}
+  @media(min-width:700px){header.hero{border-radius:0 0 18px 18px;padding:36px 32px 26px}}
+  .hero-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px}
+  h1{font-family:"Barlow Condensed","Barlow",sans-serif;font-size:clamp(2.4rem,7vw,3.6rem);line-height:.95;letter-spacing:.01em;margin:0;text-transform:uppercase;font-weight:700}
+  h1 span{color:#f5b942}
+  .checked-badge{background:#fff;color:#0e2a47;font-weight:700;font-size:.85rem;padding:8px 12px;border-radius:999px;white-space:nowrap;margin-top:6px}
+  .subtitle{font-size:1.15rem;font-weight:600;margin:10px 0 0;color:#dbe8f4;max-width:34em}
+  .standing-rule{margin-top:18px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.22);border-left:5px solid #f5b942;border-radius:10px;padding:13px 15px;font-size:.95rem;color:#eef4fa}
+  .standing-rule strong{color:#f5b942;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;display:block;margin-bottom:3px}
+
+  /* ---------- Quick nav ---------- */
+  nav.quicknav{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 4px}
+  nav.quicknav a{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;background:var(--surface);border:1px solid var(--line);border-radius:999px;font-weight:600;font-size:.92rem;text-decoration:none;color:var(--ink);box-shadow:var(--shadow)}
+  nav.quicknav a:hover{border-color:var(--navy-2)}
+
+  /* ---------- Act now ---------- */
+  .actnow{margin-top:18px;border:2px solid var(--amber-line);background:var(--amber-bg);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .actnow-head{background:var(--amber-solid);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .actnow-head h2{margin:0;font-family:"Barlow Condensed",sans-serif;font-size:1.7rem;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+  .actnow-head p{margin:0;font-size:.92rem;font-weight:600;opacity:.95}
+  .actnow-grid{display:grid;gap:0}
+  @media(min-width:760px){.actnow-grid{grid-template-columns:1fr 1fr}}
+  .actnow-item{padding:18px;color:var(--amber-ink)}
+  .actnow-item + .actnow-item{border-top:1px solid var(--amber-line)}
+  @media(min-width:760px){.actnow-item + .actnow-item{border-top:none;border-left:1px solid var(--amber-line)}}
+  @media (prefers-color-scheme: dark){.actnow-item{color:var(--ink)}}
+  .actnow-item h3{margin:0 0 6px;font-size:1.12rem;line-height:1.25;color:var(--ink)}
+  .deadline{display:inline-block;background:var(--red-solid);color:#fff;font-weight:800;font-size:.88rem;letter-spacing:.02em;padding:5px 10px;border-radius:6px;margin-bottom:8px;text-transform:uppercase}
+  .deadline.closed{background:var(--ink-2)}
+  .actnow-item p{margin:6px 0}
+  .btn-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:10px;background:var(--navy);color:#fff !important;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:9px;font-size:.95rem}
+  .btn-link:hover{background:var(--navy-2)}
+  .counts{font-weight:700}
+
+  /* ---------- Sections ---------- */
+  section{margin-top:36px}
+  .section-head{margin-bottom:14px}
+  .section-head h2{font-family:"Barlow Condensed",sans-serif;font-size:1.9rem;text-transform:uppercase;letter-spacing:.03em;margin:0;line-height:1.05;color:var(--ink)}
+  .section-head p{margin:6px 0 0;color:var(--ink-2);font-size:.97rem;max-width:62em}
+  .section-head a{font-weight:600}
+
+  .grid{display:grid;gap:16px}
+  @media(min-width:760px){.grid.cols-2{grid-template-columns:1fr 1fr}.grid.cols-3{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:760px) and (max-width:980px){.grid.cols-3{grid-template-columns:1fr 1fr}}
+
+  /* ---------- Cards ---------- */
+  article.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column}
+  article.card.wide{grid-column:1/-1}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .card h3{margin:0;font-size:1.28rem;line-height:1.2;font-weight:800}
+  .card h3 .sub{display:block;font-size:.92rem;font-weight:600;color:var(--muted);margin-top:2px}
+  .badge{flex:none;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:6px 9px;border-radius:6px;background:var(--red-solid);color:#fff;text-align:center;line-height:1.3}
+  .badge.green{background:var(--accent);color:#fff}
+  @media (prefers-color-scheme: dark){.badge.green{color:#06281c}}
+  .window-line{margin:10px 0 0;font-weight:700;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:.95rem}
+  .card ul{margin:12px 0 0;padding-left:1.15em}
+  .card li{margin:7px 0;color:var(--ink-2)}
+  .card li strong,.card p strong{color:var(--ink)}
+  .money{font-weight:800;color:var(--money);white-space:nowrap}
+  .amount-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .amount{flex:1 1 130px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .amount b{display:block;font-size:1.45rem;line-height:1.05;color:var(--money);font-weight:800}
+  .amount span{display:block;font-size:.86rem;color:var(--ink-2);margin-top:3px;line-height:1.35}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+  .chip{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.78rem;font-weight:600;background:var(--chip-bg);color:var(--chip-ink);padding:5px 8px;border-radius:6px;white-space:nowrap}
+  .label{font-size:.78rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:16px 0 0}
+  .label:first-of-type{margin-top:12px}
+  .internal{margin-top:16px;border:1.5px dashed var(--warn-line);background:var(--warn-bg);border-radius:10px;padding:12px 14px;font-size:.95rem}
+  .internal strong.head{display:block;text-transform:uppercase;letter-spacing:.06em;font-size:.78rem;margin-bottom:4px}
+  .pending{margin-top:16px;border:1.5px solid var(--red-line);background:var(--red-bg);border-radius:10px;padding:12px 14px;font-size:.95rem;color:var(--red-ink)}
+  @media (prefers-color-scheme: dark){.pending{color:var(--ink)}}
+  .pending strong{display:block;text-transform:uppercase;letter-spacing:.06em;font-size:.78rem;margin-bottom:4px}
+  .note-box{margin-top:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.95rem;color:var(--ink-2)}
+  .note-box strong{color:var(--ink)}
+  .source{margin-top:auto;padding-top:16px}
+  .source p{border-top:1px solid var(--line);padding-top:10px;margin:0;font-size:.83rem;color:var(--muted);line-height:1.45}
+  .source a{font-weight:600;word-break:break-word}
+  .card-link{display:inline-flex;align-items:center;min-height:44px;font-weight:700;text-decoration:none;margin-top:8px}
+  .card-link:hover{text-decoration:underline}
+  .contact-line{margin-top:10px;font-size:.95rem;color:var(--ink-2)}
+  .big-figure{font-size:1.05rem}
+  .compact-amount{font-size:2rem;font-weight:800;color:var(--money);line-height:1;margin:8px 0 2px}
+  article.card.compact h3{font-size:1.12rem}
+
+  /* ---------- Water heaters ---------- */
+  .water-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .water-card ul{margin:10px 0 0;padding-left:1.15em}
+  .water-card li{margin:7px 0;color:var(--ink-2)}
+  .water-card li strong{color:var(--ink)}
+  .ask{color:var(--red-solid);font-weight:800}
+
+  /* ---------- Do not quote ---------- */
+  .donot{margin-top:36px;border:2px solid var(--red-line);background:var(--red-bg);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .donot-head{background:var(--red-solid);color:#fff;padding:12px 18px}
+  .donot-head h2{margin:0;font-family:"Barlow Condensed",sans-serif;font-size:1.7rem;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+  .donot ul{margin:0;padding:16px 20px 18px 36px}
+  .donot li{margin:9px 0;color:var(--red-ink);font-size:1.02rem}
+  @media (prefers-color-scheme: dark){.donot li{color:var(--ink)}}
+  .donot li strong{color:inherit}
+
+  /* ---------- Footer ---------- */
+  footer{margin-top:32px;border-top:2px solid var(--line);padding-top:16px;color:var(--muted);font-size:.9rem;line-height:1.6}
+  footer strong{color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero-top">
+      <h1>Rebate <span>Hub</span></h1>
+      <div class="checked-badge">✓ Checked 2026-11-19</div>
+    </div>
+    <p class="subtitle">Rebate Hub — CM Heating. Every rebate we can quote, in one place.</p>
+    <div class="standing-rule">
+      <strong>Standing rule — expiry campaigns</strong>
+      When a rebate's sales deadline approaches, Muse runs the expiry campaign at ~7 days and ~2 days out — open unsold estimates pulled per HCA, sheet built, wrap-up email drafted for Geoff's approval.
+    </div>
+  </header>
+
+  <nav class="quicknav" aria-label="Jump to section">
+    <a href="#act-now">⚑ Act now</a>
+    <a href="#manufacturer">Manufacturer</a>
+    <a href="#midstream">Midstream / instant</a>
+    <a href="#utility">Utility &amp; city</a>
+    <a href="#water">Water heaters</a>
+    <a href="#do-not-quote">Do not quote</a>
+  </nav>
+
+  <!-- ACT NOW -->
+  <div class="actnow" id="act-now">
+    <div class="actnow-head">
+      <h2>⚑ Act now</h2>
+      <p>Deadlines in play right now</p>
+    </div>
+    <div class="actnow-grid">
+      <div class="actnow-item">
+        <span class="deadline">Sales close Tue Nov 25, 2026</span>
+        <h3>Mitsubishi Fall Rebate</h3>
+        <p><span class="counts">80 open estimates · 47 customers</span> — open quotes broken out per HCA in the campaign sheet.</p>
+        <p>Install + claim by <strong>Dec 31, 2026</strong>.</p>
+        <a class="btn-link" href="https://docs.google.com/spreadsheets/d/1P3WykxserDpAjIVq9iMOT1i9QZVyDNXIkAh2m2LaF0U" target="_blank" rel="noopener">Open quotes per HCA →</a>
+      </div>
+      <div class="actnow-item">
+        <span class="deadline closed">Sales window closed Nov 15</span>
+        <h3>American Standard Fall event</h3>
+        <p>In-window jobs only from here:</p>
+        <p>Install by <strong>Dec 1, 2026</strong> · Claims due <strong>Dec 9, 2026</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUFACTURER -->
+  <section id="manufacturer">
+    <div class="section-head">
+      <h2>Manufacturer rebates</h2>
+    </div>
+    <div class="grid">
+
+      <article class="card wide">
+        <div class="card-top">
+          <h3>Mitsubishi “Fall Rebate” <span class="sub">Diamond Contractor</span></h3>
+        </div>
+        <p class="window-line">Window: sales Sep 26 – Nov 25, 2026 · Install + claim by Dec 31, 2026</p>
+
+        <p class="label">$750 homeowner rebate — outdoor units</p>
+        <div class="chips">
+          <span class="chip">MXZ2D20NL</span><span class="chip">MXZ3D24NL</span><span class="chip">MXZ4D30NL</span><span class="chip">MXZ3D36NL</span><span class="chip">MXZ5D42NL</span><span class="chip">MXZ2D20NLHZ</span><span class="chip">MXZ3D24NLHZ</span><span class="chip">MXZ3D30NLHZ</span>
+        </div>
+
+        <p class="label">+$750 more when a listed PAA coil is added</p>
+        <div class="chips">
+          <span class="chip">PAA-AA24NL</span><span class="chip">PAA-BA24NL</span><span class="chip">PAA-BA30NL</span><span class="chip">PAA-BA36NL</span><span class="chip">PAA-BA42NL</span><span class="chip">PAA-CA36NL</span><span class="chip">PAA-CA42NL</span>
+        </div>
+
+        <p class="label">Branch-box systems</p>
+        <div class="amount-row">
+          <div class="amount"><b>$1,050</b><span>MXZ3M36NL</span></div>
+          <div class="amount"><b>$1,150</b><span>MXZ3M48NL / MXZ3M60NL</span></div>
+          <div class="amount"><b>$1,350</b><span>MXZ3M36NLHZ / MXZ3M42NLHZ</span></div>
+          <div class="amount"><b>$1,450</b><span>MXZ3M48NLHZ / MXZ3M60NLHZ</span></div>
+        </div>
+        <p style="margin:10px 0 0;color:var(--ink-2)">Branch boxes:</p>
+        <div class="chips"><span class="chip">MHF-PAC-LMA30BC</span><span class="chip">MHF-PAC-LMA50BC</span></div>
+
+        <p class="label">Rules</p>
+        <ul>
+          <li>Diamond Contractors only; discount taken off the install price; claim via <strong>GenscoCustomer.com</strong>.</li>
+          <li>Contractor reimbursed <strong>2/3 as Gensco account credit</strong> (thirds: contractor / Gensco / Mitsubishi).</li>
+          <li>Homeowner invoice required; consumer sales only; system must be purchased from Gensco inside the window; <strong>R454B models only</strong>.</li>
+        </ul>
+
+        <div class="internal">
+          <strong class="head">Internal — do not quote</strong>
+          $250 SPIF per qualifying SM outdoor unit; +$600 per branch box.
+        </div>
+
+        <div class="source">
+          <p>Source: Gensco promotions portal, flyer PDF, checked 2026-11-19.<br>
+          <a href="https://genscocustomer.com/pages/marketing/promotions/2026%20Fall%20Rebate.pdf" target="_blank" rel="noopener">View the flyer (PDF) →</a></p>
+        </div>
+      </article>
+
+      <article class="card wide">
+        <div class="card-top">
+          <h3>American Standard “Set the Standard Sales Event,” Fall 2026 <span class="sub">Customer Care Dealers</span></h3>
+          <span class="badge">Sales closed<br>Nov 15</span>
+        </div>
+        <p class="window-line">Sales Oct 1 – Nov 15, 2026 (closed) · Install by Dec 1, 2026 · Claims due Dec 9, 2026 — claims window only</p>
+        <ul>
+          <li>Claims via <strong>American Standard Dealer Rewards</strong> (888-565-7628).</li>
+          <li><strong>“Up to $900”</strong> = $850 system + $50 thermostat bonus.</li>
+        </ul>
+
+        <p class="label">Ducted systems</p>
+        <div class="amount-row">
+          <div class="amount"><b>$850</b><span><strong>Platinum 20</strong> — 4A6V20 / 4A7V20 + TAMX/TAMG air handler or S8V2/S9V2 furnace + BAY relay or UX360 stat</span></div>
+          <div class="amount"><b>$700</b><span><strong>Platinum 18</strong> — 4A6V18 / 4A7V18 + same handlers/furnaces</span></div>
+          <div class="amount"><b>$400</b><span><strong>Gold 17</strong> — 4A6H17 / 4A7A17 / 4A6L17 or S9X2/S9V2 furnace combos per flyer grid</span></div>
+        </div>
+
+        <p class="label">Standalone furnaces</p>
+        <div class="amount-row">
+          <div class="amount"><b>$200</b><span>Platinum 19 &amp; S9V2</span></div>
+          <div class="amount"><b>$150</b><span>Gold S9X2 / S8X2</span></div>
+          <div class="amount"><b>$100</b><span>Silver S8X1 / S8B1</span></div>
+        </div>
+
+        <div class="note-box"><strong>Thermostat bonus: $50</strong> with a qualifying system + American Standard smart thermostat (ACONT850/824/624/402 or AccuLink).</div>
+
+        <div class="source">
+          <p>Source: Gensco promotions portal, checked 2026-11-19.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- MIDSTREAM -->
+  <section id="midstream">
+    <div class="section-head">
+      <h2>Midstream / instant</h2>
+      <p>Taken off at the distributor — never stacked as a second discount.</p>
+    </div>
+    <div class="grid cols-2">
+
+      <article class="card">
+        <h3>Midstream instant discounts <span class="sub">PSE &amp; Seattle City Light, via Gensco / Johnstone</span></h3>
+        <div class="amount-row">
+          <div class="amount"><b>$300</b><span>Tier 1</span></div>
+          <div class="amount"><b>$400</b><span>Tier 2</span></div>
+          <div class="amount"><b>$600</b><span>Tier 3</span></div>
+        </div>
+        <ul>
+          <li>By efficiency tier; <strong>distributor confirms the tier at claim</strong>.</li>
+          <li>Do <strong>NOT</strong> also quote the same dollars as a utility rebate.</li>
+        </ul>
+        <div class="note-box"><strong>Note:</strong> the Gensco portal Claim Center is not enabled for our sales login (checked 2026-11-19) — tier confirmation runs through the distributor rep until access is granted.</div>
+        <div class="source"><p>Source: rebate cheat sheet, verified 2026-11-14.</p></div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Seattle City Light midstream <span class="sub">Tier 3 doubled</span></h3>
+          <span class="badge green">Tier 3<br>$1,200</span>
+        </div>
+        <p class="compact-amount">$1,200</p>
+        <ul>
+          <li>On <strong>Tier 3 residential heat pumps under 5.4 tons</strong>, minimum <strong>9.5 HSPF2 / 16 SEER2</strong>.</li>
+          <li>From <strong>Jan 1, 2027</strong>: required information must reach the distributor within <strong>60 days of the sales date</strong>.</li>
+          <li>Small-business HEAR incentives available while supplies last.</li>
+          <li>No end date stated in the program notice.</li>
+        </ul>
+        <p class="contact-line">Program contact: Energy Solutions, <a href="mailto:pnw-rebates@energy-solution.com">pnw-rebates@energy-solution.com</a>, (503) 914-0008.</p>
+        <div class="pending">
+          <strong>Customer-pricing line: [Pending Geoff]</strong>
+          Do not promise “$1,200 off” to a customer until Geoff fills this in.
+        </div>
+        <div class="source"><p>Source: program email 2026-11-17; Field Guide card audited PASS 2026-11-19.</p></div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- UTILITY & CITY -->
+  <section id="utility">
+    <div class="section-head">
+      <h2>Utility &amp; city programs</h2>
+      <p>Source for this section unless noted: “2026 Washington Heat Pump Rebates — HCA Quoting Reference” cheat sheet (verified 2026-11-14). <a href="https://docs.google.com/spreadsheets/d/1qcUqNNYiVG2j-kCYL3OaHQzqZM-tAwQUINL39V-FPD8" target="_blank" rel="noopener">Open the cheat sheet →</a></p>
+    </div>
+    <div class="grid cols-2">
+
+      <article class="card">
+        <h3>Puget Sound Energy (PSE)</h3>
+        <ul>
+          <li><span class="money">$1,500</span> ducted heat pump (min 7.5 HSPF2 / 14.3 SEER2), electric primary heat.</li>
+          <li><span class="money">$1,500</span> ductless (min 8.55 HSPF2 / 16 SEER2).</li>
+          <li><span class="money">$1,500</span> electric resistance to heat pump conversion.</li>
+          <li><span class="money">$2,400</span> Efficiency Boost (income-qualified, 150% SMI).</li>
+          <li><span class="money">$4,000</span> income-based (80% AMI / 200% FPL), ducted or ductless.</li>
+        </ul>
+        <div class="note-box"><strong>Stacking:</strong> PSE rebate and midstream instant cannot both be claimed on the same job — distributor confirms which channel.</div>
+        <div class="source"><p>Source: “2026 Washington Heat Pump Rebates — HCA Quoting Reference” cheat sheet, verified 2026-11-14.</p></div>
+      </article>
+
+      <article class="card">
+        <h3>Snohomish PUD</h3>
+        <ul>
+          <li><span class="money">$1,800</span> ducted conversion (min 7.5 HSPF2 / 13.8 SEER2).</li>
+          <li><span class="money">$2,500</span> inverter-driven ducted (min 8.5 HSPF2 / 13.8 SEER2).</li>
+          <li>Electric primary heat; PUD registered contractor; taken off the invoice.</li>
+        </ul>
+        <div class="note-box"><strong>Note:</strong> the PUD's current heating page lists <strong>NO ductless rebate</strong> — do not quote one until re-verified.</div>
+        <div class="source"><p>Source: snopud.com, re-verified 2026-11-19.</p></div>
+      </article>
+
+      <article class="card wide">
+        <h3>Cascade Natural Gas (CNGC) <span class="sub">Washington Energy Efficiency Program, 2026–2027</span></h3>
+        <p class="window-line">2026–2027 incentives effective for installs on or after Mar 15, 2026 · CM Heating is a CNGC Trade Ally and has run several of these</p>
+        <div class="amount-row">
+          <div class="amount"><b>$1,600</b><span>Furnace 95% AFUE or higher</span></div>
+          <div class="amount"><b>$2,400</b><span>Furnace 98% AFUE or higher</span></div>
+          <div class="amount"><b>$2,000</b><span>Condensing boiler 95% AFUE or higher (combi boilers do not qualify)</span></div>
+          <div class="amount"><b>$150</b><span>Efficient thermostat (programmable 5–2 day or Wi-Fi)</span></div>
+        </div>
+        <ul>
+          <li><span class="money">$1,000</span> duct sealing (requires 30% or more of supply ducts in unconditioned space).</li>
+          <li><span class="money">$2.50 per linear foot</span> duct insulation (ducts must be sealed first).</li>
+          <li><strong>Eligibility:</strong> home must be primarily heated by natural gas and be a CNGC residential customer (rate schedule 503); a multi-zone ductless electric heat pump cannot be present. Application must be received within 90 days of the install date.</li>
+          <li><strong>How CM runs it:</strong> the customer fills out the CNGC residential application form and turns it in to Amy. The rebates also sit in the ServiceTitan Pricebook under Package Pricing / Rebates.</li>
+        </ul>
+        <p class="contact-line">Program contacts: Stephanie Reed (<a href="mailto:TradeAlly@cngc.com">TradeAlly@cngc.com</a>, 360-788-2349) and Jacinda Ashby (<a href="mailto:jacinda.ashby@cngc.com">jacinda.ashby@cngc.com</a>).</p>
+        <div class="note-box"><strong>Note:</strong> CNGC also pays insulation and air-sealing measures (attic/floor/wall, bundles) — those must be performed by a CNGC qualified Trade Ally; ask before quoting.</div>
+        <div class="source"><p>Source: CNGC “2026–2027 Rebate Incentives” sheet (cngc.com), checked 2026-11-19; CM process per Amy Leibel's Jul 16, 2026 email.</p></div>
+      </article>
+
+    </div>
+    <div class="grid cols-3" style="margin-top:16px">
+
+      <article class="card compact">
+        <h3>Seattle Clean Heat <span class="sub">City of Seattle / OSE</span></h3>
+        <p class="compact-amount">$2,000</p>
+        <ul><li>Oil-to-heat-pump conversion + income-qualified bonus (80% AMI).</li></ul>
+        <div class="source"><p>Source: cheat sheet, verified 2026-11-14.</p></div>
+      </article>
+
+      <article class="card compact">
+        <h3>Energy Smart Eastside <span class="sub">King County</span></h3>
+        <ul>
+          <li><span class="money">$1,000</span> heat pump rebate.</li>
+          <li><span class="money">$5,000</span> income-qualified bonus (80% AMI).</li>
+        </ul>
+        <div class="source"><p>Source: cheat sheet, verified 2026-11-14.</p></div>
+      </article>
+
+      <article class="card compact">
+        <h3>Energize Kenmore</h3>
+        <ul>
+          <li><span class="money">$2,000</span> heat pump rebate.</li>
+          <li><span class="money">$4,000</span> income-qualified bonus (80% AMI).</li>
+          <li>Program ends with 2026.</li>
+        </ul>
+        <div class="source"><p>Source: cheat sheet, verified 2026-11-14.</p></div>
+      </article>
+
+      <article class="card compact">
+        <h3>Washington HEAR <span class="sub">State</span></h3>
+        <p class="compact-amount">Up to $8,000</p>
+        <ul>
+          <li>Low/moderate income (150% AMI).</li>
+          <li>Contractor portal enrolment required before quoting.</li>
+        </ul>
+        <div class="source"><p>Source: cheat sheet, verified 2026-11-14.</p></div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- WATER HEATERS -->
+  <section id="water">
+    <div class="section-head">
+      <h2>Water heaters</h2>
+      <p>Separate — not HVAC.</p>
+    </div>
+    <div class="water-card">
+      <ul>
+        <li>No water-heater rebates on the Gensco promotions portal (checked 2026-11-19).</li>
+        <li>Snohomish PUD heat-pump water heater pages disagree (<strong>$1,000 retail</strong> vs <strong>up to $2,500 via Trade Ally</strong>) — <span class="ask">ASK FIRST</span>, do not quote a single number.</li>
+        <li>Cascade Natural Gas (CNGC): $1,000 for a tankless water heater at 0.95 UEF or higher (water-heating fuel must be CNGC; same 90-day application rule).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- DO NOT QUOTE -->
+  <div class="donot" id="do-not-quote">
+    <div class="donot-head"><h2>⛔ Do not quote</h2></div>
+    <ul>
+      <li><strong>Energize Shoreline</strong> — CM Heating is not set up with this program. Do not quote the $2,500 / $6,000 Shoreline discounts.</li>
+      <li><strong>Tacoma Power</strong> — not a CM Heating program. Do not quote.</li>
+      <li><strong>Federal 25C tax credit</strong> — <strong>EXPIRED Dec 31, 2025</strong>. Never quote it as current.</li>
+    </ul>
+  </div>
+
+  <footer>
+    <p><strong>Sources</strong> — Gensco promotions portal (2026-11-19), rebate cheat sheet (verified 2026-11-14), SCL program email (2026-11-17), snopud.com (2026-11-19). Figures change by campaign; when in doubt, check the source before quoting.</p>
+  </footer>
+
+</div>
+</body>
+</html>
