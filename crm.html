@@ -190,6 +190,29 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .act-lane .metric span{order:1;margin-top:0;font-size:12px;letter-spacing:.02em;text-transform:none;font-weight:600;color:var(--muted)}
 /* keyboard focus */
 .btn:focus-visible,.num-seg button:focus-visible,.num-tbl th button:focus-visible,.select:focus-visible,.sched-view button:focus-visible,.sched-jump button:focus-visible{outline:2px solid #99f6e4;outline-offset:2px}
+/* Score card (D-98 preview, live in crm.html by D-140, claude-16, 2026-11-20) */
+.sc-block{margin:0 0 14px;padding:14px;border-radius:14px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.sc-top{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.sc-ring{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:22px;flex:none;color:#04201c}
+.sc-ring.green{background:#34c759}.sc-ring.yellow{background:#ffcc00}.sc-ring.red{background:#ff453a;color:#fff}.sc-ring.none{background:rgba(255,255,255,.12);color:var(--muted)}
+.sc-band{font-weight:800;font-size:17px}.sc-sub{color:var(--muted);font-size:13px}
+.sc-p{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.sc-dot{width:11px;height:11px;border-radius:50%;flex:none;background:rgba(255,255,255,.18)}
+.sc-dot.green{background:#34c759}.sc-dot.yellow{background:#ffcc00}.sc-dot.red{background:#ff453a}
+.sc-pl{flex:1;min-width:0}.sc-pl small{display:block;color:var(--muted);font-size:12px}
+.sc-pv{font-weight:700}.sc-pw{color:var(--muted);font-size:12px;min-width:44px;text-align:right}
+.sc-coach{padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:14px}
+.sc-note{color:var(--muted);font-size:14px;line-height:1.45}
+.sc-prov{font-size:11px;color:var(--muted);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:0 5px;margin-left:6px}
+.sc-hint{display:block;color:#14b8a6;font-size:12px;margin-top:2px}
+.sc-fresh{color:var(--muted);font-size:12px;margin:2px 0 6px}
+.sc-sec{margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:14px}
+.sc-sec h3{font-size:14px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.sc-sec ul{margin:4px 0 0;padding-left:18px}.sc-sec li{margin:2px 0}
+.sc-miss{color:#ff453a}.sc-ok{color:#34c759}
+.sc-calc summary{cursor:pointer;color:#14b8a6;font-size:13px}
+.sc-board table{width:100%;border-collapse:collapse;font-size:13px}.sc-board th,.sc-board td{text-align:left;padding:5px 4px;border-top:1px solid rgba(255,255,255,.08)}
+
 </style>
 </head>
 <body>
@@ -242,6 +265,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
             </div>
           </div>
           <div class="num-rot" aria-hidden="true"><i id="numRotBar"></i></div>
+          <div class="card-body" style="justify-content:flex-start;padding-bottom:0"><div id="scoreBlock" class="sc-block" hidden></div><div id="scoreBoard" class="sc-block sc-board" hidden></div></div>
           <div class="card-body" style="justify-content:flex-start"><div id="numsBody" class="loading">—</div></div>
           <div class="card-foot"><span class="card-note" id="numsNote"></span></div>
         </div>
@@ -545,6 +569,7 @@ function loadCards(){
   loadArCard(who);
   loadActivitiesCard(who);
   loadNumbersCard(who);
+  loadScoreCard(who);
   renderSchedule();
 }
 
@@ -1212,6 +1237,111 @@ $("numPause").addEventListener("click", () => {
   numPaused = !numPaused; const p=$("numPause"); p.classList.toggle("on", numPaused); p.setAttribute("aria-pressed", numPaused ? "true" : "false");
   numT0 = performance.now(); if(numPaused) $("numRotBar").style.width = "0";
 });
+/* SCORE CARD — D-140 (claude-16, 2026-11-20), moved here from the D-98 preview page.
+   Data: Firebase cmh_hca_scorecard, copied from the scorecard feed (hca_ryg_status.json) by the Mac job
+   (every 15 min 06:00-22:00 PT when the feed changes, plus 21:00 nightly). Rules: an HCA reads only their own row;
+   Geoff (cmh_followup_roster/admins) and Amy read all. Every figure, colour and hint comes from the data. */
+let scoreDesign = null, scoreSeq = 0;
+const ptTime = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", hour: "numeric", minute: "2-digit" }); };
+const ptDay = s => { const d = new Date(String(s) + "T12:00:00"); return isNaN(d) ? esc(s) : d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "numeric", day: "numeric" }); };
+const listOf = v => Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === "object" ? Object.values(v) : []);
+async function loadScoreCard(who){
+  const el = $("scoreBlock"), bd = $("scoreBoard"); if(!el) return;
+  const seq = ++scoreSeq;
+  el.hidden = true; el.innerHTML = ""; if(bd){ bd.hidden = true; bd.innerHTML = ""; }
+  if(!who || who.role !== "HCA" || !who.email) return;
+  if(!isGoogle()){ el.hidden = false; el.innerHTML = '<div class="sc-note">Sign in with your @cmheating.com Google account to see your score.</div>'; return; }
+  try{
+    const d = await get(ref(db, "cmh_hca_scorecard/design")); scoreDesign = d.val() || {};
+    const snap = await get(ref(db, "cmh_hca_scorecard/hcas/" + emailKeyOf(who.email)));
+    if(seq !== scoreSeq) return;
+    const r = snap.val();
+    el.innerHTML = r ? scoreHtml(r, scoreDesign) : '<div class="sc-note">No score yet. It updates through the day and every night after 9 PM.</div>';
+    el.hidden = false;
+  }catch(e){
+    if(seq !== scoreSeq) return;
+    console.error("Score card:", e);
+    el.hidden = false; el.innerHTML = '<div class="sc-note">This score is visible to the HCA, Geoff and Amy only.</div>';
+  }
+  if(currentUser && currentUser.role === "ADMIN" && bd) loadScoreBoard(seq);
+}
+async function loadScoreBoard(seq){
+  const bd = $("scoreBoard");
+  try{
+    const all = (await get(ref(db, "cmh_hca_scorecard/hcas"))).val() || {};
+    if(seq !== scoreSeq) return;
+    const rows = Object.values(all).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    const dot = c => `<span class="sc-dot ${esc(c || "none")}" style="display:inline-block;vertical-align:middle"></span>`;
+    bd.innerHTML = `<h3 style="margin:0 0 6px;font-size:14px">Full board · all HCAs</h3><table><thead><tr><th>HCA</th><th>Score</th><th>Kitchen 7d</th><th>Recaps 7d</th><th>Focus</th></tr></thead><tbody>` +
+      rows.map(r => { const k = r.kitchen || {}, c = r.recaps || {};
+        return `<tr><td>${esc(r.name)}</td><td>${dot(r.overall)} ${esc(r.score ?? "–")}</td><td>${dot(k.color)} ${esc(k.accounted7 ?? "–")} of ${esc(k.consults7 ?? "–")}</td><td>${dot(c.color)} ${esc(c.filed7 ?? 0)} filed · ${esc(c.missing7 ?? 0)} missing</td><td>${esc(r.coachLabel || "")}</td></tr>`; }).join("") +
+      `</tbody></table><div class="sc-fresh" style="margin-top:6px">${freshLine(scoreDesign)}</div>`;
+    bd.hidden = false;
+  }catch(e){
+    if(seq !== scoreSeq) return;
+    bd.hidden = false; bd.innerHTML = '<div class="sc-note">The full board is visible to Geoff and Amy only.</div>';
+  }
+}
+function freshLine(d){
+  d = d || {};
+  const base = d.computedAt ? `Updated ${esc(ptTime(d.computedAt))}` : "Not updated yet";
+  return base + (d.liveRefreshAt ? ` · live refresh ${esc(ptTime(d.liveRefreshAt))}` : " · nightly run");
+}
+const BASIS = { geoff_confirmed: "confirmed by Geoff", geoff_confirmed_cancel: "customer cancelled", ridealong: "ride-along", none: "no call or text logged" };
+const basisText = b => { const s = String(b || ""); if(BASIS[s]) return BASIS[s]; if(/sold/i.test(s)) return "sold alert"; if(/log/i.test(s)) return "logged on the tap board"; return s; };
+function detailLine(x){
+  const cancel = x.basis === "geoff_confirmed_cancel";
+  const st = cancel ? "accounted" : x.status;
+  const word = { accounted: "accounted", missed: "missed", revisit_credited: "revisit — credited", revisit: "revisit" }[st] || st || "";
+  const cls = st === "missed" ? "sc-miss" : (st === "accounted" || st === "revisit_credited" ? "sc-ok" : "");
+  const why = basisText(x.basis);   // geoff_confirmed_cancel -> "accounted · customer cancelled", never a miss
+  return `<li>${ptDay(x.date)} — ${esc(x.name || "(name not read)")} — <span class="${cls}">${esc(word)}</span>${why ? ` · ${esc(why)}` : ""}</li>`;
+}
+function kitchenHtml(k, d){
+  if(!k) return "";
+  const min = ((d && d.kitchenBands) || {}).min_consults_for_color ?? 5;
+  const n = k.consults ?? 0;
+  const colour = n < min ? `<div class="sc-note">Counts only for now — colour starts at ${esc(min)} consults (you have ${esc(n)}).</div>`
+    : `<div class="sc-note">Colour: 0 misses green · 1 yellow · 2 or more red.</div>`;
+  const det = listOf(k.details);
+  return `<div class="sc-sec"><h3><span class="sc-dot ${esc(k.color || "none")}"></span>Kitchen table / driveway</h3>
+    <div>Scoring window: <b>${esc(k.accounted ?? "–")} of ${esc(k.consults ?? "–")}</b> consults accounted · last 7 days ${esc(k.accounted7 ?? "–")} of ${esc(k.consults7 ?? "–")}</div>
+    <div>Misses ${esc(k.misses ?? 0)} · revisit credits ${esc(k.revisit_credits ?? 0)} (sold revisits ${esc(k.revisits_sold ?? 0)}) · <b>effective misses ${esc(k.misses_effective ?? 0)}</b></div>
+    ${colour}${det.length ? `<ul>${det.map(detailLine).join("")}</ul>` : ""}</div>`;
+}
+function recapsHtml(c){
+  if(!c) return "";
+  return `<div class="sc-sec"><h3><span class="sc-dot ${esc(c.color || "none")}"></span>Recaps</h3>
+    <div>Last 7 days: <b>${esc(c.filed7 ?? 0)} filed</b> · ${esc(c.madeup7 ?? 0)} made up · ${esc(c.missing7 ?? 0)} missing</div>
+    <div>Last 30 days: ${esc(c.missing30 ?? 0)} missing</div></div>`;
+}
+function calcHtml(r, d){
+  const w = (d && d.weights) || {}, ob = (d && d.overallBands) || {}, lb = (d && d.bands) || {}, t = (r.points || {}).total || {};
+  const parts = ((d && d.order) || Object.keys(w)).map(k => `${esc(((d.labels || {})[k]) || k)} ${esc(w[k])}`).join(" · ");
+  return `<details class="sc-calc sc-sec"><summary>ⓘ How your score is figured</summary>
+    <div class="sc-note" style="margin-top:6px">Five parts add up to 100 points: ${parts}. Each part earns points from its colour. A part that isn't scored yet is left out, and your score is the points you earned out of the points scored, times 100${t.of != null ? ` — right now ${esc(t.earned ?? "–")} of ${esc(t.of)}` : ""}.
+    Lead to cash is green at ${esc(lb.green_min ?? "–")}% or more, yellow at ${esc(lb.yellow_min ?? "–")}%. Overall: green at ${esc(ob.green_min ?? "–")}+, yellow at ${esc(ob.yellow_min ?? "–")}+.
+    <a href="${MY_NUMBERS_URL}" target="_blank" rel="noopener" style="color:#14b8a6">Full explanation &rarr;</a></div></details>`;
+}
+function scoreHtml(r, d){
+  const w = (d && d.weights) || {};
+  if(w.driving > 0) return '<div class="sc-note"><b>Your score is being recalculated.</b> The scoring changed on November 15; it returns after tonight\'s run.</div>';
+  const band = {green:"Green", yellow:"Yellow", red:"Red"}[r.overall] || "Not scored yet";
+  const order = (d && d.order) || Object.keys(r.pillars || {});
+  const pts = r.points || {}, hints = r.nextSteps || {};
+  const rows = order.map(k => {
+    const p = (r.pillars || {})[k]; if(!p) return "";
+    const pk = pts[k], earned = pk ? (pk.earned == null ? "not scored yet" : `${pk.earned} of ${pk.of} pts`) : `${esc(p.weight)} pts`;
+    return `<div class="sc-p"><span class="sc-dot ${esc(p.color || "none")}"></span><span class="sc-pl">${esc(p.label || k)}${p.provisional ? '<span class="sc-prov">provisional</span>' : ""}${p.sub ? `<small>${esc(p.sub)}</small>` : ""}${hints[k] ? `<span class="sc-hint">Next: ${esc(hints[k])}</span>` : ""}</span><span class="sc-pv">${esc(p.figure ?? "–")}</span><span class="sc-pw">${esc(earned)}</span></div>`;
+  }).join("");
+  return `<div class="sc-top"><div class="sc-ring ${esc(r.overall || "none")}">${r.score == null ? "–" : esc(r.score)}</div>` +
+    `<div><div class="sc-band">${esc(band)}</div><div class="sc-sub">Score out of 100</div></div></div>` +
+    `<div class="sc-fresh">${freshLine(d)}</div>` +
+    rows + (r.coachLabel ? `<div class="sc-coach">Coach focus: <b>${esc(r.coachLabel)}</b></div>` : "") +
+    kitchenHtml(r.kitchen, d) + recapsHtml(r.recaps) +
+    `<div class="sc-sec sc-note">What moves these numbers: a call or text on the tap board moves kitchen table, and filing in Time Blocks moves recaps, both within about 15 minutes during the work day. Lead to cash and rentals firm up each morning after the BI export.</div>` +
+    calcHtml(r, d);
+}
 /* ===== end MY NUMBERS ===== */
 
 /* CLEARANCE: shared count. */
