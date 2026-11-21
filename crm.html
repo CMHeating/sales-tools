@@ -1287,7 +1287,7 @@ function freshLine(d){
   const base = d.computedAt ? `Updated ${esc(ptTime(d.computedAt))}` : "Not updated yet";
   return base + (d.liveRefreshAt ? ` · live refresh ${esc(ptTime(d.liveRefreshAt))}` : " · nightly run");
 }
-const BASIS = { geoff_confirmed: "confirmed by Geoff", geoff_confirmed_cancel: "customer cancelled", ridealong: "ride-along", none: "no call or text logged" };
+const BASIS = { geoff_confirmed: "confirmed by Geoff", geoff_confirmed_cancel: "customer cancelled", geoff_confirmed_reschedule: "rescheduled (confirmed by Geoff)", ridealong: "ride-along", none: "no call or text logged" };
 const basisText = b => { const s = String(b || ""); if(BASIS[s]) return BASIS[s]; if(/sold/i.test(s)) return "sold alert"; if(/log/i.test(s)) return "logged on the tap board"; return s; };
 function detailLine(x){
   const cancel = x.basis === "geoff_confirmed_cancel";
